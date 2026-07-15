@@ -1,0 +1,70 @@
+{
+  "entities": {
+    "UserAppState": {
+      "title": "UserAppState",
+      "description": "Unified document storing all user app data for cross-device synchronization",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The unique Firebase Auth UID of the user"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "ISO timestamp of the last update"
+        },
+        "clients": {
+          "type": "array",
+          "description": "List of clients"
+        },
+        "tasks": {
+          "type": "array",
+          "description": "List of kanban tasks"
+        },
+        "transactions": {
+          "type": "array",
+          "description": "List of financial transactions"
+        },
+        "calendarEvents": {
+          "type": "array",
+          "description": "List of scheduled calendar events"
+        },
+        "notifications": {
+          "type": "array",
+          "description": "List of system notifications"
+        },
+        "myProfile": {
+          "type": "object",
+          "description": "User profile settings and details"
+        },
+        "transactionCategories": {
+          "type": "array",
+          "description": "Custom financial categories"
+        },
+        "logoRefs": {
+          "type": "array",
+          "description": "Brand kit logos"
+        },
+        "savedCards": {
+          "type": "array",
+          "description": "AI-generated style cards"
+        },
+        "savedNotes": {
+          "type": "array",
+          "description": "Saved copywriting and client notes documents"
+        },
+        "messages": {
+          "type": "array",
+          "description": "Chat messages with AI assistant"
+        }
+      },
+      "required": ["userId", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "UserAppState",
+      "description": "Unified sync document for all user data to support seamless cross-device persistence"
+    }
+  }
+}

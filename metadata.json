@@ -1,0 +1,6 @@
+{
+  "name": "Zion Workspace",
+  "description": "Plataforma interna de produção e gestão para a agência Zion Company.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
