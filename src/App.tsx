@@ -116,20 +116,20 @@ const ChatAssistant: React.FC<{
         setMessages([
           {
             role: "assistant",
-            content: `OlÃ¡! Sou o **Zion AI Assistant**, o assistente inteligente de sua agÃªncia digital. 
+            content: `Olá! Sou o **Zion AI Assistant**, o assistente inteligente de sua agência digital. 
 
-Como vocÃª ainda nÃ£o possui clientes cadastrados na Ã¡rea de trabalho, que tal comeÃ§ar cadastrando o seu primeiro cliente ou clicando em **Carregar Dados Demonstrativos** nas configuraÃ§Ãµes para ver os painÃ©is integrados em aÃ§Ã£o?
+Como você ainda não possui clientes cadastrados na área de trabalho, que tal começar cadastrando o seu primeiro cliente ou clicando em **Carregar Dados Demonstrativos** nas configurações para ver os painéis integrados em ação?
 
-Se preferir, posso te dar algumas ideias de conteÃºdo, scripts ou ajudar na captaÃ§Ã£o agora mesmo!`,
+Se preferir, posso te dar algumas ideias de conteúdo, scripts ou ajudar na captação agora mesmo!`,
           },
         ]);
       } else {
         setMessages([
           {
             role: "assistant",
-            content: `OlÃ¡! Sou o **Zion AI Assistant**, seu co-piloto estratÃ©gico na agÃªncia. 
+            content: `Olá! Sou o **Zion AI Assistant**, seu co-piloto estratégico na agência. 
 
-Consigo analisar a saÃºde financeira dos seus **${clients.length} clientes**, sugerir novas pautas de postagens com base nos nichos deles ou criar copies de alta conversÃ£o. Como posso te ajudar hoje?`,
+Consigo analisar a saúde financeira dos seus **${clients.length} clientes**, sugerir novas pautas de postagens com base nos nichos deles ou criar copies de alta conversão. Como posso te ajudar hoje?`,
           },
         ]);
       }
@@ -151,19 +151,19 @@ Consigo analisar a saÃºde financeira dos seus **${clients.length} clientes**, 
   const quickPrompts = [
     {
       label: "ðŸ’¡ Ideias de Post",
-      text: "Me dÃª 5 ideias criativas e persuasivas de posts para o Instagram focados em atraÃ§Ã£o orgÃ¢nica.",
+      text: "Me dê 5 ideias criativas e persuasivas de posts para o Instagram focados em atração orgânica.",
     },
     {
       label: "ðŸŽ¬ Roteiro de Reels",
-      text: "Crie um roteiro de Reels dinÃ¢mico de 30 segundos, incluindo gancho, conteÃºdo e chamada para aÃ§Ã£o (CTA).",
+      text: "Crie um roteiro de Reels dinâmico de 30 segundos, incluindo gancho, conteúdo e chamada para ação (CTA).",
     },
     {
-      label: "ðŸ“ˆ EstratÃ©gia de Ads",
-      text: "Qual estrutura de campanha vocÃª recomenda para impulsionar um negÃ³cio local com orÃ§amento baixo?",
+      label: "ðŸ“ˆ Estratégia de Ads",
+      text: "Qual estrutura de campanha você recomenda para impulsionar um negócio local com orçamento baixo?",
     },
     {
       label: "âœï¸ Copy de Vendas",
-      text: "Escreva uma legenda de Instagram com copy persuasiva e hashtags para venda de serviÃ§os digitais.",
+      text: "Escreva uma legenda de Instagram com copy persuasiva e hashtags para venda de serviços digitais.",
     },
   ];
 
@@ -186,30 +186,30 @@ Consigo analisar a saÃºde financeira dos seus **${clients.length} clientes**, 
               parts: [
                 { inlineData: { data: base64Data, mimeType: file.type } },
                 {
-                  text: "Analise esta imagem e extraia um prompt detalhado que descreva a composiÃ§Ã£o, estilo, iluminaÃ§Ã£o e elementos presentes, para que eu possa gerar uma imagem similar.",
+                  text: "Analise esta imagem e extraia um prompt detalhado que descreva a composição, estilo, iluminação e elementos presentes, para que eu possa gerar uma imagem similar.",
                 },
               ],
             },
           });
         } catch (e) {
           console.warn(
-            "gemini-3.1-pro-preview falhou, tentando gemini-2.5-flash",
+            "gemini-3.1-pro-preview falhou, tentando gemini-3.5-flash",
             e,
           );
           response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-3.5-flash",
             contents: {
               parts: [
                 { inlineData: { data: base64Data, mimeType: file.type } },
                 {
-                  text: "Analise esta imagem e extraia um prompt detalhado que descreva a composiÃ§Ã£o, estilo, iluminaÃ§Ã£o e elementos presentes, para que eu possa gerar uma imagem similar.",
+                  text: "Analise esta imagem e extraia um prompt detalhado que descreva a composição, estilo, iluminação e elementos presentes, para que eu possa gerar uma imagem similar.",
                 },
               ],
             },
           });
         }
         setExtractedPrompt(
-          response.text || "NÃ£o foi possÃ­vel extrair o prompt.",
+          response.text || "Não foi possível extrair o prompt.",
         );
       } catch (error) {
         setExtractedPrompt("Erro ao extrair prompt.");
@@ -241,33 +241,33 @@ Consigo analisar a saÃºde financeira dos seus **${clients.length} clientes**, 
               parts: [
                 { inlineData: { data: base64Data, mimeType: file.type } },
                 {
-                  text: "Analise esta imagem e extraia o estilo tipogrÃ¡fico, incluindo efeitos, texturas, 3D, fontes sugeridas e quaisquer outros detalhes visuais da tipografia.",
+                  text: "Analise esta imagem e extraia o estilo tipográfico, incluindo efeitos, texturas, 3D, fontes sugeridas e quaisquer outros detalhes visuais da tipografia.",
                 },
               ],
             },
           });
         } catch (e) {
           console.warn(
-            "gemini-3.1-pro-preview falhou, tentando gemini-2.5-flash",
+            "gemini-3.1-pro-preview falhou, tentando gemini-3.5-flash",
             e,
           );
           response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-3.5-flash",
             contents: {
               parts: [
                 { inlineData: { data: base64Data, mimeType: file.type } },
                 {
-                  text: "Analise esta imagem e extraia o estilo tipogrÃ¡fico, incluindo efeitos, texturas, 3D, fontes sugeridas e quaisquer outros detalhes visuais da tipografia.",
+                  text: "Analise esta imagem e extraia o estilo tipográfico, incluindo efeitos, texturas, 3D, fontes sugeridas e quaisquer outros detalhes visuais da tipografia.",
                 },
               ],
             },
           });
         }
         setExtractedTypography(
-          response.text || "NÃ£o foi possÃ­vel extrair o estilo tipogrÃ¡fico.",
+          response.text || "Não foi possível extrair o estilo tipográfico.",
         );
       } catch (error) {
-        setExtractedTypography("Erro ao extrair estilo tipogrÃ¡fico.");
+        setExtractedTypography("Erro ao extrair estilo tipográfico.");
       } finally {
         setIsExtracting(false);
       }
@@ -289,21 +289,21 @@ Consigo analisar a saÃºde financeira dos seus **${clients.length} clientes**, 
           ? clients
               .map(
                 (c) =>
-                  `- **${c.name}**: nicho de ${c.niche}, plano de R$ ${c.planValue || 0}/mÃªs com vencimento todo dia ${c.dueDate || 10}. Notes: ${c.notes || "Sem notas"}`,
+                  `- **${c.name}**: nicho de ${c.niche}, plano de R$ ${c.planValue || 0}/mês com vencimento todo dia ${c.dueDate || 10}. Notes: ${c.notes || "Sem notas"}`,
               )
               .join("\n")
           : "Nenhum cliente cadastrado no momento.";
 
       let response;
-      const promptContext = `VocÃª Ã© o assistente inteligente pessoal da agÃªncia digital "Zion Company", focado no sucesso de mÃ­dias sociais, trÃ¡fego pago e branding.
-      Sua personalidade Ã© extremamente profissional, criativa, amigÃ¡vel e focada em resultados prÃ¡ticos.
+      const promptContext = `Você é o assistente inteligente pessoal da agência digital "Zion Company", focado no sucesso de mídias sociais, tráfego pago e branding.
+      Sua personalidade é extremamente profissional, criativa, amigável e focada em resultados práticos.
       
-      Aqui estÃ£o os clientes cadastrados atualmente na agÃªncia para vocÃª ter o contexto operacional:
+      Aqui estão os clientes cadastrados atualmente na agência para você ter o contexto operacional:
       ${clientsContext}
       
-      Por favor, forneÃ§a respostas de altÃ­ssima qualidade tÃ©cnica para a agÃªncia. Use formataÃ§Ã£o markdown elegante para tÃ³picos e destaques importantes.
+      Por favor, forneça respostas de altíssima qualidade técnica para a agência. Use formatação markdown elegante para tópicos e destaques importantes.
       
-      Pergunta ou comando do usuÃ¡rio:
+      Pergunta ou comando do usuário:
       "${textToSend}"`;
 
       try {
@@ -313,11 +313,11 @@ Consigo analisar a saÃºde financeira dos seus **${clients.length} clientes**, 
         });
       } catch (e) {
         console.warn(
-          "gemini-3.1-pro-preview falhou, tentando gemini-2.5-flash",
+          "gemini-3.1-pro-preview falhou, tentando gemini-3.5-flash",
           e,
         );
         response = await ai.models.generateContent({
-          model: "gemini-2.5-flash",
+          model: "gemini-3.5-flash",
           contents: promptContext,
         });
       }
@@ -334,18 +334,18 @@ Consigo analisar a saÃºde financeira dos seus **${clients.length} clientes**, 
         {
           role: "assistant",
           content:
-            "Desculpe, ocorreu um erro ao processar sua solicitaÃ§Ã£o no momento. Verifique sua conexÃ£o ou se a chave de API Ã© vÃ¡lida.",
+            "Desculpe, ocorreu um erro ao processar sua solicitação no momento. Verifique sua conexão ou se a chave de API é válida.",
         },
       ]);
     }
   };
 
   return (
-    <div className="fixed bottom-0 right-0 w-full h-full sm:bottom-6 sm:right-6 sm:w-[460px] sm:h-[680px] bg-zinc-900 border border-white/10 sm:rounded-3xl shadow-2xl z-50 flex flex-col overflow-hidden">
+    <div className="fixed bottom-0 right-0 w-full h-full sm:bottom-6 sm:right-6 sm:w-[460px] sm:h-[680px] bg-[#0b0b0c] border border-white/10 sm:rounded-3xl shadow-2xl z-50 flex flex-col overflow-hidden">
       {/* Header */}
       <div className="p-4 border-b border-white/5 flex justify-between items-center bg-zinc-950/50">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center text-zinc-950 font-black text-sm">
+          <div className="w-8 h-8 rounded-lg bg-[#c5a880] flex items-center justify-center text-zinc-950 font-black text-sm">
             Z
           </div>
           <div>
@@ -368,15 +368,15 @@ Consigo analisar a saÃºde financeira dos seus **${clients.length} clientes**, 
       <div className="p-2 border-b border-white/5 flex gap-1 bg-zinc-950/20">
         <button
           onClick={() => setMode("chat")}
-          className={`flex-1 text-xs py-2 rounded-xl transition-all font-semibold ${mode === "chat" ? "bg-amber-500 text-zinc-950" : "text-zinc-400 hover:text-zinc-200"}`}
+          className={`flex-1 text-xs py-2 rounded-xl transition-all font-semibold ${mode === "chat" ? "bg-[#c5a880] text-zinc-950" : "text-zinc-400 hover:text-zinc-200"}`}
         >
           Chat Integrado
         </button>
         <button
           onClick={() => setMode("extract")}
-          className={`flex-1 text-xs py-2 rounded-xl transition-all font-semibold ${mode === "extract" ? "bg-amber-500 text-zinc-950" : "text-zinc-400 hover:text-zinc-200"}`}
+          className={`flex-1 text-xs py-2 rounded-xl transition-all font-semibold ${mode === "extract" ? "bg-[#c5a880] text-zinc-950" : "text-zinc-400 hover:text-zinc-200"}`}
         >
-          Extrair de ReferÃªncias
+          Extrair de Referências
         </button>
       </div>
 
@@ -384,30 +384,30 @@ Consigo analisar a saÃºde financeira dos seus **${clients.length} clientes**, 
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-zinc-950/40">
         {mode === "extract" ? (
           <div className="text-sm text-zinc-300 space-y-6 p-1">
-            <div className="bg-zinc-900/50 p-4 border border-white/5 rounded-2xl">
+            <div className="bg-[#0b0b0c] p-4 border border-white/5 rounded-xl">
               <p className="text-xs font-bold text-white mb-2 flex items-center gap-1">
                 ðŸ“¸ Extrair Prompt de Imagem
               </p>
               <p className="text-[11px] text-zinc-500 mb-3">
-                Envie uma imagem de referÃªncia de social media e o assistente
-                irÃ¡ gerar o prompt exato para replicar o estilo.
+                Envie uma imagem de referência de social media e o assistente
+                irá gerar o prompt exato para replicar o estilo.
               </p>
               <input
                 type="file"
                 accept="image/*"
-                className="w-full text-xs text-zinc-400 bg-zinc-950 p-2.5 rounded-xl border border-white/10 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-zinc-800 file:text-white"
+                className="w-full text-xs text-zinc-400 bg-[#050505] p-2.5 rounded-xl border border-white/10 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-zinc-800 file:text-white"
                 onChange={handleImageUpload}
               />
               {isExtracting && (
-                <p className="mt-2 text-amber-400 animate-pulse text-xs">
+                <p className="mt-2 text-[#c5a880] animate-pulse text-xs">
                   Analisando imagem e extraindo prompt...
                 </p>
               )}
               {extractedPrompt && (
-                <div className="mt-3 p-3 bg-zinc-950 rounded-xl border border-white/5 text-zinc-200 text-xs">
+                <div className="mt-3 p-3 bg-[#050505] rounded-xl border border-white/5 text-zinc-200 text-xs">
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="font-bold text-amber-400">
-                      Prompt ExtraÃ­do:
+                    <span className="font-bold text-[#c5a880]">
+                      Prompt Extraído:
                     </span>
                     <button
                       onClick={() =>
@@ -418,16 +418,16 @@ Consigo analisar a saÃºde financeira dos seus **${clients.length} clientes**, 
                       Copiar
                     </button>
                   </div>
-                  <p className="font-mono leading-relaxed select-all text-zinc-300 bg-zinc-900/40 p-2 rounded-lg">
+                  <p className="font-mono leading-relaxed select-all text-zinc-300 bg-[#0b0b0c] p-2 rounded-lg">
                     {extractedPrompt}
                   </p>
                 </div>
               )}
             </div>
 
-            <div className="bg-zinc-900/50 p-4 border border-white/5 rounded-2xl">
+            <div className="bg-[#0b0b0c] p-4 border border-white/5 rounded-xl">
               <p className="text-xs font-bold text-white mb-2 flex items-center gap-1">
-                ðŸŽ¨ Extrair Estilo TipogrÃ¡fico
+                ðŸŽ¨ Extrair Estilo Tipográfico
               </p>
               <p className="text-[11px] text-zinc-500 mb-3">
                 Gostou das letras de um post? Envie a imagem e descubra fontes,
@@ -436,19 +436,19 @@ Consigo analisar a saÃºde financeira dos seus **${clients.length} clientes**, 
               <input
                 type="file"
                 accept="image/*"
-                className="w-full text-xs text-zinc-400 bg-zinc-950 p-2.5 rounded-xl border border-white/10 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-zinc-800 file:text-white"
+                className="w-full text-xs text-zinc-400 bg-[#050505] p-2.5 rounded-xl border border-white/10 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-zinc-800 file:text-white"
                 onChange={handleTypographyExtraction}
               />
               {isExtracting && (
-                <p className="mt-2 text-amber-400 animate-pulse text-xs">
+                <p className="mt-2 text-[#c5a880] animate-pulse text-xs">
                   Analisando fontes e layout...
                 </p>
               )}
               {extractedTypography && (
-                <div className="mt-3 p-3 bg-zinc-950 rounded-xl border border-white/5 text-zinc-200 text-xs">
+                <div className="mt-3 p-3 bg-[#050505] rounded-xl border border-white/5 text-zinc-200 text-xs">
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="font-bold text-amber-400">
-                      Estilo TipogrÃ¡fico:
+                    <span className="font-bold text-[#c5a880]">
+                      Estilo Tipográfico:
                     </span>
                     <button
                       onClick={() =>
@@ -459,7 +459,7 @@ Consigo analisar a saÃºde financeira dos seus **${clients.length} clientes**, 
                       Copiar
                     </button>
                   </div>
-                  <p className="font-mono leading-relaxed select-all text-zinc-300 bg-zinc-900/40 p-2 rounded-lg">
+                  <p className="font-mono leading-relaxed select-all text-zinc-300 bg-[#0b0b0c] p-2 rounded-lg">
                     {extractedTypography}
                   </p>
                 </div>
@@ -475,13 +475,13 @@ Consigo analisar a saÃºde financeira dos seus **${clients.length} clientes**, 
               >
                 {/* Author Badge */}
                 <span className="text-[10px] text-zinc-500 mb-1 px-1 font-mono">
-                  {m.role === "user" ? "VocÃª" : "Zion AI"}
+                  {m.role === "user" ? "Você" : "Zion AI"}
                 </span>
                 <div
-                  className={`max-w-[90%] p-3.5 rounded-2xl text-xs leading-relaxed ${
+                  className={`max-w-[90%] p-3.5 rounded-xl text-xs leading-relaxed ${
                     m.role === "user"
-                      ? "bg-amber-500 text-zinc-950 rounded-tr-none font-medium"
-                      : "bg-zinc-900 border border-white/5 text-zinc-200 rounded-tl-none"
+                      ? "bg-[#c5a880] text-zinc-950 rounded-tr-none font-medium"
+                      : "bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] text-zinc-200 rounded-tl-none"
                   }`}
                 >
                   <div className="markdown-body">
@@ -497,12 +497,12 @@ Consigo analisar a saÃºde financeira dos seus **${clients.length} clientes**, 
 
       {/* Quick Suggestions Chips (only in Chat mode) */}
       {mode === "chat" && (
-        <div className="px-4 py-2 border-t border-white/5 bg-zinc-950/40 overflow-x-auto whitespace-nowrap scrollbar-none flex gap-2">
+        <div className="px-4 py-2 border-t border-white/5 bg-[#050505] overflow-x-auto whitespace-nowrap scrollbar-none flex gap-2">
           {quickPrompts.map((p, idx) => (
             <button
               key={idx}
               onClick={() => handleSend(p.text)}
-              className="inline-block text-[10px] font-bold text-zinc-400 bg-zinc-900 hover:bg-zinc-800 border border-white/5 rounded-full px-3 py-1.5 transition-all hover:text-amber-400"
+              className="inline-block text-[10px] font-bold text-zinc-400 bg-[#0b0b0c] hover:bg-zinc-800 border border-white/5 rounded-full px-3 py-1.5 transition-all hover:text-[#c5a880]"
             >
               {p.label}
             </button>
@@ -511,7 +511,7 @@ Consigo analisar a saÃºde financeira dos seus **${clients.length} clientes**, 
       )}
 
       {/* Input controls */}
-      <div className="p-3 border-t border-white/5 bg-zinc-900 flex items-center gap-2">
+      <div className="p-3 border-t border-white/5 bg-[#0b0b0c] flex items-center gap-2">
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -522,12 +522,12 @@ Consigo analisar a saÃºde financeira dos seus **${clients.length} clientes**, 
               : "Selecione um recurso acima..."
           }
           disabled={mode === "extract"}
-          className="flex-1 bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-amber-500/50 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 bg-[#050505] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-[#c5a880]/50 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
         />
         <button
           onClick={() => handleSend()}
           disabled={mode === "extract" || !input.trim()}
-          className="bg-amber-500 text-zinc-950 p-2.5 rounded-xl hover:bg-amber-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="bg-[#c5a880] text-zinc-950 p-2.5 rounded-xl hover:bg-[#c5a880]/80 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <Check size={16} className="stroke-[3]" />
         </button>
@@ -553,7 +553,7 @@ function CustomDatePicker({ value, onChange }: CustomDatePickerProps) {
   const months = [
     "Janeiro",
     "Fevereiro",
-    "MarÃ§o",
+    "Março",
     "Abril",
     "Maio",
     "Junho",
@@ -596,7 +596,7 @@ function CustomDatePicker({ value, onChange }: CustomDatePickerProps) {
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white text-left focus:outline-none focus:border-amber-500/50 flex items-center justify-between font-mono hover:bg-zinc-900 transition-colors"
+        className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white text-left focus:outline-none focus:border-[#c5a880]/50 flex items-center justify-between font-mono hover:bg-[#0b0b0c] transition-colors"
       >
         <span>{formattedDisplay}</span>
         <Calendar size={16} className="text-zinc-500" />
@@ -608,13 +608,13 @@ function CustomDatePicker({ value, onChange }: CustomDatePickerProps) {
             className="fixed inset-0 z-40"
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute left-0 top-full mt-2 bg-zinc-900 border border-white/10 rounded-2xl p-4 shadow-2xl z-50 w-72 text-left">
+          <div className="absolute left-0 top-full mt-2 bg-[#0b0b0c] border border-white/10 rounded-xl p-8 shadow-2xl z-50 w-72 text-left">
             {/* Header: Month and Year Selector */}
             <div className="flex gap-2 mb-3">
               <select
                 value={pickerMonth}
                 onChange={(e) => setPickerMonth(Number(e.target.value))}
-                className="flex-1 bg-zinc-950 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500/50"
+                className="flex-1 bg-[#050505] border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50"
               >
                 {months.map((m, idx) => (
                   <option key={idx} value={idx}>
@@ -626,7 +626,7 @@ function CustomDatePicker({ value, onChange }: CustomDatePickerProps) {
               <select
                 value={pickerYear}
                 onChange={(e) => setPickerYear(Number(e.target.value))}
-                className="bg-zinc-950 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500/50"
+                className="bg-[#050505] border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50"
               >
                 {years.map((y) => (
                   <option key={y} value={y}>
@@ -644,7 +644,7 @@ function CustomDatePicker({ value, onChange }: CustomDatePickerProps) {
               <span>Qua</span>
               <span>Qui</span>
               <span>Sex</span>
-              <span>SÃ¡b</span>
+              <span>Sáb</span>
             </div>
 
             {/* Days Grid */}
@@ -669,7 +669,7 @@ function CustomDatePicker({ value, onChange }: CustomDatePickerProps) {
                     onClick={() => handleSelectDay(day)}
                     className={`h-7 w-7 rounded-lg text-xs font-bold transition-all flex items-center justify-center ${
                       isSelected
-                        ? "bg-amber-500 text-zinc-950 scale-105"
+                        ? "bg-[#c5a880] text-zinc-950 scale-105"
                         : "text-zinc-300 hover:bg-white/5"
                     }`}
                   >
@@ -900,7 +900,7 @@ export default function App() {
   const [textAlignment, setTextAlignment] = useState<"left" | "center" | "right">("left");
   const [textStyle, setTextStyle] = useState("MODERN");
   const [activePosition, setActivePosition] = useState<"ESQUERDA" | "CENTRO" | "DIREITA">("CENTRO");
-  const [activeComposition, setActiveComposition] = useState("Plano MÃ©dio (Busto)");
+  const [activeComposition, setActiveComposition] = useState("Plano Médio (Busto)");
   const [activeDimension, setActiveDimension] = useState("1:1");
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [activeExportFormat, setActiveExportFormat] = useState<"AVIF" | "PNG" | "JPEG" | "WebP">("AVIF");
@@ -1023,27 +1023,27 @@ export default function App() {
         niche: "Odontologia",
         status: "Ativo",
         contact: "(11) 99999-9999",
-        plan: "Premium (R$ 1.500/mÃªs)",
+        plan: "Premium (R$ 1.500/mês)",
         planValue: 1500,
         dueDate: "2026-06-10",
         paymentStatus: "Em dia",
         startDate: "2026-01-10",
         notes:
-          "Contato prioritÃ¡rio por WhatsApp. Foco em campanhas de implante.",
+          "Contato prioritário por WhatsApp. Foco em campanhas de implante.",
       },
       {
         id: 2,
-        name: "EstÃ©tica Beauty",
-        niche: "Beleza & EstÃ©tica",
+        name: "Estética Beauty",
+        niche: "Beleza & Estética",
         status: "Ativo",
         contact: "(11) 88888-8888",
-        plan: "Basic (R$ 1.200/mÃªs)",
+        plan: "Basic (R$ 1.200/mês)",
         planValue: 1200,
         dueDate: "2026-06-15",
         paymentStatus: "Em dia",
         startDate: "2026-02-15",
         notes:
-          "Gosta de conteÃºdos dinÃ¢micos e fotos de antes/depois da clÃ­nica.",
+          "Gosta de conteúdos dinâmicos e fotos de antes/depois da clínica.",
       },
       {
         id: 3,
@@ -1051,22 +1051,22 @@ export default function App() {
         niche: "Tecnologia B2B",
         status: "Prospecção",
         contact: "contato@tech.com",
-        plan: "Custom (R$ 3.000/mÃªs)",
+        plan: "Custom (R$ 3.000/mês)",
         planValue: 3000,
         dueDate: "2026-06-05",
         paymentStatus: "Pendente",
         startDate: "2026-06-01",
-        notes: "Aguardando aprovaÃ§Ã£o formal do contrato de trÃ¡fego de leads.",
+        notes: "Aguardando aprovação formal do contrato de tráfego de leads.",
       },
       {
         id: 4,
         name: "Sispumumc",
-        niche: "Sindicato dos Servidores PÃºblicos",
+        niche: "Sindicato dos Servidores Públicos",
         status: "Ativo",
         contact: "(74) 9.9807-3287",
-        plan: "PresenÃ§a Local (R$ 829/mÃªs)",
+        plan: "Presença Local (R$ 829/mês)",
         planDetails:
-          "2 Posts EstratÃ©gicos por semana (8/mÃªs)\n1 VÃ­deo Reels DinÃ¢mico por semana (4/mÃªs)\nGestÃ£o de Legendas e Agendamento\nTrÃ¡fego Local Incluso (R$ 150 de verba)\nRelatÃ³rio Mensal de Alcance",
+          "2 Posts Estratégicos por semana (8/mês)\n1 Vídeo Reels Dinâmico por semana (4/mês)\nGestão de Legendas e Agendamento\nTráfego Local Incluso (R$ 150 de verba)\nRelatório Mensal de Alcance",
         planValue: 829,
         dueDate: "2026-06-20",
         paymentStatus: "Em dia",
@@ -1087,7 +1087,7 @@ export default function App() {
         id: 2,
         title: "Configurar campanha Meta Ads",
         status: "doing",
-        client: "EstÃ©tica Beauty",
+        client: "Estética Beauty",
         hasDeadline: true,
         dueDate: "2026-06-30",
       },
@@ -1134,13 +1134,13 @@ export default function App() {
       },
       {
         id: 4,
-        description: "Mensalidade EstÃ©tica Beauty",
+        description: "Mensalidade Estética Beauty",
         type: "receita",
         amount: 1200,
         date: "2026-02-15",
         category: "Contratos",
         status: "pago",
-        client: "EstÃ©tica Beauty",
+        client: "Estética Beauty",
       },
       {
         id: 5,
@@ -1161,7 +1161,7 @@ export default function App() {
         status: "pago",
       },
 
-      // MarÃ§o
+      // Março
       {
         id: 7,
         description: "Mensalidade Dr. Silva (Odonto)",
@@ -1174,13 +1174,13 @@ export default function App() {
       },
       {
         id: 8,
-        description: "Mensalidade EstÃ©tica Beauty",
+        description: "Mensalidade Estética Beauty",
         type: "receita",
         amount: 1200,
         date: "2026-03-15",
         category: "Contratos",
         status: "pago",
-        client: "EstÃ©tica Beauty",
+        client: "Estética Beauty",
       },
       {
         id: 9,
@@ -1203,11 +1203,11 @@ export default function App() {
       },
       {
         id: 11,
-        description: "Campanha TrÃ¡fego Local",
+        description: "Campanha Tráfego Local",
         type: "despesa",
         amount: 150,
         date: "2026-03-10",
-        category: "TrÃ¡fego Ads",
+        category: "Tráfego Ads",
         status: "pago",
       },
 
@@ -1224,13 +1224,13 @@ export default function App() {
       },
       {
         id: 13,
-        description: "Mensalidade EstÃ©tica Beauty",
+        description: "Mensalidade Estética Beauty",
         type: "receita",
         amount: 1200,
         date: "2026-04-15",
         category: "Contratos",
         status: "pago",
-        client: "EstÃ©tica Beauty",
+        client: "Estética Beauty",
       },
       {
         id: 14,
@@ -1262,11 +1262,11 @@ export default function App() {
       },
       {
         id: 17,
-        description: "AnÃºncios Google Ads",
+        description: "Anúncios Google Ads",
         type: "despesa",
         amount: 300,
         date: "2026-04-12",
-        category: "TrÃ¡fego Ads",
+        category: "Tráfego Ads",
         status: "pago",
       },
 
@@ -1283,13 +1283,13 @@ export default function App() {
       },
       {
         id: 19,
-        description: "Mensalidade EstÃ©tica Beauty",
+        description: "Mensalidade Estética Beauty",
         type: "receita",
         amount: 1200,
         date: "2026-05-15",
         category: "Contratos",
         status: "pago",
-        client: "EstÃ©tica Beauty",
+        client: "Estética Beauty",
       },
       {
         id: 20,
@@ -1321,11 +1321,11 @@ export default function App() {
       },
       {
         id: 23,
-        description: "Campanha de TrÃ¡fego - Sispumumc",
+        description: "Campanha de Tráfego - Sispumumc",
         type: "despesa",
         amount: 150,
         date: "2026-05-10",
-        category: "TrÃ¡fego Ads",
+        category: "Tráfego Ads",
         status: "pago",
         client: "Sispumumc",
       },
@@ -1352,13 +1352,13 @@ export default function App() {
       },
       {
         id: 26,
-        description: "Mensalidade EstÃ©tica Beauty",
+        description: "Mensalidade Estética Beauty",
         type: "receita",
         amount: 1200,
         date: "2026-06-15",
         category: "Contratos",
         status: "pago",
-        client: "EstÃ©tica Beauty",
+        client: "Estética Beauty",
       },
       {
         id: 27,
@@ -1380,17 +1380,17 @@ export default function App() {
       },
       {
         id: 29,
-        description: "Campanha de TrÃ¡fego - Sispumumc",
+        description: "Campanha de Tráfego - Sispumumc",
         type: "despesa",
         amount: 150,
         date: "2026-06-10",
-        category: "TrÃ¡fego Ads",
+        category: "Tráfego Ads",
         status: "pago",
         client: "Sispumumc",
       },
       {
         id: 30,
-        description: "Freelancer Design GrÃ¡fico",
+        description: "Freelancer Design Gráfico",
         type: "despesa",
         amount: 450,
         date: "2026-06-18",
@@ -1411,39 +1411,39 @@ export default function App() {
     const demoEvents: CalendarEvent[] = [
       {
         id: 1,
-        title: "GravaÃ§Ã£o de Reels",
+        title: "Gravação de Reels",
         date: "2026-06-26",
         time: "14:00",
-        clientName: "EstÃ©tica Beauty",
+        clientName: "Estética Beauty",
         description:
-          "Gravar 4 vÃ­deos de dicas de skin care com a especialista.",
+          "Gravar 4 vídeos de dicas de skin care com a especialista.",
         type: "entrega",
       },
       {
         id: 2,
-        title: "Post: Informativo de SaÃºde Bucal",
+        title: "Post: Informativo de Saúde Bucal",
         date: "2026-06-27",
         time: "10:00",
         clientName: "Dr. Silva (Odonto)",
-        description: "Post em carrossel sobre prevenÃ§Ã£o de tÃ¡rtaro.",
+        description: "Post em carrossel sobre prevenção de tártaro.",
         type: "post",
       },
       {
         id: 3,
-        title: "ReuniÃ£o Mensal de Resultados",
+        title: "Reunião Mensal de Resultados",
         date: "2026-06-29",
         time: "16:00",
         clientName: "Sispumumc",
-        description: "Apresentar relatÃ³rio de trÃ¡fego pago e alcance orgÃ¢nico.",
+        description: "Apresentar relatório de tráfego pago e alcance orgânico.",
         type: "reuniao",
       },
       {
         id: 4,
-        title: "ReuniÃ£o de Alinhamento B2B",
+        title: "Reunião de Alinhamento B2B",
         date: "2026-06-30",
         time: "11:00",
         clientName: "Tech Solutions",
-        description: "ReuniÃ£o de fechamento com os diretores comerciais.",
+        description: "Reunião de fechamento com os diretores comerciais.",
         type: "reuniao",
       },
     ];
@@ -1457,14 +1457,14 @@ export default function App() {
       },
       {
         id: 2,
-        message: "GravaÃ§Ã£o de Reels com EstÃ©tica Beauty amanhÃ£ Ã s 14:00.",
+        message: "Gravação de Reels com Estética Beauty amanhã às 14:00.",
         date: "2026-06-25",
         read: false,
         type: "info",
       },
       {
         id: 3,
-        message: "Meta Ads de EstÃ©tica Beauty otimizado com sucesso.",
+        message: "Meta Ads de Estética Beauty otimizado com sucesso.",
         date: "2026-06-24",
         read: true,
         type: "success",
@@ -1490,7 +1490,7 @@ export default function App() {
     const notif: NotificationItem = {
       id: Date.now(),
       message:
-        "Dados de demonstraÃ§Ã£o carregados com sucesso! Explore os painÃ©is, finanÃ§as e calendÃ¡rio.",
+        "Dados de demonstração carregados com sucesso! Explore os painéis, finanças e calendário.",
       date: new Date().toISOString().split("T")[0],
       read: false,
       type: "success",
@@ -1587,7 +1587,7 @@ export default function App() {
     } catch (e) {}
     return {
       name: "Equipe Zion",
-      role: "AgÃªncia Digital",
+      role: "Agência Digital",
       avatarUrl:
         "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80",
     };
@@ -1601,9 +1601,9 @@ export default function App() {
       } catch (e) {}
       return [
         "Contratos",
-        "ServiÃ§os Avulsos",
+        "Serviços Avulsos",
         "Ferramentas",
-        "TrÃ¡fego Ads",
+        "Tráfego Ads",
         "Freelancers",
         "Infraestrutura",
         "Outros",
@@ -1801,7 +1801,7 @@ export default function App() {
         setWhatsappLogs(data.whatsappLogs || []);
         setMyProfile(data.myProfile || {
           name: "Equipe Zion",
-          role: "AgÃªncia Digital",
+          role: "Agência Digital",
           avatarUrl:
             "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80",
         });
@@ -1846,7 +1846,7 @@ export default function App() {
                 setWhatsappLogs(newData.whatsappLogs || []);
                 setMyProfile(newData.myProfile || {
                   name: "Equipe Zion",
-                  role: "AgÃªncia Digital",
+                  role: "Agência Digital",
                   avatarUrl:
                     "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80",
                 });
@@ -1873,14 +1873,14 @@ export default function App() {
         };
 
       } catch (err) {
-        console.error("Erro na sincronizaÃ§Ã£o inicial do Supabase:", err);
+        console.error("Erro na sincronização inicial do Supabase:", err);
         setIsCloudSyncing(false);
         setIsAuthLoading(false);
         isInitialLoadCompletedRef.current = true;
       }
     };
 
-    setupSync();
+    setupSync(); setTimeout(() => { setIsAuthLoading(false); }, 3000);
 
     return () => {
       if (subscription) {
@@ -1931,7 +1931,7 @@ export default function App() {
           activeSyncKey,
         );
       } catch (err) {
-        console.error("Erro na sincronizaÃ§Ã£o de nuvem:", err);
+        console.error("Erro na sincronização de nuvem:", err);
       }
     }, 500);
 
@@ -2119,7 +2119,7 @@ export default function App() {
           }
         }
       } catch (e) {
-        console.error("Erro ao processar transaÃ§Ã£o para grÃ¡fico:", e);
+        console.error("Erro ao processar transação para gráfico:", e);
       }
     });
     return monthlyList;
@@ -2259,7 +2259,7 @@ export default function App() {
       setEditingClient(null);
       setClientForm({
         status: "Ativo",
-        plan: "Premium (R$ 1.500/mÃªs)",
+        plan: "Premium (R$ 1.500/mês)",
         planValue: 1500,
         dueDate: new Date().toISOString().split("T")[0],
         paymentStatus: "Em dia",
@@ -2321,7 +2321,7 @@ export default function App() {
       try {
         const activeKey = getActiveApiKey();
         if (!activeKey) {
-          throw new Error("Chave de API do Gemini nÃ£o encontrada. Configure sua chave nas configuraÃ§Ãµes do perfil para usar a IA.");
+          throw new Error("Chave de API do Gemini não encontrada. Configure sua chave nas configurações do perfil para usar a IA.");
         }
         const aiClient = new GoogleGenAI({ apiKey: activeKey });
         
@@ -2353,7 +2353,7 @@ export default function App() {
               reader.onload = () => resolve(reader.result as string);
               reader.readAsText(parseInputFile);
             });
-            textContent += "\n\nConteÃºdo do Arquivo:\n" + text;
+            textContent += "\n\nConteúdo do Arquivo:\n" + text;
           }
         }
         
@@ -2377,7 +2377,7 @@ Extract multiple task details and return ONLY a JSON object with this exact stru
 Context for Relative Dates:
 - Today is: ${localDate}
 - Today's date in YYYY-MM-DD format: ${localISODate}
-- IMPORTANT: When the text says "hoje" (today), "amanhÃ£" (tomorrow), "segunda" (monday), "fim de semana" (weekend), "quarta-feira", etc., calculate the exact calendar date (YYYY-MM-DD) based on the current date reference above.
+- IMPORTANT: When the text says "hoje" (today), "amanhã" (tomorrow), "segunda" (monday), "fim de semana" (weekend), "quarta-feira", etc., calculate the exact calendar date (YYYY-MM-DD) based on the current date reference above.
 
 Context for Clients:
 - Existing Clients list: ${JSON.stringify(clientNames)}
@@ -2388,7 +2388,7 @@ ${textContent}`
         });
 
         const response = await aiClient.models.generateContent({
-          model: "gemini-2.5-flash",
+          model: "gemini-3.5-flash",
           config: {
             responseMimeType: "application/json",
           },
@@ -2407,7 +2407,7 @@ ${textContent}`
           extractedData = data;
           success = true;
         } else {
-          throw new Error("Formato de resposta da IA invÃ¡lido.");
+          throw new Error("Formato de resposta da IA inválido.");
         }
       } catch (err: any) {
         console.error("Client-side parse also failed:", err);
@@ -2430,7 +2430,7 @@ ${textContent}`
           lastTaskId++;
           const newTask: Task = {
             id: lastTaskId,
-            title: task.title || "Sem tÃ­tulo",
+            title: task.title || "Sem título",
             description: task.description || "",
             status: "todo",
             client: task.client || "",
@@ -2447,7 +2447,7 @@ ${textContent}`
               type: "receita",
               amount: task.amount,
               date: task.dueDate || new Date().toISOString().split("T")[0],
-              category: "ServiÃ§os",
+              category: "Serviços",
               status: task.isPaid ? "pago" : "pendente",
               client: task.client || "",
             };
@@ -2473,7 +2473,7 @@ ${textContent}`
         alert("Erro ao processar as tarefas geradas pela IA.");
       }
     } else {
-      alert("NÃ£o foi possÃ­vel processar a tarefa com a IA.");
+      alert("Não foi possível processar a tarefa com a IA.");
     }
     setIsParsingTask(false);
   };
@@ -2575,7 +2575,7 @@ ${textContent}`
       // Create a success notification
       const newNotif: NotificationItem = {
         id: Date.now(),
-        message: `Nova transaÃ§Ã£o registrada: ${transactionForm.description} (R$ ${formattedAmount})`,
+        message: `Nova transação registrada: ${transactionForm.description} (R$ ${formattedAmount})`,
         date: new Date().toISOString().split("T")[0],
         read: false,
         type: transactionForm.type === "receita" ? "success" : "info",
@@ -2682,7 +2682,7 @@ ${textContent}`
 
       const notif: NotificationItem = {
         id: Date.now(),
-        message: "SessÃ£o encerrada.",
+        message: "Sessão encerrada.",
         date: new Date().toISOString().split("T")[0],
         read: false,
         type: "success",
@@ -2949,7 +2949,7 @@ ${textContent}`
       // Create a success notification
       const newNotif: NotificationItem = {
         id: Date.now(),
-        message: `Evento agendado: '${eventForm.title}' para ${eventForm.date} Ã s ${eventForm.time}`,
+        message: `Evento agendado: '${eventForm.title}' para ${eventForm.date} às ${eventForm.time}`,
         date: new Date().toISOString().split("T")[0],
         read: false,
         type: "info",
@@ -2995,8 +2995,8 @@ ${textContent}`
     if (target) {
       const statusLabels = {
         todo: "A Fazer",
-        doing: "Em ProduÃ§Ã£o",
-        done: "ConcluÃ­do",
+        doing: "Em Produção",
+        done: "Concluído",
       };
       const newNotif: NotificationItem = {
         id: Date.now(),
@@ -3021,14 +3021,14 @@ ${textContent}`
 
     try {
       const ai = new GoogleGenAI({ apiKey: getActiveApiKey() });
-      const prompt = `VocÃª Ã© um copywriter sÃªnior e estrategista de conteÃºdo da agÃªncia de marketing "Zion Company".
-      Sua tarefa Ã© criar um(a) "${copyType}" de alta conversÃ£o e engajamento.
+      const prompt = `Você é um copywriter sênior e estrategista de conteúdo da agência de marketing "Zion Company".
+      Sua tarefa é criar um(a) "${copyType}" de alta conversão e engajamento.
       
       Assunto/Briefing: ${copyTopic}
       
       Diretrizes:
       - Use gatilhos mentais adequados.
-      - FormataÃ§Ã£o limpa (use emojis com moderaÃ§Ã£o, separe em parÃ¡grafos curtos).
+      - Formatação limpa (use emojis com moderação, separe em parágrafos curtos).
       - Inclua uma Call to Action (CTA) forte no final.
       - Mantenha um tom de voz profissional, persuasivo e moderno.`;
 
@@ -3040,11 +3040,11 @@ ${textContent}`
         });
       } catch (e) {
         console.warn(
-          "gemini-3.1-pro-preview falhou, tentando gemini-2.5-flash",
+          "gemini-3.1-pro-preview falhou, tentando gemini-3.5-flash",
           e,
         );
         response = await ai.models.generateContent({
-          model: "gemini-2.5-flash",
+          model: "gemini-3.5-flash",
           contents: prompt,
         });
       }
@@ -3055,7 +3055,7 @@ ${textContent}`
     } catch (error) {
       console.error("Erro ao gerar texto:", error);
       setGeneratedCopy(
-        "Ocorreu um erro ao gerar o texto. Verifique se a chave da API estÃ¡ configurada corretamente.",
+        "Ocorreu um erro ao gerar o texto. Verifique se a chave da API está configurada corretamente.",
       );
     } finally {
       setIsGenerating(false);
@@ -3125,7 +3125,7 @@ ${textContent}`
       console.error("Erro no download manual da nuvem:", err);
       const notif: NotificationItem = {
         id: Date.now(),
-        message: "Erro ao baixar dados da nuvem. Verifique as permissÃµes.",
+        message: "Erro ao baixar dados da nuvem. Verifique as permissões.",
         date: new Date().toISOString().split("T")[0],
         read: false,
         type: "warning",
@@ -3178,7 +3178,7 @@ ${textContent}`
       console.error("Erro no upload manual para nuvem:", err);
       const notif: NotificationItem = {
         id: Date.now(),
-        message: "Erro ao enviar dados para a nuvem. Verifique a conexÃ£o.",
+        message: "Erro ao enviar dados para a nuvem. Verifique a conexão.",
         date: new Date().toISOString().split("T")[0],
         read: false,
         type: "warning",
@@ -3246,11 +3246,11 @@ ${textContent}`
           !data.transactions &&
           !data.calendarEvents
         ) {
-          alert("Arquivo JSON invÃ¡lido. Verifique o formato do backup.");
+          alert("Arquivo JSON inválido. Verifique o formato do backup.");
           return;
         }
 
-        if (confirm("Deseja importar este backup? Isso substituirÃ¡ seus dados atuais na tela.")) {
+        if (confirm("Deseja importar este backup? Isso substituirá seus dados atuais na tela.")) {
           isSyncingFromServerRef.current = true;
 
           if (data.clients) setClients(data.clients);
@@ -3280,7 +3280,7 @@ ${textContent}`
         }
       } catch (err) {
         console.error("Erro ao ler arquivo de backup:", err);
-        alert("Erro ao ler o arquivo JSON. Certifique-se de que Ã© um backup vÃ¡lido.");
+        alert("Erro ao ler o arquivo JSON. Certifique-se de que é um backup válido.");
       }
     };
     reader.readAsText(file);
@@ -3291,14 +3291,14 @@ ${textContent}`
   const renderCloudSyncStatus = () => {
     if (!gcalUser) return null;
     return (
-      <div className="mt-3 p-3 bg-zinc-950/40 border border-white/5 rounded-xl space-y-2 group">
+      <div className="mt-3 p-3 bg-[#050505] border border-white/5 rounded-xl space-y-2 group">
         <div className="flex items-center justify-between text-[10px] font-mono">
           <span className="text-zinc-500 font-bold flex items-center gap-1">
             <Cloud size={10} className="text-zinc-400" />
             NUVEM CONECTADA
           </span>
           <div className="flex items-center gap-1.5">
-            <span className={`w-1.5 h-1.5 rounded-full ${isCloudSyncing ? "bg-amber-500 animate-ping" : "bg-emerald-500"}`} />
+            <span className={`w-1.5 h-1.5 rounded-full ${isCloudSyncing ? "bg-[#c5a880] animate-ping" : "bg-emerald-500"}`} />
 
           </div>
         </div>
@@ -3313,24 +3313,24 @@ ${textContent}`
 
   if (isAuthLoading) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-zinc-950 text-zinc-50 font-sans relative overflow-hidden">
+      <div className="flex flex-col items-center justify-center h-screen bg-[#050505] text-zinc-50 font-sans relative overflow-hidden">
         {/* Ambient background glow */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-amber-500/10 rounded-full blur-[120px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-[#c5a880]/10 rounded-full blur-[120px]" />
         <div className="z-10 flex flex-col items-center gap-6">
-          <div className="w-16 h-16 bg-amber-500 rounded-2xl flex items-center justify-center text-zinc-950 text-3xl font-black shadow-lg shadow-amber-500/20 animate-bounce">
+          <div className="w-16 h-16 bg-[#c5a880] rounded-xl flex items-center justify-center text-zinc-950 text-3xl font-black shadow-lg shadow-amber-500/20 animate-bounce">
             Z
           </div>
           <div className="flex flex-col items-center gap-2">
             <h2 className="text-xl font-bold tracking-tight text-white flex items-center gap-1.5">
               Carregando Workspace
-              <span className="text-amber-500 animate-pulse">.</span>
+              <span className="text-[#c5a880] animate-pulse">.</span>
             </h2>
             <p className="text-xs text-zinc-400 font-mono">
-              Iniciando conexÃ£o segura...
+              Iniciando conexão segura...
             </p>
           </div>
-          <div className="w-48 h-1.5 bg-zinc-900 rounded-full overflow-hidden relative border border-white/5">
-            <div className="h-full bg-amber-500 rounded-full animate-slide w-1/3 absolute left-0" />
+          <div className="w-48 h-1.5 bg-[#0b0b0c] rounded-full overflow-hidden relative border border-white/5">
+            <div className="h-full bg-[#c5a880] rounded-full animate-slide w-1/3 absolute left-0" />
           </div>
         </div>
       </div>
@@ -3356,6 +3356,13 @@ ${textContent}`
       <header className="h-16 w-full bg-[#121214] border-b border-white/5 flex items-center justify-between px-6 fixed top-0 left-0 right-0 z-45 shrink-0">
         {/* Esquerda: Logo Zion Design */}
         <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => setIsMobileSidebarOpen(true)}
+            className="lg:hidden text-zinc-400 hover:text-white p-2 hover:bg-white/5 rounded-xl transition-all mr-1 flex items-center justify-center border border-transparent hover:border-white/5"
+            aria-label="Abrir menu"
+          >
+            <Menu size={20} />
+          </button>
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#c5a880] to-[#ad8330] flex items-center justify-center text-zinc-950 shadow-md">
             <Layers size={18} />
           </div>
@@ -3389,7 +3396,7 @@ ${textContent}`
           ) : (
             <div 
               onClick={() => setIsSettingsModalOpen(true)}
-              className="p-1 bg-zinc-900 border border-emerald-500/10 rounded-lg hidden md:flex items-center gap-1.5 px-3 py-1 cursor-pointer hover:border-emerald-500/20"
+              className="p-1 bg-[#0b0b0c] border border-emerald-500/10 rounded-lg hidden md:flex items-center gap-1.5 px-3 py-1 cursor-pointer hover:border-emerald-500/20"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               <span className="text-[10px] text-emerald-500/90 font-bold uppercase tracking-wider">API Servidor</span>
@@ -3424,11 +3431,12 @@ ${textContent}`
       <div className="flex h-[calc(100vh-64px)] mt-16 overflow-hidden relative w-full">
         
         {/* Menu Lateral Estreito Vertical (Desktop) */}
-        <aside className="hidden lg:flex w-20 bg-[#121214] border-r border-white/5 flex-col items-center py-5 flex-shrink-0 justify-between select-none">
-          <nav className="w-full px-2 space-y-5">
+        <aside className="hidden lg:flex w-20 bg-[#121214] border-r border-white/5 flex-col items-center py-4 flex-shrink-0 select-none overflow-y-auto scrollbar-none h-full">
+          <nav className="w-full px-2 space-y-3">
             <SidebarItemMini icon={<LayoutDashboard size={20} />} active={activeTab === "dashboard"} onClick={() => setActiveTab("dashboard")} tooltip="Explorar" />
             <SidebarItemMini icon={<Layers size={20} />} active={activeTab === "agents"} onClick={() => setActiveTab("agents")} tooltip="Agentes" />
-            <SidebarItemMini icon={<Sparkles size={20} />} active={activeTab === "ai-tools"} onClick={() => { setActiveTab("ai-tools"); setActiveAiTab("image"); }} tooltip="Criar" />
+            <SidebarItemMini icon={<Wand2 size={20} />} active={activeTab === "copiloto"} onClick={() => setActiveTab("copiloto")} tooltip="Copiloto IA" />
+            <SidebarItemMini icon={<Sparkles size={20} />} active={activeTab === "ai-tools"} onClick={() => setActiveTab("ai-tools")} tooltip="Criar" />
             <SidebarItemMini icon={<ImageIcon size={20} />} active={activeTab === "gallery"} onClick={() => setActiveTab("gallery")} tooltip="Galeria" />
             <SidebarItemMini icon={<Users size={20} />} active={activeTab === "clients"} onClick={() => setActiveTab("clients")} tooltip="Clientes" />
             <SidebarItemMini icon={<CheckSquare size={20} />} active={activeTab === "tasks"} onClick={() => setActiveTab("tasks")} tooltip="Tarefas" />
@@ -3437,7 +3445,7 @@ ${textContent}`
             <SidebarItemMini icon={<FileText size={20} />} active={activeTab === "notes"} onClick={() => setActiveTab("notes")} tooltip="Notas" />
           </nav>
           
-          <div className="w-full px-2 space-y-4">
+          <div className="w-full px-2 mt-auto pt-4 flex-shrink-0">
             <SidebarItemMini icon={<Settings size={20} />} active={false} onClick={() => setIsSettingsModalOpen(true)} tooltip="Configurações" />
           </div>
         </aside>
@@ -3460,7 +3468,7 @@ ${textContent}`
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ type: "tween", duration: 0.25 }}
-              className="fixed top-0 left-0 h-full w-72 bg-zinc-950 border-r border-white/10 z-50 flex flex-col p-6 lg:hidden"
+              className="fixed top-0 left-0 h-full w-72 bg-[#050505] border-r border-white/10 z-50 flex flex-col p-6 lg:hidden"
             >
               <div className="flex items-center justify-between mb-6">
                 <div className="text-xl font-bold tracking-tight text-white flex items-center gap-2.5">
@@ -3493,12 +3501,20 @@ ${textContent}`
                     }}
                   />
                   <SidebarItem
+                    icon={<Wand2 size={16} />}
+                    label="Copiloto IA"
+                    active={activeTab === "copiloto"}
+                    onClick={() => {
+                      setActiveTab("copiloto");
+                      setIsMobileSidebarOpen(false);
+                    }}
+                  />
+                  <SidebarItem
                     icon={<Sparkles size={16} />}
                     label="Criar com IA"
                     active={activeTab === "ai-tools"}
                     onClick={() => {
                       setActiveTab("ai-tools");
-                      setActiveAiTab("image");
                       setIsMobileSidebarOpen(false);
                     }}
                   />
@@ -3586,7 +3602,7 @@ ${textContent}`
                   </div>
                 ) : (
                   <div
-                    className="p-2 bg-zinc-950 border border-white/5 rounded-xl flex items-center justify-between cursor-pointer"
+                    className="p-2 bg-[#050505] border border-white/5 rounded-xl flex items-center justify-between cursor-pointer"
                     onClick={() => {
                       setIsSettingsModalOpen(true);
                       setIsMobileSidebarOpen(false);
@@ -3636,7 +3652,7 @@ ${textContent}`
                       referrerPolicy="no-referrer"
                     />
                   ) : (
-                    <div className="w-9 h-9 rounded-full bg-amber-500 text-zinc-950 flex items-center justify-center text-xs font-bold uppercase">
+                    <div className="w-9 h-9 rounded-full bg-[#c5a880] text-zinc-950 flex items-center justify-center text-xs font-bold uppercase">
                       {(myProfile?.name || "Zion").substring(0, 2)}
                     </div>
                   )}
@@ -3658,7 +3674,7 @@ ${textContent}`
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-full overflow-hidden bg-[#0b0b0c]">
         {/* Scrollable Content Area */}
-        <div className="flex-1 overflow-auto p-4 sm:p-8">
+        <div className={`flex-1 overflow-y-auto flex flex-col ${activeTab === "ai-tools" ? "p-0" : "p-4 sm:p-8"}`}>
               {/* View: Notes & Docs */}
           {activeTab === "notes" && (
             <motion.div
@@ -3667,23 +3683,23 @@ ${textContent}`
               className="max-w-6xl mx-auto"
             >
               <div className="mb-8">
-                <h1 className="text-xl sm:text-3xl font-bold mb-2 flex items-center gap-2 sm:gap-3">
-                  <FileText className="text-amber-500" size={28} /> Notas & Docs
+                <h1 className="text-xl sm:text-3xl font-bold text-white mb-2 flex items-center gap-2 sm:gap-3">
+                  <FileText className="text-[#c5a880]" size={28} /> Notas & Docs
                 </h1>
                 <p className="text-zinc-400">
-                  Armazene e consulte rapidamente briefings, ideias de cÃ³pias e
-                  anotaÃ§Ãµes dos seus clientes.
+                  Armazene e consulte rapidamente briefings, ideias de cópias e
+                  anotações dos seus clientes.
                 </p>
               </div>
 
               {savedNotes.length === 0 ? (
-                <div className="text-center py-20 bg-zinc-900 border border-white/5 rounded-2xl flex flex-col items-center justify-center">
+                <div className="text-center py-20 bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl flex flex-col items-center justify-center">
                   <FileText className="text-zinc-700 mb-4" size={48} />
                   <p className="text-zinc-400 text-lg font-medium">
                     Nenhuma nota salva ainda.
                   </p>
                   <p className="text-zinc-500 text-sm mt-2">
-                    VÃ¡ atÃ© o Copiloto Zion e salve os textos gerados.
+                    Vá até o Copiloto Zion e salve os textos gerados.
                   </p>
                 </div>
               ) : (
@@ -3691,10 +3707,10 @@ ${textContent}`
                   {savedNotes.map((note) => (
                     <div
                       key={note.id}
-                      className="bg-zinc-900 border border-white/5 rounded-2xl p-5 flex flex-col hover:border-amber-500/20 transition-all shadow-lg hover:shadow-amber-500/5"
+                      className="bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-8 flex flex-col hover:border-[#c5a880]/20 transition-all shadow-lg hover:shadow-amber-500/5"
                     >
                       <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-2 text-amber-500 bg-amber-500/10 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider">
+                        <div className="flex items-center gap-2 text-[#c5a880] bg-[#c5a880]/10 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider">
                           <User size={12} />
                           {note.clientName}
                         </div>
@@ -3735,15 +3751,15 @@ ${textContent}`
               className="max-w-6xl mx-auto"
             >
               <div className="mb-8">
-                <h1 className="text-xl sm:text-3xl font-bold mb-2 flex items-center gap-2 sm:gap-3">
-                  <ImageIcon className="text-amber-500" size={28} /> Galeria de
+                <h1 className="text-xl sm:text-3xl font-bold text-white mb-2 flex items-center gap-2 sm:gap-3">
+                  <ImageIcon className="text-[#c5a880]" size={28} /> Galeria de
                   Cards
                 </h1>
                 <p className="text-zinc-400">Gerencie seus cards gerados.</p>
               </div>
 
               {savedCards.length === 0 ? (
-                <div className="text-center py-20 bg-zinc-900 border border-white/5 rounded-2xl">
+                <div className="text-center py-20 bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl">
                   <p className="text-zinc-500">Nenhum card salvo na galeria.</p>
                 </div>
               ) : (
@@ -3751,7 +3767,7 @@ ${textContent}`
                   {savedCards.map((img, idx) => (
                     <div
                       key={idx}
-                      className="relative group bg-zinc-900 border border-white/5 rounded-xl overflow-hidden"
+                      className="relative group bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl overflow-hidden"
                     >
                       <img
                         src={img}
@@ -3787,9 +3803,9 @@ ${textContent}`
               {/* Header */}
               <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                  <h1 className="text-xl sm:text-3xl font-bold mb-2 flex items-center gap-2 sm:gap-3">
-                    <Users className="text-amber-500 animate-pulse" size={28} />{" "}
-                    GestÃ£o de Clientes
+                  <h1 className="text-xl sm:text-3xl font-bold text-white mb-2 flex items-center gap-2 sm:gap-3">
+                    <Users className="text-[#c5a880] animate-pulse" size={28} />{" "}
+                    Gestão de Clientes
                   </h1>
                   <p className="text-zinc-400">
                     Organize sua carteira de clientes, leads e contratos de
@@ -3798,7 +3814,7 @@ ${textContent}`
                 </div>
                 <button
                   onClick={() => openClientModal()}
-                  className="bg-amber-500 text-zinc-950 px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-amber-400 transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/15"
+                  className="bg-[#c5a880] text-zinc-950 px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-[#c5a880]/80 transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/15"
                 >
                   <Plus size={16} /> Cadastrar Novo Cliente
                 </button>
@@ -3806,42 +3822,42 @@ ${textContent}`
 
               {/* Client Metrics Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 w-full place-content-center">
-                <div className="bg-zinc-900 border border-white/5 rounded-xl p-4 min-w-0">
-                  <span className="text-[10px] uppercase font-bold text-zinc-500 block break-words leading-tight">
+                <div className="bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-8 min-w-0">
+                  <span className="text-sm font-bold text-white block break-words leading-tight">
                     Total Carteira
                   </span>
-                  <p className="text-xl sm:text-2xl font-black text-white mt-1 truncate">
+                  <p className="text-xl sm:text-2xl font-medium text-zinc-400 mt-1 truncate">
                     {clients.length}
                   </p>
                 </div>
-                <div className="bg-zinc-900 border border-white/5 rounded-xl p-4 min-w-0">
-                  <span className="text-[10px] uppercase font-bold text-emerald-500 block break-words leading-tight">
+                <div className="bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-8 min-w-0">
+                  <span className="text-sm font-bold text-white block break-words leading-tight">
                     Clientes Ativos
                   </span>
-                  <p className="text-xl sm:text-2xl font-black text-white mt-1 truncate">
+                  <p className="text-xl sm:text-2xl font-medium text-zinc-400 mt-1 truncate">
                     {clients.filter((c) => c.status === "Ativo").length}
                   </p>
                 </div>
-                <div className="bg-zinc-900 border border-white/5 rounded-xl p-4 min-w-0">
-                  <span className="text-[10px] uppercase font-bold text-blue-400 block break-words leading-tight">
+                <div className="bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-8 min-w-0">
+                  <span className="text-sm font-bold text-white block break-words leading-tight">
                     Em Prospecção
                   </span>
-                  <p className="text-xl sm:text-2xl font-black text-white mt-1 truncate">
+                  <p className="text-xl sm:text-2xl font-medium text-zinc-400 mt-1 truncate">
                     {clients.filter((c) => c.status === "Prospecção").length}
                   </p>
                 </div>
-                <div className="bg-zinc-900 border border-white/5 rounded-xl p-4 min-w-0">
-                  <span className="text-[10px] uppercase font-bold text-amber-500 block break-words leading-tight">
+                <div className="bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-8 min-w-0">
+                  <span className="text-sm font-bold text-white block break-words leading-tight">
                     Faturamento Previsto (MRR)
                   </span>
-                  <p className="text-xl sm:text-2xl font-black text-amber-400 mt-1 truncate">
+                  <p className="text-xl sm:text-2xl font-medium text-zinc-400 mt-1 truncate">
                     R$ {mrr.toLocaleString("pt-BR")}
                   </p>
                 </div>
               </div>
 
               {/* CRM Filters Bar */}
-              <div className="bg-zinc-900/60 border border-white/5 p-4 rounded-xl mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="bg-[#0b0b0c] border border-white/5 p-4 rounded-xl mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex flex-1 items-center gap-2">
                   <div className="relative w-full max-w-md">
                     <Search
@@ -3853,7 +3869,7 @@ ${textContent}`
                       placeholder="Buscar por nome, nicho ou contato..."
                       value={clientSearch}
                       onChange={(e) => setClientSearch(e.target.value)}
-                      className="w-full bg-zinc-950 border border-white/10 rounded-lg py-2 pl-10 pr-4 text-xs focus:outline-none focus:border-amber-500/50 text-white placeholder:text-zinc-600 transition-all"
+                      className="w-full bg-[#050505] border border-white/10 rounded-lg py-2 pl-10 pr-4 text-xs focus:outline-none focus:border-[#c5a880]/50 text-white placeholder:text-zinc-600 transition-all"
                     />
                   </div>
                   {clientSearch && (
@@ -3878,8 +3894,8 @@ ${textContent}`
                       onClick={() => setClientFilterStatus(btn.value)}
                       className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
                         clientFilterStatus === btn.value
-                          ? "bg-amber-500 text-zinc-950 shadow-md shadow-amber-500/10"
-                          : "bg-zinc-950 text-zinc-400 hover:text-white hover:bg-zinc-800"
+                          ? "bg-[#c5a880] text-zinc-950 shadow-md shadow-amber-500/10"
+                          : "bg-[#050505] text-zinc-400 hover:text-white hover:bg-zinc-800"
                       }`}
                     >
                       {btn.label}
@@ -3889,7 +3905,7 @@ ${textContent}`
               </div>
 
               {/* Table wrapper */}
-              <div className="bg-zinc-900 border border-white/5 rounded-2xl overflow-x-auto shadow-xl">
+              <div className="bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl overflow-x-auto shadow-xl">
                 {filteredClients.length === 0 ? (
                   <div className="p-12 text-center">
                     <div className="w-12 h-12 bg-zinc-800 rounded-full flex items-center justify-center text-zinc-600 mx-auto mb-4">
@@ -3900,18 +3916,18 @@ ${textContent}`
                     </h3>
                     <p className="text-zinc-500 text-xs max-w-sm mx-auto leading-relaxed">
                       Experimente alterar a busca ou filtro ou clique em
-                      "Cadastrar Novo Cliente" para comeÃ§ar do zero.
+                      "Cadastrar Novo Cliente" para começar do zero.
                     </p>
                   </div>
                 ) : (
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="bg-zinc-950/50 border-b border-white/5">
+                      <tr className="bg-[#050505] border-b border-white/5">
                         <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-zinc-400">
                           Cliente
                         </th>
                         <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-zinc-400">
-                          Nicho / Ãrea
+                          Nicho / Área
                         </th>
                         <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-zinc-400">
                           Contato
@@ -3923,13 +3939,13 @@ ${textContent}`
                           Vencimento
                         </th>
                         <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-zinc-400">
-                          CobranÃ§a
+                          Cobrança
                         </th>
                         <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-zinc-400">
                           Status Geral
                         </th>
                         <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-zinc-400 text-right">
-                          AÃ§Ãµes
+                          Ações
                         </th>
                       </tr>
                     </thead>
@@ -3949,7 +3965,7 @@ ${textContent}`
                                   referrerPolicy="no-referrer"
                                 />
                               ) : (
-                                <div className="w-9 h-9 rounded-full bg-zinc-800 border border-white/5 flex items-center justify-center text-amber-400 font-bold text-sm">
+                                <div className="w-9 h-9 rounded-full bg-zinc-800 border border-white/5 flex items-center justify-center text-[#c5a880] font-bold text-sm">
                                   {client.name.charAt(0)}
                                 </div>
                               )}
@@ -3986,7 +4002,7 @@ ${textContent}`
                                 client.paymentStatus === "Em dia"
                                   ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/10"
                                   : client.paymentStatus === "Pendente"
-                                    ? "bg-amber-500/15 text-amber-400 border border-amber-500/10"
+                                    ? "bg-[#c5a880]/15 text-[#c5a880] border border-[#c5a880]/10"
                                     : "bg-red-500/15 text-red-400 border border-red-500/10"
                               }`}
                             >
@@ -4009,7 +4025,7 @@ ${textContent}`
                           <td className="px-6 py-4 text-right">
                             <button
                               onClick={() => openClientModal(client)}
-                              className="bg-zinc-800 text-zinc-300 hover:bg-amber-500 hover:text-zinc-950 font-bold text-xs px-3 py-1.5 rounded-lg transition-all"
+                              className="bg-zinc-800 text-zinc-300 hover:bg-[#c5a880] hover:text-zinc-950 font-bold text-xs px-3 py-1.5 rounded-lg transition-all"
                             >
                               Editar
                             </button>
@@ -4044,162 +4060,142 @@ ${textContent}`
             <Agentes />
           )}
 
-          {activeTab === "ai-tools" && (
+          {activeTab === "copiloto" && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="max-w-7xl mx-auto h-full flex flex-col"
+              className="max-w-5xl mx-auto w-full pb-8"
             >
-              <div className="flex items-center gap-4 mb-6">
-                <button
-                  onClick={() => setActiveAiTab("text")}
-                  className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${activeAiTab === "text" ? "bg-amber-500 text-zinc-950" : "bg-zinc-900 text-zinc-400 hover:text-white"}`}
-                >
-                  Copiloto (Texto)
-                </button>
-                <button
-                  onClick={() => setActiveAiTab("image")}
-                  className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${activeAiTab === "image" ? "bg-amber-500 text-zinc-950" : "bg-zinc-900 text-zinc-400 hover:text-white"}`}
-                >
-                  Gerador Cards 4K
-                </button>
+              <div className="mb-8">
+                <h1 className="text-xl sm:text-3xl font-bold text-white mb-2 flex items-center gap-2 sm:gap-3">
+                  <Sparkles className="text-[#c5a880]" size={28} />{" "}
+                  Copiloto Zion (Texto)
+                </h1>
+                <p className="text-zinc-400">
+                  Seu assistente de inteligência artificial (Gemini Pro)
+                  para acelerar a produção de conteúdo e copy.
+                </p>
               </div>
 
-              <div className="flex-1">
-                {activeAiTab === "text" && (
-                  <div className="max-w-5xl mx-auto">
-                    <div className="mb-8">
-                      <h1 className="text-xl sm:text-3xl font-bold mb-2 flex items-center gap-2 sm:gap-3">
-                        <Sparkles className="text-amber-500" size={28} />{" "}
-                        Copiloto Zion (Texto)
-                      </h1>
-                      <p className="text-zinc-400">
-                        Seu assistente de inteligÃªncia artificial (Gemini Pro)
-                        para acelerar a produÃ§Ã£o de conteÃºdo e copy.
-                      </p>
+              <div className="grid lg:grid-cols-2 gap-8">
+                {/* Input Section */}
+                <div className="bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-8 flex flex-col gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-400 mb-2">
+                      O que vamos criar hoje?
+                    </label>
+                    <select
+                      value={copyType}
+                      onChange={(e) => setCopyType(e.target.value)}
+                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#c5a880]/50 transition-colors appearance-none"
+                    >
+                      <option>Legenda para Instagram</option>
+                      <option>Copy para Facebook/Instagram Ads</option>
+                      <option>Roteiro para Reels/TikTok</option>
+                      <option>
+                        Ideias de Conteúdo (Linha Editorial)
+                      </option>
+                      <option>E-mail Marketing</option>
+                      <option>Copy para Landing Page</option>
+                    </select>
+                  </div>
+
+                  <div className="flex-1 flex flex-col">
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="block text-sm font-medium text-zinc-400">
+                        Briefing / Assunto
+                      </label>
+                      <VoiceInputButton
+                        onTranscript={(val) =>
+                          setCopyTopic(
+                            (prev) =>
+                              (prev || "") + (prev ? " " : "") + val,
+                          )
+                        }
+                      />
                     </div>
+                    <textarea
+                      value={copyTopic}
+                      onChange={(e) => setCopyTopic(e.target.value)}
+                      placeholder="Ex: Lançamento de uma nova clínica de estética em São Paulo focada em harmonização facial. O diferencial é o atendimento premium e tecnologia indolor..."
+                      className="w-full flex-1 min-h-[200px] bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#c5a880]/50 transition-colors resize-none placeholder:text-zinc-700"
+                    />
+                  </div>
 
-                    <div className="grid lg:grid-cols-2 gap-8">
-                      {/* Input Section */}
-                      <div className="bg-zinc-900 border border-white/5 rounded-2xl p-6 flex flex-col gap-6">
-                        <div>
-                          <label className="block text-sm font-medium text-zinc-400 mb-2">
-                            O que vamos criar hoje?
-                          </label>
-                          <select
-                            value={copyType}
-                            onChange={(e) => setCopyType(e.target.value)}
-                            className="w-full bg-zinc-950 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500/50 transition-colors appearance-none"
-                          >
-                            <option>Legenda para Instagram</option>
-                            <option>Copy para Facebook/Instagram Ads</option>
-                            <option>Roteiro para Reels/TikTok</option>
-                            <option>
-                              Ideias de ConteÃºdo (Linha Editorial)
-                            </option>
-                            <option>E-mail Marketing</option>
-                            <option>Copy para Landing Page</option>
-                          </select>
-                        </div>
+                  <button
+                    onClick={handleGenerateCopy}
+                    disabled={isGenerating || !copyTopic.trim()}
+                    className="w-full bg-[#c5a880] text-zinc-950 py-3.5 rounded-xl font-bold text-base hover:bg-[#b0936b] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isGenerating ? (
+                      <>
+                        <Loader2 size={20} className="animate-spin" />{" "}
+                        Gerando Mágica...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={20} /> Gerar Conteúdo
+                      </>
+                    )}
+                  </button>
+                </div>
 
-                        <div className="flex-1 flex flex-col">
-                          <div className="flex justify-between items-center mb-2">
-                            <label className="block text-sm font-medium text-zinc-400">
-                              Briefing / Assunto
-                            </label>
-                            <VoiceInputButton
-                              onTranscript={(val) =>
-                                setCopyTopic(
-                                  (prev) =>
-                                    (prev || "") + (prev ? " " : "") + val,
-                                )
-                              }
-                            />
-                          </div>
-                          <textarea
-                            value={copyTopic}
-                            onChange={(e) => setCopyTopic(e.target.value)}
-                            placeholder="Ex: LanÃ§amento de uma nova clÃ­nica de estÃ©tica em SÃ£o Paulo focada em harmonizaÃ§Ã£o facial. O diferencial Ã© o atendimento premium e tecnologia indolor..."
-                            className="w-full flex-1 min-h-[200px] bg-zinc-950 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500/50 transition-colors resize-none placeholder:text-zinc-700"
-                          />
-                        </div>
-
+                {/* Output Section */}
+                <div className="bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-8 flex flex-col">
+                  <div className="flex items-center justify-between mb-4">
+                    <label className="block text-sm font-medium text-zinc-400">
+                      Resultado
+                    </label>
+                    {generatedCopy && (
+                      <div className="flex items-center gap-2">
                         <button
-                          onClick={handleGenerateCopy}
-                          disabled={isGenerating || !copyTopic.trim()}
-                          className="w-full bg-[#c5a880] text-zinc-950 py-3.5 rounded-xl font-bold text-base hover:bg-[#b0936b] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                          onClick={() => setIsSavingNote(true)}
+                          className="text-zinc-400 hover:text-white transition-colors flex items-center gap-1.5 text-sm bg-zinc-800 px-3 py-1.5 rounded-lg"
                         >
-                          {isGenerating ? (
-                            <>
-                              <Loader2 size={20} className="animate-spin" />{" "}
-                              Gerando MÃ¡gica...
-                            </>
+                          <Save size={14} />
+                          Salvar Nota
+                        </button>
+                        <button
+                          onClick={copyToClipboard}
+                          className="text-zinc-400 hover:text-white transition-colors flex items-center gap-1.5 text-sm bg-zinc-800 px-3 py-1.5 rounded-lg"
+                        >
+                          {copied ? (
+                            <Check size={14} className="text-[#c5a880]" />
                           ) : (
-                            <>
-                              <Sparkles size={20} /> Gerar ConteÃºdo
-                            </>
+                            <Copy size={14} />
                           )}
+                          {copied ? "Copiado!" : "Copiar"}
                         </button>
                       </div>
-
-                      {/* Output Section */}
-                      <div className="bg-zinc-900 border border-white/5 rounded-2xl p-6 flex flex-col">
-                        <div className="flex items-center justify-between mb-4">
-                          <label className="block text-sm font-medium text-zinc-400">
-                            Resultado
-                          </label>
-                          {generatedCopy && (
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => setIsSavingNote(true)}
-                                className="text-zinc-400 hover:text-white transition-colors flex items-center gap-1.5 text-sm bg-zinc-800 px-3 py-1.5 rounded-lg"
-                              >
-                                <Save size={14} />
-                                Salvar Nota
-                              </button>
-                              <button
-                                onClick={copyToClipboard}
-                                className="text-zinc-400 hover:text-white transition-colors flex items-center gap-1.5 text-sm bg-zinc-800 px-3 py-1.5 rounded-lg"
-                              >
-                                {copied ? (
-                                  <Check size={14} className="text-amber-500" />
-                                ) : (
-                                  <Copy size={14} />
-                                )}
-                                {copied ? "Copiado!" : "Copiar"}
-                              </button>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="flex-1 bg-zinc-950 border border-white/10 rounded-xl p-5 overflow-auto">
-                          {generatedCopy ? (
-                            <div className="whitespace-pre-wrap text-zinc-300 text-sm leading-relaxed">
-                              {generatedCopy}
-                            </div>
-                          ) : (
-                            <div className="h-full flex flex-col items-center justify-center text-zinc-600 text-sm text-center px-8">
-                              <Sparkles size={32} className="mb-3 opacity-20" />
-                              <p>
-                                Preencha o briefing ao lado e clique em gerar
-                                para ver a inteligÃªncia artificial da Zion em
-                                aÃ§Ã£o.
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+                    )}
                   </div>
-                )}
-                {activeAiTab === "image" && (
-                  <DesignBuilder
-                    customApiKey={getActiveApiKey()}
-                    myProfile={myProfile}
-                  />
-                )}
+
+                  <div className="flex-1 bg-[#050505] border border-white/10 rounded-xl p-5 overflow-auto">
+                    {generatedCopy ? (
+                      <div className="whitespace-pre-wrap text-zinc-300 text-sm leading-relaxed">
+                        {generatedCopy}
+                      </div>
+                    ) : (
+                      <div className="h-full flex flex-col items-center justify-center text-zinc-600 text-sm text-center px-8">
+                        <Sparkles size={32} className="mb-3 opacity-20" />
+                        <p>
+                          Preencha o briefing ao lado e clique em gerar
+                          para ver a inteligência artificial da Zion em
+                          ação.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </motion.div>
+          )}
+
+          {activeTab === "ai-tools" && (
+            <DesignBuilder
+              customApiKey={getActiveApiKey()}
+              myProfile={myProfile}
+            />
           )}
 
           {/* View: Tasks */}
@@ -4207,75 +4203,75 @@ ${textContent}`
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="max-w-6xl mx-auto space-y-6"
+              className="max-w-6xl mx-auto space-y-4 lg:space-y-5 flex-1 flex flex-col h-full overflow-hidden w-full"
             >
               {/* Header */}
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
-                  <h1 className="text-xl sm:text-3xl font-bold mb-2 flex items-center gap-2 sm:gap-3">
+                  <h1 className="text-xl sm:text-3xl font-bold text-white mb-2 flex items-center gap-2 sm:gap-3">
                     <CheckSquare
-                      className="text-amber-500 animate-pulse"
+                      className="text-[#c5a880] animate-pulse"
                       size={28}
                     />{" "}
-                    Painel de ProduÃ§Ã£o
+                    Painel de Produção
                   </h1>
                   <p className="text-zinc-400 text-sm">
-                    Gerencie entregas, posts, campanhas e criativos da agÃªncia em tempo real.
+                    Gerencie entregas, posts, campanhas e criativos da agência em tempo real.
                   </p>
                 </div>
                 <button
                   onClick={() => openTaskModal()}
-                  className="bg-amber-500 text-zinc-950 px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-amber-400 transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/15 active:scale-95 self-start md:self-auto"
+                  className="bg-[#c5a880] text-zinc-950 px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-[#c5a880]/80 transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/15 active:scale-95 self-start md:self-auto"
                 >
                   <Plus size={16} /> Criar Nova Tarefa
                 </button>
               </div>
 
               {/* Filtering Controls Card */}
-              <div className="bg-zinc-900/40 border border-white/5 rounded-2xl p-4 sm:p-5 space-y-4">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="bg-[#0b0b0c] border border-white/5 rounded-xl p-4 sm:p-5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] space-y-3.5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   {/* Search bar */}
-                  <div className="relative flex-1 max-w-md">
-                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
+                  <div className="relative flex-1 max-w-md w-full">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={14} />
                     <input
                       type="text"
-                      placeholder="Buscar por tÃ­tulo ou descriÃ§Ã£o..."
+                      placeholder="Buscar por título ou descrição..."
                       value={taskSearch}
                       onChange={(e) => setTaskSearch(e.target.value)}
-                      className="w-full bg-zinc-950/60 border border-white/10 rounded-xl pl-10 pr-10 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500/50 transition-colors"
+                      className="w-full bg-[#050505] border border-white/10 rounded-xl pl-9 pr-9 py-1.5 sm:py-2 text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[#c5a880]/50 transition-colors"
                     />
                     {taskSearch && (
                       <button
                         onClick={() => setTaskSearch("")}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
                       >
-                        <X size={14} />
+                        <X size={12} />
                       </button>
                     )}
                   </div>
 
                   {/* View Switcher Controls */}
-                  <div className="flex items-center gap-2 self-start md:self-auto">
-                    <span className="text-xs text-zinc-400 mr-2 flex items-center gap-1">
-                      <Layers size={14} className="text-amber-500" /> Visualizar por:
+                  <div className="flex items-center gap-2 self-stretch sm:self-auto justify-between sm:justify-end">
+                    <span className="text-[11px] text-zinc-400 flex items-center gap-1 font-medium whitespace-nowrap">
+                      <Layers size={12} className="text-[#c5a880]" /> Ver por:
                     </span>
-                    <div className="bg-zinc-950/80 p-1 rounded-xl border border-white/5 flex">
+                    <div className="bg-[#050505] p-0.5 rounded-lg border border-white/5 flex shrink-0">
                       <button
                         onClick={() => setTaskViewMode("kanban")}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                        className={`px-2.5 py-1 rounded-md text-[10px] sm:text-xs font-bold transition-all ${
                           taskViewMode === "kanban"
-                            ? "bg-amber-500 text-zinc-950 shadow-md shadow-amber-500/10"
-                            : "text-zinc-400 hover:text-white"
+                            ? "bg-[#c5a880] text-zinc-950 shadow-md shadow-amber-500/10"
+                            : "text-zinc-500 hover:text-white"
                         }`}
                       >
                         Kanban (Status)
                       </button>
                       <button
                         onClick={() => setTaskViewMode("client")}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                        className={`px-2.5 py-1 rounded-md text-[10px] sm:text-xs font-bold transition-all ${
                           taskViewMode === "client"
-                            ? "bg-amber-500 text-zinc-950 shadow-md shadow-amber-500/10"
-                            : "text-zinc-400 hover:text-white"
+                            ? "bg-[#c5a880] text-zinc-950 shadow-md shadow-amber-500/10"
+                            : "text-zinc-500 hover:text-white"
                         }`}
                       >
                         Por Cliente
@@ -4285,18 +4281,18 @@ ${textContent}`
                 </div>
 
                 {/* Horizontal Client Filter Chips */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-1 text-xs text-zinc-400 font-bold px-1">
-                    <Filter size={12} className="text-amber-500" />
+                <div className="space-y-1.5 pt-1.5 border-t border-white/[0.03]">
+                  <div className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-zinc-500 font-bold px-0.5">
+                    <Filter size={10} className="text-[#c5a880]" />
                     Filtrar por Cliente:
                   </div>
-                  <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none max-w-full">
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 scrollbar-none max-w-full">
                     <button
                       onClick={() => setTaskClientFilter("all")}
-                      className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${
+                      className={`px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold whitespace-nowrap transition-all border ${
                         taskClientFilter === "all"
-                          ? "bg-amber-500/10 border-amber-500 text-amber-500 shadow-sm shadow-amber-500/5"
-                          : "bg-zinc-950/60 border-white/5 text-zinc-400 hover:text-white hover:border-white/10"
+                          ? "bg-[#c5a880]/10 border-[#c5a880] text-[#c5a880] shadow-sm shadow-amber-500/5"
+                          : "bg-[#050505] border-white/5 text-zinc-400 hover:text-white hover:border-white/10"
                       }`}
                     >
                       Todos ({tasks.length})
@@ -4304,10 +4300,10 @@ ${textContent}`
                     
                     <button
                       onClick={() => setTaskClientFilter("none")}
-                      className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${
+                      className={`px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold whitespace-nowrap transition-all border ${
                         taskClientFilter === "none"
-                          ? "bg-amber-500/10 border-amber-500 text-amber-500 shadow-sm shadow-amber-500/5"
-                          : "bg-zinc-950/60 border-white/5 text-zinc-400 hover:text-white hover:border-white/10"
+                          ? "bg-[#c5a880]/10 border-[#c5a880] text-[#c5a880] shadow-sm shadow-amber-500/5"
+                          : "bg-[#050505] border-white/5 text-zinc-400 hover:text-white hover:border-white/10"
                       }`}
                     >
                       Sem Cliente ({tasks.filter(t => !t.client || t.client.trim() === "").length})
@@ -4319,10 +4315,10 @@ ${textContent}`
                         <button
                           key={clientName}
                           onClick={() => setTaskClientFilter(clientName)}
-                          className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${
+                          className={`px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold whitespace-nowrap transition-all border ${
                             taskClientFilter === clientName
-                              ? "bg-amber-500/10 border-amber-500 text-amber-500 shadow-sm shadow-amber-500/5"
-                              : "bg-zinc-950/60 border-white/5 text-zinc-400 hover:text-white hover:border-white/10"
+                              ? "bg-[#c5a880]/10 border-[#c5a880] text-[#c5a880] shadow-sm shadow-amber-500/5"
+                              : "bg-[#050505] border-white/5 text-zinc-400 hover:text-white hover:border-white/10"
                           }`}
                         >
                           {clientName} ({totalForThisClient})
@@ -4335,19 +4331,19 @@ ${textContent}`
 
               {/* View 1: Kanban (Grouped by Status) */}
               {taskViewMode === "kanban" && (
-                <div className="grid md:grid-cols-3 gap-6">
+                <div className="grid md:grid-cols-3 gap-4 lg:gap-6 flex-1 min-h-0 pb-2">
                   {/* To Do Column */}
-                  <div className="bg-zinc-900/40 rounded-2xl p-4 border border-white/5 shadow-xl space-y-4">
-                    <div className="flex items-center justify-between px-1">
+                  <div className="bg-[#0b0b0c] rounded-xl p-4 lg:p-5 border border-white/5 shadow-xl flex flex-col min-h-0 h-[450px] md:h-auto md:max-h-[calc(100vh-270px)]">
+                    <div className="flex items-center justify-between px-1 pb-3 shrink-0">
                       <h3 className="font-semibold text-zinc-300 flex items-center gap-2 text-sm">
                         <span className="w-2.5 h-2.5 rounded-full bg-zinc-500"></span>{" "}
                         A Fazer
                       </h3>
-                      <span className="text-xs bg-zinc-950/80 text-zinc-400 px-2.5 py-0.5 rounded-full font-bold">
+                      <span className="text-xs bg-[#050505] text-zinc-400 px-2.5 py-0.5 rounded-full font-bold">
                         {filteredTasks.filter((t) => t.status === "todo").length}
                       </span>
                     </div>
-                    <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
+                    <div className="space-y-3 flex-1 overflow-y-auto scrollbar-none pr-0.5">
                       {filteredTasks.filter((t) => t.status === "todo").length === 0 ? (
                         <div className="py-12 border border-dashed border-white/5 rounded-xl text-center text-zinc-600 text-xs">
                           Nenhuma tarefa pendente
@@ -4368,20 +4364,20 @@ ${textContent}`
                   </div>
 
                   {/* Doing Column */}
-                  <div className="bg-zinc-900/40 rounded-2xl p-4 border border-white/5 shadow-xl space-y-4">
-                    <div className="flex items-center justify-between px-1">
+                  <div className="bg-[#0b0b0c] rounded-xl p-4 lg:p-5 border border-white/5 shadow-xl flex flex-col min-h-0 h-[450px] md:h-auto md:max-h-[calc(100vh-270px)]">
+                    <div className="flex items-center justify-between px-1 pb-3 shrink-0">
                       <h3 className="font-semibold text-zinc-300 flex items-center gap-2 text-sm">
                         <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse"></span>{" "}
-                        Em ProduÃ§Ã£o
+                        Em Produção
                       </h3>
-                      <span className="text-xs bg-zinc-950/80 text-zinc-400 px-2.5 py-0.5 rounded-full font-bold">
+                      <span className="text-xs bg-[#050505] text-zinc-400 px-2.5 py-0.5 rounded-full font-bold">
                         {filteredTasks.filter((t) => t.status === "doing").length}
                       </span>
                     </div>
-                    <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
+                    <div className="space-y-3 flex-1 overflow-y-auto scrollbar-none pr-0.5">
                       {filteredTasks.filter((t) => t.status === "doing").length === 0 ? (
                         <div className="py-12 border border-dashed border-white/5 rounded-xl text-center text-zinc-600 text-xs">
-                          Nenhuma tarefa em produÃ§Ã£o
+                          Nenhuma tarefa em produção
                         </div>
                       ) : (
                         filteredTasks
@@ -4399,20 +4395,20 @@ ${textContent}`
                   </div>
 
                   {/* Done Column */}
-                  <div className="bg-zinc-900/40 rounded-2xl p-4 border border-white/5 shadow-xl space-y-4">
-                    <div className="flex items-center justify-between px-1">
+                  <div className="bg-[#0b0b0c] rounded-xl p-4 lg:p-5 border border-white/5 shadow-xl flex flex-col min-h-0 h-[450px] md:h-auto md:max-h-[calc(100vh-270px)]">
+                    <div className="flex items-center justify-between px-1 pb-3 shrink-0">
                       <h3 className="font-semibold text-zinc-300 flex items-center gap-2 text-sm">
                         <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>{" "}
-                        ConcluÃ­do
+                        Concluído
                       </h3>
-                      <span className="text-xs bg-zinc-950/80 text-zinc-400 px-2.5 py-0.5 rounded-full font-bold">
+                      <span className="text-xs bg-[#050505] text-zinc-400 px-2.5 py-0.5 rounded-full font-bold">
                         {filteredTasks.filter((t) => t.status === "done").length}
                       </span>
                     </div>
-                    <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
+                    <div className="space-y-3 flex-1 overflow-y-auto scrollbar-none pr-0.5">
                       {filteredTasks.filter((t) => t.status === "done").length === 0 ? (
                         <div className="py-12 border border-dashed border-white/5 rounded-xl text-center text-zinc-600 text-xs">
-                          Nenhuma tarefa concluÃ­da
+                          Nenhuma tarefa concluída
                         </div>
                       ) : (
                         filteredTasks
@@ -4433,9 +4429,9 @@ ${textContent}`
 
               {/* View 2: Grouped by Client */}
               {taskViewMode === "client" && (
-                <div className="space-y-6">
+                <div className="space-y-6 flex-1 overflow-y-auto scrollbar-none pb-2 pr-0.5">
                   {Object.keys(tasksByClient).length === 0 ? (
-                    <div className="bg-zinc-900/30 border border-dashed border-white/5 rounded-2xl p-16 text-center text-zinc-500">
+                    <div className="bg-[#0b0b0c] border border-dashed border-white/5 rounded-xl p-16 text-center text-zinc-500">
                       Nenhuma tarefa encontrada para os filtros selecionados.
                     </div>
                   ) : (
@@ -4449,19 +4445,19 @@ ${textContent}`
                       return (
                         <div
                           key={clientName}
-                          className="bg-zinc-900/30 border border-white/5 rounded-2xl p-5 shadow-xl hover:border-white/10 transition-colors"
+                          className="bg-[#0b0b0c] border border-white/5 rounded-xl p-5 shadow-xl hover:border-white/10 transition-colors"
                         >
                           {/* Client Header Card */}
                           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-white/5 pb-4 mb-5">
                             <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 font-bold shrink-0">
+                              <div className="w-10 h-10 rounded-xl bg-[#c5a880]/10 border border-[#c5a880]/20 flex items-center justify-center text-[#c5a880] font-bold shrink-0">
                                 {clientName.substring(0, 2).toUpperCase()}
                               </div>
                               <div>
                                 <h3 className="font-bold text-white text-base sm:text-lg flex items-center gap-2">
                                   {clientName}
                                   {clientName === "Sem Cliente" && (
-                                    <span className="text-[10px] bg-zinc-950 text-zinc-500 border border-white/5 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                                    <span className="text-[10px] bg-[#050505] text-zinc-500 border border-white/5 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
                                       Geral
                                     </span>
                                   )}
@@ -4475,8 +4471,8 @@ ${textContent}`
                             <div className="flex items-center justify-between sm:justify-end gap-6">
                               {/* Progress bar */}
                               <div className="flex flex-col items-end gap-1 shrink-0">
-                                <span className="text-[10px] text-zinc-400 font-bold">{pct}% ConcluÃ­do</span>
-                                <div className="w-32 h-1.5 bg-zinc-950 rounded-full overflow-hidden">
+                                <span className="text-[10px] text-zinc-400 font-bold">{pct}% Concluído</span>
+                                <div className="w-32 h-1.5 bg-[#050505] rounded-full overflow-hidden">
                                   <div
                                     className="h-full bg-emerald-500 transition-all duration-500"
                                     style={{ width: `${pct}%` }}
@@ -4486,7 +4482,7 @@ ${textContent}`
 
                               {/* Breakdown */}
                               <div className="flex items-center gap-1 text-[9px] font-black tracking-wider uppercase shrink-0">
-                                <span className="bg-zinc-950 text-zinc-500 px-2 py-1 rounded-full border border-white/5">
+                                <span className="bg-[#050505] text-zinc-500 px-2 py-1 rounded-full border border-white/5">
                                   {clientTasks.filter((t) => t.status === "todo").length} TD
                                 </span>
                                 <span className="bg-blue-500/10 text-blue-400 px-2 py-1 rounded-full border border-blue-500/10">
@@ -4527,7 +4523,7 @@ ${textContent}`
                             {/* Doing Sub-column */}
                             <div className="space-y-2.5">
                               <h4 className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1 px-1 flex items-center gap-1.5">
-                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" /> Em ProduÃ§Ã£o ({clientTasks.filter((t) => t.status === "doing").length})
+                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" /> Em Produção ({clientTasks.filter((t) => t.status === "doing").length})
                               </h4>
                               {clientTasks.filter((t) => t.status === "doing").length === 0 ? (
                                 <div className="py-4 border border-dashed border-white/5 rounded-xl text-center text-zinc-700 text-[10px]">
@@ -4550,7 +4546,7 @@ ${textContent}`
                             {/* Done Sub-column */}
                             <div className="space-y-2.5">
                               <h4 className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1 px-1 flex items-center gap-1.5">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> ConcluÃ­do ({clientTasks.filter((t) => t.status === "done").length})
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Concluído ({clientTasks.filter((t) => t.status === "done").length})
                               </h4>
                               {clientTasks.filter((t) => t.status === "done").length === 0 ? (
                                 <div className="py-4 border border-dashed border-white/5 rounded-xl text-center text-zinc-700 text-[10px]">
@@ -4579,7 +4575,7 @@ ${textContent}`
             </motion.div>
           )}
 
-          {/* View: Dashboard & FinanÃ§as */}
+          {/* View: Dashboard & Finanças */}
           {activeTab === "dashboard" && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
@@ -4589,44 +4585,44 @@ ${textContent}`
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-white/5">
                 <div>
                   <h1 className="text-xl sm:text-3xl font-bold text-white flex items-center gap-2 sm:gap-3">
-                    <LayoutDashboard className="text-amber-500" size={28} />{" "}
-                    Dashboard & FinanÃ§as
+                    <LayoutDashboard className="text-[#c5a880]" size={28} />{" "}
+                    Dashboard & Finanças
                   </h1>
                   <p className="text-zinc-400 text-sm mt-1">
-                    VisÃ£o holÃ­stica da receita recorrente, fluxo de caixa e
-                    faturamento da agÃªncia.
+                    Visão holística da receita recorrente, fluxo de caixa e
+                    faturamento da agência.
                   </p>
                 </div>
                 <div className="flex gap-3">
                   <button
                     onClick={() => openTransactionModal()}
-                    className="bg-amber-500 text-zinc-950 px-4 py-2 rounded-lg font-bold text-sm hover:bg-amber-400 transition-colors flex items-center gap-2"
+                    className="bg-[#c5a880] text-zinc-950 px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#c5a880]/80 transition-colors flex items-center gap-2"
                   >
-                    <Plus size={16} /> Nova TransaÃ§Ã£o
+                    <Plus size={16} /> Nova Transação
                   </button>
                 </div>
               </div>
 
               {/* Welcome state when empty */}
               {clients.length === 0 && transactions.length === 0 && (
-                <div className="bg-gradient-to-br from-amber-500/10 via-zinc-900 to-zinc-900 border border-amber-500/10 rounded-2xl p-6 sm:p-8 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
+                <div className="bg-gradient-to-br from-amber-500/10 via-zinc-900 to-zinc-900 border border-[#c5a880]/10 rounded-xl p-6 sm:p-8 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-[#c5a880]/5 rounded-full blur-3xl pointer-events-none" />
                   <div className="max-w-2xl relative z-10">
-                    <span className="bg-amber-500/20 text-amber-400 text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider inline-block mb-4">
+                    <span className="bg-[#c5a880]/20 text-[#c5a880] text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider inline-block mb-4">
                       Boas-vindas ao Zion!
                     </span>
                     <h2 className="text-xl sm:text-2xl font-bold text-white mb-3">
-                      Sua agÃªncia estÃ¡ limpa e pronta para decolar
+                      Sua agência está limpa e pronta para decolar
                     </h2>
                     <p className="text-zinc-400 text-sm leading-relaxed mb-6">
-                      VocÃª estÃ¡ iniciando com um sistema 100% limpo e zerado.
-                      Crie seu primeiro cliente manualmente para comeÃ§ar a
-                      gerenciar sua agÃªncia.
+                      Você está iniciando com um sistema 100% limpo e zerado.
+                      Crie seu primeiro cliente manualmente para começar a
+                      gerenciar sua agência.
                     </p>
                     <div className="flex flex-wrap gap-3">
                       <button
                         onClick={() => setActiveTab("clients")}
-                        className="bg-amber-500 hover:bg-amber-400 text-zinc-950 px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-2"
+                        className="bg-[#c5a880] hover:bg-[#c5a880]/80 text-zinc-950 px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-2"
                       >
                         <Users size={16} /> Cadastrar Novo Cliente
                       </button>
@@ -4639,20 +4635,20 @@ ${textContent}`
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex items-start gap-4 shadow-lg shadow-amber-500/5"
+                  className="bg-[#c5a880]/10 border border-[#c5a880]/30 rounded-xl p-8 flex items-start gap-4 shadow-lg shadow-amber-500/5"
                 >
-                  <div className="bg-amber-500/20 p-2 rounded-lg text-amber-500 shrink-0 mt-0.5">
+                  <div className="bg-[#c5a880]/20 p-2 rounded-lg text-[#c5a880] shrink-0 mt-0.5">
                     <Bell size={20} />
                   </div>
                   <div>
                     <h3 className="text-white font-bold text-sm sm:text-base flex items-center gap-2">
-                      Faturas prÃ³ximas do vencimento
-                      <span className="bg-amber-500 text-zinc-950 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider">
+                      Faturas próximas do vencimento
+                      <span className="bg-[#c5a880] text-zinc-950 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider">
                         {pendingInvoicesExpiringSoon.length} Cliente(s)
                       </span>
                     </h3>
                     <p className="text-zinc-400 text-xs sm:text-sm mt-1">
-                      VocÃª possui faturas pendentes que vencerÃ£o nos prÃ³ximos 3 dias:{" "}
+                      Você possui faturas pendentes que vencerão nos próximos 3 dias:{" "}
                       <span className="text-zinc-300 font-medium">
                         {pendingInvoicesExpiringSoon.map(c => c.name).join(", ")}.
                       </span>
@@ -4664,15 +4660,15 @@ ${textContent}`
               {/* KPI Cards Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 md:gap-6 w-full place-content-center">
                 {/* Card 1: MRR */}
-                <div className="bg-zinc-900 border border-white/5 rounded-2xl p-4 sm:p-5 hover:border-white/10 transition-colors relative overflow-hidden group min-w-0">
-                  <div className="absolute top-0 left-0 w-1.5 h-full bg-amber-500" />
+                <div className="bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-8 sm:p-5 hover:border-white/10 transition-colors relative overflow-hidden group min-w-0">
+                  <div className="absolute top-0 left-0 w-1.5 h-full bg-[#c5a880]" />
                   <div className="flex justify-between items-start text-zinc-400 mb-2 sm:mb-3">
-                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider break-words leading-tight pr-2">
-                      RecorrÃªncia (MRR)
+                    <span className="text-sm font-bold text-white block break-words leading-tight mb-1 pr-2">
+                      Recorrência (MRR)
                     </span>
-                    <Wallet size={18} className="text-amber-500 shrink-0" />
+                    <Wallet size={18} className="text-[#c5a880] shrink-0" />
                   </div>
-                  <h3 className="text-xl sm:text-2xl font-black text-white truncate">
+                  <h3 className="text-xl sm:text-2xl font-medium text-zinc-400 truncate">
                     R$ {mrr.toLocaleString("pt-BR")}
                   </h3>
                   <div className="flex items-start sm:items-center gap-1.5 text-[10px] sm:text-xs text-emerald-400 mt-2">
@@ -4686,18 +4682,18 @@ ${textContent}`
                 </div>
 
                 {/* Card 2: Recebimentos */}
-                <div className="bg-zinc-900 border border-white/5 rounded-2xl p-4 sm:p-5 hover:border-white/10 transition-colors relative overflow-hidden min-w-0">
+                <div className="bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-8 sm:p-5 hover:border-white/10 transition-colors relative overflow-hidden min-w-0">
                   <div className="absolute top-0 left-0 w-1.5 h-full bg-emerald-500" />
                   <div className="flex justify-between items-start text-zinc-400 mb-2 sm:mb-3">
-                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider break-words leading-tight pr-2">
-                      Receitas do MÃªs
+                    <span className="text-sm font-bold text-white block break-words leading-tight mb-1 pr-2">
+                      Receitas do Mês
                     </span>
                     <TrendingUp
                       size={18}
                       className="text-emerald-500 shrink-0"
                     />
                   </div>
-                  <h3 className="text-xl sm:text-2xl font-black text-white truncate">
+                  <h3 className="text-xl sm:text-2xl font-medium text-zinc-400 truncate">
                     R$ {totalReceitas.toLocaleString("pt-BR")}
                   </h3>
                   <div className="flex items-start sm:items-center gap-1.5 text-[10px] sm:text-xs text-emerald-400 mt-2">
@@ -4712,10 +4708,10 @@ ${textContent}`
                 </div>
 
                 {/* Card 3: A Receber */}
-                <div className="bg-zinc-900 border border-white/5 rounded-2xl p-4 sm:p-5 hover:border-white/10 transition-colors relative overflow-hidden min-w-0">
+                <div className="bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-8 sm:p-5 hover:border-white/10 transition-colors relative overflow-hidden min-w-0">
                   <div className="absolute top-0 left-0 w-1.5 h-full bg-violet-500" />
                   <div className="flex justify-between items-start text-zinc-400 mb-2 sm:mb-3">
-                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider break-words leading-tight pr-2">
+                    <span className="text-sm font-bold text-white block break-words leading-tight mb-1 pr-2">
                       A Receber
                     </span>
                     <Clock
@@ -4723,7 +4719,7 @@ ${textContent}`
                       className="text-violet-500 shrink-0"
                     />
                   </div>
-                  <h3 className="text-xl sm:text-2xl font-black text-white truncate">
+                  <h3 className="text-xl sm:text-2xl font-medium text-zinc-400 truncate">
                     R$ {totalAReceber.toLocaleString("pt-BR")}
                   </h3>
                   <div className="flex items-start sm:items-center gap-1.5 text-[10px] sm:text-xs text-violet-400 mt-2">
@@ -4732,21 +4728,21 @@ ${textContent}`
                       className="shrink-0 mt-0.5 sm:mt-0"
                     />
                     <span className="break-words leading-tight">
-                      Faturas e serviÃ§os pendentes
+                      Faturas e serviços pendentes
                     </span>
                   </div>
                 </div>
 
                 {/* Card 3: Despesas */}
-                <div className="bg-zinc-900 border border-white/5 rounded-2xl p-4 sm:p-5 hover:border-white/10 transition-colors relative overflow-hidden min-w-0">
+                <div className="bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-8 sm:p-5 hover:border-white/10 transition-colors relative overflow-hidden min-w-0">
                   <div className="absolute top-0 left-0 w-1.5 h-full bg-red-500" />
                   <div className="flex justify-between items-start text-zinc-400 mb-2 sm:mb-3">
-                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider break-words leading-tight pr-2">
+                    <span className="text-sm font-bold text-white block break-words leading-tight mb-1 pr-2">
                       Despesas / Custos
                     </span>
                     <TrendingDown size={18} className="text-red-500 shrink-0" />
                   </div>
-                  <h3 className="text-xl sm:text-2xl font-black text-white truncate">
+                  <h3 className="text-xl sm:text-2xl font-medium text-zinc-400 truncate">
                     R$ {totalDespesas.toLocaleString("pt-BR")}
                   </h3>
                   <div className="flex items-start sm:items-center gap-1.5 text-[10px] sm:text-xs text-red-400 mt-2">
@@ -4761,16 +4757,16 @@ ${textContent}`
                 </div>
 
                 {/* Card 4: Saldo */}
-                <div className="bg-zinc-900 border border-white/5 rounded-2xl p-4 sm:p-5 hover:border-white/10 transition-colors relative overflow-hidden min-w-0">
+                <div className="bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-8 sm:p-5 hover:border-white/10 transition-colors relative overflow-hidden min-w-0">
                   <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-500" />
                   <div className="flex justify-between items-start text-zinc-400 mb-2 sm:mb-3">
-                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider break-words leading-tight pr-2">
-                      Lucro LÃ­quido
+                    <span className="text-sm font-bold text-white block break-words leading-tight mb-1 pr-2">
+                      Lucro Líquido
                     </span>
                     <Clock size={18} className="text-blue-400 shrink-0" />
                   </div>
                   <h3
-                    className={`text-xl sm:text-2xl font-black truncate ${liquidIncome >= 0 ? "text-white" : "text-red-400"}`}
+                    className={`text-xl sm:text-2xl font-medium truncate ${liquidIncome >= 0 ? "text-zinc-400" : "text-red-400"}`}
                   >
                     R$ {liquidIncome.toLocaleString("pt-BR")}
                   </h3>
@@ -4778,10 +4774,10 @@ ${textContent}`
                     <span
                       className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${liquidIncome >= 0 ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"}`}
                     >
-                      {liquidIncome >= 0 ? "RentÃ¡vel" : "DÃ©ficit"}
+                      {liquidIncome >= 0 ? "Rentável" : "Déficit"}
                     </span>
                     <span className="break-words leading-tight">
-                      Margem lÃ­quida saudÃ¡vel
+                      Margem líquida saudável
                     </span>
                   </div>
                 </div>
@@ -4790,20 +4786,20 @@ ${textContent}`
               {/* Chart Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* SVG Line Chart */}
-                <div className="bg-zinc-900 border border-white/5 rounded-2xl p-6 lg:col-span-2">
+                <div className="bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-8 lg:col-span-2">
                   <div className="flex items-center justify-between mb-6">
                     <div>
                       <h3 className="text-sm font-bold uppercase tracking-wider text-white">
-                        Fluxo de Caixa (Ãšltimos 6 Meses)
+                        Fluxo de Caixa (Últimos 6 Meses)
                       </h3>
                       <p className="text-xs text-zinc-500 mt-1">
-                        Comparativo histÃ³rico de faturamento bruto vs custos
+                        Comparativo histórico de faturamento bruto vs custos
                         operacionais.
                       </p>
                     </div>
                     <div className="flex gap-4 text-xs">
                       <div className="flex items-center gap-1.5">
-                        <span className="w-3 h-3 bg-amber-500 rounded-full inline-block" />
+                        <span className="w-3 h-3 bg-[#c5a880] rounded-full inline-block" />
                         <span className="text-zinc-400">Receitas</span>
                       </div>
                       <div className="flex items-center gap-1.5">
@@ -4814,7 +4810,7 @@ ${textContent}`
                   </div>
 
                   {/* Responsive Vector Chart */}
-                  <div className="w-full h-64 sm:h-80 bg-zinc-950/40 rounded-xl border border-white/5 p-4 relative flex items-center justify-center">
+                  <div className="w-full h-64 sm:h-80 bg-[#050505] rounded-xl border border-white/5 p-4 relative flex items-center justify-center">
                     <svg
                       className="w-full h-full overflow-visible"
                       viewBox="0 0 500 240"
@@ -5052,16 +5048,16 @@ ${textContent}`
                     </svg>
 
                     {/* Tooltip dynamic overlay */}
-                    <div className="absolute top-2 right-2 bg-zinc-900/90 border border-white/10 rounded-xl p-3 text-xs text-zinc-300 backdrop-blur-md shadow-xl transition-all w-52">
+                    <div className="absolute top-2 right-2 bg-[#0b0b0c] border border-white/10 rounded-xl p-3 text-xs text-zinc-300 backdrop-blur-md shadow-xl transition-all w-52">
                       {hoveredPointIndex !== null ? (
                         <div>
                           <p className="font-bold text-white text-xs tracking-wider uppercase">
-                            MÃªs: {chartPoints[hoveredPointIndex].name} 2026
+                            Mês: {chartPoints[hoveredPointIndex].name} 2026
                           </p>
                           <div className="mt-1.5 space-y-1">
                             <div className="flex justify-between items-center">
                               <span className="flex items-center gap-1.5 text-zinc-400">
-                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                                <span className="w-1.5 h-1.5 rounded-full bg-[#c5a880]" />
                                 Receitas
                               </span>
                               <span className="font-bold font-mono text-white">
@@ -5102,12 +5098,12 @@ ${textContent}`
                           <p className="font-bold text-white flex items-center gap-1.5">
                             <Sparkles
                               size={12}
-                              className="text-amber-400 animate-pulse"
+                              className="text-[#c5a880] animate-pulse"
                             />
-                            RelatÃ³rio DinÃ¢mico
+                            Relatório Dinâmico
                           </p>
                           <p className="text-[10px] text-zinc-500 mt-0.5 leading-tight">
-                            Passe o mouse no grÃ¡fico para ver detalhes mensais
+                            Passe o mouse no gráfico para ver detalhes mensais
                           </p>
                           <div className="mt-2 space-y-1 text-[11px] border-t border-white/5 pt-1.5">
                             <div className="flex justify-between">
@@ -5132,25 +5128,25 @@ ${textContent}`
                 </div>
 
                 {/* Distribution of Despesas */}
-                <div className="bg-zinc-900 border border-white/5 rounded-2xl p-6">
+                <div className="bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-8">
                   <h3 className="text-sm font-bold uppercase tracking-wider text-white mb-4">
-                    DivisÃ£o de Custos
+                    Divisão de Custos
                   </h3>
                   <div className="space-y-4">
                     {[
                       {
                         name: "Ferramentas de IA & SaaS",
                         key: "Ferramentas",
-                        color: "bg-amber-500",
+                        color: "bg-[#c5a880]",
                       },
                       {
-                        name: "Freelancers & ProduÃ§Ã£o",
+                        name: "Freelancers & Produção",
                         key: "Freelancers",
                         color: "bg-purple-500",
                       },
                       {
-                        name: "TrÃ¡fego Pago (Meta/Google)",
-                        key: "TrÃ¡fego Ads",
+                        name: "Tráfego Pago (Meta/Google)",
+                        key: "Tráfego Ads",
                         color: "bg-emerald-500",
                       },
                       {
@@ -5176,7 +5172,7 @@ ${textContent}`
                               R$ {value} ({pct}%)
                             </span>
                           </div>
-                          <div className="w-full h-1.5 bg-zinc-950 rounded-full overflow-hidden">
+                          <div className="w-full h-1.5 bg-[#050505] rounded-full overflow-hidden">
                             <div
                               className={`h-full ${cat.color}`}
                               style={{ width: `${pct}%` }}
@@ -5189,7 +5185,7 @@ ${textContent}`
 
                   <div className="mt-6 pt-4 border-t border-white/5 text-center">
                     <span className="text-xs text-zinc-500">
-                      MÃ©dia de custos operacionais estÃ¡ em 22.4% do faturamento.
+                      Média de custos operacionais está em 22.4% do faturamento.
                     </span>
                   </div>
                 </div>
@@ -5198,16 +5194,16 @@ ${textContent}`
               {/* Transactions & Billing lists */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Ledger / Transactions List */}
-                <div className="bg-zinc-900 border border-white/5 rounded-2xl p-6">
+                <div className="bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-8">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-sm font-bold uppercase tracking-wider text-white">
-                      TransaÃ§Ãµes Recentes
+                      Transações Recentes
                     </h3>
                     <button
                       onClick={() => openTransactionModal()}
-                      className="text-amber-500 hover:text-amber-400 text-xs font-bold"
+                      className="text-[#c5a880] hover:text-[#c5a880] text-xs font-bold"
                     >
-                      + LanÃ§ar manual
+                      + Lançar manual
                     </button>
                   </div>
 
@@ -5215,7 +5211,7 @@ ${textContent}`
                     {transactions.map((t) => (
                       <div
                         key={t.id}
-                        className="p-3 bg-zinc-950/40 border border-white/5 hover:border-white/10 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 transition-colors"
+                        className="p-3 bg-[#050505] border border-white/5 hover:border-white/10 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 transition-colors"
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           <div
@@ -5269,9 +5265,9 @@ ${textContent}`
                 </div>
 
                 {/* Client Billing Health Board */}
-                <div className="bg-zinc-900 border border-white/5 rounded-2xl p-6">
+                <div className="bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-8">
                   <h3 className="text-sm font-bold uppercase tracking-wider text-white mb-4">
-                    Vencimentos e CobranÃ§a de Clientes
+                    Vencimentos e Cobrança de Clientes
                   </h3>
 
                   <div className="space-y-3">
@@ -5280,7 +5276,7 @@ ${textContent}`
                       .map((c) => (
                         <div
                           key={c.id}
-                          className="p-3 bg-zinc-950/40 border border-white/5 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                          className="p-3 bg-[#050505] border border-white/5 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                         >
                           <div className="min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
@@ -5292,7 +5288,7 @@ ${textContent}`
                                   c.paymentStatus === "Em dia"
                                     ? "bg-emerald-500/10 text-emerald-400"
                                     : c.paymentStatus === "Pendente"
-                                      ? "bg-amber-500/10 text-amber-400"
+                                      ? "bg-[#c5a880]/10 text-[#c5a880]"
                                       : "bg-red-500/10 text-red-400"
                                 }`}
                               >
@@ -5363,7 +5359,7 @@ ${textContent}`
             </motion.div>
           )}
 
-          {/* View: CalendÃ¡rio & Agenda */}
+          {/* View: Calendário & Agenda */}
           {activeTab === "calendar" &&
             (() => {
               const daysInMonth = getDaysInMonth(currentYear, currentMonth);
@@ -5374,7 +5370,7 @@ ${textContent}`
               const monthNames = [
                 "Janeiro",
                 "Fevereiro",
-                "MarÃ§o",
+                "Março",
                 "Abril",
                 "Maio",
                 "Junho",
@@ -5408,11 +5404,11 @@ ${textContent}`
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-4 border-b border-white/5">
                     <div>
                       <h1 className="text-xl sm:text-3xl font-bold text-white flex items-center gap-2 sm:gap-3">
-                        <Calendar className="text-amber-500" size={28} />{" "}
-                        CalendÃ¡rio & Agenda
+                        <Calendar className="text-[#c5a880]" size={28} />{" "}
+                        Calendário & Agenda
                       </h1>
                       <p className="text-zinc-400 text-sm mt-1">
-                        Planeje postagens de clientes, reuniÃµes corporativas e
+                        Planeje postagens de clientes, reuniões corporativas e
                         entregas operacionais.
                       </p>
                     </div>
@@ -5432,10 +5428,10 @@ ${textContent}`
                             {isGcalSyncing ? (
                               <Loader2
                                 size={14}
-                                className="animate-spin text-amber-500"
+                                className="animate-spin text-[#c5a880]"
                               />
                             ) : (
-                              <RefreshCw size={14} className="text-amber-500" />
+                              <RefreshCw size={14} className="text-[#c5a880]" />
                             )}
                             Sincronizar
                           </button>
@@ -5460,7 +5456,7 @@ ${textContent}`
                             `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-25`,
                           )
                         }
-                        className="bg-amber-500 text-zinc-950 px-4 py-2 rounded-lg font-bold text-sm hover:bg-amber-400 transition-colors flex items-center gap-2"
+                        className="bg-[#c5a880] text-zinc-950 px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#c5a880]/80 transition-colors flex items-center gap-2"
                       >
                         <Plus size={16} /> Agendar Compromisso
                       </button>
@@ -5469,7 +5465,7 @@ ${textContent}`
 
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Calendar Matrix layout */}
-                    <div className="bg-zinc-900 border border-white/5 rounded-2xl p-6 lg:col-span-2">
+                    <div className="bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-8 lg:col-span-2">
                       <div className="flex items-center justify-between mb-6">
                         <h2 className="text-lg font-bold text-white flex items-center gap-2 font-mono">
                           {monthNames[currentMonth]} {currentYear}
@@ -5484,7 +5480,7 @@ ${textContent}`
                                 setCurrentMonth(currentMonth - 1);
                               }
                             }}
-                            className="p-1.5 bg-zinc-950 border border-white/5 text-zinc-400 hover:text-white rounded-lg hover:border-white/10"
+                            className="p-1.5 bg-[#050505] border border-white/5 text-zinc-400 hover:text-white rounded-lg hover:border-white/10"
                           >
                             <ChevronLeft size={16} />
                           </button>
@@ -5494,7 +5490,7 @@ ${textContent}`
                               setCurrentMonth(5);
                               setCurrentYear(2026);
                             }}
-                            className="px-2 py-1 text-xs bg-zinc-950 border border-white/5 text-zinc-400 hover:text-white rounded-lg"
+                            className="px-2 py-1 text-xs bg-[#050505] border border-white/5 text-zinc-400 hover:text-white rounded-lg"
                           >
                             Hoje
                           </button>
@@ -5507,7 +5503,7 @@ ${textContent}`
                                 setCurrentMonth(currentMonth + 1);
                               }
                             }}
-                            className="p-1.5 bg-zinc-950 border border-white/5 text-zinc-400 hover:text-white rounded-lg hover:border-white/10"
+                            className="p-1.5 bg-[#050505] border border-white/5 text-zinc-400 hover:text-white rounded-lg hover:border-white/10"
                           >
                             <ChevronRight size={16} />
                           </button>
@@ -5516,7 +5512,7 @@ ${textContent}`
 
                       {/* Day-of-week header labels */}
                       <div className="grid grid-cols-7 gap-1.5 mb-2 text-center">
-                        {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "SÃ¡b"].map(
+                        {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map(
                           (day) => (
                             <span
                               key={day}
@@ -5535,7 +5531,7 @@ ${textContent}`
                             return (
                               <div
                                 key={`empty-${idx}`}
-                                className="aspect-square bg-zinc-950/20 rounded-xl"
+                                className="aspect-square bg-[#050505] rounded-xl"
                               />
                             );
                           }
@@ -5553,14 +5549,14 @@ ${textContent}`
                               onClick={() =>
                                 openEventModal(undefined, dayString)
                               }
-                              className={`aspect-square p-2 bg-zinc-950/40 border rounded-xl flex flex-col justify-between hover:bg-zinc-800/40 cursor-pointer transition-colors relative group ${
+                              className={`aspect-square p-2 bg-[#050505] border rounded-xl flex flex-col justify-between hover:bg-zinc-800/40 cursor-pointer transition-colors relative group ${
                                 isToday
-                                  ? "border-amber-500 bg-amber-500/5"
+                                  ? "border-[#c5a880] bg-[#c5a880]/5"
                                   : "border-white/5"
                               }`}
                             >
                               <span
-                                className={`text-xs font-bold font-mono ${isToday ? "text-amber-500" : "text-zinc-400"}`}
+                                className={`text-xs font-bold font-mono ${isToday ? "text-[#c5a880]" : "text-zinc-400"}`}
                               >
                                 {day}
                               </span>
@@ -5575,7 +5571,7 @@ ${textContent}`
                                     }}
                                     className={`px-1 py-0.5 rounded text-[8px] font-bold truncate ${
                                       e.type === "post"
-                                        ? "bg-amber-500/15 text-amber-400"
+                                        ? "bg-[#c5a880]/15 text-[#c5a880]"
                                         : e.type === "reuniao"
                                           ? "bg-blue-500/15 text-blue-400"
                                           : "bg-purple-500/15 text-purple-400"
@@ -5588,7 +5584,7 @@ ${textContent}`
                               </div>
 
                               {/* Quick add Indicator show on hover */}
-                              <span className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 text-[9px] text-amber-500 font-bold transition-opacity">
+                              <span className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 text-[9px] text-[#c5a880] font-bold transition-opacity">
                                 +
                               </span>
                             </div>
@@ -5598,11 +5594,11 @@ ${textContent}`
                     </div>
 
                     {/* Sidebar events logger */}
-                    <div className="bg-zinc-900 border border-white/5 rounded-2xl p-6 flex flex-col justify-between h-full min-h-[400px]">
+                    <div className="bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-8 flex flex-col justify-between h-full min-h-[400px]">
                       <div>
                         <div className="flex items-center justify-between mb-4 pb-2 border-b border-white/5">
                           <h3 className="text-sm font-bold uppercase tracking-wider text-white">
-                            PrÃ³ximos Eventos
+                            Próximos Eventos
                           </h3>
                           <span className="text-xs text-zinc-500 font-mono font-bold">
                             Zion Core
@@ -5612,20 +5608,20 @@ ${textContent}`
                         <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1">
                           {calendarEvents.length === 0 ? (
                             <div className="text-center py-10 text-zinc-500 text-xs">
-                              Nenhum compromisso agendado para este mÃªs.
+                              Nenhum compromisso agendado para este mês.
                             </div>
                           ) : (
                             calendarEvents.map((e) => (
                               <div
                                 key={e.id}
                                 onClick={() => openEventModal(e)}
-                                className="p-3 bg-zinc-950/40 border border-white/5 rounded-xl hover:border-white/10 transition-colors cursor-pointer group"
+                                className="p-3 bg-[#050505] border border-white/5 rounded-xl hover:border-white/10 transition-colors cursor-pointer group"
                               >
                                 <div className="flex justify-between items-start">
                                   <span
                                     className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
                                       e.type === "post"
-                                        ? "bg-amber-500/10 text-amber-400"
+                                        ? "bg-[#c5a880]/10 text-[#c5a880]"
                                         : e.type === "reuniao"
                                           ? "bg-blue-500/10 text-blue-400"
                                           : "bg-purple-500/10 text-purple-400"
@@ -5634,21 +5630,21 @@ ${textContent}`
                                     {e.type === "post"
                                       ? "Postagem ðŸ“"
                                       : e.type === "reuniao"
-                                        ? "ReuniÃ£o ðŸ¤"
+                                        ? "Reunião ðŸ¤"
                                         : "Entrega ðŸ“¦"}
                                   </span>
                                   <span className="text-[10px] text-zinc-500 font-mono font-medium">
-                                    {e.date} Ã s {e.time}
+                                    {e.date} às {e.time}
                                   </span>
                                 </div>
-                                <h4 className="text-sm font-bold text-zinc-100 mt-2 group-hover:text-amber-500 transition-colors">
+                                <h4 className="text-sm font-bold text-zinc-100 mt-2 group-hover:text-[#c5a880] transition-colors">
                                   {e.title}
                                 </h4>
                                 <p className="text-xs text-zinc-500 mt-1 font-semibold">
                                   {e.clientName}
                                 </p>
                                 {e.description && (
-                                  <p className="text-xs text-zinc-400 mt-1.5 line-clamp-2 leading-relaxed bg-zinc-950/20 p-1.5 rounded">
+                                  <p className="text-xs text-zinc-400 mt-1.5 line-clamp-2 leading-relaxed bg-[#050505] p-1.5 rounded">
                                     {e.description}
                                   </p>
                                 )}
@@ -5661,12 +5657,12 @@ ${textContent}`
                       <div className="mt-6 pt-4 border-t border-white/5">
                         <div className="flex gap-2 text-[10px] text-zinc-400 justify-center">
                           <span className="flex items-center gap-1">
-                            <span className="w-2 h-2 rounded bg-amber-500" />{" "}
+                            <span className="w-2 h-2 rounded bg-[#c5a880]" />{" "}
                             Postagem
                           </span>
                           <span className="flex items-center gap-1">
                             <span className="w-2 h-2 rounded bg-blue-500" />{" "}
-                            ReuniÃ£o
+                            Reunião
                           </span>
                           <span className="flex items-center gap-1">
                             <span className="w-2 h-2 rounded bg-purple-500" />{" "}
@@ -5691,19 +5687,19 @@ ${textContent}`
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-zinc-900 border border-white/10 rounded-2xl p-4 sm:p-6 w-full max-w-2xl shadow-2xl max-h-[92vh] overflow-y-auto flex flex-col"
+              className="bg-[#0b0b0c] border border-white/10 rounded-xl p-8 sm:p-6 w-full max-w-2xl shadow-2xl max-h-[92vh] overflow-y-auto flex flex-col"
             >
               <div className="flex items-center justify-between mb-6 pb-3 border-b border-white/5">
                 <div>
                   <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                    <Users size={22} className="text-amber-500" />
+                    <Users size={22} className="text-[#c5a880]" />
                     {editingClient
                       ? "Editar Cadastro do Cliente"
                       : "Cadastrar Novo Cliente"}
                   </h2>
                   <p className="text-xs text-zinc-500 mt-0.5">
-                    Preencha as informaÃ§Ãµes essenciais para faturamento e
-                    gestÃ£o.
+                    Preencha as informações essenciais para faturamento e
+                    gestão.
                   </p>
                 </div>
                 <button
@@ -5715,9 +5711,9 @@ ${textContent}`
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
-                {/* Coluna 1: InformaÃ§Ãµes Cadastrais */}
+                {/* Coluna 1: Informações Cadastrais */}
                 <div className="space-y-4">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-amber-500 font-mono">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#c5a880] font-mono">
                     1. Dados do Cliente
                   </h3>
 
@@ -5742,7 +5738,7 @@ ${textContent}`
                       onChange={(e) =>
                         setClientForm({ ...clientForm, name: e.target.value })
                       }
-                      className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20"
+                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 focus:ring-1 focus:ring-amber-500/20"
                       placeholder="Ex: Dr. Silva (Odonto)"
                     />
                   </div>
@@ -5750,7 +5746,7 @@ ${textContent}`
                   <div>
                     <div className="flex justify-between items-center mb-1.5">
                       <label className="block text-xs font-semibold text-zinc-400 uppercase">
-                        Nicho / Ãrea de AtuaÃ§Ã£o
+                        Nicho / Área de Atuação
                       </label>
                       <VoiceInputButton
                         onTranscript={(val) =>
@@ -5770,7 +5766,7 @@ ${textContent}`
                       onChange={(e) =>
                         setClientForm({ ...clientForm, niche: e.target.value })
                       }
-                      className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20"
+                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 focus:ring-1 focus:ring-amber-500/20"
                       placeholder="Ex: Odontologia"
                     />
                   </div>
@@ -5788,7 +5784,7 @@ ${textContent}`
                           contact: e.target.value,
                         })
                       }
-                      className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20 font-mono"
+                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 focus:ring-1 focus:ring-amber-500/20 font-mono"
                       placeholder="Ex: (11) 99999-9999"
                     />
                   </div>
@@ -5798,13 +5794,13 @@ ${textContent}`
                     <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase">
                       Foto de Perfil do Cliente
                     </label>
-                    <div className="bg-zinc-950/50 border border-white/5 rounded-xl p-3 space-y-3">
+                    <div className="bg-[#050505] border border-white/5 rounded-xl p-3 space-y-3">
                       <div className="flex items-center gap-3">
                         {clientForm.avatarUrl ? (
                           <img
                             src={clientForm.avatarUrl}
-                            alt="VisualizaÃ§Ã£o"
-                            className="w-12 h-12 rounded-full object-cover border border-amber-500/50"
+                            alt="Visualização"
+                            className="w-12 h-12 rounded-full object-cover border border-[#c5a880]/50"
                             referrerPolicy="no-referrer"
                           />
                         ) : (
@@ -5869,7 +5865,7 @@ ${textContent}`
                               }
                               className={`w-8 h-8 rounded-full overflow-hidden border flex-shrink-0 transition-all ${
                                 clientForm.avatarUrl === url
-                                  ? "border-amber-500 scale-110 ring-2 ring-amber-500/20"
+                                  ? "border-[#c5a880] scale-110 ring-2 ring-amber-500/20"
                                   : "border-white/10 hover:border-white/30"
                               }`}
                             >
@@ -5889,7 +5885,7 @@ ${textContent}`
 
                 {/* Coluna 2: Dados Financeiros e Contrato */}
                 <div className="space-y-4">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-amber-500 font-mono">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#c5a880] font-mono">
                     2. Valores & Faturamento
                   </h3>
 
@@ -5907,13 +5903,13 @@ ${textContent}`
                             planValue: Number(e.target.value),
                           })
                         }
-                        className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20 font-mono"
+                        className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 focus:ring-1 focus:ring-amber-500/20 font-mono"
                         placeholder="Ex: 1500"
                       />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase">
-                        PrÃ³ximo Vencimento
+                        Próximo Vencimento
                       </label>
                       <input
                         type="date"
@@ -5924,7 +5920,7 @@ ${textContent}`
                             dueDate: e.target.value,
                           })
                         }
-                        className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20 font-mono"
+                        className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 focus:ring-1 focus:ring-amber-500/20 font-mono"
                       />
                     </div>
                   </div>
@@ -5932,7 +5928,7 @@ ${textContent}`
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase">
-                        Status CobranÃ§a
+                        Status Cobrança
                       </label>
                       <select
                         value={clientForm.paymentStatus || "Em dia"}
@@ -5943,7 +5939,7 @@ ${textContent}`
                               .value as Client["paymentStatus"],
                           })
                         }
-                        className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20"
+                        className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 focus:ring-1 focus:ring-amber-500/20"
                       >
                         <option value="Em dia">ðŸŸ¢ Em dia</option>
                         <option value="Pendente">ðŸŸ¡ Pendente</option>
@@ -5952,7 +5948,7 @@ ${textContent}`
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase">
-                        Data de InÃ­cio
+                        Data de Início
                       </label>
                       <input
                         type="date"
@@ -5963,7 +5959,7 @@ ${textContent}`
                             startDate: e.target.value,
                           })
                         }
-                        className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20"
+                        className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 focus:ring-1 focus:ring-amber-500/20"
                       />
                     </div>
                   </div>
@@ -5979,7 +5975,7 @@ ${textContent}`
                           status: e.target.value as Client["status"],
                         })
                       }
-                      className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20"
+                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 focus:ring-1 focus:ring-amber-500/20"
                     >
                       <option value="Ativo">Ativo</option>
                       <option value="Inativo">Inativo</option>
@@ -5989,15 +5985,15 @@ ${textContent}`
 
                   <div>
                     <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase font-mono">
-                      ObservaÃ§Ãµes Internas (Opcional)
+                      Observações Internas (Opcional)
                     </label>
                     <textarea
                       value={clientForm.notes || ""}
                       onChange={(e) =>
                         setClientForm({ ...clientForm, notes: e.target.value })
                       }
-                      className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20 min-h-[70px]"
-                      placeholder="Notas adicionais, contatos de emergÃªncia, senhas compartilhadas..."
+                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 focus:ring-1 focus:ring-amber-500/20 min-h-[70px]"
+                      placeholder="Notas adicionais, contatos de emergência, senhas compartilhadas..."
                     />
                   </div>
 
@@ -6037,13 +6033,13 @@ ${textContent}`
                                 plan: e.target.value,
                               })
                             }
-                            className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500/50"
-                            placeholder="Ex: Plano IntermediÃ¡rio"
+                            className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50"
+                            placeholder="Ex: Plano Intermediário"
                           />
                         </div>
                         <div>
                           <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase font-mono">
-                            Escopo / Detalhes de EntregÃ¡veis
+                            Escopo / Detalhes de Entregáveis
                           </label>
                           <textarea
                             value={clientForm.planDetails || ""}
@@ -6053,8 +6049,8 @@ ${textContent}`
                                 planDetails: e.target.value,
                               })
                             }
-                            className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500/50 min-h-[60px]"
-                            placeholder="Ex: 2 Posts/semana, 1 Reels/semana, R$ 200 trÃ¡fego embutido..."
+                            className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 min-h-[60px]"
+                            placeholder="Ex: 2 Posts/semana, 1 Reels/semana, R$ 200 tráfego embutido..."
                           />
                         </div>
                       </motion.div>
@@ -6067,7 +6063,7 @@ ${textContent}`
                 savedNotes.filter((n) => n.clientName === editingClient.name)
                   .length > 0 && (
                   <div className="mt-6 pt-6 border-t border-white/5">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-amber-500 font-mono flex items-center gap-2 mb-4">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#c5a880] font-mono flex items-center gap-2 mb-4">
                       <FileText size={14} /> Notas & Documentos do Cliente
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -6076,7 +6072,7 @@ ${textContent}`
                         .map((note) => (
                           <div
                             key={note.id}
-                            className="bg-zinc-950/50 border border-white/5 rounded-xl p-4"
+                            className="bg-[#050505] border border-white/5 rounded-xl p-8"
                           >
                             <div className="flex justify-between items-start mb-2">
                               <h4 className="text-sm font-bold text-white">
@@ -6116,9 +6112,9 @@ ${textContent}`
                   </button>
                   <button
                     onClick={handleSaveClient}
-                    className="bg-amber-500 hover:bg-amber-400 text-zinc-950 px-5 py-2.5 rounded-xl font-black text-xs transition-all shadow-md shadow-amber-500/15"
+                    className="bg-[#c5a880] hover:bg-[#c5a880]/80 text-zinc-950 px-5 py-2.5 rounded-xl font-black text-xs transition-all shadow-md shadow-amber-500/15"
                   >
-                    Gravar AlteraÃ§Ãµes
+                    Gravar Alterações
                   </button>
                 </div>
               </div>
@@ -6132,12 +6128,12 @@ ${textContent}`
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-zinc-900 border border-white/10 rounded-2xl p-4 sm:p-6 w-full max-w-md shadow-2xl flex flex-col"
+              className="bg-[#0b0b0c] border border-white/10 rounded-xl p-8 sm:p-6 w-full max-w-md shadow-2xl flex flex-col"
             >
               <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/5">
                 <div>
                   <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                    <Save size={20} className="text-amber-500" />
+                    <Save size={20} className="text-[#c5a880]" />
                     Salvar Nota / Copy
                   </h2>
                   <p className="text-xs text-zinc-500 mt-0.5">
@@ -6160,7 +6156,7 @@ ${textContent}`
                   <select
                     value={noteClient}
                     onChange={(e) => setNoteClient(e.target.value)}
-                    className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500/50"
+                    className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50"
                   >
                     <option value="">Selecione o Cliente</option>
                     <option value="Geral (Sem cliente)">
@@ -6175,13 +6171,13 @@ ${textContent}`
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase">
-                    TÃ­tulo da Nota
+                    Título da Nota
                   </label>
                   <input
                     type="text"
                     value={noteTitle}
                     onChange={(e) => setNoteTitle(e.target.value)}
-                    className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500/50"
+                    className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50"
                     placeholder="Ex: Copy para Campanha de Black Friday"
                   />
                 </div>
@@ -6196,7 +6192,7 @@ ${textContent}`
                   <button
                     onClick={() => {
                       if (!noteClient || !noteTitle) {
-                        alert("Por favor, preencha o cliente e o tÃ­tulo.");
+                        alert("Por favor, preencha o cliente e o título.");
                         return;
                       }
                       const newNote: SavedNote = {
@@ -6213,7 +6209,7 @@ ${textContent}`
                       setNoteTitle("");
                       alert("Nota salva com sucesso!");
                     }}
-                    className="bg-amber-500 text-zinc-950 px-6 py-2 rounded-xl font-bold text-sm hover:bg-amber-400 transition-colors shadow-lg shadow-amber-500/10 active:scale-95"
+                    className="bg-[#c5a880] text-zinc-950 px-6 py-2 rounded-xl font-bold text-sm hover:bg-[#c5a880]/80 transition-colors shadow-lg shadow-amber-500/10 active:scale-95"
                   >
                     Salvar
                   </button>
@@ -6229,13 +6225,13 @@ ${textContent}`
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-zinc-900 border border-white/10 rounded-2xl p-4 sm:p-6 w-full max-w-md shadow-2xl max-h-[92vh] overflow-y-auto flex flex-col"
+              className="bg-[#0b0b0c] border border-white/10 rounded-xl p-8 sm:p-6 w-full max-w-md shadow-2xl max-h-[92vh] overflow-y-auto flex flex-col"
             >
               <div className="flex items-center justify-between mb-6 pb-3 border-b border-white/5">
                 <div>
                   <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                    <User size={20} className="text-amber-500" />
-                    ConfiguraÃ§Ãµes da Minha Conta
+                    <User size={20} className="text-[#c5a880]" />
+                    Configurações da Minha Conta
                   </h2>
                   <p className="text-xs text-zinc-500 mt-0.5">
                     Gerencie o nome e avatar exibidos no painel Zion.
@@ -6251,16 +6247,16 @@ ${textContent}`
 
               <div className="space-y-5 text-left">
                 {/* Avatar Display & Input */}
-                <div className="flex flex-col items-center gap-4 bg-zinc-950/50 border border-white/5 rounded-xl p-4">
+                <div className="flex flex-col items-center gap-4 bg-[#050505] border border-white/5 rounded-xl p-8">
                   {myProfile.avatarUrl ? (
                     <img
                       src={myProfile.avatarUrl}
                       alt={myProfile.name}
-                      className="w-20 h-20 rounded-full object-cover border-2 border-amber-500/50 shadow-lg shadow-amber-500/10"
+                      className="w-20 h-20 rounded-full object-cover border-2 border-[#c5a880]/50 shadow-lg shadow-amber-500/10"
                       referrerPolicy="no-referrer"
                     />
                   ) : (
-                    <div className="w-20 h-20 rounded-full bg-amber-500 text-zinc-950 flex items-center justify-center text-2xl font-black uppercase">
+                    <div className="w-20 h-20 rounded-full bg-[#c5a880] text-zinc-950 flex items-center justify-center text-2xl font-black uppercase">
                       {myProfile.name.substring(0, 2)}
                     </div>
                   )}
@@ -6306,7 +6302,7 @@ ${textContent}`
                   {/* Preset photo options for user/agency */}
                   <div className="w-full space-y-1">
                     <span className="text-[10px] text-zinc-500 block text-center">
-                      Ou escolha um avatar pronto de agÃªncia:
+                      Ou escolha um avatar pronto de agência:
                     </span>
                     <div className="flex gap-2 justify-center py-1 overflow-x-auto scrollbar-none">
                       {[
@@ -6324,7 +6320,7 @@ ${textContent}`
                           }
                           className={`w-8 h-8 rounded-full overflow-hidden border transition-all ${
                             myProfile.avatarUrl === url
-                              ? "border-amber-500 scale-110"
+                              ? "border-[#c5a880] scale-110"
                               : "border-white/10"
                           }`}
                         >
@@ -6343,7 +6339,7 @@ ${textContent}`
                 {/* Name & Role Form fields */}
                 <div>
                   <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase">
-                    Nome do UsuÃ¡rio / AgÃªncia
+                    Nome do Usuário / Agência
                   </label>
                   <input
                     type="text"
@@ -6351,14 +6347,14 @@ ${textContent}`
                     onChange={(e) =>
                       setMyProfile({ ...myProfile, name: e.target.value })
                     }
-                    className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500/50"
+                    className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50"
                     placeholder="Ex: Equipe Zion"
                   />
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase">
-                    FunÃ§Ã£o / Cargo
+                    Função / Cargo
                   </label>
                   <input
                     type="text"
@@ -6366,13 +6362,13 @@ ${textContent}`
                     onChange={(e) =>
                       setMyProfile({ ...myProfile, role: e.target.value })
                     }
-                    className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500/50"
-                    placeholder="Ex: AgÃªncia Digital"
+                    className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50"
+                    placeholder="Ex: Agência Digital"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-amber-500 mb-1.5 uppercase flex items-center gap-1.5">
+                  <label className="block text-xs font-semibold text-[#c5a880] mb-1.5 uppercase flex items-center gap-1.5">
                     <Wand2 size={12} /> Chave API Gemini (Opcional)
                   </label>
                   <input
@@ -6384,13 +6380,13 @@ ${textContent}`
                         geminiApiKey: e.target.value,
                       })
                     }
-                    className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500/50"
+                    className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50"
                     placeholder="Cole sua API Key do Google AI Studio aqui"
                   />
                   <p className="text-[10px] text-zinc-500 mt-1.5">
-                    Ao definir a chave aqui, a IA utilizarÃ¡ sua cota para gerar
-                    textos e ler imagens. Esta chave Ã© salva diretamente no
-                    Firebase e fica disponÃ­vel em todos os seus dispositivos.
+                    Ao definir a chave aqui, a IA utilizará sua cota para gerar
+                    textos e ler imagens. Esta chave é salva diretamente no
+                    Firebase e fica disponível em todos os seus dispositivos.
                   </p>
                 </div>
               </div>
@@ -6398,9 +6394,9 @@ ${textContent}`
               <div className="mt-8 pt-4 border-t border-white/5 flex justify-end">
                 <button
                   onClick={() => setIsProfileModalOpen(false)}
-                  className="bg-amber-500 hover:bg-amber-400 text-zinc-950 px-5 py-2.5 rounded-xl font-black text-xs transition-all shadow-md shadow-amber-500/15"
+                  className="bg-[#c5a880] hover:bg-[#c5a880]/80 text-zinc-950 px-5 py-2.5 rounded-xl font-black text-xs transition-all shadow-md shadow-amber-500/15"
                 >
-                  Confirmar AlteraÃ§Ãµes
+                  Confirmar Alterações
                 </button>
               </div>
             </motion.div>
@@ -6415,7 +6411,7 @@ ${textContent}`
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-zinc-900 border border-white/10 rounded-2xl p-4 sm:p-6 w-full max-w-md shadow-2xl max-h-[92vh] overflow-y-auto flex flex-col"
+              className="bg-[#0b0b0c] border border-white/10 rounded-xl p-8 sm:p-6 w-full max-w-md shadow-2xl max-h-[92vh] overflow-y-auto flex flex-col"
             >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-white">
@@ -6429,7 +6425,7 @@ ${textContent}`
                 </button>
               </div>
 
-              <div className="flex bg-zinc-950 p-1 rounded-xl mb-6">
+              <div className="flex bg-[#050505] p-1 rounded-xl mb-6">
                 <button
                   onClick={() => setTaskMode('manual')}
                   className={`flex-1 py-2 text-xs font-bold rounded-lg ${
@@ -6444,7 +6440,7 @@ ${textContent}`
                   onClick={() => setTaskMode('ai')}
                   className={`flex-1 py-2 text-xs font-bold rounded-lg ${
                     taskMode === 'ai'
-                      ? 'bg-amber-500 text-zinc-950'
+                      ? 'bg-[#c5a880] text-zinc-950'
                       : 'text-zinc-500 hover:text-white'
                   }`}
                 >
@@ -6454,18 +6450,18 @@ ${textContent}`
 
               <div className="space-y-4">
                 {taskMode === 'ai' && !editingTask && (
-                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 mb-4">
-                    <h3 className="text-amber-500 text-sm font-bold flex items-center gap-1.5 mb-2">
-                      <Sparkles size={14} /> CriaÃ§Ã£o Inteligente com IA
+                  <div className="bg-[#c5a880]/10 border border-[#c5a880]/20 rounded-xl p-8 mb-4">
+                    <h3 className="text-[#c5a880] text-sm font-bold flex items-center gap-1.5 mb-2">
+                      <Sparkles size={14} /> Criação Inteligente com IA
                     </h3>
                     <p className="text-xs text-zinc-400 mb-3">
-                      Envie um Ã¡udio, texto ou arquivo. A IA entenderÃ¡ os detalhes e organizarÃ¡ a tarefa, prazo e cliente para vocÃª (integrado ao Google Workspace).
+                      Envie um áudio, texto ou arquivo. A IA entenderá os detalhes e organizará a tarefa, prazo e cliente para você (integrado ao Google Workspace).
                     </p>
                     <textarea
                       value={parseInputText}
                       onChange={(e) => setParseInputText(e.target.value)}
-                      placeholder="Descreva a tarefa ou cole anotaÃ§Ãµes..."
-                      className="w-full bg-zinc-950/50 border border-amber-500/20 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500/50 text-sm min-h-[60px] resize-none mb-2"
+                      placeholder="Descreva a tarefa ou cole anotações..."
+                      className="w-full bg-[#050505] border border-[#c5a880]/20 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#c5a880]/50 text-sm min-h-[60px] resize-none mb-2"
                     />
                     <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center w-full">
                       <div className="flex flex-1 items-center gap-2 w-full">
@@ -6481,7 +6477,7 @@ ${textContent}`
                       <button
                         onClick={handleParseTask}
                         disabled={isParsingTask}
-                        className="bg-amber-500 text-zinc-950 px-3 py-2 rounded-lg text-xs font-bold hover:bg-amber-400 whitespace-nowrap disabled:opacity-50 w-full sm:w-auto"
+                        className="bg-[#c5a880] text-zinc-950 px-3 py-2 rounded-lg text-xs font-bold hover:bg-[#c5a880]/80 whitespace-nowrap disabled:opacity-50 w-full sm:w-auto"
                       >
                         {isParsingTask ? "Analisando..." : "Organizar"}
                       </button>
@@ -6493,7 +6489,7 @@ ${textContent}`
                     <div>
                       <div className="flex justify-between items-center mb-1">
                         <label className="block text-sm font-medium text-zinc-400">
-                          TÃ­tulo da Tarefa
+                          Título da Tarefa
                         </label>
                         <VoiceInputButton
                           onTranscript={(val) =>
@@ -6511,7 +6507,7 @@ ${textContent}`
                         onChange={(e) =>
                           setTaskForm({ ...taskForm, title: e.target.value })
                         }
-                        className="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50"
+                        className="w-full bg-[#050505] border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50"
                         placeholder="Ex: Criar roteiro de Reels"
                       />
                     </div>
@@ -6524,7 +6520,7 @@ ${textContent}`
                         onChange={(e) =>
                           setTaskForm({ ...taskForm, client: e.target.value })
                         }
-                        className="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 appearance-none"
+                        className="w-full bg-[#050505] border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 appearance-none"
                       >
                         <option value="">
                           Nenhum / Sem Cliente
@@ -6548,11 +6544,11 @@ ${textContent}`
                         status: e.target.value as Task["status"],
                       })
                     }
-                    className="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 appearance-none"
+                    className="w-full bg-[#050505] border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 appearance-none"
                   >
                     <option value="todo">A Fazer</option>
-                    <option value="doing">Em ProduÃ§Ã£o</option>
-                    <option value="done">ConcluÃ­do</option>
+                    <option value="doing">Em Produção</option>
+                    <option value="done">Concluído</option>
                   </select>
                 </div>
 
@@ -6567,7 +6563,7 @@ ${textContent}`
                           hasDeadline: e.target.checked,
                         })
                       }
-                      className="rounded border-zinc-700 bg-zinc-950 text-amber-500 focus:ring-amber-500/50 focus:ring-offset-0 w-4 h-4"
+                      className="rounded border-zinc-700 bg-[#050505] text-[#c5a880] focus:ring-amber-500/50 focus:ring-offset-0 w-4 h-4"
                     />
                     <span className="text-sm font-medium text-zinc-300 group-hover:text-white transition-colors">
                       Possui prazo de entrega?
@@ -6638,12 +6634,12 @@ ${textContent}`
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-zinc-900 border border-white/10 rounded-2xl p-4 sm:p-6 w-full max-w-md shadow-2xl max-h-[92vh] overflow-y-auto flex flex-col"
+              className="bg-[#0b0b0c] border border-white/10 rounded-xl p-8 sm:p-6 w-full max-w-md shadow-2xl max-h-[92vh] overflow-y-auto flex flex-col"
             >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                  <DollarSign className="text-amber-500" size={20} />
-                  {editingTransaction ? "Editar TransaÃ§Ã£o" : "Nova TransaÃ§Ã£o"}
+                  <DollarSign className="text-[#c5a880]" size={20} />
+                  {editingTransaction ? "Editar Transação" : "Nova Transação"}
                 </h2>
                 <button
                   onClick={closeTransactionModal}
@@ -6657,7 +6653,7 @@ ${textContent}`
                 <div>
                   <div className="flex justify-between items-center mb-1">
                     <label className="block text-sm font-medium text-zinc-400">
-                      DescriÃ§Ã£o
+                      Descrição
                     </label>
                     <VoiceInputButton
                       onTranscript={(val) =>
@@ -6680,7 +6676,7 @@ ${textContent}`
                         description: e.target.value,
                       })
                     }
-                    className="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 text-sm"
+                    className="w-full bg-[#050505] border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 text-sm"
                     placeholder="Ex: Mensalidade Dr. Silva"
                   />
                 </div>
@@ -6698,7 +6694,7 @@ ${textContent}`
                           type: e.target.value as "receita" | "despesa",
                         })
                       }
-                      className="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 text-sm"
+                      className="w-full bg-[#050505] border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 text-sm"
                     >
                       <option value="receita">Receita (+)</option>
                       <option value="despesa">Despesa (-)</option>
@@ -6717,7 +6713,7 @@ ${textContent}`
                           amount: Number(e.target.value),
                         })
                       }
-                      className="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 text-sm"
+                      className="w-full bg-[#050505] border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 text-sm"
                     />
                   </div>
                 </div>
@@ -6746,7 +6742,7 @@ ${textContent}`
                           status: e.target.value as "pago" | "pendente",
                         })
                       }
-                      className="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 text-sm"
+                      className="w-full bg-[#050505] border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 text-sm"
                     >
                       <option value="pago">Pago</option>
                       <option value="pendente">Pendente</option>
@@ -6767,7 +6763,7 @@ ${textContent}`
                             placeholder="Nova Categoria"
                             value={newCategoryName}
                             onChange={(e) => setNewCategoryName(e.target.value)}
-                            className="flex-1 bg-zinc-950 border border-white/10 rounded-lg px-2.5 py-1.5 text-white text-xs focus:outline-none focus:border-amber-500/50"
+                            className="flex-1 bg-[#050505] border border-white/10 rounded-lg px-2.5 py-1.5 text-white text-xs focus:outline-none focus:border-[#c5a880]/50"
                             autoFocus
                           />
                           <button
@@ -6791,7 +6787,7 @@ ${textContent}`
                               setNewCategoryName("");
                               setIsAddingNewCategory(false);
                             }}
-                            className="bg-amber-500 hover:bg-amber-400 text-zinc-950 text-[10px] font-black px-2.5 py-1.5 rounded-lg transition-colors"
+                            className="bg-[#c5a880] hover:bg-[#c5a880]/80 text-zinc-950 text-[10px] font-black px-2.5 py-1.5 rounded-lg transition-colors"
                           >
                             Add
                           </button>
@@ -6824,7 +6820,7 @@ ${textContent}`
                             });
                           }
                         }}
-                        className="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500/50 text-sm"
+                        className="w-full bg-[#050505] border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#c5a880]/50 text-sm"
                       >
                         {transactionCategories.map((cat) => (
                           <option key={cat} value={cat}>
@@ -6847,7 +6843,7 @@ ${textContent}`
                           client: e.target.value,
                         })
                       }
-                      className="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 text-sm"
+                      className="w-full bg-[#050505] border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 text-sm"
                     >
                       <option value="">Nenhum</option>
                       {clients.map((c) => (
@@ -6883,7 +6879,7 @@ ${textContent}`
                   </button>
                   <button
                     onClick={handleSaveTransaction}
-                    className="bg-amber-500 text-zinc-950 px-4 py-2 rounded-lg font-bold text-sm hover:bg-amber-400 transition-colors"
+                    className="bg-[#c5a880] text-zinc-950 px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#c5a880]/80 transition-colors"
                   >
                     Salvar
                   </button>
@@ -6899,11 +6895,11 @@ ${textContent}`
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-zinc-900 border border-white/10 rounded-2xl p-4 sm:p-6 w-full max-w-md shadow-2xl max-h-[92vh] overflow-y-auto flex flex-col"
+              className="bg-[#0b0b0c] border border-white/10 rounded-xl p-8 sm:p-6 w-full max-w-md shadow-2xl max-h-[92vh] overflow-y-auto flex flex-col"
             >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                  <Calendar className="text-amber-500" size={20} />
+                  <Calendar className="text-[#c5a880]" size={20} />
                   {editingEvent ? "Editar Evento" : "Novo Compromisso"}
                 </h2>
                 <button
@@ -6918,7 +6914,7 @@ ${textContent}`
                 <div>
                   <div className="flex justify-between items-center mb-1">
                     <label className="block text-sm font-medium text-zinc-400">
-                      TÃ­tulo do Evento
+                      Título do Evento
                     </label>
                     <VoiceInputButton
                       onTranscript={(val) =>
@@ -6936,8 +6932,8 @@ ${textContent}`
                     onChange={(e) =>
                       setEventForm({ ...eventForm, title: e.target.value })
                     }
-                    className="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 text-sm"
-                    placeholder="Ex: ReuniÃ£o Mensal Sispumumc"
+                    className="w-full bg-[#050505] border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 text-sm"
+                    placeholder="Ex: Reunião Mensal Sispumumc"
                   />
                 </div>
 
@@ -6955,7 +6951,7 @@ ${textContent}`
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-zinc-400 mb-1">
-                      HorÃ¡rio
+                      Horário
                     </label>
                     <input
                       type="time"
@@ -6963,7 +6959,7 @@ ${textContent}`
                       onChange={(e) =>
                         setEventForm({ ...eventForm, time: e.target.value })
                       }
-                      className="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 text-sm font-mono"
+                      className="w-full bg-[#050505] border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 text-sm font-mono"
                     />
                   </div>
                 </div>
@@ -6984,11 +6980,11 @@ ${textContent}`
                             | "entrega",
                         })
                       }
-                      className="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 text-sm"
+                      className="w-full bg-[#050505] border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 text-sm"
                     >
                       <option value="post">Post ðŸ“</option>
-                      <option value="reuniao">ReuniÃ£o ðŸ¤</option>
-                      <option value="entrega">Entrega/GravaÃ§Ã£o ðŸ“¦</option>
+                      <option value="reuniao">Reunião ðŸ¤</option>
+                      <option value="entrega">Entrega/Gravação ðŸ“¦</option>
                     </select>
                   </div>
                   <div>
@@ -7003,7 +6999,7 @@ ${textContent}`
                           clientName: e.target.value,
                         })
                       }
-                      className="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 text-sm"
+                      className="w-full bg-[#050505] border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 text-sm"
                     >
                       <option value="" disabled>
                         Selecione um cliente
@@ -7019,7 +7015,7 @@ ${textContent}`
 
                 <div>
                   <label className="block text-sm font-medium text-zinc-400 mb-1">
-                    DescriÃ§Ã£o / Briefing
+                    Descrição / Briefing
                   </label>
                   <textarea
                     value={eventForm.description || ""}
@@ -7029,8 +7025,8 @@ ${textContent}`
                         description: e.target.value,
                       })
                     }
-                    className="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 min-h-[80px] text-sm"
-                    placeholder="Ex: Pauta da reuniÃ£o ou detalhes do post..."
+                    className="w-full bg-[#050505] border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 min-h-[80px] text-sm"
+                    placeholder="Ex: Pauta da reunião ou detalhes do post..."
                   />
                 </div>
               </div>
@@ -7056,7 +7052,7 @@ ${textContent}`
                   </button>
                   <button
                     onClick={handleSaveEvent}
-                    className="bg-amber-500 text-zinc-950 px-4 py-2 rounded-lg font-bold text-sm hover:bg-amber-400 transition-colors"
+                    className="bg-[#c5a880] text-zinc-950 px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#c5a880]/80 transition-colors"
                   >
                     Salvar
                   </button>
@@ -7127,7 +7123,7 @@ function Select({
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/50 appearance-none"
+      className="w-full bg-[#050505] border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/50 appearance-none"
     >
       {options.map((o) => (
         <option key={o} value={o}>
@@ -7181,7 +7177,7 @@ function SidebarItemMini({
         onClick={onClick}
         className={`p-3 rounded-xl transition-all ${
           active
-            ? "bg-[#ad8330]/15 text-[#ad8330] border border-[#ad8330]/20 font-bold"
+            ? "bg-[#c5a880]/15 text-[#c5a880] border border-[#c5a880]/20 font-bold"
             : "text-zinc-500 hover:text-white hover:bg-white/[0.03] border border-transparent"
         }`}
       >
@@ -7236,14 +7232,14 @@ const TaskCard: React.FC<{
   return (
     <div
       onClick={onClick}
-      className={`bg-zinc-900 border p-4 rounded-xl transition-all cursor-pointer group hover:bg-zinc-800/50 relative overflow-hidden ${
+      className={`bg-[#0b0b0c] border p-4 rounded-xl transition-all cursor-pointer group hover:bg-zinc-800/50 relative overflow-hidden ${
         isOverdue
           ? "border-red-500/30 hover:border-red-500/50 shadow-md shadow-red-500/5"
           : "border-white/5 hover:border-white/10"
       }`}
     >
       <div className="flex items-center justify-between gap-2 mb-2">
-        <span className="text-[10px] uppercase font-bold tracking-wider text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded">
+        <span className="text-[10px] uppercase font-bold tracking-wider text-[#c5a880] bg-[#c5a880]/10 px-2 py-0.5 rounded">
           {task.client}
         </span>
         <span className="text-[9px] text-zinc-500 font-mono font-medium">
@@ -7266,8 +7262,8 @@ const TaskCard: React.FC<{
               )
             </span>
           ) : (
-            <span className="text-[10px] bg-zinc-950 text-zinc-400 border border-white/5 px-2 py-0.5 rounded flex items-center gap-1 font-medium">
-              <Clock size={10} className="text-amber-500/70" /> Prazo:{" "}
+            <span className="text-[10px] bg-[#050505] text-zinc-400 border border-white/5 px-2 py-0.5 rounded flex items-center gap-1 font-medium">
+              <Clock size={10} className="text-[#c5a880]/70" /> Prazo:{" "}
               {typeof task.dueDate === "string" && task.dueDate.includes("-")
                 ? task.dueDate.split("-").reverse().slice(0, 2).join("/")
                 : task.dueDate}
@@ -7286,7 +7282,7 @@ const TaskCard: React.FC<{
                 onMoveStatus(task.id, "doing");
               }}
               className="flex items-center gap-1 bg-blue-500/10 hover:bg-blue-500 hover:text-zinc-950 text-blue-400 font-bold text-[10px] px-2 py-1 rounded transition-all"
-              title="Iniciar ProduÃ§Ã£o"
+              title="Iniciar Produção"
             >
               Iniciar <ChevronRight size={12} />
             </button>

@@ -98,22 +98,29 @@ export const buildMasterPrompt = (config: ProjectConfig): string => {
   }
 
   // 8. TYPOGRAPHY & TEXT LAYOUT (The true Flyer BR magic)
-  if (config.enableTypography && config.camadasTexto && config.camadasTexto.length > 0) {
+  if (config.camadasTexto && config.camadasTexto.length > 0) {
     const activeLayers = config.camadasTexto.filter(l => l.conteudo && l.conteudo.trim() !== "");
     if (activeLayers.length > 0) {
       promptParts.push(`\n=== TYPOGRAPHY & TEXT LAYOUT ===\nThe design MUST include the following text layers arranged professionally, aligned to the ${(config.typographyPosition || "Centro").toUpperCase()}:`);
       
       activeLayers.forEach((layer) => {
-        promptParts.push(`- [${layer.funcao.toUpperCase()}]: Write exactly "${layer.conteudo.trim()}" using a ${layer.fonte} style font. Text color: ${layer.cor}.`);
+        const isSocialHandle = layer.conteudo.trim().startsWith("@") || layer.funcao.toLowerCase().includes("social") || layer.funcao.toLowerCase().includes("insta");
+        const lowercaseRule = isSocialHandle ? " (CRITICAL: Write this text strictly in LOWERCASE letters, e.g. '" + layer.conteudo.trim().toLowerCase() + "'. Do NOT capitalize it.)" : "";
+        promptParts.push(`- [${layer.funcao.toUpperCase()}]: Write exactly "${layer.conteudo.trim()}"${lowercaseRule} using a ${layer.fonte} style font. Text color: ${layer.cor}.`);
       });
       
-      promptParts.push("Ensure perfect typographic hierarchy, kerning, and contrast. Text should look like it was designed by a human art director in Photoshop, integrating with the lighting and shadows.");
+      promptParts.push("Ensure perfect typographic hierarchy, kerning, and contrast. Text should look like it was designed by a human art director in Photoshop, integrating with the lighting and shadows. Social media handles starting with '@' must remain strictly in lowercase.");
     }
   }
 
   // 9. LOGO INTEGRATION
-  if (config.useLogo && config.logoBase64) {
-    promptParts.push("Brand Identity: Integrate the provided logo reference naturally into the composition layout (e.g., top center or bottom corner).");
+  if (config.useLogo && (config.logoBase64 || (config.logosList && config.logosList.length > 0))) {
+    promptParts.push("Brand Identity: Integrate the client's provided brand logo ('Referência de Logotipo') naturally into the composition layout (e.g., top center or bottom corner). CRITICAL DESIGN DIRECTIVE: You MUST completely ignore and omit any logo, symbol, or brand mark that is present in the background design reference flyer image. Do NOT copy the reference flyer's logo under any circumstances; use exclusively the client's provided brand logo exactly as is, preserving its original colors, sharp shapes, and exact design without modifications or hallucinations.");
+  }
+
+  // 9.5 DESIGN REFERENCE FIDELITY
+  if (config.designRefBase64 || (config.designRefsList && config.designRefsList.length > 0)) {
+    promptParts.push("\n=== DESIGN REFERENCE FIDELITY ===\nCRITICAL DIRECTIVE: A 'Design Layout Reference' image is supplied. You MUST perfectly match its composition structure, layout grid, text positions, light source direction, background elements, gradients, textures, and overall visual balance. Do NOT invent a random or creative layout or deviate from this composition. Replicate its visual structure and atmosphere faithfully while integrating the custom subject and the provided brand logo. Completely ignore any logos present inside the Design Layout Reference, substituting them with the client's brand logo.");
   }
 
   // 10. STYLE REFERENCES

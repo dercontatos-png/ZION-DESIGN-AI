@@ -38,7 +38,12 @@ export const useGenerateImage = (customApiKey: string, showToast: (msg: string, 
       desativarSujeito: store.desativarSujeito,
       logoBase64: store.logoBase64,
       logosList: store.logosList || [],
-      dimensao: store.dimensao
+      useLogo: store.useLogo,
+      logoInclusionType: store.logoInclusionType || "overlay",
+      logoPosOverlay: store.logoPosOverlay || "top_center",
+      logoSizeOverlay: store.logoSizeOverlay || 20,
+      dimensao: store.dimensao,
+      somentePrompt: store.somentePrompt
     };
 
     const payloadString = JSON.stringify(payload);
@@ -82,6 +87,11 @@ export const useGenerateImage = (customApiKey: string, showToast: (msg: string, 
       if (data.prompt) store.setLastGeneratedPrompt(data.prompt);
       if (data.systemInstruction) store.setLastSystemInstruction(data.systemInstruction);
       
+      if (store.somentePrompt) {
+        showToast("Prompt e Instrução gerados com sucesso!", "success");
+        return;
+      }
+
       if (data.image) {
         // Adiciona à lista de imagens geradas
         store.setGaleriaImages((prev) => [data.image, ...prev]);

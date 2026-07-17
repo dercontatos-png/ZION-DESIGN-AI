@@ -12,6 +12,7 @@ import { MaskPainter } from "./MaskPainter";
 import { ExportModal } from "./ExportModal";
 import {
   Sparkles,
+  Terminal,
   User,
   Image as ImageIcon,
   Copy,
@@ -31,6 +32,7 @@ import {
   ZoomOut,
   Maximize2,
   Maximize,
+  Minimize2,
   Download,
   Info,
   Type,
@@ -48,8 +50,42 @@ import {
   Filter,
   MoreVertical,
   PenTool,
-  Smartphone
+  Smartphone,
+  SlidersHorizontal,
+  MessageSquare
 } from "lucide-react";
+
+const DEFAULT_SYSTEM_INSTRUCTION = `You are an absolute master generative AI image prompt engineer, art director, and elite graphic designer specializing in High-End Brazilian Flyers (Flyer BR Style / "Design de Eventos e Shows brasileiro"). Your mission is to generate ultra-realistic, premium, and impactful visual compositions that serve as high-end backgrounds or complete layouts for shows, concerts, nightlife, and festivals.
+
+### CORE ARTISTIC GUIDELINES & SPECIFICATIONS:
+
+1. **COMPOSITION & CONTRAST (High-End Flyer BR Signature)**
+   - **Subject Placement**: Establish a highly charismatic and powerful central subject (e.g., singer, DJ, performance artist, or premium event assets like luxury bottles, VIP cards).
+   - **Aspect Ratio**: Always optimize for vertical display format (primarily 4:5 for feed flyers or 9:16 for social media stories).
+   - **Chiaroscuro Drama**: Deep, pitch-black/charcoal shadows contrasted sharply with incredibly bright, vibrant, glowing backlight and neon-colored rim lights contouring the subject.
+   - **Cinematic Depth**: Keep an extremely shallow depth of field (DoF) where the subject is in razor-sharp focus (hyper-detailed skin, visible pores, hair strands, fabric textures) while the background is layered with beautifully blurred laser lights, ambient smoke, and volumetric lighting.
+
+2. **LIGHTING & COLOR HARMONIES**
+   - **Volumetric Lights**: Use dense light rays, background backlighting, laser beams, spotlights, and flare effects slicing through the darkness.
+   - **Color Schemes**:
+     - *Luxurious*: Intense metallic gold accents, amber glow, and warm orange embers over dark charcoal or black.
+     - *Futuristic/Cyberpunk*: Electric cyan combined with hot magenta, deep royal blues with purple rim lighting, and vibrant acid green highlights.
+   - **No Flat Lighting**: Avoid ambient or flat white illumination. Every light source must be directional, dramatic, and atmospheric.
+
+3. **METALLIC, NEON & 3D GEOMETRIC TEXTURES**
+   - **Metallic Premium Alloys**: Polished chrome, glossy liquid gold, reflective glass shards, polished steel, and carbon fiber.
+   - **Reflections**: Realistic micro-reflections on plastic, wet surfaces, glossy leather, metal plates, and polished black marble floorings.
+   - **Geometric Backgrounds**: Abstract 3D glass structures, suspended metallic spheres, floating neon cubes, and dynamic lines that add structure and modernity.
+
+4. **ATMOSPHERIC ASSETS & SPECIAL EFFECTS**
+   - **Particles**: Golden dust, high-speed sparks, floating glowing embers, abstract light leaks, delicate lens flares, and floating confetti.
+   - **Smoke, Fog & Haze**: Thick, volumetric fog, layered ambient haze, and slow-moving cloud layers that create deep spatial separation between background elements and the foreground subject.
+   - **Decay & Grit**: Subtle grunge elements, high-tech HUD overlays, or organic light leaks to make the artwork feel like a premium high-budget poster.
+
+5. **SYSTEMATIC PROMPT FORMAT FOR GENERATION**
+   - State the core subject clearly first (e.g., "A charismatic male DJ with sunglasses, wearing a modern streetwear glossy black puffer jacket, hands on professional Pioneer CDJs...").
+   - Define exact rendering engine and photo parameters: "captured on Hasselblad 85mm lens, f/1.4, cinematic lighting, dramatic backlight, volumetric smoke, photorealistic, Unreal Engine 5 style render, Octane render quality, 8k resolution, raytracing, award-winning art direction."
+   - Explicitly instruct the AI generator to EXACTLY replicate and embed any text, titles, words, numbers, and the provided logo directly into the image canvas. The generator MUST perfectly bake the text and logo into the graphic, rendering it in a beautiful, modern, high-contrast style that perfectly matches the reference layout. Color adaptation of the logo for better contrast is highly encouraged (e.g. converting a dark logo to white for a dark flyer), but shapes and fonts must not be altered.`;
 
 interface TemplatePreset {
   id: string;
@@ -81,23 +117,23 @@ const templatePresets: TemplatePreset[] = [
     category: "Eventos & Promoções",
     dimensao: "4:5",
     useCorDominante: true,
-    corDominante: "#ad8330",
+    corDominante: "#c5a880",
     estilosVisuais: ["Ultra Realista", "Glow"],
     nivelCriativo: 65,
     promptCenario: "Ambiente rústico de boteco premium, balcão de madeira nobre, luz quente âmbar desfocada, copos de cerveja trincando de gelados",
     additionalPrompt: "Luxury night club event flyer, glowing gold neon borders, premium beer drops on cold glass, high-end commercial bar photography, 8k, cinematic lighting.",
     camadasTexto: [
-      { conteudo: "BOTECO PREMIUM", funcao: "Headline Principal", fonte: "Montserrat", cor: "#ad8330" },
+      { conteudo: "BOTECO PREMIUM", funcao: "Headline Principal", fonte: "Montserrat", cor: "#c5a880" },
       { conteudo: "OPEN BAR BRAHMA", funcao: "Subheadline Secundário", fonte: "Unbounded", cor: "#ffffff" },
-      { conteudo: "MARCOS & ROBERT", funcao: "Corpo Descrição", fonte: "Montserrat", cor: "#ad8330" },
+      { conteudo: "MARCOS & ROBERT", funcao: "Corpo Descrição", fonte: "Montserrat", cor: "#c5a880" },
       { conteudo: "25 DE ABRIL - SEXTA-FEIRA", funcao: "Data / Horário", fonte: "Outfit", cor: "#ffffff" }
     ],
     bgColor: "#08020f",
     textColor: "#ffffff",
-    accentColor: "#ad8330",
+    accentColor: "#c5a880",
     mockBgStyle: {
       background: "radial-gradient(circle at center, #1e1105 0%, #050201 100%)",
-      borderColor: "#ad8330"
+      borderColor: "#c5a880"
     }
   },
   {
@@ -326,19 +362,19 @@ const templatePresets: TemplatePreset[] = [
     category: "Datas Comemorativas",
     dimensao: "1:1",
     useCorDominante: true,
-    corDominante: "#ad8330",
+    corDominante: "#c5a880",
     estilosVisuais: ["Elegante", "Clássico"],
     nivelCriativo: 40,
     promptCenario: "Silhueta de cruz de madeira no topo de uma colina ao entardecer, raios de sol dourados passando pelas nuvens, névoa suave, tom solene",
     additionalPrompt: "Sober and solemn Good Friday poster, classical painting style, elegant warm light rays, high-contrast chiaroscuro, spiritual, highly detailed, professional composition.",
     camadasTexto: [
-      { conteudo: "SEXTA-FEIRA SANTA", funcao: "Headline Principal", fonte: "Playfair Display", cor: "#ad8330" },
+      { conteudo: "SEXTA-FEIRA SANTA", funcao: "Headline Principal", fonte: "Playfair Display", cor: "#c5a880" },
       { conteudo: "Hoje é dia de silêncio, gratidão e reflexão diante do sacrifício.", funcao: "Corpo Descrição", fonte: "Inter", cor: "#e2e8f0" },
       { conteudo: "03 DE ABRIL - SEXTA-FEIRA", funcao: "Data / Horário", fonte: "Outfit", cor: "#ffffff" }
     ],
     bgColor: "#0f0d1a",
     textColor: "#e2e8f0",
-    accentColor: "#ad8330",
+    accentColor: "#c5a880",
     mockBgStyle: {
       background: "linear-gradient(to bottom, #090812, #141126)",
       borderColor: "#4a3c31"
@@ -431,7 +467,7 @@ const templatePresets: TemplatePreset[] = [
       { conteudo: "QUINTA DO COMBO", funcao: "Headline Principal", fonte: "Unbounded", cor: "#ffffff" },
       { conteudo: "CHIVAS OU JACK + ROSH", funcao: "Subheadline Secundário", fonte: "Outfit", cor: "#dc2626" },
       { conteudo: "APENAS R$ 290", funcao: "Preço / Valor", fonte: "Montserrat", cor: "#ffffff" },
-      { conteudo: "Brahma por R$ 5,90", funcao: "Legenda / Detalhe", fonte: "Inter", cor: "#ad8330" }
+      { conteudo: "Brahma por R$ 5,90", funcao: "Legenda / Detalhe", fonte: "Inter", cor: "#c5a880" }
     ],
     bgColor: "#09090b",
     textColor: "#ffffff",
@@ -491,12 +527,31 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
   const store = useProjectStore();
 
   const [activeMenuTab, setActiveMenuTab] = useState<string>("Design Builder");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [refineQuery, setRefineQuery] = useState<string>("");
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("boteco_premium");
   const [galleryFilterDimension, setGalleryFilterDimension] = useState<string>("Todos");
   const [galleryFilterFormat, setGalleryFilterFormat] = useState<string>("Todos");
   const [isTesting, setIsTesting] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempProjectName, setTempProjectName] = useState("");
+
+  const handleRefine = () => {
+    if (!refineQuery.trim()) {
+      showToast("Por favor, digite uma instrução de ajuste.", "warning");
+      return;
+    }
+    // Adiciona o ajuste ao prompt adicional e gera
+    store.updateConfig({
+      additionalPrompt: store.additionalPrompt 
+        ? `${store.additionalPrompt}, ${refineQuery}` 
+        : refineQuery
+    });
+    const adjustmentText = refineQuery;
+    setRefineQuery("");
+    showToast(`Ajuste "${adjustmentText}" adicionado! Iniciando refinamento...`, "success");
+    generatePremiumImage();
+  };
 
   const activeProject = store.projectsList.find((p) => p.id === store.activeProjectId);
   const activeProjectName = activeProject?.name || "Projeto Alpha";
@@ -531,9 +586,12 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
   const [showMaskPainter, setShowMaskPainter] = useState(false);
   const [copyButtonText, setCopyButtonText] = useState("Copiar Prompt");
   const [isCopied, setIsCopied] = useState(false);
+  const [isPromptCopied, setIsPromptCopied] = useState(false);
+  const [isInstructionCopied, setIsInstructionCopied] = useState(false);
 
   // Estados locais para controle de visualizador de imagens interativo (Pan & Zoom)
   const [zoomPercent, setZoomPercent] = useState<number>(100);
+
   const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [dragStart, setDragStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -547,9 +605,6 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
   const [progressMessage, setProgressMessage] = useState<string>("Iniciando conexão...");
   const [countdown, setCountdown] = useState<number>(0);
 
-  // Controle de colapso de seções para maximizar a área do preview da imagem
-  const [isSystemInstructionExpanded, setIsSystemInstructionExpanded] = useState<boolean>(false);
-  const [isFullPromptExpanded, setIsFullPromptExpanded] = useState<boolean>(false);
 
   useEffect(() => {
     store.initProjectsList();
@@ -683,7 +738,22 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
     if (!activeImage) return;
     try {
       showToast(`Iniciando conversão para ${exportFormat}...`, "success");
-      await downloadImage(activeImage, exportFormat);
+      await downloadImage(
+        activeImage,
+        exportFormat,
+        {
+          useLogo: store.useLogo,
+          logosList: store.logosList,
+          logoBase64: store.logoBase64,
+          logoPosOverlay: store.logoPosOverlay,
+          logoSizeOverlay: store.logoSizeOverlay,
+          logoInclusionType: store.logoInclusionType
+        },
+        {
+          enableTypography: store.enableTypography,
+          camadasTexto: store.camadasTexto
+        }
+      );
       showToast("Download concluído com sucesso!", "success");
     } catch (e) {
       showToast("Erro ao converter e baixar imagem.", "error");
@@ -720,8 +790,38 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
     setPanOffset({ x: 0, y: 0 });
   };
 
-  const compressImage = (base64Str: string, maxWidth = 1024, maxHeight = 1024, quality = 0.8): Promise<string> => {
-    return Promise.resolve(base64Str);
+  const compressImage = (base64Str: string, maxWidth = 1024, maxHeight = 1024, quality = 0.75): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        if (width > maxWidth || height > maxHeight) {
+          if (width > height) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          } else {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL("image/webp", quality));
+        } else {
+          resolve(base64Str);
+        }
+      };
+      img.onerror = () => {
+        resolve(base64Str);
+      };
+      img.src = base64Str;
+    });
   };
 
   const handleStyleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -758,7 +858,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
   const isProduct = store.tipoPainel === "PRODUCT";
 
   return (
-    <div className="flex flex-col h-screen w-full bg-[#0a0a0a] text-zinc-100 font-sans overflow-hidden" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+    <div className="flex h-screen w-full bg-[#000000] text-zinc-100 font-sans overflow-hidden" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
       
       <style dangerouslySetInnerHTML={{__html: `
         .custom-scrollbar::-webkit-scrollbar {
@@ -769,11 +869,11 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
           background: transparent;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #4b5563;
+          background: #3f3f46;
           border-radius: 10px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #ad8330;
+          background: #c5a880;
         }
         .no-scrollbar::-webkit-scrollbar {
           display: none;
@@ -784,193 +884,218 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
         }
       `}} />
 
-      {/* HEADER SUPERIOR (NAVBAR) DE NAVEGAÇÃO COMPACTA */}
-      <div className="h-16 border-b border-zinc-800 bg-[#0f0f11] flex items-center justify-between px-4 sm:px-6 shrink-0 relative z-30 select-none gap-2">
-        {/* Lado Esquerdo: Logo DZ + Título + Seletor de Projetos */}
-        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-            <div className="w-8 h-8 rounded bg-[#ad8330] flex items-center justify-center font-bold text-black text-sm shrink-0">
-              DZ
-            </div>
-            <span className="font-extrabold text-xs sm:text-sm uppercase tracking-widest text-[#ad8330] hidden md:block">
-              Designer Zion
-            </span>
-          </div>
-
-          <div className="w-[1px] h-4 bg-zinc-800 hidden md:block" />
-
-          {/* Nome do projeto ativo editável */}
-          <div className="flex items-center gap-1.5 sm:gap-2 bg-zinc-950 p-1.5 sm:p-2 rounded-lg border border-zinc-800 min-w-0">
-            {isEditingName ? (
-              <input
-                type="text"
-                value={tempProjectName}
-                onChange={(e) => setTempProjectName(e.target.value)}
-                onBlur={saveProjectName}
-                onKeyDown={(e) => e.key === "Enter" && saveProjectName()}
-                className="bg-transparent border-0 text-[10px] text-white focus:outline-none focus:ring-0 w-20 sm:w-32 font-bold uppercase tracking-wider"
-                autoFocus
-              />
-            ) : (
-              <span className="text-[10px] font-black uppercase tracking-wider text-zinc-300 truncate max-w-[80px] sm:max-w-[120px]">
-                {activeProjectName}
+      
+      {/* CONTEÚDO PRINCIPAL HEADER + ESPAÇO CORE WORKSPACE */}
+      <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#000000]">
+        
+        {/* TOPBAR UNIFICADA COM NAVEGAÇÃO E LOGO */}
+        <div className="h-16 border-b border-white/5 bg-[#0A0A0A] flex items-center justify-between px-6 shrink-0 z-30 select-none gap-8">
+          
+          {/* Lado Esquerdo: Logo e Navegação */}
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2.5 shrink-0 mr-4">
+              <div className="w-7 h-7 rounded-lg bg-[#c5a880]/10 border border-[#c5a880]/20 flex items-center justify-center text-[#c5a880] shrink-0 shadow-inner">
+                <Layers size={14} />
+              </div>
+              <span className="font-bold text-lg text-white tracking-tight">
+                Design Builder
               </span>
-            )}
-            <button
-              onClick={isEditingName ? saveProjectName : startEditingName}
-              className="text-zinc-500 hover:text-[#ad8330] transition-colors shrink-0 cursor-pointer"
-            >
-              {isEditingName ? <CheckCircle size={12} /> : <Edit2 size={12} />}
-            </button>
-          </div>
-        </div>
+            </div>
 
-        {/* Centro: Links de Navegação Horizontais da SPA */}
-        <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar scrollbar-none px-1 py-1 max-w-[45%] md:max-w-none shrink-0">
-          {[
-            { name: "Designer Zion", value: "Design Builder" },
-            { name: "Ref Builder", value: "Ref Builder" },
-            { name: "Inspiração", value: "Inspiração" },
-            { name: "Comunidade", value: "Comunidade" },
-            { name: "Minha Galeria", value: "Minha Galeria" }
-          ].map((tab) => {
-            const isSel = activeMenuTab === tab.value;
-            return (
+            {/* Menu de Navegação Horizontal */}
+            <div className="flex items-center gap-1 bg-[#121215] p-1 rounded-xl border border-white/5">
               <button
-                key={tab.value}
-                onClick={() => setActiveMenuTab(tab.value)}
-                className={`px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg text-[10px] sm:text-xs font-black uppercase tracking-wider transition-all cursor-pointer shrink-0 ${
-                  isSel 
-                    ? "bg-[#ad8330]/10 border border-[#ad8330]/25 text-[#ad8330]" 
-                    : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/30"
+                onClick={() => setActiveMenuTab("Design Builder")}
+                className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  activeMenuTab === "Design Builder"
+                    ? "bg-[#c5a880] text-black font-extrabold shadow-sm"
+                    : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50 border border-transparent"
                 }`}
               >
-                {tab.name}
+                <Sparkles size={12} />
+                <span>Criar</span>
               </button>
-            );
-          })}
-        </div>
-
-        {/* Lado Direito: Status e Testar Conexão compactos */}
-        <div className="flex items-center gap-1.5 sm:gap-4 shrink-0">
-          <div className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800">
-            <span className={`w-2 h-2 rounded-full ${store.apiStatus === "Online" ? "bg-emerald-500 animate-pulse" : "bg-red-500"} shrink-0`} />
-            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 hidden lg:inline">
-              {store.apiStatus === "Online" ? "API: Online" : "Erro API"}
-            </span>
+              <button
+                onClick={() => setActiveMenuTab("Inspiração")}
+                className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  activeMenuTab === "Inspiração"
+                    ? "bg-[#c5a880] text-black font-extrabold shadow-sm"
+                    : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50 border border-transparent"
+                }`}
+              >
+                <Compass size={12} />
+                <span>Explorar</span>
+              </button>
+              <button
+                onClick={() => setActiveMenuTab("Minha Galeria")}
+                className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  activeMenuTab === "Minha Galeria"
+                    ? "bg-[#c5a880] text-black font-extrabold shadow-sm"
+                    : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50 border border-transparent"
+                }`}
+              >
+                <ImageIcon size={12} />
+                <span>Minha Galeria</span>
+              </button>
+              <button
+                onClick={() => setActiveMenuTab("Ref Builder")}
+                className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  activeMenuTab === "Ref Builder"
+                    ? "bg-[#c5a880] text-black font-extrabold shadow-sm"
+                    : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50 border border-transparent"
+                }`}
+              >
+                <SlidersHorizontal size={12} />
+                <span>Ref Builder PRO</span>
+              </button>
+            </div>
           </div>
 
-          <button
-            onClick={handleTestToken}
-            disabled={isTesting}
-            className="flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[9.5px] font-extrabold uppercase tracking-widest text-zinc-350 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
-          >
-            {isTesting ? (
-              <RefreshCw size={11} className="animate-spin text-[#ad8330]" />
-            ) : (
-              <Play size={11} className="text-[#ad8330]" />
-            )}
-            <span className="hidden sm:inline">Testar</span>
-          </button>
-        </div>
-      </div>
-
-      {/* CONTAINER DAS COLUNAS (2 COLUNAS PRINCIPAIS) */}
-      <div className="flex flex-col lg:flex-row flex-1 w-full overflow-hidden lg:overflow-hidden overflow-y-auto lg:overflow-y-hidden">
-
-        {/* COLUNA 2: PAINEL DE CONFIGURAÇÕES (52%) */}
-        <div className="w-full lg:w-[52%] bg-[#121214] border-b lg:border-b-0 lg:border-r border-zinc-800/80 flex flex-col h-[50vh] lg:h-full shrink-0 select-none overflow-hidden">
-        
-        {/* Topbar/Projetos e Seletor de Módulo */}
-        <div className="h-14 border-b border-zinc-800 flex items-center justify-between px-6 shrink-0 bg-black/10">
-          
-          {/* Listagem horizontal de projetos */}
-          <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar flex-1 mr-4 py-1">
-            {store.projectsList.map((proj) => {
-              const isActive = proj.id === store.activeProjectId;
-              return (
-                <div
-                  key={proj.id}
-                  onClick={() => store.loadProjectById(proj.id)}
-                  className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[9.5px] font-black uppercase tracking-wider cursor-pointer border transition-all ${
-                    isActive
-                      ? "bg-zinc-900 border-zinc-800 text-white ring-1 ring-zinc-800"
-                      : "bg-[#121214] border-transparent text-zinc-500 hover:text-zinc-350"
-                  }`}
-                >
-                  <span className="truncate max-w-[70px]">{proj.name}</span>
-                  {store.projectsList.length > 1 && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        store.deleteProject(proj.id);
-                      }}
-                      className="hover:text-red-500 transition-colors p-0.5"
-                    >
-                      <X size={10} />
-                    </button>
-                  )}
-                </div>
-              );
-            })}
+          {/* Lado Direito: Ações */}
+          <div className="flex items-center gap-3 shrink-0">
             <button
-              onClick={() => store.createProject()}
-              className="p-1.5 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white transition-all border border-zinc-800 bg-zinc-900"
-              title="Novo Projeto"
+              onClick={() => {
+                if (window.confirm("Deseja realmente limpar todas as configurações, textos e referências do projeto atual? Isso não apagará as imagens da galeria.")) {
+                  store.updateConfig({
+                    sujeitoBase64: "",
+                    cenarioBase64: "",
+                    sujeitosBase64List: [],
+                    cenariosBase64List: [],
+                    tipografiaRefsList: [],
+                    designRefsList: [],
+                    logosList: [],
+                    referenciasEstilo: [],
+                    camadasTexto: [],
+                    additionalPrompt: "",
+                    promptCenario: "",
+                    promptDesign: "",
+                    promptTipografia: "",
+                    useLogo: false,
+                    enableTypography: false,
+                    useEnvRef: false,
+                    enableEstiloVisual: false,
+                    estiloVisualCustom: "",
+                    poseDescription: ""
+                  });
+                  showToast("Configurações do projeto atual redefinidas!", "success");
+                }
+              }}
+              className="px-3 py-2 bg-zinc-950 hover:bg-zinc-900 border border-white/5 text-zinc-400 hover:text-white text-xs font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
+              title="Limpar configurações do projeto atual"
             >
-              <Plus size={10} />
+              <RefreshCw size={11} className="text-zinc-500" />
+              <span>Limpar Editor</span>
+            </button>
+            <button
+              onClick={() => { store.createProject(); showToast("Novo projeto criado com sucesso!", "success"); }}
+              className="px-4 py-2 bg-[#c5a880] hover:bg-[#b39873] text-black text-xs font-black uppercase tracking-wider rounded-lg transition-colors cursor-pointer shadow-md"
+            >
+              + NOVO PROJETO
             </button>
           </div>
-
-          {/* Seletor de Painel: Designer Zion vs Product Zion */}
-          <div className="flex bg-zinc-950 p-1 rounded-lg border border-zinc-800 shrink-0">
-            {[
-              { label: "Designer", value: "DESIGNER" },
-              { label: "Product", value: "PRODUCT" }
-            ].map((pnl) => {
-              const isSel = store.tipoPainel === pnl.value;
-              return (
-                <button
-                  key={pnl.value}
-                  onClick={() => store.updateConfig({ tipoPainel: pnl.value as any })}
-                  className={`px-3 py-1 rounded text-[9.5px] font-black uppercase tracking-wider transition-all cursor-pointer ${
-                    isSel ? "bg-[#ad8330] text-black" : "text-zinc-500 hover:text-zinc-300"
-                  }`}
-                >
-                  {pnl.label}
-                </button>
-              );
-            })}
-          </div>
-
         </div>
 
-        {/* Scrollable Form */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-7 custom-scrollbar">
+        {/* CORE WORKSPACE COM TAB-BAR E COLUNAS */}
+        <div className="flex-1 flex flex-col overflow-hidden relative">
+          
+          {/* horizontal browser tabs for active projects */}
+          <div className="h-11 bg-[#0A0A0A]/50 border-b border-white/5 flex items-center px-4 shrink-0 overflow-x-auto select-none no-scrollbar">
+            <div className="flex items-center gap-1">
+              {store.projectsList.map((proj) => {
+                const isActive = proj.id === store.activeProjectId;
+                return (
+                  <div
+                    key={proj.id}
+                    onClick={() => store.loadProjectById(proj.id)}
+                    className={`group flex items-center gap-2.5 px-4 py-1.5 rounded-t-lg text-[10px] font-black uppercase tracking-wider cursor-pointer border-t border-x transition-all duration-150 ${
+                      isActive
+                        ? "bg-[#0A0A0A] border-white/5 text-white"
+                        : "bg-transparent border-transparent text-zinc-500 hover:text-zinc-300"
+                    }`}
+                  >
+                    <span className="truncate max-w-[120px]">{proj.name}</span>
+                    {store.projectsList.length > 1 && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          store.deleteProject(proj.id);
+                        }}
+                        className="text-zinc-600 hover:text-red-500 transition-colors p-0.5 ml-1.5 rounded"
+                      >
+                        <X size={10} />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+              <button
+                onClick={() => store.createProject()}
+                className="p-1.5 hover:bg-zinc-800 rounded-lg text-zinc-500 hover:text-white transition-all ml-1"
+                title="Novo Projeto"
+              >
+                <Plus size={12} />
+              </button>
+            </div>
+          </div>
+
+          {/* DOIS PAINEIS DO WORKSPACE */}
+          <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+            
+            {/* COLUNA ESQUERDA: CONFIGURAÇÕES */}
+            <div className="w-full md:w-[360px] lg:w-[420px] 2xl:w-[480px] bg-[#0A0A0A] border-b md:border-b-0 md:border-r border-white/5 flex flex-col h-[45vh] md:h-full shrink-0 select-none overflow-hidden">
+              
+              {/* Seletor de Módulo */}
+              <div className="h-12 border-b border-white/5 flex items-center justify-between px-6 shrink-0 bg-[#0A0A0A]/40">
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-450">
+                  MÓDULO ATIVO: <span className="text-[#c5a880]">{store.tipoPainel}</span>
+                </span>
+                <div className="flex bg-zinc-950 p-1 rounded-lg border border-white/5 shrink-0">
+                  {[
+                    { label: "DESIGNER", value: "DESIGNER" },
+                    { label: "PRODUCT", value: "PRODUCT" }
+                  ].map((pnl) => {
+                    const isSel = store.tipoPainel === pnl.value;
+                    return (
+                      <button
+                        key={pnl.value}
+                        onClick={() => store.updateConfig({ tipoPainel: pnl.value as any })}
+                        className={`px-3 py-1 rounded-md text-[9.5px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                          isSel ? "bg-[#c5a880] text-black font-bold" : "text-zinc-500 hover:text-zinc-300"
+                        }`}
+                      >
+                        {pnl.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Scrollable Form */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-7 custom-scrollbar">
           
           {activeMenuTab === "Design Builder" && (
             <>
               {/* Sujeito / Produto */}
-          <div className="bg-zinc-900/20 border border-zinc-800 p-5 rounded-2xl space-y-5 shadow-sm hover:border-zinc-800/80 transition-colors">
-            <div className="flex items-center gap-2.5 border-l-2 border-[#ad8330] pl-3">
-              <span className="text-xs font-black tracking-widest text-zinc-200 uppercase">
+          <div className="bg-[#121214] border border-white/5 p-5 rounded-xl space-y-5 shadow-sm hover:border-white/5 transition-colors">
+            <div className="flex items-center gap-2.5 border-l-2 border-[#c5a880] pl-3">
+              <span className="text-sm font-semibold text-white tracking-tight">
                 {isProduct ? "Produto Principal" : "Sujeito Principal"}
               </span>
             </div>
 
             {/* Toggle Desativar Sujeito */}
-            <div className="flex items-center justify-between p-3 bg-zinc-950/40 rounded-xl border border-zinc-800/60">
+            <div className="flex items-center justify-between p-3 bg-zinc-950/40 rounded-xl border border-white/5">
               <div className="flex flex-col">
                 <span className="text-xs font-bold text-zinc-300 uppercase tracking-wider">Desativar Sujeito Principal?</span>
                 <span className="text-[10px] text-zinc-500 tracking-wide mt-0.5">Ignore pessoas ou produtos no criativo, focando apenas no cenário e texto</span>
               </div>
               <button
                 onClick={() => store.updateConfig({ desativarSujeito: !store.desativarSujeito })}
-                className="w-11 h-6 bg-zinc-800 rounded-full p-0.5 relative transition-colors duration-200"
-                style={{ backgroundColor: store.desativarSujeito ? "#ad8330" : "" }}
+                className="w-11 h-6 rounded-full p-0.5 relative transition-colors duration-200 cursor-pointer"
+                style={{ backgroundColor: store.desativarSujeito ? "#c5a880" : "#27272a" }}
               >
                 <div
-                  className="w-5 h-5 bg-white rounded-full transition-transform duration-200"
+                  className="w-5 h-5 bg-white rounded-full transition-transform duration-200 shadow-sm"
                   style={{ transform: store.desativarSujeito ? "translateX(20px)" : "translateX(0)" }}
                 />
               </button>
@@ -982,59 +1107,63 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                 <ImageUploader
                   type="person"
                   label={isProduct ? "Fotos do Produto" : "Fotos do Sujeito"}
-                  icon={isProduct ? <Layers size={20} /> : <User size={20} />}
+                  icon={isProduct ? <Layers size={20} className="text-[#c5a880]" /> : <User size={20} className="text-[#c5a880]" />}
                   base64s={store.sujeitosBase64List || []}
                   onUpdateBase64s={store.setSujeitoBase64List}
                   showToast={showToast}
                 />
 
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Quantidade */}
-                  <div>
-                    <label className="block text-[11px] uppercase tracking-widest font-black text-zinc-400 mb-1.5 font-bold">Quantidade</label>
-                    <div className="flex gap-1 bg-zinc-950 p-1.5 rounded-lg border border-zinc-800">
-                      {[1, 2, 3, 4, 5].map((num) => {
-                        const isSelected = store.variations === num;
-                        return (
-                          <button
-                            key={num}
-                            onClick={() => store.updateConfig({ variations: num })}
-                            className={`flex-1 py-1.5 rounded text-xs font-black transition-all cursor-pointer ${
-                              isSelected ? "bg-[#ad8330] text-black" : "text-zinc-400 hover:text-white"
-                            }`}
-                          >
-                            {num}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Gênero (Oculto se for produto) */}
+                <div className="space-y-4">
+                  {/* Gênero ou Posicionamento (Oculto se for produto) */}
                   {!isProduct ? (
                     <div>
-                      <label className="block text-[11px] uppercase tracking-widest font-black text-zinc-400 mb-1.5 font-bold">Gênero</label>
-                      <div className="flex gap-1 bg-zinc-950 p-1.5 rounded-lg border border-zinc-800">
-                        {["Masculino", "Feminino", "Outros"].map((gen) => {
-                          const isSelected = store.gender === gen;
-                          return (
-                            <button
-                              key={gen}
-                              onClick={() => store.updateConfig({ gender: gen })}
-                              className={`flex-1 py-1.5 rounded text-xs font-black transition-all cursor-pointer ${
-                                isSelected ? "bg-[#ad8330] text-black" : "text-zinc-400 hover:text-white"
-                              }`}
-                            >
-                              {gen}
-                            </button>
-                          );
-                        })}
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block text-xs font-medium text-zinc-400">Gênero</label>
+                        <label className="flex items-center gap-1.5 text-[10px] text-zinc-500 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={store.multiplesPersons || false}
+                            onChange={(e) => store.updateConfig({ multiplesPersons: e.target.checked })}
+                            className="rounded bg-zinc-950 border-white/10 text-[#c5a880] focus:ring-0 focus:ring-offset-0 w-3.5 h-3.5 cursor-pointer accent-[#c5a880]"
+                          />
+                          <span>Mais de 1 pessoa na foto?</span>
+                        </label>
                       </div>
+                      
+                      {!store.multiplesPersons ? (
+                        <div className="flex gap-1 bg-zinc-950 p-1.5 rounded-lg border border-white/5">
+                          {["Masculino", "Feminino", "Outros"].map((gen) => {
+                            const isSelected = store.gender === gen;
+                            return (
+                              <button
+                                key={gen}
+                                onClick={() => store.updateConfig({ gender: gen })}
+                                className={`flex-1 py-1.5 rounded text-xs font-black transition-all cursor-pointer ${
+                                  isSelected ? "bg-[#c5a880] text-black font-semibold" : "text-zinc-400 hover:text-white"
+                                }`}
+                              >
+                                {gen}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="space-y-1.5">
+                          <textarea
+                            value={store.gendersDescription || ""}
+                            onChange={(e) => store.updateConfig({ gendersDescription: e.target.value })}
+                            placeholder="Descreva o gênero de cada pessoa da foto (Ex: Um homem de barba e duas mulheres ao fundo...)"
+                            rows={2}
+                            className="w-full bg-zinc-950/60 border border-white/5 rounded-lg p-2.5 text-xs text-zinc-200 placeholder-zinc-700 focus:outline-none focus:border-[#c5a880]/40 tracking-wide resize-none"
+                          />
+                          <span className="text-[9px] text-zinc-500 uppercase tracking-wider block">O Diretor Criativo descreve automaticamente ao analisar múltiplas pessoas na imagem.</span>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div>
-                      <label className="block text-[11px] uppercase tracking-widest font-black text-zinc-400 mb-1.5 font-bold">Posicionamento</label>
-                      <div className="flex gap-1 bg-zinc-950 p-1.5 rounded-lg border border-zinc-800">
+                      <label className="block text-xs font-medium text-zinc-400 mb-1.5">Posicionamento</label>
+                      <div className="flex gap-1 bg-zinc-950 p-1.5 rounded-lg border border-white/5">
                         {["Centro", "Esquerda", "Direita"].map((pos) => {
                           const isSelected = store.positioning === pos;
                           return (
@@ -1042,7 +1171,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                               key={pos}
                               onClick={() => store.updateConfig({ positioning: pos })}
                               className={`flex-1 py-1.5 rounded text-xs font-black transition-all cursor-pointer ${
-                                isSelected ? "bg-[#ad8330] text-black" : "text-zinc-400 hover:text-white"
+                                isSelected ? "bg-[#c5a880] text-black font-semibold" : "text-zinc-400 hover:text-white"
                               }`}
                             >
                               {pos}
@@ -1056,7 +1185,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
 
                 {/* Descrição da pose ou roupa / Detalhes do produto */}
                 <div>
-                  <label className="block text-[11px] uppercase tracking-widest font-black text-zinc-400 mb-1.5 font-bold">
+                  <label className="block text-xs font-medium text-zinc-400 mb-1.5">
                     {isProduct ? "Características do Produto (opcional)" : "Descrição da pose ou roupa (opcional)"}
                   </label>
                   <input
@@ -1064,15 +1193,15 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                     value={store.poseDescription || ""}
                     onChange={(e) => store.updateConfig({ poseDescription: e.target.value })}
                     placeholder={isProduct ? "Ex: Frasco de vidro fosco, tampa dourada, reflexo metálico..." : "Ex: Em pé de braços cruzados, vestindo blazer preto..."}
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-700 focus:outline-none focus:border-[#ad8330]/50 font-medium"
+                    className="w-full bg-[#0F0F11] border border-white/10 rounded-lg px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-700 focus:outline-none focus:border-[#c5a880]/50 font-medium"
                   />
                 </div>
 
                 {/* Posição do Sujeito (Oculto se for produto para não repetir seletor) */}
                 {!isProduct && (
                   <div>
-                    <label className="block text-[11px] uppercase tracking-widest font-black text-zinc-400 mb-1.5 font-bold">Posição do Sujeito</label>
-                    <div className="flex gap-1 bg-zinc-950 p-1.5 rounded-lg border border-zinc-800">
+                    <label className="block text-xs font-medium text-zinc-400 mb-1.5">Posição do Sujeito</label>
+                    <div className="flex gap-1 bg-zinc-950 p-1.5 rounded-lg border border-white/5">
                       {["Esquerda", "Centro", "Direita"].map((pos) => {
                         const isSelected = store.positioning === pos;
                         return (
@@ -1080,7 +1209,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                             key={pos}
                             onClick={() => store.updateConfig({ positioning: pos })}
                             className={`flex-1 py-1.5 rounded text-xs font-black transition-all cursor-pointer ${
-                              isSelected ? "bg-[#ad8330] text-black" : "text-zinc-400 hover:text-white"
+                              isSelected ? "bg-[#c5a880] text-black font-semibold" : "text-zinc-400 hover:text-white"
                             }`}
                           >
                             {pos}
@@ -1095,9 +1224,9 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
           </div>
 
           {/* Dimensões com ícones visuais representativos */}
-          <div className="bg-zinc-900/20 border border-zinc-800 p-5 rounded-2xl space-y-4 shadow-sm hover:border-zinc-800/80 transition-colors">
-            <div className="flex flex-col gap-1.5 border-l-2 border-[#ad8330] pl-3">
-              <span className="text-xs font-black tracking-widest text-zinc-200 uppercase">Dimensões</span>
+          <div className="bg-[#121214] border border-white/5 p-5 rounded-xl space-y-4 shadow-sm hover:border-white/5 transition-colors">
+            <div className="flex flex-col gap-1.5 border-l-2 border-[#c5a880] pl-3">
+              <span className="text-sm font-semibold text-white tracking-tight">Dimensões</span>
               <span className="text-[10px] text-zinc-400 tracking-wide">Selecione o formato ideal para as redes sociais ou desktop</span>
             </div>
             <div className="grid grid-cols-4 gap-2">
@@ -1130,8 +1259,8 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                     onClick={() => store.updateConfig({ dimensao: dim.value })}
                     className={`py-3 rounded-lg border text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer flex flex-col items-center justify-center ${
                       isSelected
-                        ? "bg-[#ad8330]/10 border-[#ad8330] text-[#ad8330] ring-1 ring-[#ad8330]"
-                        : "bg-zinc-900/40 border-zinc-800 text-zinc-400 hover:text-white hover:border-[#ad8330]/20 hover:ring-1 hover:ring-[#ad8330]/20"
+                        ? "bg-[#c5a880]/10 border-[#c5a880] text-[#c5a880] ring-1 ring-[#c5a880]"
+                        : "bg-zinc-900/40 border-white/5 text-zinc-400 hover:text-white hover:border-[#c5a880]/30 hover:ring-1 hover:ring-[#c5a880]/30"
                     }`}
                   >
                     {dim.icon}
@@ -1143,21 +1272,21 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
           </div>
 
           {/* Tipografia (Camadas de textos configuráveis) */}
-          <div className="bg-zinc-900/20 border border-zinc-800 p-5 rounded-2xl space-y-5 shadow-sm hover:border-zinc-800/80 transition-colors">
-            <div className="flex flex-col gap-1.5 border-l-2 border-[#ad8330] pl-3">
-              <span className="text-xs font-black tracking-widest text-zinc-200 uppercase">Tipografia (Camadas)</span>
+          <div className="bg-[#121214] border border-white/5 p-5 rounded-xl space-y-5 shadow-sm hover:border-white/5 transition-colors">
+            <div className="flex flex-col gap-1.5 border-l-2 border-[#c5a880] pl-3">
+              <span className="text-sm font-semibold text-white tracking-tight">Tipografia (Camadas)</span>
               <span className="text-[10px] text-zinc-400 tracking-wide">Crie e configure camadas dinâmicas de textos com fontes premium</span>
             </div>
 
             <div className="flex items-center justify-between">
-              <span className="text-[10.5px] font-bold text-zinc-450 uppercase tracking-wider">Adicionar Texto</span>
+              <span className="text-[10.5px] font-bold text-zinc-455 uppercase tracking-wider">Adicionar Texto</span>
                 <button
                   onClick={() => store.updateConfig({ enableTypography: !store.enableTypography })}
-                  className="w-11 h-6 bg-zinc-800 rounded-full p-0.5 relative transition-colors duration-200"
-                  style={{ backgroundColor: store.enableTypography ? "#ad8330" : "" }}
+                  className="w-11 h-6 rounded-full p-0.5 relative transition-colors duration-200 cursor-pointer"
+                  style={{ backgroundColor: store.enableTypography ? "#c5a880" : "#27272a" }}
                 >
                   <div
-                    className="w-5 h-5 bg-white rounded-full transition-transform duration-200"
+                    className="w-5 h-5 bg-white rounded-full transition-transform duration-200 shadow-sm"
                     style={{ transform: store.enableTypography ? "translateX(20px)" : "translateX(0)" }}
                   />
                 </button>
@@ -1167,22 +1296,33 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                 <div className="space-y-5 pt-1">
                   
                   {/* Referência de Tipografia por Imagem */}
-                  <div className="p-3 bg-zinc-950 rounded-lg border border-zinc-900/60 space-y-2">
+                  <div className="p-3 bg-zinc-950 rounded-lg border border-white/5 space-y-2.5">
                     <span className="text-[9.5px] font-bold text-zinc-400 uppercase tracking-wider block">Copiar Tipografia por Referência (Imagem)</span>
                     <ImageUploader
                       type="env"
                       label="Enviar Print da Tipografia"
-                      icon={<ImageIcon size={16} />}
+                      icon={<ImageIcon size={16} className="text-[#c5a880]" />}
                       base64s={store.tipografiaRefsList || []}
                       onUpdateBase64s={store.setTipografiaRefsList}
                       showToast={showToast}
                     />
+
+                    <div className="space-y-1">
+                      <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider block">O que deseja extrair/copiar desta tipografia/texto?</span>
+                      <textarea
+                        value={store.promptTipografia || ""}
+                        onChange={(e) => store.updateConfig({ promptTipografia: e.target.value })}
+                        placeholder="Ex: Copiar exatamente o texto principal 'ZION' usando a mesma fonte sans-serif moderna, peso ultra-bold e posições..."
+                        rows={2}
+                        className="w-full bg-zinc-900/40 border border-white/5 rounded-lg p-2 text-xs text-zinc-200 placeholder-zinc-700 focus:outline-none focus:border-[#c5a880]/40 tracking-wide resize-none"
+                      />
+                    </div>
                   </div>
 
                   {/* Lista de Camadas de Texto */}
                   <div className="space-y-3.5">
                     {store.camadasTexto.map((layer, index) => (
-                      <div key={layer.id} className="p-4 bg-zinc-950 rounded-xl border border-zinc-900 space-y-3 relative group">
+                      <div key={layer.id} className="p-4 bg-zinc-950 rounded-xl border border-white/5 space-y-3 relative group">
                         
                         {/* Controles de ordem */}
                         <div className="absolute top-3 right-3 flex items-center gap-1.5">
@@ -1209,28 +1349,28 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                         </div>
 
                         <div className="pr-16">
-                          <span className="text-[9px] font-black text-[#ad8330] uppercase tracking-widest block mb-1">CAMADA #{index + 1}</span>
+                          <span className="text-[9px] font-black text-[#c5a880] uppercase tracking-widest block mb-1">CAMADA #{index + 1}</span>
                         </div>
 
                         {/* Conteúdo frase */}
                         <div>
-                          <label className="block text-[8.5px] uppercase tracking-widest font-black text-zinc-555 mb-1">Frase</label>
+                          <label className="block text-xs font-medium text-zinc-400 mb-1">Frase</label>
                           <input
                             type="text"
                             value={layer.conteudo}
                             onChange={(e) => store.updateCamadaTexto(layer.id, { conteudo: e.target.value })}
                             placeholder="Frase ou texto..."
-                            className="w-full bg-zinc-900 border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-zinc-650 focus:outline-none focus:border-[#ad8330]/40 font-medium"
+                            className="w-full bg-[#1A1A1C] border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-zinc-650 focus:outline-none focus:border-[#c5a880]/50 font-medium"
                           />
                         </div>
 
                         {/* Função Corpo / Descrição */}
                         <div>
-                          <label className="block text-[8.5px] uppercase tracking-widest font-black text-zinc-555 mb-1">Função</label>
+                          <label className="block text-xs font-medium text-zinc-400 mb-1">Função</label>
                           <select
                             value={layer.funcao}
                             onChange={(e) => store.updateCamadaTexto(layer.id, { funcao: e.target.value as any })}
-                            className="w-full bg-zinc-900 border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#ad8330]/40 font-bold uppercase tracking-wide cursor-pointer"
+                            className="w-full bg-[#1A1A1C] border border-white/10 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 font-bold uppercase tracking-wide cursor-pointer"
                           >
                             <option value="Headline Principal">Headline Principal</option>
                             <option value="Subheadline Secundário">Subheadline Secundário</option>
@@ -1246,11 +1386,11 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                         {/* Dropdown de Escolha de Fontes e Cor */}
                         <div className="grid grid-cols-2 gap-2">
                           <div>
-                            <label className="block text-[8px] uppercase tracking-widest font-black text-zinc-555 mb-1">Escolha a Fonte</label>
+                            <label className="block text-xs font-medium text-zinc-400 mb-1">Escolha a Fonte</label>
                             <select
                               value={layer.fonte}
                               onChange={(e) => store.updateCamadaTexto(layer.id, { fonte: e.target.value })}
-                              className="w-full bg-zinc-900 border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#ad8330]/40 font-bold uppercase tracking-wide cursor-pointer"
+                              className="w-full bg-[#1A1A1C] border border-white/10 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 font-bold uppercase tracking-wide cursor-pointer"
                             >
                               <option value="Montserrat">Montserrat</option>
                               <option value="Poppins">Poppins</option>
@@ -1263,7 +1403,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                           </div>
 
                           <div>
-                            <label className="block text-[8px] uppercase tracking-widest font-black text-zinc-555 mb-1">Cor do Texto</label>
+                            <label className="block text-xs font-medium text-zinc-400 mb-1">Cor do Texto</label>
                             <div className="flex items-center gap-1.5">
                               <input
                                 type="color"
@@ -1276,7 +1416,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                                 value={layer.cor}
                                 onChange={(e) => store.updateCamadaTexto(layer.id, { cor: e.target.value })}
                                 placeholder="#ffffff"
-                                className="w-full bg-zinc-900 border border-zinc-800 rounded px-1.5 py-1 text-[10px] text-white focus:outline-none focus:border-[#ad8330]/40 font-bold uppercase"
+                                className="w-full bg-[#1A1A1C] border border-white/10 rounded px-1.5 py-1 text-[10px] text-white focus:outline-none focus:border-[#c5a880]/50 font-bold uppercase"
                               />
                             </div>
                           </div>
@@ -1288,7 +1428,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
 
                   <button
                     onClick={() => store.addCamadaTexto()}
-                    className="w-full py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs font-black uppercase tracking-widest text-[#ad8330] rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="w-full py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-white/5 text-xs font-black uppercase tracking-widest text-[#c5a880] hover:text-[#c5a880] rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <Plus size={12} />
                     <span>Adicionar Bloco de Texto</span>
@@ -1296,8 +1436,8 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
 
                   {/* Posição Global */}
                   <div>
-                    <label className="block text-[9.5px] uppercase tracking-widest font-black text-zinc-500 mb-1.5 font-bold">Posição Global do Texto</label>
-                    <div className="flex gap-1.5 bg-zinc-950 p-1.5 rounded-lg border border-zinc-800">
+                    <label className="block text-xs font-medium text-zinc-400 mb-1.5">Posição Global do Texto</label>
+                    <div className="flex gap-1.5 bg-zinc-950 p-1.5 rounded-lg border border-white/5">
                       {(["ESQUERDA", "CENTRO", "DIREITA"] as const).map((pos) => {
                         const isSel = store.typographyPosition === pos;
                         return (
@@ -1305,7 +1445,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                             key={pos}
                             onClick={() => store.updateConfig({ typographyPosition: pos })}
                             className={`flex-1 py-1.5 rounded text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
-                              isSel ? "bg-[#ad8330] text-black" : "text-zinc-400 hover:text-white"
+                              isSel ? "bg-[#c5a880] text-black font-semibold" : "text-zinc-400 hover:text-white"
                             }`}
                           >
                             {pos}
@@ -1319,9 +1459,9 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
             </div>
 
           {/* Cenário Customizado & Prompt Adicional Cenário */}
-          <div className="bg-zinc-900/20 border border-zinc-800 p-5 rounded-2xl space-y-5 shadow-sm hover:border-zinc-800/80 transition-colors">
-            <div className="flex flex-col gap-1 border-l-2 border-[#ad8330] pl-3">
-              <span className="text-[10.5px] font-black tracking-widest text-zinc-300 uppercase">Cenário</span>
+          <div className="bg-[#121214] border border-white/5 p-5 rounded-xl space-y-5 shadow-sm hover:border-white/5 transition-colors">
+            <div className="flex flex-col gap-1 border-l-2 border-[#c5a880] pl-3">
+              <span className="text-sm font-semibold text-white tracking-tight">Cenário</span>
               <span className="text-[8px] text-zinc-500 tracking-wide">Descreva ou envie imagens do plano de fundo/ambiente do criativo</span>
             </div>
             
@@ -1329,11 +1469,11 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                 <span className="text-[10.5px] font-bold text-zinc-400 uppercase tracking-wider">Usar fotos de cenário?</span>
                 <button
                   onClick={() => store.updateConfig({ useEnvRef: !store.useEnvRef })}
-                  className="w-11 h-6 bg-zinc-800 rounded-full p-0.5 relative transition-colors duration-200"
-                  style={{ backgroundColor: store.useEnvRef ? "#ad8330" : "" }}
+                  className="w-11 h-6 rounded-full p-0.5 relative transition-colors duration-200 cursor-pointer"
+                  style={{ backgroundColor: store.useEnvRef ? "#c5a880" : "#27272a" }}
                 >
                   <div
-                    className="w-5 h-5 bg-white rounded-full transition-transform duration-200"
+                    className="w-5 h-5 bg-white rounded-full transition-transform duration-200 shadow-sm"
                     style={{ transform: store.useEnvRef ? "translateX(20px)" : "translateX(0)" }}
                   />
                 </button>
@@ -1343,7 +1483,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                 <ImageUploader
                   type="env"
                   label="Fotos de Cenário"
-                  icon={<ImageIcon size={20} />}
+                  icon={<ImageIcon size={20} className="text-[#c5a880]" />}
                   base64s={store.cenariosBase64List || []}
                   onUpdateBase64s={store.setCenarioBase64List}
                   showToast={showToast}
@@ -1352,25 +1492,25 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
 
               {/* Prompt Adicional Cenário */}
               <div className="pt-2">
-                <label className="block text-[9.5px] uppercase tracking-widest font-black text-zinc-500 mb-1.5 font-bold">Prompt Adicional Cenário</label>
+                <label className="block text-xs font-medium text-zinc-400 mb-1.5">Prompt Adicional Cenário</label>
                 <input
                   type="text"
                   value={store.promptCenario}
                   onChange={(e) => store.updateConfig({ promptCenario: e.target.value })}
                   placeholder="Ex: Sala executiva com luz solar, janelas de vidro amplas..."
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-3 text-xs text-zinc-200 placeholder:text-zinc-700 focus:outline-none focus:border-[#ad8330]/50 font-medium"
+                  className="w-full bg-[#0F0F11] border border-white/10 rounded-lg px-4 py-3 text-xs text-zinc-200 placeholder:text-zinc-700 focus:outline-none focus:border-[#c5a880]/50 font-medium"
                 />
               </div>
             </div>
 
           {/* Referência de Design Obrigatório */}
-          <div className="bg-zinc-900/20 border border-zinc-800 p-5 rounded-2xl space-y-5 shadow-sm hover:border-zinc-800/80 transition-colors">
-            <div className="flex flex-col gap-1 border-l-2 border-[#ad8330] pl-3">
-              <span className="text-[10.5px] font-black tracking-widest text-zinc-300 uppercase">Design Obrigatório</span>
+          <div className="bg-[#121214] border border-white/5 p-5 rounded-xl space-y-5 shadow-sm hover:border-white/5 transition-colors">
+            <div className="flex flex-col gap-1 border-l-2 border-[#c5a880] pl-3">
+              <span className="text-sm font-semibold text-white tracking-tight">Design Obrigatório</span>
               <span className="text-[8px] text-zinc-500 tracking-wide">Importe uma imagem com o layout ou posicionamento estrutural desejado</span>
             </div>
 
-            <div className="flex items-start gap-3 text-[#ad8330] bg-[#ad8330]/5 border border-[#ad8330]/10 p-3 rounded-xl animate-in fade-in">
+            <div className="flex items-start gap-3 text-[#c5a880] bg-[#c5a880]/5 border border-[#c5a880]/10 p-3 rounded-xl animate-in fade-in">
               <Info size={14} className="shrink-0 mt-0.5" />
               <span className="text-[9px] font-medium leading-relaxed uppercase tracking-wider text-zinc-400">
                 Suba uma imagem de referência de design. A IA vai analisar a estrutura, tipografia e grid para aplicar no card gerado.
@@ -1380,17 +1520,28 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
             <ImageUploader
               type="env"
               label="Referência de Design Obrigatório"
-              icon={<Layout size={20} />}
+              icon={<Layout size={20} className="text-[#c5a880]" />}
               base64s={store.designRefsList || []}
               onUpdateBase64s={store.setDesignRefsList}
               showToast={showToast}
             />
+
+            <div className="space-y-1.5 pt-1">
+              <span className="text-[9.5px] font-bold text-zinc-400 uppercase tracking-wider block">O que deseja extrair/copiar deste layout/design?</span>
+              <textarea
+                value={store.promptDesign || ""}
+                onChange={(e) => store.updateConfig({ promptDesign: e.target.value })}
+                placeholder="Ex: Copiar a estrutura do flyer de referência, mantendo o sujeito principal centralizado com elementos gráficos atrás de sua silhueta..."
+                rows={2}
+                className="w-full bg-zinc-950/60 border border-white/5 rounded-lg p-2.5 text-xs text-zinc-200 placeholder-zinc-700 focus:outline-none focus:border-[#c5a880]/40 tracking-wide resize-none"
+              />
+            </div>
           </div>
 
           {/* Logotipo da Marca */}
-          <div className="bg-zinc-900/20 border border-zinc-800 p-5 rounded-2xl space-y-5 shadow-sm hover:border-zinc-800/80 transition-colors">
-            <div className="flex flex-col gap-1 border-l-2 border-[#ad8330] pl-3">
-              <span className="text-xs font-black tracking-widest text-zinc-200 uppercase">Logotipo da Marca</span>
+          <div className="bg-[#121214] border border-white/5 p-5 rounded-xl space-y-5 shadow-sm hover:border-white/5 transition-colors">
+            <div className="flex flex-col gap-1 border-l-2 border-[#c5a880] pl-3">
+              <span className="text-sm font-semibold text-white tracking-tight">Logotipo da Marca</span>
               <span className="text-[10px] text-zinc-400 tracking-wide">Importe o logotipo da sua marca para estampar no criativo</span>
             </div>
 
@@ -1398,35 +1549,42 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
               <span className="text-xs font-bold text-zinc-300 uppercase tracking-wider">Estampar Logotipo?</span>
               <button
                 onClick={() => store.updateConfig({ useLogo: !store.useLogo })}
-                className="w-11 h-6 bg-zinc-800 rounded-full p-0.5 relative transition-colors duration-200"
-                style={{ backgroundColor: store.useLogo ? "#ad8330" : "" }}
+                className="w-11 h-6 rounded-full p-0.5 relative transition-colors duration-200 cursor-pointer"
+                style={{ backgroundColor: store.useLogo ? "#c5a880" : "#27272a" }}
               >
                 <div
-                  className="w-5 h-5 bg-white rounded-full transition-transform duration-200"
+                  className="w-5 h-5 bg-white rounded-full transition-transform duration-200 shadow-sm"
                   style={{ transform: store.useLogo ? "translateX(20px)" : "translateX(0)" }}
                 />
               </button>
             </div>
 
             {store.useLogo && (
-              <div className="animate-in fade-in duration-200">
+              <div className="animate-in fade-in duration-200 space-y-4">
                 <ImageUploader
                   type="env"
                   label="Logotipo da Marca (PNG/SVG)"
-                  icon={<Layers size={20} />}
+                  icon={<Layers size={20} className="text-[#c5a880]" />}
                   base64s={store.logosList || []}
                   onUpdateBase64s={store.setLogosList}
                   showToast={showToast}
                 />
+                {store.logosList && store.logosList.length > 0 && (
+                  <div className="space-y-4 p-4 bg-zinc-950/60 rounded-xl border border-white/5">
+                    <div className="p-3 bg-[#c5a880]/5 border border-[#c5a880]/10 rounded-lg text-[9px] font-medium leading-normal text-zinc-400 uppercase tracking-wider">
+                      A logo será sobreposta automaticamente na imagem final. O gerador não tentará recriar ou alterar a logo, mantendo 100% da fidelidade original.
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
 
           {/* Referências de Estilos Individuais com Descrição */}
-          <div className="bg-zinc-900/20 border border-zinc-800 p-5 rounded-2xl space-y-5 shadow-sm hover:border-zinc-800/80 transition-colors">
-            <div className="flex justify-between items-start border-l-2 border-[#ad8330] pl-3">
+          <div className="bg-[#121214] border border-white/5 p-5 rounded-xl space-y-5 shadow-sm hover:border-white/5 transition-colors">
+            <div className="flex justify-between items-start border-l-2 border-[#c5a880] pl-3">
               <div className="flex flex-col gap-1">
-                <span className="text-[10.5px] font-black tracking-widest text-zinc-300 uppercase">Referências de Estilo</span>
+                <span className="text-sm font-semibold text-white tracking-tight">Referências de Estilo</span>
                 <span className="text-[8px] text-zinc-500 tracking-wide">Importe referências estéticas e descreva o estilo a ser absorvido</span>
               </div>
               <div className="relative overflow-hidden shrink-0 mt-1">
@@ -1437,7 +1595,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                   onChange={handleStyleImageUpload}
                   className="absolute inset-0 opacity-0 cursor-pointer w-24"
                 />
-                <button className="px-3.5 py-1.5 bg-zinc-900 border border-zinc-800 hover:border-[#ad8330]/30 rounded-lg text-[9px] font-black uppercase tracking-widest text-[#ad8330] cursor-pointer">
+                <button className="px-3.5 py-1.5 bg-[#1A1A1C] border border-white/10 hover:border-[#c5a880]/30 rounded-lg text-[9px] font-black uppercase tracking-widest text-[#c5a880] cursor-pointer">
                   + Adicionar
                 </button>
               </div>
@@ -1446,7 +1604,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
             {store.referenciasEstilo.length > 0 ? (
               <div className="space-y-3.5">
                 {store.referenciasEstilo.map((ref) => (
-                  <div key={ref.id} className="p-3 bg-zinc-950 rounded-xl border border-zinc-900 flex gap-3 relative group">
+                  <div key={ref.id} className="p-3 bg-zinc-950 rounded-xl border border-white/5 flex gap-3 relative group">
                     
                     <button
                       onClick={() => store.removeReferenciaEstilo(ref.id)}
@@ -1454,10 +1612,10 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                     >
                       <X size={10} />
                     </button>
-
+ 
                     <div
                       onClick={() => setModalImageRefUrl(ref.url)}
-                      className="w-14 h-14 rounded-lg overflow-hidden shrink-0 border border-zinc-800 bg-zinc-905 cursor-zoom-in relative"
+                      className="w-14 h-14 rounded-lg overflow-hidden shrink-0 border border-white/5 bg-zinc-905 cursor-zoom-in relative"
                       title="Ver tamanho grande"
                     >
                       <img src={ref.url} className="w-full h-full object-cover" alt="Estilo Ref" />
@@ -1467,13 +1625,13 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                     </div>
 
                     <div className="flex-1 flex flex-col justify-between">
-                      <span className="text-[8px] font-black text-zinc-550 uppercase tracking-widest block">Descrição do Estilo Visual</span>
+                      <span className="text-[8px] font-black text-zinc-555 uppercase tracking-widest block">Descrição do Estilo Visual</span>
                       <input
                         type="text"
                         value={ref.descricao}
                         onChange={(e) => store.updateReferenciaEstilo(ref.id, e.target.value)}
                         placeholder="Ex: Copiar tons de dourado..."
-                        className="w-[90%] bg-zinc-900 border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-zinc-650 focus:outline-none focus:border-[#ad8330]/40 font-medium"
+                        className="w-[90%] bg-[#1A1A1C] border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-zinc-650 focus:outline-none focus:border-[#c5a880]/50 font-medium"
                       />
                     </div>
 
@@ -1481,16 +1639,16 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                 ))}
               </div>
             ) : (
-              <div className="py-5 text-center border border-dashed border-zinc-800/80 rounded-xl bg-zinc-950/20">
+              <div className="py-5 text-center border border-dashed border-white/5 rounded-xl bg-zinc-950/20">
                 <span className="text-[8.5px] font-bold text-zinc-600 uppercase tracking-wider">Suba imagens de estilo para imitar</span>
               </div>
             )}
           </div>
 
           {/* Cores & Iluminação */}
-          <div className="bg-zinc-900/20 border border-zinc-800 p-5 rounded-2xl space-y-5 shadow-sm hover:border-zinc-800/80 transition-colors">
-            <div className="flex flex-col gap-1 border-l-2 border-[#ad8330] pl-3">
-              <span className="text-[10.5px] font-black tracking-widest text-zinc-300 uppercase">Cores & Iluminação</span>
+          <div className="bg-[#121214] border border-white/5 p-5 rounded-xl space-y-5 shadow-sm hover:border-white/5 transition-colors">
+            <div className="flex flex-col gap-1 border-l-2 border-[#c5a880] pl-3">
+              <span className="text-sm font-semibold text-white tracking-tight">Cores & Iluminação</span>
               <span className="text-[8px] text-zinc-500 tracking-wide">Configure as cores de iluminação de estúdio do seu criativo</span>
             </div>
 
@@ -1498,11 +1656,11 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
               <span className="text-[10.5px] font-bold text-zinc-400 uppercase tracking-wider">Automático (Harmônico)?</span>
               <button
                 onClick={() => store.updateConfig({ coresAutomaticas: !store.coresAutomaticas })}
-                className="w-11 h-6 bg-zinc-855 rounded-full p-0.5 relative transition-colors duration-200"
-                style={{ backgroundColor: store.coresAutomaticas ? "#ad8330" : "" }}
+                className="w-11 h-6 rounded-full p-0.5 relative transition-colors duration-200 cursor-pointer"
+                style={{ backgroundColor: store.coresAutomaticas ? "#c5a880" : "#27272a" }}
               >
                 <div
-                  className="w-5 h-5 bg-white rounded-full transition-transform duration-200"
+                  className="w-5 h-5 bg-white rounded-full transition-transform duration-200 shadow-sm"
                   style={{ transform: store.coresAutomaticas ? "translateX(20px)" : "translateX(0)" }}
                 />
               </button>
@@ -1511,7 +1669,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
             {!store.coresAutomaticas && (
               <div className="space-y-3 pt-1 animate-in fade-in duration-300">
                 <div className="grid grid-cols-3 gap-3.5">
-                  <div className="p-3 bg-zinc-950 border border-zinc-900 flex flex-col gap-2 hover:border-[#ad8330]/30 transition-all rounded-lg">
+                  <div className="p-3 bg-black/40 border border-white/5 flex flex-col gap-2 hover:border-[#c5a880]/30 transition-all rounded-lg">
                     <span className="text-[9px] font-bold text-zinc-550 uppercase tracking-widest">Ambiente</span>
                     <div className="flex items-center gap-1.5">
                       <input
@@ -1528,11 +1686,11 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                         onChange={(e) => store.updateConfig({
                           cores: { ...store.cores, ambiente: e.target.value }
                         })}
-                        className="w-full bg-zinc-900 border border-zinc-800 rounded px-1.5 py-0.5 text-[10px] text-white focus:outline-none focus:border-[#ad8330]/40 font-bold uppercase"
+                        className="w-full bg-[#1A1A1C] border border-white/10 rounded px-1.5 py-0.5 text-[10px] text-white focus:outline-none focus:border-[#c5a880]/50 font-bold uppercase"
                       />
                     </div>
                   </div>
-                  <div className="p-3 bg-zinc-950 border border-zinc-900 flex flex-col gap-2 hover:border-[#ad8330]/30 transition-all rounded-lg">
+                  <div className="p-3 bg-black/40 border border-white/5 flex flex-col gap-2 hover:border-[#c5a880]/30 transition-all rounded-lg">
                     <span className="text-[9px] font-bold text-zinc-550 uppercase tracking-widest">Recorte</span>
                     <div className="flex items-center gap-1.5">
                       <input
@@ -1549,16 +1707,16 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                         onChange={(e) => store.updateConfig({
                           cores: { ...store.cores, recorte: e.target.value }
                         })}
-                        className="w-full bg-zinc-900 border border-zinc-800 rounded px-1.5 py-0.5 text-[10px] text-white focus:outline-none focus:border-[#ad8330]/40 font-bold uppercase"
+                        className="w-full bg-[#1A1A1C] border border-white/10 rounded px-1.5 py-0.5 text-[10px] text-white focus:outline-none focus:border-[#c5a880]/50 font-bold uppercase"
                       />
                     </div>
                   </div>
-                  <div className="p-3 bg-zinc-950 border border-zinc-900 flex flex-col gap-2 hover:border-[#ad8330]/30 transition-all rounded-lg">
-                    <span className="text-[9px] font-bold text-zinc-550 uppercase tracking-widest">Complementar</span>
+                  <div className="p-3 bg-black/40 border border-white/5 flex flex-col gap-2 hover:border-[#c5a880]/30 transition-all rounded-lg">
+                    <span className="text-[9px] font-bold text-zinc-555 uppercase tracking-widest">Complementar</span>
                     <div className="flex items-center gap-1.5">
                       <input
                         type="color"
-                        value={store.cores.complementar || "#ad8330"}
+                        value={store.cores.complementar || "#c5a880"}
                         onChange={(e) => store.updateConfig({
                           cores: { ...store.cores, complementar: e.target.value }
                         })}
@@ -1566,89 +1724,39 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                       />
                       <input
                         type="text"
-                        value={store.cores.complementar || "#ad8330"}
+                        value={store.cores.complementar || "#c5a880"}
                         onChange={(e) => store.updateConfig({
                           cores: { ...store.cores, complementar: e.target.value }
                         })}
-                        className="w-full bg-zinc-900 border border-zinc-800 rounded px-1.5 py-0.5 text-[10px] text-white focus:outline-none focus:border-[#ad8330]/40 font-bold uppercase"
+                        className="w-full bg-[#1A1A1C] border border-white/10 rounded px-1.5 py-0.5 text-[10px] text-white focus:outline-none focus:border-[#c5a880]/50 font-bold uppercase"
                       />
                     </div>
                   </div>
                 </div>
-
-                <div className="flex flex-col gap-3 p-3 bg-zinc-950 border border-zinc-900 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[9px] font-bold text-zinc-550 uppercase tracking-widest">Paleta Adicional de Cores ({store.cores?.paleta?.length || 0})</span>
-                    <button
-                      onClick={() => store.updateConfig({
-                        cores: { ...store.cores, paleta: [...(store.cores?.paleta || []), "#ffffff"] }
-                      })}
-                      className="bg-zinc-800 hover:bg-zinc-700 text-white w-5 h-5 rounded-md flex items-center justify-center text-xs font-bold transition-colors"
-                    >
-                      +
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                    {store.cores?.paleta?.map((color, idx) => (
-                      <div key={idx} className="flex items-center gap-1.5 relative group">
-                        <input
-                          type="color"
-                          value={color}
-                          onChange={(e) => {
-                            const newPaleta = [...(store.cores?.paleta || [])];
-                            newPaleta[idx] = e.target.value;
-                            store.updateConfig({ cores: { ...store.cores, paleta: newPaleta } });
-                          }}
-                          className="w-6 h-6 rounded border-0 cursor-pointer overflow-hidden bg-transparent p-0 shrink-0"
-                        />
-                        <input
-                          type="text"
-                          value={color}
-                          onChange={(e) => {
-                            const newPaleta = [...(store.cores?.paleta || [])];
-                            newPaleta[idx] = e.target.value;
-                            store.updateConfig({ cores: { ...store.cores, paleta: newPaleta } });
-                          }}
-                          className="w-full bg-zinc-900 border border-zinc-800 rounded px-1.5 py-0.5 text-[10px] text-white focus:outline-none focus:border-[#ad8330]/40 font-bold uppercase"
-                        />
-                        <button
-                          onClick={() => {
-                            const newPaleta = store.cores.paleta.filter((_, i) => i !== idx);
-                            store.updateConfig({ cores: { ...store.cores, paleta: newPaleta } });
-                          }}
-                          className="absolute -right-2 -top-2 w-4 h-4 bg-red-500/20 text-red-500 rounded-full flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity z-10 cursor-pointer"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
               </div>
             )}
-
             {/* Cor Dominante e Degradê Leitura */}
-            <div className="space-y-3.5 pt-3.5 border-t border-zinc-800/60">
+            <div className="space-y-3.5 pt-3.5 border-t border-white/5">
               <div className="flex items-center justify-between">
                 <div className="flex flex-col">
-                  <span className="text-[10px] font-bold text-zinc-450 uppercase tracking-widest">Usar Cor Dominante?</span>
+                  <span className="text-[10px] font-bold text-zinc-455 uppercase tracking-widest">Usar Cor Dominante?</span>
                   <span className="text-[8px] text-zinc-500 tracking-wide mt-0.5">Ativa cor da marca no criativo</span>
                 </div>
                 <button
                   onClick={() => store.updateConfig({ useCorDominante: !store.useCorDominante })}
-                  className="w-11 h-6 bg-zinc-855 rounded-full p-0.5 relative transition-colors duration-200"
-                  style={{ backgroundColor: store.useCorDominante ? "#ad8330" : "" }}
+                  className="w-11 h-6 rounded-full p-0.5 relative transition-colors duration-200 cursor-pointer"
+                  style={{ backgroundColor: store.useCorDominante ? "#c5a880" : "#27272a" }}
                 >
                   <div
-                    className="w-5 h-5 bg-white rounded-full transition-transform duration-200"
+                    className="w-5 h-5 bg-white rounded-full transition-transform duration-200 shadow-sm"
                     style={{ transform: store.useCorDominante ? "translateX(20px)" : "translateX(0)" }}
                   />
                 </button>
               </div>
 
               {store.useCorDominante && (
-                <div className="flex items-center justify-between p-2.5 bg-zinc-950/60 rounded-xl border border-zinc-900 animate-in slide-in-from-top-2 duration-200">
-                  <span className="text-[10px] font-bold text-zinc-450 uppercase tracking-widest">Cor Dominante</span>
+                <div className="flex items-center justify-between p-2.5 bg-zinc-950/60 rounded-xl border border-white/5 animate-in slide-in-from-top-2 duration-200">
+                  <span className="text-[10px] font-bold text-zinc-455 uppercase tracking-widest">Cor Dominante</span>
                   <div className="flex items-center gap-2">
                     <input
                       type="color"
@@ -1660,7 +1768,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                       type="text"
                       value={store.corDominante}
                       onChange={(e) => store.updateConfig({ corDominante: e.target.value })}
-                      className="w-16 bg-zinc-900 border border-zinc-800 rounded px-2 py-1 text-[10px] text-white focus:outline-none focus:border-[#ad8330]/40 font-bold uppercase"
+                      className="w-16 bg-[#1A1A1C] border border-white/10 rounded px-2 py-1 text-[10px] text-white focus:outline-none focus:border-[#c5a880]/50 font-bold uppercase"
                     />
                   </div>
                 </div>
@@ -1670,11 +1778,11 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                 <span className="text-[10px] font-bold text-zinc-450 uppercase tracking-widest">Degradê Leitura?</span>
                 <button
                   onClick={() => store.updateConfig({ degradeLeitura: !store.degradeLeitura })}
-                  className="w-11 h-6 bg-zinc-855 rounded-full p-0.5 relative transition-colors duration-200"
-                  style={{ backgroundColor: store.degradeLeitura ? "#ad8330" : "" }}
+                  className="w-11 h-6 rounded-full p-0.5 relative transition-colors duration-200 cursor-pointer"
+                  style={{ backgroundColor: store.degradeLeitura ? "#c5a880" : "#27272a" }}
                 >
                   <div
-                    className="w-5 h-5 bg-white rounded-full transition-transform duration-200"
+                    className="w-5 h-5 bg-white rounded-full transition-transform duration-200 shadow-sm"
                     style={{ transform: store.degradeLeitura ? "translateX(20px)" : "translateX(0)" }}
                   />
                 </button>
@@ -1683,9 +1791,9 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
           </div>
 
           {/* Composição */}
-          <div className="bg-zinc-900/20 border border-zinc-800 p-5 rounded-2xl space-y-4 shadow-sm hover:border-zinc-800/80 transition-colors">
-            <div className="flex items-center gap-2.5 border-l-2 border-[#ad8330] pl-3">
-              <span className="text-[10.5px] font-black tracking-widest text-zinc-300 uppercase">Composição</span>
+          <div className="bg-[#121214] border border-white/5 p-5 rounded-xl space-y-4 shadow-sm hover:border-white/5 transition-colors">
+            <div className="flex items-center gap-2.5 border-l-2 border-[#c5a880] pl-3">
+              <span className="text-sm font-semibold text-white tracking-tight">Composição</span>
             </div>
 
             <div className="space-y-2.5">
@@ -1701,11 +1809,11 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                     onClick={() => store.updateConfig({ composicao: framingItem.name })}
                     className={`flex items-center gap-4 p-4 rounded-lg border cursor-pointer transition-all duration-300 ${
                       isSelected
-                        ? "bg-[#ad8330]/10 border-[#ad8330] text-[#ad8330] ring-1 ring-[#ad8330]"
-                        : "bg-zinc-900/40 border-zinc-800 text-zinc-400 hover:text-white hover:border-[#ad8330]/20"
+                        ? "bg-[#c5a880]/10 border-[#c5a880] text-[#c5a880] ring-1 ring-[#c5a880]"
+                        : "bg-zinc-900/40 border-white/5 text-zinc-400 hover:text-white hover:border-[#c5a880]/20"
                     }`}
                   >
-                    <div className={`w-6 h-6 rounded flex items-center justify-center ${isSelected ? 'bg-[#ad8330]/20 text-[#ad8330]' : 'bg-zinc-900 text-zinc-650'}`}>
+                    <div className={`w-6 h-6 rounded flex items-center justify-center ${isSelected ? 'bg-[#c5a880]/20 text-[#c5a880]' : 'bg-zinc-900 text-zinc-650'}`}>
                       <User size={12} />
                     </div>
                     <div className="flex flex-col">
@@ -1718,24 +1826,24 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
 
               {/* Campo livre de Composição */}
               <div className="pt-2">
-                <label className="block text-[9.5px] uppercase tracking-widest font-black text-zinc-500 mb-1.5 font-bold">Composição Personalizada (opcional)</label>
+                <label className="block text-xs font-medium text-zinc-400 mb-1.5">Composição Personalizada (opcional)</label>
                 <input
                   type="text"
                   value={store.composicaoCustom || ""}
                   onChange={(e) => store.updateConfig({ composicaoCustom: e.target.value })}
                   placeholder="Ex: Sujeito desfocado fundo centralizado..."
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-3 text-xs text-zinc-200 placeholder:text-zinc-700 focus:outline-none focus:border-[#ad8330]/50 font-medium"
+                  className="w-full bg-[#0F0F11] border border-white/10 rounded-lg px-4 py-3 text-xs text-zinc-200 placeholder:text-zinc-700 focus:outline-none focus:border-[#c5a880]/50 font-medium"
                 />
               </div>
 
               {/* Elementos Flutuantes Avançados */}
-              <div className="space-y-3 pt-3.5 border-t border-zinc-800/60 mt-3">
+              <div className="space-y-3 pt-3.5 border-t border-white/5 mt-3">
                 <div className="flex flex-col gap-1">
                   <span className="text-xs font-bold text-zinc-350 uppercase tracking-wider">Elementos Flutuantes</span>
                   <span className="text-[10px] text-zinc-500 tracking-wide">Configure partículas ou objetos suspensos para dar profundidade</span>
                 </div>
                 
-                <div className="grid grid-cols-3 gap-1.5 bg-zinc-950 p-1 rounded-xl border border-zinc-800">
+                <div className="grid grid-cols-3 gap-1.5 bg-zinc-950 p-1 rounded-xl border border-white/5">
                   {[
                     { label: "Desligar", value: "off" },
                     { label: "Auto", value: "auto" },
@@ -1748,7 +1856,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                         onClick={() => store.updateConfig({ floatingElementsMode: opt.value as any })}
                         className={`py-2.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
                           isSelected 
-                            ? "bg-[#ad8330] text-black" 
+                            ? "bg-[#c5a880] text-black font-semibold" 
                             : "text-zinc-550 hover:text-zinc-200"
                         }`}
                       >
@@ -1765,7 +1873,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                       value={store.floatingElementsCustom || ""}
                       onChange={(e) => store.updateConfig({ floatingElementsCustom: e.target.value })}
                       placeholder="Ex: Folhas douradas de outono caindo desfocadas..."
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-3 text-xs text-zinc-200 placeholder:text-zinc-700 focus:outline-none focus:border-[#ad8330]/50 font-medium"
+                      className="w-full bg-[#0F0F11] border border-white/10 rounded-lg px-4 py-3 text-xs text-zinc-200 placeholder:text-zinc-700 focus:outline-none focus:border-[#c5a880]/50 font-medium"
                     />
                   </div>
                 )}
@@ -1774,27 +1882,29 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
           </div>
 
           {/* Atributos Visuais & Estilo */}
-          <div className="bg-zinc-900/20 border border-zinc-800 p-5 rounded-2xl space-y-5 shadow-sm hover:border-zinc-800/80 transition-colors">
-            <div className="flex items-center gap-2.5 border-l-2 border-[#ad8330] pl-3">
-              <span className="text-[10.5px] font-black tracking-widest text-zinc-300 uppercase">Atributos Visuais & Estilo</span>
+          <div className="bg-[#0d0d11]/85 border border-white/5 p-5 rounded-2xl space-y-5 shadow-lg hover:border-white/5 transition-colors">
+            <div className="flex items-center gap-2.5 border-l-2 border-[#c5a880] pl-3">
+              <span className="text-sm font-semibold text-white tracking-tight">Atributos Visuais & Estilo</span>
             </div>
 
             {/* Slider de Sobriedade com Porcentagem Dinâmica */}
-            <div className="bg-zinc-950 border border-zinc-900 p-5 rounded-xl space-y-3 shadow-md">
-              <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-wider text-zinc-450">
+            <div className="bg-[#121216] border border-white/5 p-5 rounded-xl space-y-3 shadow-md">
+              <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-wider text-zinc-400">
                 <span>Sobriedade</span>
-                <span className="text-[#ad8330] font-bold">
+                <span className="text-[#c5a880] font-black">
                   {store.nivelCriativo}% — {getCreativeSliderLabel(store.nivelCriativo)}
                 </span>
               </div>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={store.nivelCriativo}
-                onChange={(e) => store.updateConfig({ nivelCriativo: parseInt(e.target.value) })}
-                className="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-[#ad8330]"
-              />
+              <div className="relative pt-1">
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={store.nivelCriativo}
+                  onChange={(e) => store.updateConfig({ nivelCriativo: parseInt(e.target.value) })}
+                  className="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-[#c5a880] focus:outline-none"
+                />
+              </div>
               <div className="flex justify-between text-[8px] font-extrabold text-zinc-600 uppercase tracking-widest pt-1">
                 <span>Criativo</span>
                 <span>Profissional</span>
@@ -1803,35 +1913,41 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
 
             {/* Style Selector */}
             <StyleSelector
-              enableEstiloVisual={enableEstiloVisual}
-              setEnableEstiloVisual={setEnableEstiloVisual}
+              enableEstiloVisual={store.enableEstiloVisual ?? true}
+              setEnableEstiloVisual={(val) => store.updateConfig({ enableEstiloVisual: val })}
             />
 
             {/* Toggles extras */}
-            <div className="space-y-3 border-t border-zinc-800 pt-5">
+            <div className="space-y-3 border-t border-white/5 pt-5">
               <div className="flex items-center justify-between py-1">
-                <span className="text-[10.5px] font-bold text-zinc-400 uppercase tracking-wider">Usar Desfoque (Blur)?</span>
+                <div className="flex flex-col">
+                  <span className="text-[10.5px] font-bold text-zinc-400 uppercase tracking-wider">Usar Desfoque (Blur)?</span>
+                  <span className="text-[8.5px] text-zinc-600">Aplica profundidade de campo suave</span>
+                </div>
                 <button
                   onClick={() => store.updateConfig({ enableBlur: !store.enableBlur })}
-                  className="w-11 h-6 bg-zinc-800 rounded-full p-0.5 relative transition-colors duration-200"
-                  style={{ backgroundColor: store.enableBlur ? "#ad8330" : "" }}
+                  className="w-11 h-6 rounded-full p-0.5 relative transition-colors duration-250 cursor-pointer"
+                  style={{ backgroundColor: store.enableBlur ? "#c5a880" : "#27272a" }}
                 >
                   <div
-                    className="w-5 h-5 bg-white rounded-full transition-transform duration-200"
+                    className="w-5 h-5 bg-white rounded-full transition-transform duration-250 shadow-md"
                     style={{ transform: store.enableBlur ? "translateX(20px)" : "translateX(0)" }}
                   />
                 </button>
               </div>
 
               <div className="flex items-center justify-between py-1">
-                <span className="text-[10.5px] font-bold text-zinc-400 uppercase tracking-wider">Usar Degradê Lateral?</span>
+                <div className="flex flex-col">
+                  <span className="text-[10.5px] font-bold text-zinc-400 uppercase tracking-wider">Usar Degradê Lateral?</span>
+                  <span className="text-[8.5px] text-zinc-600">Insere sombras laterais sutis para contraste</span>
+                </div>
                 <button
                   onClick={() => store.updateConfig({ lateralGradient: !store.lateralGradient })}
-                  className="w-11 h-6 bg-zinc-855 rounded-full p-0.5 relative transition-colors duration-200"
-                  style={{ backgroundColor: store.lateralGradient ? "#ad8330" : "" }}
+                  className="w-11 h-6 rounded-full p-0.5 relative transition-colors duration-250 cursor-pointer"
+                  style={{ backgroundColor: store.lateralGradient ? "#c5a880" : "#27272a" }}
                 >
                   <div
-                    className="w-5 h-5 bg-white rounded-full transition-transform duration-200"
+                    className="w-5 h-5 bg-white rounded-full transition-transform duration-250 shadow-md"
                     style={{ transform: store.lateralGradient ? "translateX(20px)" : "translateX(0)" }}
                   />
                 </button>
@@ -1840,9 +1956,9 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
           </div>
 
           {/* Entradas Manuais */}
-          <div className="bg-zinc-900/20 border border-zinc-800 p-5 rounded-2xl space-y-5 shadow-sm hover:border-zinc-800/80 transition-colors">
-            <div className="flex items-center gap-2.5 border-l-2 border-[#ad8330] pl-3">
-              <span className="text-[10.5px] font-black tracking-widest text-zinc-300 uppercase">Entradas Manuais</span>
+          <div className="bg-[#121214] border border-white/5 p-5 rounded-xl space-y-5 shadow-sm hover:border-white/5 transition-colors">
+            <div className="flex items-center gap-2.5 border-l-2 border-[#c5a880] pl-3">
+              <span className="text-sm font-semibold text-white tracking-tight">Entradas Manuais</span>
             </div>
 
             <div>
@@ -1852,7 +1968,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                 onChange={(e) => store.updateConfig({ additionalPrompt: e.target.value })}
                 placeholder="Escreva detalhes estéticos adicionais..."
                 rows={3}
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-3 text-xs text-zinc-300 placeholder:text-zinc-700 focus:outline-none focus:border-[#ad8330]/50 resize-none font-medium"
+                className="w-full bg-[#0F0F11] border border-white/10 rounded-lg px-4 py-3 text-xs text-zinc-300 placeholder:text-zinc-700 focus:outline-none focus:border-[#c5a880]/50 resize-none font-medium"
               />
             </div>
 
@@ -1861,24 +1977,24 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
               <textarea
                 value={store.negativePrompt}
                 onChange={(e) => store.updateConfig({ negativePrompt: e.target.value })}
-                placeholder="Ex: óculos, água no avião, elementos distorcidos, deformações, texto borrado..."
+                placeholder="Ex: óculos, água no avião, elements distorcidos, deformações, texto borrado..."
                 rows={3}
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-3 text-xs text-zinc-300 placeholder:text-zinc-700 focus:outline-none focus:border-[#ad8330]/50 resize-none font-medium"
+                className="w-full bg-[#0F0F11] border border-white/10 rounded-lg px-4 py-3 text-xs text-zinc-300 placeholder:text-zinc-700 focus:outline-none focus:border-[#c5a880]/50 resize-none font-medium"
               />
             </div>
           </div>
 
           {/* Opções Avançadas */}
-          <div className="bg-zinc-900/20 border border-zinc-800 p-5 rounded-2xl space-y-5 shadow-sm hover:border-zinc-800/80 transition-colors">
-            <div className="flex items-center gap-2.5 border-l-2 border-[#ad8330] pl-3">
-              <span className="text-[10.5px] font-black tracking-widest text-zinc-300 uppercase">Opções Avançadas</span>
+          <div className="bg-[#121214] border border-white/5 p-5 rounded-xl space-y-5 shadow-sm hover:border-white/5 transition-colors">
+            <div className="flex items-center gap-2.5 border-l-2 border-[#c5a880] pl-3">
+              <span className="text-sm font-semibold text-white tracking-tight">Opções Avançadas</span>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               {/* Qualidade */}
               <div>
                 <label className="block text-[9.5px] uppercase tracking-widest font-black text-zinc-500 mb-1.5">Qualidade de Renderização</label>
-                <div className="flex gap-1 bg-zinc-950 p-1.5 rounded-lg border border-zinc-800">
+                <div className="flex gap-1 bg-zinc-950 p-1.5 rounded-lg border border-white/5">
                   {["1K", "2K", "4K"].map((q) => {
                     const isSelected = store.resolucao === q;
                     return (
@@ -1886,7 +2002,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                         key={q}
                         onClick={() => store.updateConfig({ resolucao: q })}
                         className={`flex-1 py-1.5 rounded text-[10.5px] font-black transition-all cursor-pointer ${
-                          isSelected ? "bg-[#ad8330] text-black" : "text-zinc-400 hover:text-white"
+                          isSelected ? "bg-[#c5a880] text-black font-semibold" : "text-zinc-400 hover:text-white"
                         }`}
                       >
                         {q}
@@ -1899,7 +2015,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
               {/* Formato */}
               <div>
                 <label className="block text-[9.5px] uppercase tracking-widest font-black text-zinc-500 mb-1.5">Formato de Exportação</label>
-                <div className="flex gap-1 bg-zinc-950 p-1.5 rounded-lg border border-zinc-800">
+                <div className="flex gap-1 bg-zinc-950 p-1.5 rounded-lg border border-white/5">
                   {["AVIF", "PNG", "JPEG", "WEBP"].map((fmt) => {
                     const isSelected = exportFormat === fmt;
                     return (
@@ -1910,7 +2026,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                           store.updateConfig({ formatoExportacao: fmt as any });
                         }}
                         className={`flex-1 py-1.5 rounded text-[9.5px] font-black transition-all cursor-pointer ${
-                          isSelected ? "bg-[#ad8330] text-black" : "text-zinc-400 hover:text-white"
+                          isSelected ? "bg-[#c5a880] text-black font-semibold" : "text-zinc-400 hover:text-white"
                         }`}
                       >
                         {fmt}
@@ -1920,36 +2036,80 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                 </div>
               </div>
             </div>
+
+            {/* Quantidade de Cards a Gerar */}
+            <div>
+              <label className="block text-[9.5px] uppercase tracking-widest font-black text-zinc-500 mb-1.5">Quantidade de Cards a Gerar</label>
+              <div className="flex gap-1 bg-zinc-950 p-1.5 rounded-lg border border-white/5">
+                {[1, 2, 3, 4, 5].map((num) => {
+                  const isSelected = store.variations === num;
+                  return (
+                    <button
+                      key={num}
+                      onClick={() => store.updateConfig({ variations: num })}
+                      className={`flex-1 py-1.5 rounded text-xs font-black transition-all cursor-pointer ${
+                        isSelected ? "bg-[#c5a880] text-black font-semibold" : "text-zinc-400 hover:text-white"
+                      }`}
+                    >
+                      {num}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Toggle Somente Prompt & Instrução */}
+            <div className="flex items-center justify-between p-3.5 bg-zinc-950/40 rounded-xl border border-white/5 mt-3">
+              <div className="flex flex-col pr-4">
+                <span className="text-xs font-bold text-zinc-300 uppercase tracking-wider">Desativar Geração de Imagem?</span>
+                <span className="text-[9px] text-zinc-500 tracking-wide mt-1 uppercase">Gera apenas o Prompt Mestre e a Instrução de Sistema, sem criar a imagem física no servidor.</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => store.updateConfig({ somentePrompt: !store.somentePrompt })}
+                className="w-11 h-6 rounded-full p-0.5 relative transition-colors duration-200 cursor-pointer shrink-0"
+                style={{ backgroundColor: store.somentePrompt ? "#c5a880" : "#27272a" }}
+              >
+                <div
+                  className="w-5 h-5 bg-white rounded-full transition-transform duration-200 shadow-sm"
+                  style={{ transform: store.somentePrompt ? "translateX(20px)" : "translateX(0)" }}
+                />
+              </button>
+            </div>
           </div>
 
           <div className="pt-2 flex flex-col gap-3">
             <button
               onClick={generatePremiumImage}
               disabled={isGenerating}
-              className="w-full bg-[#ad8330] hover:bg-[#8e6b27] disabled:opacity-50 text-black font-bold py-4 rounded-xl text-xs uppercase tracking-widest transition-all shadow-md active:scale-[0.98] hover:shadow-[0_0_15px_rgba(173,131,48,0.4)] cursor-pointer flex items-center justify-center gap-2 relative overflow-hidden"
+              className="w-full bg-[#c5a880] hover:bg-[#b39873] border-none disabled:opacity-50 text-black font-bold py-4 rounded-lg text-sm transition-all shadow-md active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2.5 relative overflow-hidden group hover:shadow-[0_4px_15px_rgba(201,155,59,0.3)]"
             >
               {isGenerating ? (
                 <>
                   <RefreshCw size={13} className="animate-spin text-black" />
-                  <span>Gerando Pixels...</span>
+                  <span className="text-black font-bold">
+                    {store.somentePrompt ? "Gerando Prompt & Instrução..." : "Gerando Background..."}
+                  </span>
                   <span className="absolute inset-0 bg-black/10 backdrop-blur-[0.5px]" />
                 </>
               ) : (
                 <>
-                  <Sparkles size={13} className="text-black" />
-                  <span>Gerar Imagem</span>
+                  <Sparkles size={13} className="text-black group-hover:scale-110 transition-transform" />
+                  <span>
+                    {store.somentePrompt ? "Gerar Prompt & Instrução" : "Gerar Background"}
+                  </span>
                 </>
               )}
             </button>
 
             <button
               onClick={handleCopyPrompt}
-              className={`w-full flex items-center justify-center gap-2 p-3 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-400 hover:text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer active:scale-[0.98] ${
-                isCopied ? "bg-[#ad8330]/20 border-[#ad8330] text-[#ad8330]" : ""
+              className={`w-full flex items-center justify-center gap-2 p-3 bg-zinc-950 hover:bg-[#121215] border border-white/5 hover:border-zinc-850 text-zinc-400 hover:text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer active:scale-[0.98] ${
+                isCopied ? "bg-[#c5a880]/10 border-[#c5a880]/20 text-[#c5a880]" : ""
               }`}
             >
               {isCopied ? <CheckCircle size={14} /> : <Copy size={14} />}
-              Duplicar Configuração
+              <span>Duplicar Configuração</span>
             </button>
           </div>
           </>
@@ -1958,69 +2118,69 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
           {activeMenuTab === "Ref Builder" && (
             <div className="space-y-6 animate-in fade-in duration-300">
               {/* Ref Builder Header */}
-              <div className="flex flex-col gap-1 pb-4 border-b border-zinc-800">
-                <span className="text-[10px] font-black text-[#ad8330] tracking-widest uppercase">Estúdio de Referências</span>
+              <div className="flex flex-col gap-1 pb-4 border-b border-white/5">
+                <span className="text-[10px] font-black text-[#c5a880] tracking-widest uppercase">Estúdio de Referências</span>
                 <h3 className="text-sm font-extrabold text-white uppercase tracking-wider">Ref Builder PRO</h3>
                 <p className="text-[9px] text-zinc-500 leading-relaxed uppercase tracking-wider">Ajuste os pesos das referências visuais para obter consistência máxima em seus criativos.</p>
               </div>
 
               {/* Referência de Personagem */}
-              <div className="bg-zinc-900/20 border border-zinc-800 p-5 rounded-2xl space-y-4 shadow-sm hover:border-zinc-800 transition-all">
-                <div className="flex items-center gap-2 border-l-2 border-[#ad8330] pl-3">
-                  <User size={14} className="text-[#ad8330]" />
-                  <span className="text-[10.5px] font-black tracking-widest text-zinc-300 uppercase">Referência de Personagem (IP-Adapter)</span>
+              <div className="bg-[#121214] border border-white/5 p-5 rounded-xl space-y-4 shadow-sm hover:border-white/5 transition-all">
+                <div className="flex items-center gap-2 border-l-2 border-[#c5a880] pl-3">
+                  <User size={14} className="text-[#c5a880]" />
+                  <span className="text-sm font-semibold text-white tracking-tight">Referência de Personagem (IP-Adapter)</span>
                 </div>
                 <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Garanta rostos e identidades idênticas em múltiplos criativos.</p>
-                <div className="border border-dashed border-zinc-800 bg-zinc-950/40 rounded-xl p-4 flex flex-col items-center justify-center text-center gap-2">
+                <div className="border border-dashed border-white/5 bg-zinc-950/40 rounded-xl p-4 flex flex-col items-center justify-center text-center gap-2">
                   <User size={24} className="text-zinc-700" />
                   <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wide">Arraste ou clique para subir face de referência</span>
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between text-[9px] font-black text-zinc-500 uppercase tracking-widest">
                     <span>Peso do Personagem (Força)</span>
-                    <span className="text-[#ad8330]">0.85</span>
+                    <span className="text-[#c5a880]">0.85</span>
                   </div>
-                  <input type="range" min="0" max="1" step="0.05" defaultValue="0.85" className="w-full accent-[#ad8330] bg-zinc-800 rounded-lg appearance-none h-1.5 cursor-pointer" />
+                  <input type="range" min="0" max="1" step="0.05" defaultValue="0.85" className="w-full accent-[#c5a880] bg-zinc-800 rounded-lg appearance-none h-1.5 cursor-pointer" />
                 </div>
               </div>
 
               {/* Referência de Estilo */}
-              <div className="bg-zinc-900/20 border border-zinc-800 p-5 rounded-2xl space-y-4 shadow-sm hover:border-zinc-800 transition-all">
-                <div className="flex items-center gap-2 border-l-2 border-[#ad8330] pl-3">
-                  <Palette size={14} className="text-[#ad8330]" />
-                  <span className="text-[10.5px] font-black tracking-widest text-zinc-300 uppercase">Referência de Estilo (Style Transfer)</span>
+              <div className="bg-[#121214] border border-white/5 p-5 rounded-xl space-y-4 shadow-sm hover:border-white/5 transition-all">
+                <div className="flex items-center gap-2 border-l-2 border-[#c5a880] pl-3">
+                  <Palette size={14} className="text-[#c5a880]" />
+                  <span className="text-sm font-semibold text-white tracking-tight">Referência de Estilo (Style Transfer)</span>
                 </div>
                 <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Copie cores, pinceladas, iluminação de estúdio e texturas de uma imagem base.</p>
-                <div className="border border-dashed border-zinc-800 bg-zinc-950/40 rounded-xl p-4 flex flex-col items-center justify-center text-center gap-2">
+                <div className="border border-dashed border-white/5 bg-zinc-950/40 rounded-xl p-4 flex flex-col items-center justify-center text-center gap-2">
                   <Palette size={24} className="text-zinc-700" />
                   <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wide">Arraste ou clique para subir estilo de referência</span>
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between text-[9px] font-black text-zinc-500 uppercase tracking-widest">
                     <span>Peso do Estilo</span>
-                    <span className="text-[#ad8330]">0.70</span>
+                    <span className="text-[#c5a880]">0.70</span>
                   </div>
-                  <input type="range" min="0" max="1" step="0.05" defaultValue="0.70" className="w-full accent-[#ad8330] bg-zinc-800 rounded-lg appearance-none h-1.5 cursor-pointer" />
+                  <input type="range" min="0" max="1" step="0.05" defaultValue="0.70" className="w-full accent-[#c5a880] bg-zinc-800 rounded-lg appearance-none h-1.5 cursor-pointer" />
                 </div>
               </div>
 
               {/* Referência de Estrutura */}
-              <div className="bg-zinc-900/20 border border-zinc-800 p-5 rounded-2xl space-y-4 shadow-sm hover:border-zinc-800 transition-all">
-                <div className="flex items-center gap-2 border-l-2 border-[#ad8330] pl-3">
-                  <Layout size={14} className="text-[#ad8330]" />
-                  <span className="text-[10.5px] font-black tracking-widest text-zinc-300 uppercase">Estrutura & Grid (ControlNet)</span>
+              <div className="bg-[#121214] border border-white/5 p-5 rounded-xl space-y-4 shadow-sm hover:border-white/5 transition-all">
+                <div className="flex items-center gap-2 border-l-2 border-[#c5a880] pl-3">
+                  <Layout size={14} className="text-[#c5a880]" />
+                  <span className="text-sm font-semibold text-white tracking-tight">Estrutura & Grid (ControlNet)</span>
                 </div>
                 <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Preserve o layout original do flyer, posição dos elementos e profundidade.</p>
-                <div className="border border-dashed border-zinc-800 bg-zinc-950/40 rounded-xl p-4 flex flex-col items-center justify-center text-center gap-2">
+                <div className="border border-dashed border-white/5 bg-zinc-950/40 rounded-xl p-4 flex flex-col items-center justify-center text-center gap-2">
                   <Layout size={24} className="text-zinc-700" />
                   <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wide">Arraste ou clique para subir grid estrutural</span>
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between text-[9px] font-black text-zinc-500 uppercase tracking-widest">
                     <span>Fidelidade do Grid</span>
-                    <span className="text-[#ad8330]">0.90</span>
+                    <span className="text-[#c5a880]">0.90</span>
                   </div>
-                  <input type="range" min="0" max="1" step="0.05" defaultValue="0.90" className="w-full accent-[#ad8330] bg-zinc-800 rounded-lg appearance-none h-1.5 cursor-pointer" />
+                  <input type="range" min="0" max="1" step="0.05" defaultValue="0.90" className="w-full accent-[#c5a880] bg-zinc-800 rounded-lg appearance-none h-1.5 cursor-pointer" />
                 </div>
               </div>
             </div>
@@ -2029,8 +2189,8 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
           {activeMenuTab === "Inspiração" && (
             <div className="space-y-6 animate-in fade-in duration-300">
               {/* Inspiração Header */}
-              <div className="flex flex-col gap-1 pb-4 border-b border-zinc-800">
-                <span className="text-[10px] font-black text-[#ad8330] tracking-widest uppercase">Presets Premium</span>
+              <div className="flex flex-col gap-1 pb-4 border-b border-white/5">
+                <span className="text-[10px] font-black text-[#c5a880] tracking-widest uppercase">Presets Premium</span>
                 <h3 className="text-sm font-extrabold text-white uppercase tracking-wider">Inspiradores Zion</h3>
                 <p className="text-[9px] text-zinc-500 leading-relaxed uppercase tracking-wider">Clique em um preset inspirado nos panfletos premium da Zion Company para configurar instantaneamente o designer.</p>
               </div>
@@ -2045,33 +2205,33 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                       onClick={() => setSelectedTemplateId(template.id)}
                       className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col gap-3.5 relative group ${
                         isSelected
-                          ? "bg-[#ad8330]/10 border-[#ad8330] shadow-[0_0_15px_rgba(173,131,48,0.1)]"
-                          : "bg-zinc-900/20 border-zinc-800 hover:border-zinc-800 hover:bg-zinc-900/40"
+                          ? "bg-[#c5a880]/10 border-[#c5a880] shadow-[0_0_15px_rgba(173,131,48,0.1)]"
+                          : "bg-zinc-900/20 border-white/5 hover:border-white/5 hover:bg-zinc-900/40"
                       }`}
                     >
                       <div className="flex justify-between items-start">
                         <div className="flex flex-col gap-0.5">
-                          <span className="text-[8px] font-black text-[#ad8330] uppercase tracking-widest">
+                          <span className="text-[8px] font-black text-[#c5a880] uppercase tracking-widest">
                             {template.category}
                           </span>
                           <span className="text-xs font-extrabold text-zinc-100 uppercase tracking-wider group-hover:text-white transition-colors">
                             {template.name}
                           </span>
                         </div>
-                        <span className="bg-zinc-950 border border-zinc-800 text-[8px] font-black px-2 py-0.5 rounded text-zinc-400">
+                        <span className="bg-[#0F0F11] border border-white/10 text-[8px] font-black px-2 py-0.5 rounded text-zinc-400">
                           PROPORÇÃO {template.dimensao}
                         </span>
                       </div>
 
                       <div className="flex flex-wrap gap-1.5">
                         {template.estilosVisuais.map((st) => (
-                          <span key={st} className="bg-zinc-900 border border-zinc-800 text-[7.5px] font-black uppercase px-1.5 py-0.5 rounded text-zinc-500">
+                          <span key={st} className="bg-[#1A1A1C] border border-white/10 text-[7.5px] font-black uppercase px-1.5 py-0.5 rounded text-zinc-500">
                             {st}
                           </span>
                         ))}
                       </div>
 
-                      <div className="pt-2 flex items-center justify-between border-t border-zinc-800/60">
+                      <div className="pt-2 flex items-center justify-between border-t border-white/5">
                         <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-wider">
                           {template.camadasTexto.length} Blocos de Texto
                         </span>
@@ -2118,7 +2278,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                             setActiveMenuTab("Design Builder");
                             showToast(`Preset "${template.name}" carregado com sucesso! Clique em "Gerar" na coluna direita.`, "success");
                           }}
-                          className="px-3 py-1 bg-zinc-900 border border-zinc-800 hover:border-[#ad8330]/40 group-hover:bg-[#ad8330] group-hover:text-black hover:scale-105 active:scale-95 transition-all text-[8px] font-black uppercase tracking-widest text-[#ad8330] rounded-lg"
+                          className="px-3 py-1 bg-[#1A1A1C] border border-white/10 hover:border-[#c5a880]/40 group-hover:bg-[#c5a880] group-hover:text-black hover:scale-105 active:scale-95 transition-all text-[8px] font-black uppercase tracking-widest text-[#c5a880] rounded-lg"
                         >
                           Aplicar Preset
                         </button>
@@ -2133,8 +2293,8 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
           {activeMenuTab === "Comunidade" && (
             <div className="space-y-6 animate-in fade-in duration-300">
               {/* Comunidade Header */}
-              <div className="flex flex-col gap-1 pb-4 border-b border-zinc-800">
-                <span className="text-[10px] font-black text-[#ad8330] tracking-widest uppercase">Zion Hub</span>
+              <div className="flex flex-col gap-1 pb-4 border-b border-white/5">
+                <span className="text-[10px] font-black text-[#c5a880] tracking-widest uppercase">Zion Hub</span>
                 <h3 className="text-sm font-extrabold text-white uppercase tracking-wider">Feed da Comunidade</h3>
                 <p className="text-[9px] text-zinc-500 leading-relaxed uppercase tracking-wider">Inspire-se em layouts de alto nível criados por outros diretores de arte da agência.</p>
               </div>
@@ -2142,10 +2302,10 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
               {/* Feed List */}
               <div className="space-y-4">
                 {communityCreations.map((item) => (
-                  <div key={item.id} className="p-4 bg-zinc-900/20 border border-zinc-800 rounded-2xl space-y-3.5 hover:border-zinc-800 transition-all">
+                  <div key={item.id} className="p-4 bg-zinc-900/20 border border-white/5 rounded-2xl space-y-3.5 hover:border-white/5 transition-all">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <div className={`w-7 h-7 rounded-full flex items-center justify-center ${item.avatarColor} text-black font-extrabold text-[10px]`}>
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center ${item.avatarColor} text-black font-semibold text-[10px]`}>
                           {item.author.charAt(0)}
                         </div>
                         <div className="flex flex-col">
@@ -2153,25 +2313,25 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                           <span className="text-[7.5px] font-bold text-zinc-500 uppercase tracking-widest">{item.role}</span>
                         </div>
                       </div>
-                      <span className="text-[8px] font-black bg-zinc-950 border border-zinc-900 text-zinc-400 px-2 py-0.5 rounded">
+                      <span className="text-[8px] font-black bg-black/40 border border-white/5 text-zinc-400 px-2 py-0.5 rounded">
                         PROPORÇÃO {item.dimensao}
                       </span>
                     </div>
 
-                    <div className="space-y-1 bg-zinc-950 p-3 rounded-xl border border-zinc-900">
-                      <span className="text-[8.5px] font-extrabold text-[#ad8330] uppercase tracking-widest block">Prompt Utilizado</span>
+                    <div className="space-y-1 bg-zinc-950 p-3 rounded-xl border border-white/5">
+                      <span className="text-[8.5px] font-extrabold text-[#c5a880] uppercase tracking-widest block">Prompt Utilizado</span>
                       <p className="text-[10px] font-bold text-zinc-300 leading-relaxed font-mono select-all">
                         {item.prompt}
                       </p>
                     </div>
 
-                    <div className="flex items-center justify-between pt-2 border-t border-zinc-900/60">
+                    <div className="flex items-center justify-between pt-2 border-t border-white/5">
                       <div className="flex items-center gap-3">
                         <button className="flex items-center gap-1 text-[9px] font-bold text-zinc-400 hover:text-red-500 transition-colors">
                           <Heart size={11} />
                           <span>{item.likes}</span>
                         </button>
-                        <button className="flex items-center gap-1 text-[9px] font-bold text-zinc-400 hover:text-[#ad8330] transition-colors">
+                        <button className="flex items-center gap-1 text-[9px] font-bold text-zinc-400 hover:text-[#c5a880] transition-colors">
                           <Share2 size={11} />
                           <span>{item.shares}</span>
                         </button>
@@ -2187,7 +2347,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                           setActiveMenuTab("Design Builder");
                           showToast("Prompt e dimensões clonados com sucesso!", "success");
                         }}
-                        className="px-3 py-1 bg-[#ad8330]/10 border border-[#ad8330]/20 hover:bg-[#ad8330] hover:text-black transition-all text-[8px] font-black uppercase tracking-widest text-[#ad8330] rounded-lg"
+                        className="px-3 py-1 bg-[#c5a880]/10 border border-[#c5a880]/20 hover:bg-[#c5a880] hover:text-black transition-all text-[8px] font-black uppercase tracking-widest text-[#c5a880] rounded-lg"
                       >
                         Clonar Prompt
                       </button>
@@ -2201,8 +2361,8 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
           {activeMenuTab === "Minha Galeria" && (
             <div className="space-y-6 animate-in fade-in duration-300">
               {/* Galeria Header */}
-              <div className="flex flex-col gap-1 pb-4 border-b border-zinc-800">
-                <span className="text-[10px] font-black text-[#ad8330] tracking-widest uppercase">Histórico Digital</span>
+              <div className="flex flex-col gap-1 pb-4 border-b border-white/5">
+                <span className="text-[10px] font-black text-[#c5a880] tracking-widest uppercase">Histórico Digital</span>
                 <h3 className="text-sm font-extrabold text-white uppercase tracking-wider">Minha Galeria</h3>
                 <p className="text-[9px] text-zinc-500 leading-relaxed uppercase tracking-wider">Visualize, filtre e gerencie todas as criações premium salvas neste projeto.</p>
               </div>
@@ -2210,7 +2370,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
               {/* Filtros da Galeria */}
               <div className="space-y-3">
                 <span className="text-[9px] font-black text-zinc-550 uppercase tracking-widest block">Filtros de Proporção</span>
-                <div className="flex flex-wrap gap-1 bg-zinc-950 p-1 rounded-lg border border-zinc-900">
+                <div className="flex flex-wrap gap-1 bg-zinc-950 p-1 rounded-lg border border-white/5">
                   {["Todos", "1:1", "4:5", "9:16", "16:9"].map((dim) => {
                     const isSel = galleryFilterDimension === dim;
                     return (
@@ -2218,7 +2378,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                         key={dim}
                         onClick={() => setGalleryFilterDimension(dim)}
                         className={`px-2.5 py-1 text-[8.5px] font-extrabold rounded uppercase tracking-wider transition-all cursor-pointer ${
-                          isSel ? "bg-[#ad8330] text-black" : "text-zinc-500 hover:text-zinc-300"
+                          isSel ? "bg-[#c5a880] text-black" : "text-zinc-500 hover:text-zinc-300"
                         }`}
                       >
                         {dim}
@@ -2242,7 +2402,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
 
                   if (filteredImages.length === 0) {
                     return (
-                      <div className="py-8 text-center border border-dashed border-zinc-800 rounded-xl bg-zinc-950/20">
+                      <div className="py-8 text-center border border-dashed border-white/5 rounded-xl bg-zinc-950/20">
                         <span className="text-[9px] font-bold text-zinc-600 uppercase tracking-wider">Nenhuma correspondência</span>
                       </div>
                     );
@@ -2263,15 +2423,15 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                             }}
                             className={`aspect-square rounded-xl overflow-hidden border cursor-pointer relative group transition-all ${
                               isSelected
-                                ? "border-[#ad8330] ring-2 ring-[#ad8330]/20"
-                                : "border-zinc-800 hover:border-zinc-700"
+                                ? "border-[#c5a880] ring-2 ring-[#c5a880]/20"
+                                : "border-white/5 hover:border-zinc-700"
                             }`}
                           >
                             <img src={imgBase64} className="w-full h-full object-cover" alt="Galeria Zion" />
                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                              <Eye size={14} className="text-[#ad8330] scale-90 group-hover:scale-100 transition-transform" />
+                              <Eye size={14} className="text-[#c5a880] scale-90 group-hover:scale-100 transition-transform" />
                             </div>
-                            <div className="absolute bottom-1 right-1 bg-black/80 border border-zinc-800/80 rounded px-1 text-[6.5px] font-black text-zinc-400">
+                            <div className="absolute bottom-1 right-1 bg-black/80 border border-white/5 rounded px-1 text-[6.5px] font-black text-zinc-400">
                               IMG #{originalIdx + 1}
                             </div>
                           </div>
@@ -2281,7 +2441,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                   );
                 })()
               ) : (
-                <div className="py-8 text-center border border-dashed border-zinc-800 rounded-xl bg-zinc-950/20">
+                <div className="py-8 text-center border border-dashed border-white/5 rounded-xl bg-zinc-950/20">
                   <ImageIcon size={20} className="text-zinc-700 mx-auto mb-2" />
                   <span className="text-[9px] font-bold text-zinc-650 uppercase tracking-wider">Nenhuma imagem gerada ainda</span>
                 </div>
@@ -2289,448 +2449,247 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
             </div>
           )}
 
+          {/* Spacer extra no final para evitar cortes de layout ao rolar */}
+          <div className="h-16 shrink-0" />
         </div>
       </div>
 
-      {/* COLUNA 3: VIEWPORT (MENSAGENS DE PROGRESSO REALISTA & ZOOM) E GALERIA MASONRY (48%) */}
-      <div className="w-full lg:w-[48%] bg-[#0a0a0a] flex flex-col h-[50vh] lg:h-full overflow-hidden relative">
-        
-        {/* Workspace Canvas / Viewport com Zoom e Pan */}
-        <div className="flex-1 flex flex-col relative overflow-hidden bg-[#070708]">
-          
-          {/* Barra superior de controle do Zoom */}
-          {activeImage && (
-            <div className="absolute top-4 left-4 z-10 flex items-center gap-2 bg-black/85 border border-zinc-800 px-3 py-1.5 rounded-xl shadow-lg text-zinc-350">
-              <button
-                onClick={() => setZoomPercent(prev => Math.max(prev - 10, 30))}
-                className="hover:text-white p-1 cursor-pointer transition-colors"
-                title="Zoom Out"
-              >
-                <ZoomOut size={13} />
-              </button>
-              <span className="text-[9.5px] font-black tracking-wider uppercase px-1 min-w-[36px] text-center text-[#ad8330]">
-                {zoomPercent}%
-              </span>
-              <button
-                onClick={() => setZoomPercent(prev => Math.min(prev + 10, 500))}
-                className="hover:text-white p-1 cursor-pointer transition-colors"
-                title="Zoom In"
-              >
-                <ZoomIn size={13} />
-              </button>
-              <div className="w-[1px] h-3.5 bg-zinc-800 mx-1" />
-              <button
-                onClick={resetZoomAndPan}
-                className="hover:text-white text-[8px] font-black uppercase tracking-widest cursor-pointer px-1.5 py-0.5 bg-zinc-900 hover:bg-zinc-800 rounded border border-zinc-800"
-              >
-                Resetar
-              </button>
-            </div>
-          )}
-
-          {/* Area Interativa de Imagem com Loading Progressivo Realista */}
-          <div
-            ref={viewportRef}
-            onWheel={activeImage ? handleWheel : undefined}
-            onMouseDown={activeImage ? handleMouseDown : undefined}
-            onMouseMove={activeImage ? handleMouseMove : undefined}
-            onMouseUp={activeImage ? handleMouseUpOrLeave : undefined}
-            onMouseLeave={activeImage ? handleMouseUpOrLeave : undefined}
-            className={`flex-1 flex items-center justify-center p-6 relative select-none overflow-hidden ${
-              activeImage ? "cursor-grab" : ""
-            } ${isDragging ? "cursor-grabbing" : ""}`}
+      
+      
+      
+      {/* COLUNA 3: VIEWPORT (MENSAGENS DE PROGRESSO REALISTA & ZOOM) E GALERIA MASONRY */}
+      <div className="w-full md:flex-1 bg-[#000000] flex flex-col h-[55vh] md:h-full overflow-hidden relative">
+        <div className="border-b border-white/5 bg-[#0A0A0A] p-4 shrink-0 flex items-center gap-3">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              placeholder="Instrução de ajuste localizado ou estilo..."
+              value={refineQuery}
+              onChange={(e) => setRefineQuery(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleRefine()}
+              className="w-full bg-[#121215] border border-white/5 hover:border-zinc-700 text-xs rounded-lg px-4 py-2.5 text-zinc-200 placeholder:text-zinc-600 focus:outline-none transition-colors"
+            />
+          </div>
+          <button
+            onClick={handleRefine}
+            className="px-6 py-2.5 bg-[#c5a880] hover:bg-[#b39873] text-black text-xs font-bold uppercase tracking-widest rounded-lg transition-all active:scale-95 cursor-pointer shadow-md"
           >
-            {activeMenuTab === "Inspiração" ? (
-              (() => {
-                const template = templatePresets.find(t => t.id === selectedTemplateId) || templatePresets[0];
-                return (
-                  <div className="w-full h-full flex flex-col items-center justify-center p-4 animate-in fade-in duration-500">
-                    <div className="text-center mb-4">
-                      <span className="text-[10px] font-black text-[#ad8330] uppercase tracking-widest block mb-0.5">Pré-Visualização do Layout</span>
-                      <h4 className="text-sm font-extrabold uppercase tracking-wider text-zinc-100">{template.name}</h4>
-                    </div>
-                    
-                    {/* Mockup Canvas */}
-                    <div 
-                      className="relative rounded-2xl shadow-2xl border flex flex-col justify-between p-6 overflow-hidden transition-all duration-500"
-                      style={{
-                        ...template.mockBgStyle,
-                        width: template.dimensao === "16:9" ? "320px" : template.dimensao === "9:16" ? "210px" : template.dimensao === "4:5" ? "250px" : "280px",
-                        height: template.dimensao === "16:9" ? "180px" : template.dimensao === "9:16" ? "370px" : template.dimensao === "4:5" ? "312px" : "280px",
-                        boxShadow: `0 20px 40px rgba(0,0,0,0.6), 0 0 25px ${template.accentColor}25`
-                      }}
-                    >
-                      {/* Abstract background elements for high quality */}
-                      <div className="absolute inset-0 opacity-25 pointer-events-none">
-                        <div className="absolute top-[-10%] left-[-10%] w-[120%] h-[120%] bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.15)_0%,transparent_70%)]" />
-                        <div className="absolute top-1/4 left-1/4 w-32 h-32 rounded-full blur-3xl opacity-30" style={{ backgroundColor: template.corDominante }} />
-                        <div className="absolute bottom-1/4 right-1/4 w-24 h-24 rounded-full blur-3xl opacity-20" style={{ backgroundColor: template.accentColor }} />
-                        {/* Grid overlay */}
-                        <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff03_1px,transparent_1px),linear-gradient(to_bottom,#ffffff03_1px,transparent_1px)] bg-[size:15px_15px]" />
-                      </div>
+            REFINAR
+          </button>
+        </div>
 
-                      {/* Header Logo */}
-                      <div className="z-10 flex justify-between items-center w-full">
-                        <div className="flex items-center gap-1.5 opacity-80">
-                          <div className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-black" style={{ backgroundColor: template.accentColor, color: "#000" }}>
-                            Z
-                          </div>
-                          <span className="text-[7.5px] font-black uppercase tracking-widest" style={{ color: "#fff" }}>ZION COMPANY</span>
-                        </div>
-                        <div className="text-[6.5px] font-bold uppercase px-1.5 py-0.5 rounded border opacity-60" style={{ color: template.accentColor, borderColor: `${template.accentColor}40` }}>
-                          PRESET
-                        </div>
+        <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+          <div className="flex-1 flex flex-col relative overflow-hidden bg-[#0A0A0A] border-b md:border-b-0 border-white/5 h-[350px] md:h-full shrink-0 md:shrink">
+            <div className="flex-1 flex relative p-4 sm:p-5 items-center justify-center overflow-hidden">
+              {store.somentePrompt ? (
+                <div className="w-full h-full flex flex-col p-4 sm:p-5 bg-[#0a0a0c]/80 border border-white/5 rounded-2xl overflow-hidden">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/5 shrink-0">
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        <Terminal size={14} className="text-[#c5a880]" />
+                        <span className="text-[10px] font-black text-[#c5a880] tracking-widest uppercase">Modo Somente Prompt & Instrução Ativo</span>
                       </div>
-
-                      {/* Middle Graphic Silhouette (Simulating Sujeito/Produto) */}
-                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
-                        {template.id.includes("boteco") || template.id.includes("combo") ? (
-                          <div className="w-24 h-32 rounded-t-full border border-dashed border-zinc-600 flex items-center justify-center">
-                            <span className="text-[8px] uppercase tracking-wider font-bold">Produto/Sujeito</span>
-                          </div>
-                        ) : (
-                          <div className="w-20 h-20 rounded-full border border-dashed border-zinc-600 flex items-center justify-center">
-                            <span className="text-[8px] uppercase tracking-wider font-bold">Elemento Focal</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Main Typography content */}
-                      <div className="z-10 flex flex-col gap-2.5 w-full mt-auto relative">
-                        {template.camadasTexto.map((layer, idx) => {
-                          const isHeadline = layer.funcao === "Headline Principal";
-                          const isSub = layer.funcao === "Subheadline Secundário";
-                          const isPrice = layer.funcao === "Preço / Valor";
-                          const isDate = layer.funcao === "Data / Horário";
-                          return (
-                            <div 
-                              key={idx} 
-                              className={`leading-tight text-center`}
-                              style={{ 
-                                color: layer.cor,
-                                fontFamily: layer.fonte === "Cinzel" ? "Cinzel" : layer.fonte === "Playfair Display" ? "Playfair Display" : "Montserrat",
-                              }}
-                            >
-                              {isHeadline && (
-                                <h1 className="text-sm font-black uppercase tracking-tighter" style={{ textShadow: "0 2px 4px rgba(0,0,0,0.8)" }}>
-                                  {layer.conteudo}
-                                </h1>
-                              )}
-                              {isSub && (
-                                <p className="text-[8.5px] font-bold uppercase tracking-wide opacity-90">
-                                  {layer.conteudo}
-                                </p>
-                              )}
-                              {isPrice && (
-                                <span className="inline-block px-2.5 py-0.5 bg-white text-black font-black text-[10px] uppercase rounded shadow-lg mt-0.5">
-                                  {layer.conteudo}
-                                </span>
-                              )}
-                              {isDate && (
-                                <span className="text-[7.5px] font-black uppercase tracking-widest block mt-0.5 opacity-75">
-                                  {layer.conteudo}
-                                </span>
-                              )}
-                              {!isHeadline && !isSub && !isPrice && !isDate && (
-                                <p className="text-[8px] font-medium leading-relaxed max-w-[90%] mx-auto opacity-80">
-                                  {layer.conteudo}
-                                </p>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      {/* Footer Info */}
-                      <div className="z-10 w-full text-center mt-2 opacity-50">
-                        <span className="text-[6px] font-bold uppercase tracking-widest text-zinc-400">DESIGNER ZION DIGITAL ENGINE</span>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 max-w-xs text-center">
-                      <p className="text-[9px] text-zinc-400 leading-relaxed uppercase tracking-wider">
-                        Este layout utiliza a fonte <strong className="text-zinc-200">{template.camadasTexto[0]?.fonte}</strong> e tons de <strong style={{ color: template.accentColor }}>{template.corDominante}</strong>.
-                      </p>
+                      <p className="text-[9px] text-zinc-500 uppercase tracking-wider text-left">Copie o Prompt e a Instrução de Sistema estruturados lado a lado para alimentar geradores externos.</p>
                     </div>
                   </div>
-                );
-              })()
-            ) : (
-              activeImage ? (
-                <div className="relative w-full h-full flex items-center justify-center pointer-events-none">
-                  {/* Resolution & Model Badge */}
-                  {activeImageDims && (
-                    <div className="absolute top-4 left-4 bg-[#0a0a0a]/95 backdrop-blur-md border border-zinc-800 rounded-xl px-3 py-2 flex flex-col gap-0.5 select-none text-[10px] pointer-events-auto font-mono text-zinc-400 z-10 shadow-2xl">
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#ad8330]" />
-                        <span className="text-zinc-200 font-bold uppercase text-[9px]">gemini-3-pro-image</span>
+
+                  {!store.lastGeneratedPrompt ? (
+                    <div className="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-4">
+                      <div className="w-12 h-12 rounded-full bg-[#c5a880]/10 flex items-center justify-center border border-[#c5a880]/20 animate-pulse">
+                        <Sparkles size={20} className="text-[#c5a880]" />
                       </div>
-                      <div className="flex items-center gap-1 text-[9px]">
-                        <span>RESOLUÇÃO REAL:</span>
-                        <span className="text-[#ad8330] font-bold">{activeImageDims.width} x {activeImageDims.height}</span>
+                      <div className="space-y-1.5 max-w-sm">
+                        <h4 className="text-xs font-bold text-zinc-300 uppercase tracking-wider">Aguardando Planejamento</h4>
+                        <p className="text-[10px] text-zinc-500 uppercase tracking-wider leading-relaxed">
+                          O Diretor Criativo escaneará todas as referências visuais e configurações para planejar a composição, pensar e criar o Prompt Mestre e a Instrução de Sistema ideais.
+                        </p>
+                      </div>
+                      <button
+                        onClick={generatePremiumImage}
+                        disabled={isGenerating}
+                        className="px-6 py-2.5 bg-[#c5a880] hover:bg-[#b39873] border-none disabled:opacity-50 text-black font-black text-[10px] uppercase tracking-widest rounded-lg transition-all shadow-md active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2"
+                      >
+                        {isGenerating ? (
+                          <>
+                            <RefreshCw size={11} className="animate-spin text-black" />
+                            <span>Pensando e Estruturando...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles size={11} className="text-black" />
+                            <span>Gerar Prompt & Instrução</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex-1 flex flex-col min-h-0 mt-3">
+                      <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 min-h-0">
+                        
+                        {/* Mega Prompt Mestre Container */}
+                        <div className="bg-[#040406]/90 border border-white/5 p-4 rounded-xl space-y-2.5 flex flex-col min-h-0 h-full">
+                          <div className="flex justify-between items-center shrink-0 gap-2">
+                            <span className="text-[10px] font-extrabold text-white uppercase tracking-wider">Mega Prompt Mestre (Flyer BR)</span>
+                            
+                            {/* Copy Button */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const p = store.lastGeneratedPrompt || buildMasterPrompt(store);
+                                navigator.clipboard.writeText(p);
+                                setIsPromptCopied(true);
+                                showToast("Prompt mestre copiado!", "success");
+                                setTimeout(() => setIsPromptCopied(false), 2000);
+                              }}
+                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase transition-colors cursor-pointer shrink-0 ${
+                                isPromptCopied ? "bg-[#c5a880]/15 text-[#c5a880] border border-[#c5a880]/20" : "bg-zinc-900 hover:bg-zinc-850 text-zinc-400 hover:text-white border border-white/5"
+                              }`}
+                            >
+                              {isPromptCopied ? <CheckCircle size={10} /> : <Copy size={10} />}
+                              <span>{isPromptCopied ? "Copiado!" : "Copiar Prompt"}</span>
+                            </button>
+                          </div>
+                          <div className="p-4 bg-[#08080a] border border-white/5 rounded-lg text-[11px] font-mono text-zinc-200 leading-relaxed flex-1 overflow-y-auto custom-scrollbar break-words text-left min-h-0 select-text">
+                            {store.lastGeneratedPrompt}
+                          </div>
+                        </div>
+
+                        {/* Instrução de Sistema Container */}
+                        <div className="bg-[#040406]/90 border border-white/5 p-4 rounded-xl space-y-2.5 flex flex-col min-h-0 h-full">
+                          <div className="flex justify-between items-center shrink-0 gap-2">
+                            <span className="text-[10px] font-extrabold text-white uppercase tracking-wider">Instrução de Sistema (System Instruction)</span>
+                            
+                            {/* Copy Button */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const inst = store.lastSystemInstruction || DEFAULT_SYSTEM_INSTRUCTION;
+                                navigator.clipboard.writeText(inst);
+                                setIsInstructionCopied(true);
+                                showToast("Instrução copiada!", "success");
+                                setTimeout(() => setIsInstructionCopied(false), 2000);
+                              }}
+                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase transition-colors cursor-pointer shrink-0 ${
+                                isInstructionCopied ? "bg-[#c5a880]/15 text-[#c5a880] border border-[#c5a880]/20" : "bg-zinc-900 hover:bg-zinc-850 text-zinc-400 hover:text-white border border-white/5"
+                              }`}
+                            >
+                              {isInstructionCopied ? <CheckCircle size={10} /> : <Copy size={10} />}
+                              <span>{isInstructionCopied ? "Copiado!" : "Copiar Instrução"}</span>
+                            </button>
+                          </div>
+                          <div className="p-4 bg-[#08080a] border border-white/5 rounded-lg text-[11px] font-mono text-zinc-200 leading-relaxed flex-1 overflow-y-auto custom-scrollbar break-words text-left min-h-0 select-text">
+                            {store.lastSystemInstruction}
+                          </div>
+                        </div>
+
                       </div>
                     </div>
                   )}
-                  {/* The zoomable layer */}
+                </div>
+              ) : activeImage ? (
+                <div 
+                  className="relative group w-full h-full flex items-center justify-center overflow-hidden"
+                  onWheel={handleWheel}
+                  onMouseDown={handleMouseDown}
+                  onMouseMove={handleMouseMove}
+                  onMouseUp={handleMouseUpOrLeave}
+                  onMouseLeave={handleMouseUpOrLeave}
+                >
                   <div
-                    className="transition-transform duration-75 ease-out shadow-2xl border border-zinc-800 rounded-2xl bg-zinc-950 flex items-center justify-center overflow-hidden pointer-events-auto"
+                    className="relative max-w-full max-h-full flex items-center justify-center select-none"
                     style={{
-                      transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomPercent / 100})`,
-                      maxWidth: "90%",
-                      maxHeight: "90%",
-                      aspectRatio: store.dimensao === "16:9" ? "16/9" : store.dimensao === "9:16" ? "9/16" : store.dimensao === "4:5" ? "4/5" : "1/1"
+                      transform: `scale(${zoomPercent / 100}) translate(${panOffset.x}px, ${panOffset.y}px)`,
+                      transformOrigin: "center center",
+                      transition: "transform 0.05s ease-out"
                     }}
                   >
                     <img
                       src={activeImage}
-                      alt="Resultado Ativo"
-                      className="max-w-full max-h-full object-contain pointer-events-none"
+                      alt="Preview"
+                      className="max-w-full max-h-[70vh] object-contain rounded-xl border border-white/10 shadow-2xl select-none pointer-events-none"
                     />
-                  </div>
-                  
-                  {/* Floating Action Menu */}
-                  <div className="absolute bottom-6 left-[10%] pointer-events-auto flex flex-col gap-2 animate-in slide-in-from-bottom-2">
-                    {showImageOptions && (
-                      <div className="w-56 bg-[#0a0a0a] border border-zinc-800 rounded-xl shadow-2xl p-1.5 flex flex-col gap-1">
-                        <button 
-                          onClick={() => { setShowImageOptions(false); setShowMaskPainter(true); }}
-                          className="flex items-center gap-3 p-2 hover:bg-zinc-900 rounded-lg text-zinc-300 hover:text-white transition-colors text-xs font-medium"
-                        >
-                          <PenTool size={14} className="text-[#ad8330]" />
-                          Pintar Máscara
-                        </button>
-                        <button 
-                          className="flex items-center gap-3 p-2 hover:bg-zinc-900 rounded-lg text-zinc-300 hover:text-white transition-colors text-xs font-medium"
-                        >
-                          <Smartphone size={14} className="text-[#ad8330]" />
-                          Versão Vertical (9:16)
-                        </button>
+                    {store.useLogo && store.logosList && store.logosList.length > 0 && (
+                      <div className="absolute top-[5%] left-0 right-0 flex justify-center pointer-events-none select-none z-10">
+                         <img src={store.logosList[0]} style={{ maxHeight: '15%' }} className="object-contain opacity-95 drop-shadow-2xl" alt="Logo Overlay" />
                       </div>
                     )}
-                    
-                    <div className="flex items-center gap-2">
-                      <button 
-                        onClick={() => setShowExportMenu(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-zinc-200 text-black text-xs font-bold uppercase tracking-wider rounded-lg transition-colors shadow-lg"
-                      >
-                        <Maximize size={14} />
-                        DOWNLOAD
-                      </button>
-                      <button 
-                        onClick={() => setShowImageOptions(!showImageOptions)}
-                        className={`p-2 rounded-lg transition-colors shadow-lg ${showImageOptions ? 'bg-[#ad8330] text-black' : 'bg-[#ad8330] text-black hover:bg-[#c2963a]'}`}
-                      >
-                        <MoreVertical size={16} />
-                      </button>
-                    </div>
                   </div>
                 </div>
               ) : (
-                <div className="text-center p-6 select-none w-full max-w-sm">
-                  {isGenerating ? (
-                    <div className="flex flex-col items-center gap-5 w-full">
-                      
-                      {/* Animação do Progress Ring ou Barra Horizontal elegante */}
-                      <div className="w-full bg-zinc-950 border border-zinc-900 p-6 rounded-2xl space-y-4 shadow-xl">
-                        <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-wider text-zinc-400">
-                          <span className="text-[#ad8330] flex items-center gap-1.5 font-bold">
-                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse inline-block" />
-                            Renderizando Card Premium
-                          </span>
-                          <span className="font-mono text-[#ad8330]">{progressPercent}%</span>
-                        </div>
-                        
-                        {/* Contador Regressivo Inteligente */}
-                        <div className="text-center py-2 bg-zinc-900/50 border border-zinc-800/80 rounded-xl space-y-1">
-                          <span className="text-[9px] text-zinc-500 uppercase tracking-wider font-extrabold block">Tempo Estimado Restante</span>
-                          <span className="text-2xl font-black text-white font-mono tracking-tight block">
-                            {countdown > 1 ? `${countdown}s` : "Finalizando..."}
-                          </span>
-                        </div>
-
-                        {/* Barra de progresso */}
-                        <div className="w-full h-2 bg-zinc-900 rounded-full overflow-hidden p-[2px] border border-zinc-800">
-                          <div
-                            className="h-full bg-gradient-to-r from-[#ad8330] via-yellow-500 to-amber-600 transition-all duration-300 rounded-full"
-                            style={{ width: `${progressPercent}%` }}
-                          />
-                        </div>
-
-                        {/* Mensagem atual */}
-                        <p className="text-[9px] text-zinc-400 font-medium tracking-wide text-center pt-1 transition-all duration-300 leading-relaxed min-h-[24px]">
-                          {progressMessage}
-                        </p>
-                      </div>
-
-                      <p className="text-[8px] text-zinc-600 font-bold uppercase tracking-wider">Conectado ao Engine de IA</p>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center gap-3.5">
-                      <div className="w-10 h-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-655 mb-1.5">
-                        <Eye size={16} />
-                      </div>
-                      <p className="text-[10.5px] font-black text-zinc-550 uppercase tracking-widest">Aguardando Criação</p>
-                      <p className="text-[9px] text-zinc-600 max-w-xs leading-relaxed mt-1">Monte os parâmetros no formulário central e inicie a geração da imagem.</p>
-                    </div>
-                  )}
+                <div className="flex flex-col items-center gap-3.5">
+                  <div className="w-10 h-10 rounded-full bg-[#1A1A1C] border border-white/10 flex items-center justify-center text-zinc-655 mb-1.5">
+                    <Sparkles size={16} />
+                  </div>
+                  <p className="text-[10.5px] font-black text-zinc-550 uppercase tracking-widest">Aguardando Criação</p>
+                  <p className="text-[9px] text-zinc-600 max-w-xs leading-relaxed mt-1">Monte os parâmetros no formulário central e inicie a geração da imagem.</p>
                 </div>
-              )
-            )}
-          </div>
+              )}
 
-        </div>
-
-        {/* Instrução do Sistema (Colapsável) */}
-        {store.lastSystemInstruction && (
-          <div className="border-t border-zinc-900 bg-[#ad8330]/5 shrink-0 transition-all duration-300">
-            {/* Header / Gatilho */}
-            <div 
-              onClick={() => setIsSystemInstructionExpanded(!isSystemInstructionExpanded)}
-              className="flex items-center justify-between p-4 cursor-pointer hover:bg-[#ad8330]/10 transition-colors select-none"
-            >
-              <span className="text-[10px] font-black uppercase tracking-widest text-[#ad8330] flex items-center gap-1.5">
-                {isSystemInstructionExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                <Sparkles size={11} /> Instrução do Sistema (Para Modelo AI)
-              </span>
-              
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigator.clipboard.writeText(store.lastSystemInstruction);
-                  showToast("Instrução do sistema copiada!", "success");
-                }}
-                className="text-[9px] font-bold uppercase tracking-wider text-[#ad8330] hover:text-[#d4af37] transition-colors px-2 py-1 bg-[#ad8330]/10 border border-[#ad8330]/30 rounded-lg cursor-pointer flex items-center gap-1"
-              >
-                <Copy size={9} /> Copiar Instrução
-              </button>
-            </div>
-
-            {/* Conteúdo Expansível */}
-            {isSystemInstructionExpanded && (
-              <div className="p-4 pt-0 border-t border-zinc-900/40 animate-in fade-in duration-200">
-                <div className="bg-zinc-950/80 border border-zinc-900 p-3.5 rounded-xl max-h-[90px] overflow-y-auto font-mono text-[10px] text-zinc-300 leading-relaxed scrollbar-thin select-all">
-                  {store.lastSystemInstruction}
+              {/* Download overlay controls */}
+              {activeImage && (
+                <div className="absolute bottom-4 left-4 flex items-center gap-2 z-20">
+                  <button
+                    onClick={handleDownloadActiveImage}
+                    className="flex items-center gap-2.5 px-4.5 py-2.5 bg-white text-black text-[11px] font-black uppercase tracking-wider rounded-lg hover:bg-zinc-200 active:scale-95 transition-all shadow-xl cursor-pointer"
+                  >
+                    <Maximize size={12} className="text-black stroke-[3px]" />
+                    <span>DOWNLOAD</span>
+                  </button>
+                  <button
+                    onClick={() => showToast("Formatos extras disponíveis nas configurações!", "success")}
+                    className="p-2.5 bg-[#0b0b0c]/90 hover:bg-zinc-900 border border-white/10 rounded-lg text-white active:scale-95 transition-all cursor-pointer shadow-lg"
+                  >
+                    <MoreVertical size={14} />
+                  </button>
                 </div>
-                <p className="text-[8px] text-zinc-500 mt-1.5 font-semibold">
-                  Coloque esta instrução do sistema no console do Google Cloud Agent Platform.
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Prompt Completo (Colapsável) */}
-        <div className="border-t border-zinc-900 bg-black/40 shrink-0 transition-all duration-300">
-          {/* Header / Gatilho */}
-          <div 
-            onClick={() => setIsFullPromptExpanded(!isFullPromptExpanded)}
-            className="flex items-center justify-between p-4 cursor-pointer hover:bg-black/60 transition-colors select-none"
-          >
-            <span className="text-[10px] font-black uppercase tracking-widest text-[#ad8330] flex items-center gap-1.5">
-              {isFullPromptExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-              <Sparkles size={11} /> Prompt Completo de Geração (Pensamento da IA)
-            </span>
-            
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                navigator.clipboard.writeText(store.lastGeneratedPrompt || buildMasterPrompt(store));
-                showToast("Prompt mestre copiado!", "success");
-              }}
-              className="text-[9px] font-bold uppercase tracking-wider text-zinc-400 hover:text-[#ad8330] transition-colors px-2 py-1 bg-zinc-900 border border-zinc-800 rounded-lg cursor-pointer flex items-center gap-1"
-            >
-              <Copy size={9} /> Copiar Prompt Completo
-            </button>
-          </div>
-
-          {/* Conteúdo Expansível */}
-          {isFullPromptExpanded && (
-            <div className="p-4 pt-0 border-t border-zinc-900/40 animate-in fade-in duration-200">
-              <div className="bg-zinc-950/80 border border-zinc-900 p-3.5 rounded-xl max-h-[90px] overflow-y-auto font-mono text-[10px] text-zinc-400 leading-relaxed scrollbar-thin select-all">
-                {store.lastGeneratedPrompt || buildMasterPrompt(store)}
-              </div>
-              <p className="text-[8px] text-zinc-600 mt-1.5">
-                Use este prompt completo em outras ferramentas de IA para recriar ou aprimorar sua imagem com as mesmas diretrizes.
-              </p>
+              )}
             </div>
-          )}
-        </div>
-
-        {/* Galeria Masonry inferior - Memoized */}
-        <div className="border-t border-zinc-900 bg-black/25 p-5 shrink-0 select-none">
-          <MasonryGallery
-            exportFormat={exportFormat}
-            showToast={showToast}
-          />
+          </div>
+          
+          <div className="w-full md:w-[240px] lg:w-[300px] 2xl:w-[350px] bg-[#0A0A0A] border-t md:border-t-0 md:border-l border-white/5 flex flex-col overflow-y-auto custom-scrollbar shrink-0">
+             <div className="flex-1 flex flex-col p-4 space-y-4">
+                <div className="border border-white/5 bg-black/35 p-4 rounded-xl shrink-0 select-none">
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-[#c5a880]">Galeria Masonry</span>
+                  </div>
+                  <MasonryGallery
+                    exportFormat={exportFormat}
+                    showToast={showToast}
+                  />
+                </div>
+             </div>
+          </div>
         </div>
       </div>
       </div>
-
-      {/* 9. MODAL GRANDE DE PREVIEW DE ESTILO VISUAL */}
-      {modalImageRefUrl && (
-        <div
-          onClick={() => setModalImageRefUrl(null)}
-          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in duration-200 cursor-zoom-out"
-        >
-          <div className="relative max-w-4xl max-h-[90%] flex flex-col items-center justify-center">
-            <img
-              src={modalImageRefUrl}
-              alt="Estilo Ref Zoom"
-              className="max-w-full max-h-[85vh] object-contain rounded-2xl border border-zinc-800 shadow-2xl"
-            />
-            <button
-              onClick={() => setModalImageRefUrl(null)}
-              className="absolute top-4 right-4 p-2 bg-black/75 hover:bg-zinc-800 rounded-full text-white cursor-pointer transition-colors"
-            >
-              <X size={16} />
-            </button>
-            <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#ad8330] mt-3">Imagem de Referência de Estilo</span>
-          </div>
-        </div>
-      )}
-
-      {/* Toasts de Feedback */}
-      {toast && (
-        <div className="fixed bottom-6 right-6 z-50 bg-[#0f0f11] border border-zinc-800 p-5 rounded-xl shadow-2xl flex items-center gap-3.5 animate-in slide-in-from-bottom-5 max-w-sm">
-          {toast.type === "warning" && <AlertTriangle size={16} className="text-amber-500 shrink-0" />}
-          {toast.type === "error" && <X size={16} className="text-red-500 shrink-0" />}
-          {toast.type === "success" && <CheckCircle size={16} className="text-emerald-500 shrink-0" />}
-          <span className="text-xs font-bold text-zinc-300">{toast.message}</span>
-          <button onClick={() => setToast(null)} className="text-zinc-600 hover:text-white ml-2 shrink-0 cursor-pointer">
-            <X size={15} />
-          </button>
-        </div>
-      )}
-
-      {showExportMenu && (
-        <ExportModal 
-          onClose={() => setShowExportMenu(false)}
-          exportFormat={exportFormat}
-          setExportFormat={setExportFormat}
-          zoomPercent={zoomPercent}
-          setZoomPercent={setZoomPercent}
-          resolution={store.resolucao}
-        />
-      )}
-
-      {showMaskPainter && activeImage && (
-        <MaskPainter 
-          imageUrl={activeImage}
-          onCancel={() => setShowMaskPainter(false)}
-          onConfirm={(maskBase64) => {
-            // No futuro isso pode ser enviado para a API de Inpainting
-            setShowMaskPainter(false);
-            showToast("Máscara salva. (Pronto para API de Inpainting)", "success");
-          }}
-        />
-      )}
-
-      {/* Assistente Zion AI Chat Drawer */}
-      <ChatAssistente
-        customApiKey={customApiKey}
-        showToast={showToast}
-      />
-
     </div>
+  </div>
+
+  {modalImageRefUrl && (
+    <div
+      onClick={() => setModalImageRefUrl(null)}
+      className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in duration-200 cursor-zoom-out"
+    >
+      <div className="relative max-w-4xl max-h-[90%] flex flex-col items-center justify-center">
+        <img
+          src={modalImageRefUrl}
+          alt="Estilo Ref Zoom"
+          className="max-w-full max-h-[85vh] object-contain rounded-2xl border border-white/5 shadow-2xl"
+        />
+        <button
+          onClick={() => setModalImageRefUrl(null)}
+          className="absolute top-4 right-4 p-2 bg-black/75 hover:bg-zinc-800 rounded-full text-white cursor-pointer transition-colors"
+        >
+          <X size={16} />
+        </button>
+      </div>
+    </div>
+  )}
+
+  <ChatAssistente
+    customApiKey={customApiKey}
+    showToast={showToast}
+  />
+</div>
   );
 }

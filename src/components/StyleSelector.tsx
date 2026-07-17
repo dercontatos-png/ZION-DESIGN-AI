@@ -57,23 +57,39 @@ export const StyleSelector: React.FC<StyleSelectorProps> = ({
       </div>
 
       {enableEstiloVisual && (
-        <div className="flex flex-wrap gap-1.5 pt-1">
-          {styleOptions.map((opt) => {
-            const isSelected = store.estilosVisuais.includes(opt);
-            return (
-              <button
-                key={opt}
-                onClick={() => handleStyleClick(opt)}
-                className={`px-3 py-2 rounded-full border text-[10px] font-black transition-all duration-300 uppercase tracking-wider cursor-pointer ${
-                  isSelected
-                    ? "bg-[#ad8330] border-[#ad8330] text-black ring-1 ring-[#ad8330]"
-                    : "bg-zinc-900/60 border-zinc-800 text-zinc-400 hover:text-white hover:border-[#ad8330]/20 hover:bg-zinc-900/80"
-                }`}
-              >
-                {opt}
-              </button>
-            );
-          })}
+        <div className="space-y-3">
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {styleOptions.map((opt) => {
+              const isSelected = store.estilosVisuais.includes(opt);
+              return (
+                <button
+                  key={opt}
+                  onClick={() => handleStyleClick(opt)}
+                  className={`px-3 py-2 rounded-full border text-[10px] font-black transition-all duration-300 uppercase tracking-wider cursor-pointer ${
+                    isSelected
+                      ? "bg-[#ad8330] border-[#ad8330] text-black ring-1 ring-[#ad8330]"
+                      : "bg-zinc-900/60 border-zinc-800 text-zinc-400 hover:text-white hover:border-[#ad8330]/20 hover:bg-zinc-900/80"
+                  }`}
+                >
+                  {opt}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="space-y-1.5 pt-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Estilo Visual Customizado</span>
+              <span className="text-[8px] text-zinc-500">Ex: Barroco, Cyberpunk distópico, 3D claymation...</span>
+            </div>
+            <input
+              type="text"
+              value={store.estiloVisualCustom || ""}
+              onChange={(e) => store.updateConfig({ estiloVisualCustom: e.target.value })}
+              placeholder="Descreva o estilo se não encontrar nas tags acima..."
+              className="w-full bg-zinc-950/60 border border-white/5 rounded-lg px-3 py-1.5 text-xs text-zinc-200 placeholder-zinc-700 focus:outline-none focus:border-[#ad8330]/40 tracking-wide"
+            />
+          </div>
         </div>
       )}
     </div>

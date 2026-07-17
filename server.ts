@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import multer from "multer";
 import { GoogleGenAI, Modality } from "@google/genai";
-import { Jimp, ResizeStrategy } from "jimp";
+import { Jimp, ResizeStrategy, BlendMode } from "jimp";
 import path from "path";
 import fs from "fs";
 import dotenv from "dotenv";
@@ -274,7 +274,7 @@ ${textContent}`
       });
 
       const response = await currentAi.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.5-flash",
         config: {
           responseMimeType: "application/json",
         },
@@ -502,7 +502,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
       let finalPrompt = "";
       try {
         const thinkResponse = await currentAi.models.generateContent({
-          model: "gemini-2.5-flash",
+          model: "gemini-3.5-flash",
           contents: thinkParts,
         });
         finalPrompt = thinkResponse.text || "";
@@ -602,40 +602,98 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
             aspectRatio: selectedRatio
           });
 
-          const response = await currentAi.models.generateContent({
-            model: targetModel,
-            contents: [
-              {
-                role: "user",
-                parts: parts
-              }
-            ],
-            config: {
-              responseModalities: ["IMAGE"],
-              imageConfig: {
-                aspectRatio: selectedRatio,
-                imageSize: sizeSelected,
-                outputMimeType: "image/png"
-              }
-            }
-          });
-
           let rawData = "";
           let mimeType = "image/png";
 
-          if (response?.candidates?.[0]?.content?.parts) {
-            for (const part of response.candidates[0].content.parts) {
-              if (part.inlineData && part.inlineData.data) {
-                rawData = part.inlineData.data;
-                mimeType = part.inlineData.mimeType || "image/png";
-                responseImgUrl = `data:${mimeType};base64,${rawData}`;
-                break;
+          try {
+            const response = await currentAi.models.generateContent({
+              model: targetModel,
+              contents: [
+                {
+                  role: "user",
+                  parts: parts
+                }
+              ],
+              config: {
+                responseModalities: ["IMAGE"],
+                imageConfig: {
+                  aspectRatio: selectedRatio,
+                  imageSize: sizeSelected,
+                  outputMimeType: "image/png"
+                }
+              }
+            });
+
+            if (response?.candidates?.[0]?.content?.parts) {
+              for (const part of response.candidates[0].content.parts) {
+                if (part.inlineData && part.inlineData.data) {
+                  rawData = part.inlineData.data;
+                  mimeType = part.inlineData.mimeType || "image/png";
+                  responseImgUrl = `data:${mimeType};base64,${rawData}`;
+                  break;
+                }
               }
             }
-          }
 
-          if (!responseImgUrl) {
-            throw new Error("No image data returned in candidate parts.");
+            if (!responseImgUrl) {
+              throw new Error("No image data returned in candidate parts.");
+            }
+
+            modelUsed = `Vertex AI (gemini-3-pro-image)`;
+
+          } catch (imagenErr: any) {
+            console.warn(`[api/generate-image] Primary model gemini-3-pro-image failed. Attempting fallback to imagen-3.0-generate-002...`, imagenErr.message || imagenErr);
+            
+            try {
+              console.log(`[api/generate-image] Calling generateImages with model: imagen-3.0-generate-002`);
+              const fallbackResponse = await (currentAi.models as any).generateImages({
+                model: "imagen-3.0-generate-002",
+                prompt: finalPrompt,
+                config: {
+                  numberOfImages: 1,
+                  aspectRatio: selectedRatio,
+                  outputMimeType: "image/png"
+                }
+              });
+
+              if (fallbackResponse?.generatedImages?.[0]?.image?.imageBytes) {
+                rawData = fallbackResponse.generatedImages[0].image.imageBytes;
+                mimeType = "image/png";
+                responseImgUrl = `data:image/png;base64,${rawData}`;
+                modelUsed = `Vertex AI (imagen-3.0-generate-002 - Fallback)`;
+                console.log("[BACK] Fallback imagen-3.0-generate-002 gerou imagem com sucesso.");
+              } else {
+                throw new Error("Nenhum byte de imagem retornado no fallback imagen-3.0-generate-002.");
+              }
+            } catch (fallbackErr: any) {
+              console.warn("[api/generate-image] Fallback to imagen-3.0-generate-002 failed. Attempting fallback to imagen-3.0-generate-001...", fallbackErr.message || fallbackErr);
+              
+              try {
+                console.log(`[api/generate-image] Calling generateImages with model: imagen-3.0-generate-001`);
+                const fallbackResponse2 = await (currentAi.models as any).generateImages({
+                  model: "imagen-3.0-generate-001",
+                  prompt: finalPrompt,
+                  config: {
+                    numberOfImages: 1,
+                    aspectRatio: selectedRatio,
+                    outputMimeType: "image/png"
+                  }
+                });
+
+                if (fallbackResponse2?.generatedImages?.[0]?.image?.imageBytes) {
+                  rawData = fallbackResponse2.generatedImages[0].image.imageBytes;
+                  mimeType = "image/png";
+                  responseImgUrl = `data:image/png;base64,${rawData}`;
+                  modelUsed = `Vertex AI (imagen-3.0-generate-001 - Fallback 2)`;
+                  console.log("[BACK] Fallback imagen-3.0-generate-001 gerou imagem com sucesso.");
+                } else {
+                  throw new Error("Nenhum byte de imagem retornado no fallback imagen-3.0-generate-001.");
+                }
+              } catch (fallbackErr2: any) {
+                console.error("[api/generate-image] All image generation attempts and fallbacks failed.");
+                errorDetails += `[${targetModel} error: ${imagenErr.message || imagenErr}] `;
+              }
+            }
           }
 
           let width = 0;
@@ -643,8 +701,11 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
           let bytes = 0;
 
           if (rawData) {
-            const buffer = Buffer.from(rawData, "base64");
-            bytes = buffer.length;
+            
+          let buffer = Buffer.from(rawData, "base64");
+          
+          bytes = buffer.length;
+
             const dims = getImageDimensions(buffer, mimeType);
             width = dims.width;
             height = dims.height;
@@ -663,9 +724,9 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
             console.warn(`[api/generate-image] WARNING: Requested 4K, but received resolution of ${width}x${height}px. Skipping any upscaling or modifications.`);
           }
 
-        } catch (imagenErr: any) {
-          console.warn(`gemini-3-pro-image failed:`, imagenErr);
-          errorDetails += `[${targetModel} error: ${imagenErr.message || imagenErr}] `;
+        } catch (catastrophicErr: any) {
+          console.error("[api/generate-image] Catastrophic error in loop iteration:", catastrophicErr);
+          errorDetails += `[Catastrophic loop error: ${catastrophicErr.message || catastrophicErr}] `;
         }
 
         if (responseImgUrl) {
@@ -978,40 +1039,98 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
             aspectRatio: selectedRatio
           });
 
-          const response = await client.models.generateContent({
-            model: targetModel,
-            contents: [
-              {
-                role: "user",
-                parts: parts
-              }
-            ],
-            config: {
-              responseModalities: ["IMAGE"],
-              imageConfig: {
-                aspectRatio: selectedRatio,
-                imageSize: sizeSelected,
-                outputMimeType: "image/png"
-              }
-            }
-          });
-
           let rawData = "";
           let rawMime = "image/png";
 
-          if (response?.candidates?.[0]?.content?.parts) {
-            for (const part of response.candidates[0].content.parts) {
-              if (part.inlineData && part.inlineData.data) {
-                rawData = part.inlineData.data;
-                rawMime = part.inlineData.mimeType || "image/png";
-                responseImgUrl = `data:${rawMime};base64,${rawData}`;
-                break;
+          try {
+            const response = await client.models.generateContent({
+              model: targetModel,
+              contents: [
+                {
+                  role: "user",
+                  parts: parts
+                }
+              ],
+              config: {
+                responseModalities: ["IMAGE"],
+                imageConfig: {
+                  aspectRatio: selectedRatio,
+                  imageSize: sizeSelected,
+                  outputMimeType: "image/png"
+                }
+              }
+            });
+
+            if (response?.candidates?.[0]?.content?.parts) {
+              for (const part of response.candidates[0].content.parts) {
+                if (part.inlineData && part.inlineData.data) {
+                  rawData = part.inlineData.data;
+                  rawMime = part.inlineData.mimeType || "image/png";
+                  responseImgUrl = `data:${rawMime};base64,${rawData}`;
+                  break;
+                }
               }
             }
-          }
 
-          if (!responseImgUrl) {
-            throw new Error("Nenhuma imagem gerada retornada no corpo da resposta.");
+            if (!responseImgUrl) {
+              throw new Error("Nenhuma imagem gerada retornada no corpo da resposta.");
+            }
+
+            modelUsed = `Google AI Studio (gemini-3-pro-image)`;
+
+          } catch (imagenErr: any) {
+            console.warn(`[api/generate] Primary model gemini-3-pro-image failed. Attempting fallback to imagen-3.0-generate-002...`, imagenErr.message || imagenErr);
+            
+            try {
+              console.log(`[api/generate] Calling generateImages with model: imagen-3.0-generate-002`);
+              const fallbackResponse = await (client.models as any).generateImages({
+                model: "imagen-3.0-generate-002",
+                prompt: promptCompleto,
+                config: {
+                  numberOfImages: 1,
+                  aspectRatio: selectedRatio,
+                  outputMimeType: "image/png"
+                }
+              });
+
+              if (fallbackResponse?.generatedImages?.[0]?.image?.imageBytes) {
+                rawData = fallbackResponse.generatedImages[0].image.imageBytes;
+                rawMime = "image/png";
+                responseImgUrl = `data:image/png;base64,${rawData}`;
+                modelUsed = `Google AI Studio (imagen-3.0-generate-002 - Fallback)`;
+                console.log("[BACK] Fallback imagen-3.0-generate-002 gerou imagem com sucesso.");
+              } else {
+                throw new Error("Nenhum byte de imagem retornado no fallback imagen-3.0-generate-002.");
+              }
+            } catch (fallbackErr: any) {
+              console.warn("[api/generate] Fallback to imagen-3.0-generate-002 failed. Attempting fallback to imagen-3.0-generate-001...", fallbackErr.message || fallbackErr);
+              
+              try {
+                console.log(`[api/generate] Calling generateImages with model: imagen-3.0-generate-001`);
+                const fallbackResponse2 = await (client.models as any).generateImages({
+                  model: "imagen-3.0-generate-001",
+                  prompt: promptCompleto,
+                  config: {
+                    numberOfImages: 1,
+                    aspectRatio: selectedRatio,
+                    outputMimeType: "image/png"
+                  }
+                });
+
+                if (fallbackResponse2?.generatedImages?.[0]?.image?.imageBytes) {
+                  rawData = fallbackResponse2.generatedImages[0].image.imageBytes;
+                  rawMime = "image/png";
+                  responseImgUrl = `data:image/png;base64,${rawData}`;
+                  modelUsed = `Google AI Studio (imagen-3.0-generate-001 - Fallback 2)`;
+                  console.log("[BACK] Fallback imagen-3.0-generate-001 gerou imagem com sucesso.");
+                } else {
+                  throw new Error("Nenhum byte de imagem retornado no fallback imagen-3.0-generate-001.");
+                }
+              } catch (fallbackErr2: any) {
+                console.error("[api/generate] All image generation attempts and fallbacks failed.");
+                errorDetails += `[Generation error: ${imagenErr.message || imagenErr}] `;
+              }
+            }
           }
 
           let width = 0;
@@ -1019,8 +1138,11 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
           let bytes = 0;
 
           if (rawData) {
-            const buffer = Buffer.from(rawData, "base64");
-            bytes = buffer.length;
+            
+          let buffer = Buffer.from(rawData, "base64");
+          
+          bytes = buffer.length;
+
             const dims = getImageDimensions(buffer, rawMime);
             width = dims.width;
             height = dims.height;
@@ -1039,9 +1161,9 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
             console.warn(`[api/generate] WARNING: Requested 4K, but received resolution of ${width}x${height}px. Skipping any upscaling or modifications.`);
           }
 
-        } catch (imagenErr: any) {
-          console.error("[api/generate] Google Imagen failed:", imagenErr.message || imagenErr);
-          errorDetails += `[Generation error: ${imagenErr.message || imagenErr}] `;
+        } catch (catastrophicErr: any) {
+          console.error("[api/generate] Catastrophic error in loop iteration:", catastrophicErr);
+          errorDetails += `[Catastrophic loop error: ${catastrophicErr.message || catastrophicErr}] `;
         }
 
         modelUsed = `Google AI Studio (${sizeSelected})`;
@@ -1094,7 +1216,13 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         customApiKey,
         desativarSujeito = false,
         logoBase64 = "",
-        dimensao = "1:1"
+        logosList = [],
+        useLogo = false,
+        logoInclusionType = "overlay",
+        logoPosOverlay = "top_center",
+        logoSizeOverlay = 20,
+        dimensao = "1:1",
+        somentePrompt = false
       } = req.body;
 
       console.log("\n--- CONFIGURAÇÃO DE GERAÇÃO (/api/gerar) ---");
@@ -1120,11 +1248,11 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
       const hasSujeito = sujeitoLimpo || (Array.isArray(sujeitosBase64List) && sujeitosBase64List.some((s: any) => s && (typeof s === 'string' ? s.trim() !== "" : (s.data || s.url))));
       const hasCenario = cenarioLimpo || (Array.isArray(cenariosBase64List) && cenariosBase64List.some((c: any) => c && (typeof c === 'string' ? c.trim() !== "" : (c.data || c.url))));
 
-      if (!desativarSujeito && !hasSujeito) {
+      if (!somentePrompt && !desativarSujeito && !hasSujeito) {
         return res.status(400).json({ error: "Por favor, faça o upload de pelo menos uma imagem do Sujeito Principal antes de gerar." });
       }
 
-      if (useEnvRef && !hasCenario) {
+      if (!somentePrompt && useEnvRef && !hasCenario) {
         return res.status(400).json({ error: "Por favor, faça o upload de pelo menos uma imagem de Cenário antes de gerar." });
       }
 
@@ -1151,14 +1279,203 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         targetAspectRatio = "4:3";
       }
 
+      // --- START PROMPT & SYSTEM INSTRUCTION EXPANSION (MAXIMUM SIZE & DETAIL) ---
+      let expandedPrompt = promptTraduzido;
+      let expandedSystemInstruction = `You are an absolute master generative AI image prompt engineer, art director, and elite graphic designer specializing in High-End Brazilian Flyers (Flyer BR Style / "Design de Eventos e Shows brasileiro"). Your mission is to generate ultra-realistic, premium, and impactful visual compositions that serve as high-end backgrounds or complete layouts for shows, concerts, nightlife, and festivals.`;
+
+      try {
+        console.log("[api/gerar] Initiating premium multimodal prompt & instruction expansion...");
+        const expansionParts: any[] = [];
+
+        // Helper to add clean base64 image part to prompt expansion
+        const addImagePartToExpansion = (b64: string, label: string) => {
+          const cleaned = cleanBase64(b64);
+          if (cleaned) {
+            expansionParts.push({
+              inlineData: {
+                data: cleaned,
+                mimeType: "image/jpeg"
+              }
+            });
+            expansionParts.push({ text: `[Multimodal Visual Reference for ${label}]` });
+          }
+        };
+
+        // Attach design references (up to 2) to the prompt expansion model so it can analyze the layout!
+        let addedDesignCount = 0;
+        if (designRefBase64) {
+          addImagePartToExpansion(designRefBase64, "Primary Design Layout Reference");
+          addedDesignCount++;
+        }
+        if (Array.isArray(designRefsList)) {
+          for (const ref of designRefsList) {
+            if (addedDesignCount >= 2) break;
+            const dataStr = typeof ref === 'string' ? ref : (ref?.data || ref?.url);
+            if (dataStr) {
+              addImagePartToExpansion(dataStr, `Design Layout Reference #${addedDesignCount + 1}`);
+              addedDesignCount++;
+            }
+          }
+        }
+
+        // Attach subject reference (up to 1) so it knows what subject/object we are dealing with
+        if (base64DoSujeito) {
+          addImagePartToExpansion(base64DoSujeito, "Subject/Person Reference");
+        }
+
+        const logoInclusionRule = logoBase64 ? `\n5. BRAND LOGO EMBEDDING (ABSOLUTELY CRITICAL): You MUST look for the brand logo region in the reference. You MUST COMPLETELY ERASE any generic logo present in the reference flyer. You MUST DRAW, PAINT, and BAKE the client's provided brand logo ("Referência de Logotipo") directly into the image canvas. YOU ARE FORBIDDEN FROM MODIFYING THE LOGO'S SHAPE OR FONT. The ONLY allowed modification is altering the logo's color (e.g., making it all white or all black) to ensure perfect contrast with the background. Otherwise, it must be an exact structural clone.` : "";
+        const logoCompositionRule = logoBase64 ? `\n10. FULL COMPOSITION WITH HIGH-FIDELITY EMBEDDED TYPOGRAPHY AND LOGOS (CRITICAL): Do NOT generate just a blank background. You MUST generate the complete graphic composition, including all layouts, panel cards, curved borders, divided sections, background textures, lighting setups, and the beautifully stylized subject photo, WITH all text layers and the client's original brand logo ("Referência de Logotipo") professionally rendered, printed, and embedded directly inside their corresponding visual sectors as beautiful, crisp, un-deformed elements, preserving the logo's original symbols, texts, and exact branding structures with 100% fidelity (color adaptation for contrast is allowed).` : "";
+        const logoPromptRule = logosList && logosList.length > 0 ? `\n5. Text & Logo Integration: Explicitly instruct the generator to NOT draw any logos. The system will overlay the original logo file on top of the generated image. Instruct it to ONLY use the text provided in the prompt, replacing any text from the reference while respecting the original text placements, and leave space for the logo.` : "";
+        const logoPrintRule = logosList && logosList.length > 0 ? `\n9. EXACT TEXT REPLACEMENT: Explicitly instruct the generator to NEVER copy text or logos from the Design Reference. It must print all specified titles, social handles, and event details. It MUST NOT draw any logos.` : "";
+        const logoSysInstructionRule = logosList && logosList.length > 0 ? `\n5. Logo & Text Replacement: Instruct the generator to completely ignore any text, names, handles, or brand logos found in the background design reference. It must use ONLY the explicitly requested text, drawing and printing them directly on the card canvas with 100% complete exactness.` : "";
+        const logoEmbeddedRule = logosList && logosList.length > 0 ? `\n9. STRICT TYPOGRAPHY REPLACEMENT RULE: Dictate that the image generator MUST NOT hallucinate or copy old text/logos. It MUST print, write, embed, and render ONLY the provided texts, titles, words, acronyms, letters, numbers directly onto the image canvas.` : "";
+        const instructionPrompt = `You are the absolute ultimate master Generative AI Image Prompt Engineer, Art Director, and Elite Graphic Designer specializing in High-End Brazilian Flyers (Flyer BR Style / "Design de Eventos e Shows brasileiro").
+Your job is to analyze the attached visual references (especially the Design Layout Reference images) along with the following initial layout and composition specification:
+"${promptTraduzido}"
+
+Based on this complete multimodal context, you must generate an extremely descriptive, highly accurate, professional prompt and system instruction. The absolute number one goal is extreme structural, compositional, stylistic, and visual faithfulness to the design details of the reference image.
+
+CRITICAL VISUAL DESIGN RULES TO EXTRACT FROM THE ATTACHED DESIGN LAYOUT REFERENCE:
+1. STRICT DESIGN FIDELITY & NO ARBITRARY INVENTIONS: You are strictly FORBIDDEN from inventing arbitrary backdrops, stage lights, lasers, smoke, stars, gold particles, dust, or geometric layers unless they are explicitly visible in the "Design Layout Reference" image. If the reference design has a clean, solid, dark, minimal, gradient, or simple textured background, you MUST describe exactly that clean background. Mirror the exact level of simplicity or complexity, replicating its aesthetic, depth, colors, and layout precisely.
+2. LAYOUT, ALIGNMENT & TYPOGRAPHY FIDELITY: Look closely at the text alignment, composition grid, font weights, and spacing of the Design Layout Reference. Replicate the text placement and typography style exactly as styled on the reference, drawing and embedding the specified text parameters directly inside those regions with beautiful, modern, extremely crisp, and highly-legible typography.
+3. SUPPORTING GRAPHIC ELEMENTS & SOCIAL MEDIA: Look for any social media handles, symbols, or small details (like the Instagram logo/handle, website text, small badges). Command the generator to write and render these elements beautifully and cleanly on the image canvas in their exact corresponding positions.
+4. SECONDARY PHOTOS & VISUAL MOTIFS: Look for any secondary photos or decorative graphics in the reference card. For instance, if there is a photo of people's hands joining, hands holding, or any supporting imagery, you MUST specify its presence and describe its integration: "subtly integrated into the bottom or background layer is a clear, polished photographic motif of people's hands joining together, representing connection, with warm rim lighting."
+${logoInclusionRule}
+6. SOCIAL HANDLE CASE FIDELITY (STRICTLY LOWERCASE): Explicitly instruct the generator to render any social media usernames or handles (containing "@") strictly in lowercase letters, using a thin, modern, high-contrast sans-serif font.
+7. BRAND COLOR PALETTE ENFORCEMENT (CRITICAL): Look closely at the client's specification in: "${promptTraduzido}". If the client has provided custom brand colors, specific hex codes (#xxxxxx), or specific colors for "Color Palette" or "Lighting Setup" (e.g., specific ambient color, rim color, or fill color), you MUST strictly enforce these custom brand colors as the primary, dominant colors of the flyer's design, lighting, glows, and accents. Do NOT copy the color palette of the Design Layout Reference if the client has specified their own custom brand colors! Instead, adapt the layout, composition structure, and atmospheric depth of the reference to be perfectly styled under the client's custom brand colors.
+8. FULL TYPOGRAPHY EMBEDDING (CRITICAL): You MUST command the generator to write, draw, print, and beautifully integrate all titles, text layers, event dates, contact details, and social handles directly onto the image canvas. Style them with gorgeous, sharp, modern typography, ensuring high legibility and precise alignment matching the reference design layout.
+9. CREATIVE SUBJECT INTERPRETATION & PREMIUMIZATION (CRITICAL): Do NOT clone or copy the exact same person, face, gender, pose, or object from the photo inside the Design Layout Reference. Instead, interpret the general context, subject category, and style of that photo (e.g., if there's a businessman, an elegant woman, a speaker, or a specific product), and instruct the image generator to create a completely new, fresh, extremely high-end, and visually superior premium subject of similar visual category. This ensures the output is highly professional, customized, and original while respecting the compositional grid.
+${logoCompositionRule}
+11. CARD DESIGN PRESERVATION: Replicate the exact shape of the card panels (e.g., if there's a rounded panel on the right side of the canvas where the photo of hands is placed, generate a rounded panel exactly there). The image must contain the full, beautiful card layouts and panels, not just a plain backdrop.
+12. STRICT REFERENCE PRESERVATION (WHEN EDITING): If the user's specification requests an edit to a specific reference image (e.g. "remove text and keep the symbol" on a logo), you MUST instruct the generator to preserve the original visual structure, shapes, colors, and details of the provided reference with absolute 100% exact fidelity. DO NOT redesign, reimagine, stylize, or alter the core shapes of the reference. It must look identical, only applying the requested edit (e.g. erasing the text).
+
+The output must be returned as a JSON object with exactly two string fields:
+{
+  "prompt": "...",
+  "systemInstruction": "..."
+}
+
+CRITICAL RULES FOR "prompt" (Mega Prompt Mestre):
+1. Must be written in technical, descriptive, high-fidelity English to achieve absolute perfection in image generators (like gemini-3-pro-image, Imagen 3, or Midjourney V6).
+2. Do NOT write generic text-to-image filler text. Keep the description concise, precise, and targeted directly at copying the reference image's true structure, background, lighting, and elements.
+3. Replicate the precise lighting direction and color palette of the Design Layout Reference. If the reference is dark gray and white, do not add golden elements. If the reference is warm brown, make it warm brown. CRITICAL OVERRIDE: If the client specifies custom brand colors in their layout specification (e.g. "Color Palette: #xxxxxx" or explicit ambient, rim, and complementary colors), you MUST completely override the reference's color palette with the client's custom brand colors. Apply these client colors to all background shades, ambient glows, lighting beams, and graphic highlights, ensuring the layout layout strictly matches the reference, but the color styling strictly matches the client's brand colors.
+4. Exclusions/Negative constraints: specify exactly what should NOT appear (e.g. generic templates, deformed faces, text hallucinations, bad hands, low resolution).
+${logoPromptRule}
+6. Lowercase Social Handles: Mandate that all social media usernames/handles (containing "@") be written strictly in lowercase letters and printed directly on the image canvas.
+7. Typography Rendering: Replicate and write all custom texts, titles, websites, numbers, and handles directly on the card canvas, styling them with high-definition, sharp, professional typography.
+8. Request a completely new, high-end, original custom subject (person or element) matching the context of the reference photo, avoiding exact face or identity copies.
+9. Exact Visual Trace (Edit Mode): If the user edits a reference, demand the generator to perfectly trace and retain the exact shape and proportions of the original, without hallucinating variations.
+${logoPrintRule}
+
+CRITICAL RULES FOR "systemInstruction":
+1. Must be written in highly professional, technical, authoritative English, serving as a strict rules guide for the image generator.
+2. It must act as the ultimate set of strict rules/guidelines for the image generator, dictating exactly how to interpret, parse, and execute the prompt with absolute visual fidelity.
+3. Strict Adherence to Card Layout and Panels: Instruct the generator to replicate the full layout structure, panel divisions, cards, background textures, lighting style, and overall styling of the reference image. Do NOT generate just a plain background backdrop; generate all card panels, split backgrounds, and graphic dividers exactly.
+4. Custom Brand Color Palette Override: Explicitly instruct the image generator that if custom brand color hex codes or palette colors are defined in the prompt (e.g., custom accent colors or specific lighting colors), it must strictly use those exact colors for the scene's ambient lighting, highlights, text colors, card panels, and backdrop accents, completely overriding the colors of the design layout reference image while preserving its design composition structure.
+${logoSysInstructionRule}
+6. Lowercase Instagram Handles: Require the generator to render any social media handle containing "@" strictly in lowercase letters, printing them directly on the canvas.
+7. Custom Text Enforcement & Printing: Strictly instruct the generator to replace any text content, social media usernames, or contact details present in the visual reference with the customized text parameters supplied in the prompt, and write/render them beautifully and cleanly onto the card image canvas.
+8. Original Subject Generation: Explicitly command the generator to create a new, high-quality, professional subject matching the visual category/context of the reference photo instead of attempting to copy or clone the reference face, person, or pose.
+9. Strict Visual Fidelity on Edited References: If the user explicitly asks to edit a provided reference (like stripping text from a logo), command the image generator to treat the remaining parts of that reference as a holy artifact, preserving 100% of its original shape, vector lines, colors, and proportions without any hallucinated alterations.
+${logoEmbeddedRule}
+
+Return ONLY the JSON object. Do not include any conversational text or markdown formatting except the json code block itself.`;
+
+        expansionParts.push({ text: instructionPrompt });
+
+        const expResponse = await client.models.generateContent({
+          model: "gemini-3.5-flash",
+          contents: [
+            {
+              role: "user",
+              parts: expansionParts
+            }
+          ],
+          config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: "object",
+              properties: {
+                prompt: { type: "string" },
+                systemInstruction: { type: "string" }
+              },
+              required: ["prompt", "systemInstruction"]
+            }
+          }
+        });
+
+        const expText = expResponse.text || "";
+        console.log("[api/gerar] Gemini prompt/system instruction expanded. Raw response length:", expText.length);
+        
+        let cleanedExpText = expText.trim();
+        if (cleanedExpText.startsWith("```")) {
+          cleanedExpText = cleanedExpText.replace(/^```[a-zA-Z]*\n?/, "").replace(/\n?```$/, "").trim();
+        }
+        try {
+          const parsed = JSON.parse(cleanedExpText);
+          if (parsed.prompt && parsed.prompt.trim() !== "") {
+            expandedPrompt = parsed.prompt.trim();
+          }
+          if (parsed.systemInstruction && parsed.systemInstruction.trim() !== "") {
+            expandedSystemInstruction = parsed.systemInstruction.trim();
+          }
+          console.log("[api/gerar] JSON parsed successfully. Expanded prompt length:", expandedPrompt.length, "Expanded instruction length:", expandedSystemInstruction.length);
+        } catch (jsonErr) {
+          console.warn("[api/gerar] Failed to parse expanded JSON, trying regex...", jsonErr);
+          const promptMatch = expText.match(/"prompt"\s*:\s*"([^"]+)"/);
+          const sysMatch = expText.match(/"systemInstruction"\s*:\s*"([^"]+)"/);
+          if (promptMatch && promptMatch[1]) {
+            expandedPrompt = promptMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"');
+          }
+          if (sysMatch && sysMatch[1]) {
+            expandedSystemInstruction = sysMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"');
+          }
+        }
+      } catch (expErr) {
+        console.error("[api/gerar] Error generating premium prompt/system expansion with Gemini:", expErr);
+      }
+      // --- END PROMPT & SYSTEM INSTRUCTION EXPANSION ---
+
       // Build the parts array for gemini-3-pro-image (multimodal generateContent)
       const parts: any[] = [];
 
-      // 1. Core text prompt
-      let fullPrompt = "Fotografia comercial profissional, resolução 4k UHD, textura de pele hiper-realista, foco nítido, estilo premium de luxo, paleta com preto, branco e dourado #ad8330, " + promptTraduzido;
-      if (negativePrompt && negativePrompt.trim() !== "") {
-        fullPrompt += `\nAvoid / Negative constraints: ${negativePrompt.trim()}`;
+      // 1. Core text prompt (using the beautiful, mega expanded prompt!)
+      let fullPrompt = expandedPrompt;
+
+      // Extract typography block from the original prompt to ensure it is NOT lost in LLM translation
+      const typoMatch = promptTraduzido.match(/=== TYPOGRAPHY & TEXT LAYOUT ===[\s\S]*?(?=\n===|$)/);
+      if (typoMatch && typoMatch[0]) {
+        fullPrompt += "\n\n" + typoMatch[0];
       }
+      
+      // Also extract color palette if present
+      const colorMatch = promptTraduzido.match(/Color Palette: [^\n]*/);
+      if (colorMatch && colorMatch[0]) {
+        fullPrompt += "\n\n" + colorMatch[0];
+      }
+
+      
+      // Force append absolute critical constraints to the prompt so both gemini-3-pro-image and fallbacks receive them
+      const logoMandatoryRule = logosList && logosList.length > 0
+        ? `- LOGO PLACEMENT: Do NOT attempt to draw, write, or hallucinate the logo. The UI will automatically overlay the client's logo on top of the image later. You must leave an appropriate empty space (preferably at the top center) for the logo to be placed. Do NOT generate any text for the logo.`
+        : `- NO RANDOM LOGOS: Do not invent or hallucinate logos if not provided. Erase any existing logos from the reference image.`;
+
+      const mandatorySuffix = `\n\n=== ABSOLUTE CRITICAL CONSTRAINTS (MANDATORY) ===
+- TOTAL FIDELITY & ZERO OMISSIONS (CRITICAL): If a Design Layout Reference is provided, you MUST perfectly clone EVERYTHING from it (the layout, the spatial positioning of texts, the graphic elements, the background, the subject pose/lighting). You MUST put the texts EXACTLY in the same spatial locations as they are in the reference. DO NOT skip any text fields. Replicate the exact typography hierarchy.
+- EXACT VISUAL CLONE OF DESIGN REFERENCE: You MUST perfectly trace and clone the exact shapes, layout grids, panel structures, background gradients, textures, and geometric dimensions of the provided Design Layout Reference. Do NOT invent new shapes, structures, or change the composition grid. It must look 100% identical in layout and structural design, simply applying the new text, logos, and colors.
+- BRAND COLOR PALETTE ENFORCEMENT (CRITICAL): If custom colors, hex codes, or light setup colors are specified in the prompt above, you MUST strictly and aggressively use those EXACT colors for the entire graphic composition, background panels, highlights, glows, and ambient lighting. You MUST completely OVERRIDE the original reference flyer's colors with the requested colors. Do NOT use the reference colors if custom colors are provided!
+- TEXT COMPLETENESS & PLACEMENT (CRITICAL): You MUST print ALL provided text fields, titles, and words exactly as requested. DO NOT SKIP ANY TEXT. You MUST place the text EXACTLY in the same spatial positions as the original text blocks found in the Design Layout Reference. DO NOT put text in random places. Replicate the original typographical hierarchy and alignment perfectly, but using the new text.
+- COMPLETE CARD LAYOUT GENERATION: Do NOT generate just a plain empty background backdrop. You MUST generate the complete graphic composition, including all layouts, cards, panels, curved border divides, background textures, lighting setups, and the main visual subjects (e.g., joining hands, models, or products) in their exact spatial positions, proportions, and layouts as shown in the Design Layout Reference image.
+- EMBEDDED TYPOGRAPHY (MANDATORY): You MUST print, write, embed, and render all actual written texts, titles, words, acronyms, letters, numbers, and website URLs directly onto the image canvas. Style them with beautiful, modern, extremely crisp, and highly-legible typography matching the alignments and visual style of the reference design. All social media usernames or handles (starting with "@") must be printed strictly in lowercase letters.
+${logoMandatoryRule}`;
+
+      if (negativePrompt && negativePrompt.trim() !== "") {
+        fullPrompt += `\nAvoid / Negative constraints: old logos, original reference text, hallucinated words, ${negativePrompt.trim()}`;
+      } else {
+        fullPrompt += `\nAvoid / Negative constraints: old logos, original reference text, original reference logos, hallucinated words, incorrect spelling`;
+      }
+      
+      fullPrompt += mandatorySuffix;
       parts.push({ text: fullPrompt });
 
       // Helper to add base64 images to parts
@@ -1219,6 +1536,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
       }
 
       // 5. Add Design References
+      // We ALWAYS feed the design reference image so that gemini-3-pro-image knows the exact layout, structure, panel divisions, and geometry to replicate.
       if (designRefBase64) {
         addImagePart(designRefBase64, "Referência de Design/Layout");
       }
@@ -1245,6 +1563,26 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
       if (logoBase64) {
         addImagePart(logoBase64, "Referência de Logotipo");
       }
+      if (Array.isArray(logosList)) {
+        logosList.forEach((ref: any, idx: number) => {
+          const dataStr = typeof ref === 'string' ? ref : (ref?.data || ref?.url);
+          if (dataStr) {
+            addImagePart(dataStr, `Referência de Logotipo Adicional ${idx + 1}`);
+          }
+        });
+      }
+
+      if (somentePrompt) {
+        return res.json({
+          image: "",
+          prompt: expandedPrompt,
+          systemInstruction: expandedSystemInstruction,
+          modelUsed: "Zion AI (Premium Prompt Generator)",
+          requestedResolution: resolutionInput,
+          returnedWidth: 0,
+          returnedHeight: 0
+        });
+      }
 
       let responseImgUrl = "";
       let modelUsed = `Google AI Studio (${targetModel})`;
@@ -1262,51 +1600,112 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
           aspectRatio: targetAspectRatio
         });
 
-        const response = await client.models.generateContent({
-          model: targetModel,
-          contents: [
-            {
-              role: "user",
-              parts: parts
-            }
-          ],
-          config: {
-            responseModalities: ["IMAGE"],
-            imageConfig: {
-              aspectRatio: targetAspectRatio,
-              imageSize: sizeSelected,
-              outputMimeType: "image/png"
-            }
-          }
-        });
-
-        console.log("[BACK] Resposta recebida com sucesso.");
-
         let rawData = "";
         let rawMime = "image/png";
-
-        if (response?.candidates?.[0]?.content?.parts) {
-          for (const part of response.candidates[0].content.parts) {
-            if (part.inlineData && part.inlineData.data) {
-              rawData = part.inlineData.data;
-              rawMime = part.inlineData.mimeType || "image/png";
-              responseImgUrl = `data:${rawMime};base64,${rawData}`;
-              break;
-            }
-          }
-        }
-
-        if (!responseImgUrl) {
-          throw new Error("Nenhuma imagem gerada retornada no corpo da resposta.");
-        }
-
         let width = 0;
         let height = 0;
         let bytes = 0;
 
+        try {
+          const response = await client.models.generateContent({
+            model: targetModel,
+            contents: [
+              {
+                role: "user",
+                parts: parts
+              }
+            ],
+            config: {
+              systemInstruction: expandedSystemInstruction,
+              responseModalities: ["IMAGE"],
+              imageConfig: {
+                aspectRatio: targetAspectRatio,
+                imageSize: sizeSelected,
+                outputMimeType: "image/png"
+              }
+            }
+          });
+
+          console.log("[BACK] Resposta recebida com sucesso de gemini-3-pro-image.");
+
+          if (response?.candidates?.[0]?.content?.parts) {
+            for (const part of response.candidates[0].content.parts) {
+              if (part.inlineData && part.inlineData.data) {
+                rawData = part.inlineData.data;
+                rawMime = part.inlineData.mimeType || "image/png";
+                responseImgUrl = `data:${rawMime};base64,${rawData}`;
+                break;
+              }
+            }
+          }
+
+          if (!responseImgUrl) {
+            throw new Error("Nenhuma imagem gerada retornada no corpo da resposta do gemini-3-pro-image.");
+          }
+
+          modelUsed = `Vertex AI (gemini-3-pro-image)`;
+
+        } catch (genErr: any) {
+          console.warn("[api/gerar] Primary model gemini-3-pro-image failed. Attempting fallback to imagen-3.0-generate-002...", genErr.message || genErr);
+          
+          try {
+            console.log(`[api/gerar] Calling generateImages with model: imagen-3.0-generate-002`);
+            const fallbackResponse = await (client.models as any).generateImages({
+              model: "imagen-3.0-generate-002",
+              prompt: fullPrompt,
+              config: {
+                numberOfImages: 1,
+                aspectRatio: targetAspectRatio,
+                outputMimeType: "image/png"
+              }
+            });
+
+            if (fallbackResponse?.generatedImages?.[0]?.image?.imageBytes) {
+              rawData = fallbackResponse.generatedImages[0].image.imageBytes;
+              rawMime = "image/png";
+              responseImgUrl = `data:image/png;base64,${rawData}`;
+              modelUsed = `Vertex AI (imagen-3.0-generate-002 - Fallback)`;
+              console.log("[BACK] Fallback imagen-3.0-generate-002 gerou imagem com sucesso.");
+            } else {
+              throw new Error("Nenhum byte de imagem retornado no fallback imagen-3.0-generate-002.");
+            }
+          } catch (fallbackErr: any) {
+            console.warn("[api/gerar] Fallback to imagen-3.0-generate-002 failed. Attempting fallback to imagen-3.0-generate-001...", fallbackErr.message || fallbackErr);
+            
+            try {
+              console.log(`[api/gerar] Calling generateImages with model: imagen-3.0-generate-001`);
+              const fallbackResponse2 = await (client.models as any).generateImages({
+                model: "imagen-3.0-generate-001",
+                prompt: fullPrompt,
+                config: {
+                  numberOfImages: 1,
+                  aspectRatio: targetAspectRatio,
+                  outputMimeType: "image/png"
+                }
+              });
+
+              if (fallbackResponse2?.generatedImages?.[0]?.image?.imageBytes) {
+                rawData = fallbackResponse2.generatedImages[0].image.imageBytes;
+                rawMime = "image/png";
+                responseImgUrl = `data:image/png;base64,${rawData}`;
+                modelUsed = `Vertex AI (imagen-3.0-generate-001 - Fallback 2)`;
+                console.log("[BACK] Fallback imagen-3.0-generate-001 gerou imagem com sucesso.");
+              } else {
+                throw new Error("Nenhum byte de imagem retornado no fallback imagen-3.0-generate-001.");
+              }
+            } catch (fallbackErr2: any) {
+              console.error("[api/gerar] All image generation attempts and fallbacks failed.");
+              throw genErr; // throw original gemini-3-pro-image error to show user the core quota limit or error
+            }
+          }
+        }
+
         if (rawData) {
-          const buffer = Buffer.from(rawData, "base64");
+          
+          let buffer = Buffer.from(rawData, "base64");
+          
           bytes = buffer.length;
+
           const dims = getImageDimensions(buffer, rawMime);
           width = dims.width;
           height = dims.height;
@@ -1325,14 +1724,10 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
           console.warn(`[api/gerar] WARNING: Requested 4K, but received resolution of ${width}x${height}px. Skipping any upscaling or modifications.`);
         }
 
-        modelUsed = `Vertex AI (gemini-3-pro-image)`;
-
-        const systemInstruction = `You are an absolute master generative AI image prompt engineer, art director, and elite graphic designer specializing in High-End Brazilian Flyers (Flyer BR Style).`;
-        
         res.json({ 
           image: responseImgUrl, 
-          prompt: promptTraduzido, 
-          systemInstruction,
+          prompt: expandedPrompt, 
+          systemInstruction: expandedSystemInstruction,
           modelUsed,
           debugInfo,
           requestedResolution: resolutionInput,
@@ -1378,7 +1773,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
 
       const cleanData = imageData.replace(/^data:image\/\w+;base64,/, "");
       const response = await currentAi.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.5-flash",
         contents: [
           {
             role: "user",
@@ -1437,13 +1832,24 @@ Você deve compreender CADA IMAGEM de referência enviada. Se receber um Sujeito
           systemInstruction += "Você é o Assistente Criativo da Zion, um MESTRE do DESIGN ESTILO FLYER BR. Sua missão é ter ideias brilhantes, ousadas e de nível de agência internacional para flyers, artes e banners. Sugira paletas de neon, iluminação agressiva (recorte, glow), posicionamento 3D de elementos flutuantes e contrastes perfeitos, independente do nicho (eventos, produtos, lançamentos, gospel, etc). O resultado deve ser sempre 'TUDO PERFEITO', orquestrando texto, elementos, cenário e pessoa em uma visão criativa única.";
           break;
         case "diretor-criativo":
-          systemInstruction += `Você é o Diretor Criativo da Zion (O 'Guru' do Flyer BR). Você mentora designers a elevarem o nível de suas artes para o padrão Premium/Masterpiece de Eventos e Publicidade. 
+          systemInstruction += `Você é o Diretor Criativo da Zion (O 'Guru' do Flyer BR). Você mentora designers a elevarem o nível de suas artes para o padrão Premium/Masterpiece de Eventos e Publicidade.
+Você tem OLHO CLÍNICO e INTELIGÊNCIA DE DESIGN:
+1. PENSE e DECIDA de forma inteligente se a arte deve usar um Sujeito Principal (pessoa, modelo, artista, palestrante, atleta, ou um produto físico de destaque como perfume, bebida, tênis, etc.):
+   - Se SIM (se houver fotos de sujeito/produto, se o usuário descrever um sujeito/personagem central, ou se for um flyer típico de shows, eventos de pessoas, etc.), você DEVE definir explicitamente "desativarSujeito": false no JSON.
+   - Se NÃO (se for uma arte puramente tipográfica, minimalista, institucional de avisos, apenas cenário urbano/abstrato sem foco em pessoas/produtos, ou se o usuário pediu para não ter sujeitos/pessoas), você DEVE definir "desativarSujeito": true no JSON.
+2. Se o usuário mandar uma imagem de flyer completo (card de referência) sem dizer nada, analise esse card imediatamente, descubra que se trata de uma referência de layout, mapeie-o OBRIGATORIAMENTE como "design" no seu JSON em "mapeamentoImagens" para preenchimento automático.
+3. Se o estilo visual que você quer aplicar a essa geração exigir alguma característica estética especial do card ou se o usuário quiser que você copie, defina "enableEstiloVisual": true e descreva detalhadamente em "estiloVisualCustom" (O estilo visual customizado deve ser preenchido automaticamente, detalhando texturas, iluminação, atmosfera e vibe). Se não for necessário nenhum estilo visual, você pode desativar explicitamente ("enableEstiloVisual": false).
+4. No fotos de cenário (promptCenario): se não houver um cenário específico enviado pelo usuário, você deve colocar a imagem do card de referência como cenário também e descrever em "promptCenario" o que quer extrair daquele cenário (ex: descrever a atmosfera urbana, o céu dramático ou as luzes de holofotes).
 Sua mente processa design analisando:
 1. Foco e Recorte (Saber separar Sujeito e Cenário).
 2. Profundidade 3D (O que passa na frente do texto, o que fica atrás).
 3. Iluminação Dramática e Cores (Glow, Luz de Contraste, Reflexos).
 4. Tipografia Impecável (Hierarquia de textos pesados, metálicos ou neon).
-Analise qualquer imagem de referência e diga como reproduzir aquela excelência técnica em Midjourney, Leonardo AI ou outras plataformas, mapeando a estrutura perfeita para cada botão/opção da arte.`;
+Analise qualquer imagem de referência e diga como reproduzir aquela excelência técnica em Midjourney, Leonardo AI ou outras plataformas, mapeando a estrutura perfeita para cada botão/opção da arte.
+
+MUITO IMPORTANTE: O usuário EXIGE que você automatize a interface. No final da sua resposta, você DEVE SEMPRE incluir um bloco \`\`\`json { ... } \`\`\` contendo TODOS os parâmetros. 
+Se a arte não tiver pessoas, retorne "desativarSujeito": true e "noPeople": true. Se tiver, retorne "desativarSujeito": false. 
+Você deve usar a inteligência para preencher "cores", "promptCenario", "estiloVisualCustom", "useLogo", "enableTypography", etc. GERE O JSON PARA APLICAR AS ALTERAÇÕES NA INTERFACE!`;;
           break;
         case "copy-ads":
           systemInstruction += "Você é o Copy Zion Ads, especialista em copywriting para anúncios estáticos de alta conversão. Você deve OBRIGATORIAMENTE estruturar todas as suas copys utilizando a técnica AIDA (Atenção, Interesse, Desejo, Ação). É TERMINANTEMENTE PROIBIDO inventar ou inserir marcações de perfis de terceiros (@) em qualquer sugestão de texto. Responda em português do Brasil.";
@@ -1494,26 +1900,70 @@ Lembre-se sempre das características de altíssima qualidade de Flyers Brasilei
 3. Sombras & Efeitos: Luzes de recorte dramáticas, glows perfeitamente mesclados, reflexos, integração impecável do sujeito ao fundo e texturas ricas.
 4. Remoção & Exclusões: Se o usuário pedir para remover algo (ex: sem texto, sem pessoas, sem logos), isso deve ser tratado como uma REGRA ABSOLUTA (Negative Prompting rígido).
 
+AUTONOMIA TOTAL E INTELIGÊNCIA DE DESIGN (AUTO-FILL):
+Você tem AUTONOMIA ABSOLUTA para tomar decisões de design. Analise rigorosamente se a arte deve ter um Sujeito Principal (pessoa ou produto central):
+- Se o usuário enviar uma ou mais fotos de pessoas/produtos, ou se o briefing descrever um sujeito/personagem central, ou se for uma arte típica que exige modelo/produto, você DEVE ativar o sujeito ("desativarSujeito": false, "noPeople": false), identificar o gênero ("Masculino"/"Feminino"/"") e descrever a pose ("poseDescription").
+- Se não houver pessoa nem produto focado (arte puramente de cenário, tipográfica, avisos institucionais limpos, etc.), você DEVE desativar o sujeito ("desativarSujeito": true, "noPeople": true).
+Se o usuário enviar uma foto que parece um logo, ATIVE o logo (useLogo=true) e faça o mapeamento.
+Você DEVE habilitar, desabilitar e configurar TODOS OS EFEITOS (degradeLeitura, enableTypography, coresAutomaticas, blur, floatingElementsMode, enableEstiloVisual, estiloVisualCustom) de acordo com o que você achar melhor para gerar a arte MAIS ABSURDA E PROFISSIONAL possível. Tenha pensamento próprio, confie no seu instinto de Diretor de Arte. 
+Se você achar que a arte se beneficia de estilo visual ou se o usuário enviar uma imagem de referência, use "enableEstiloVisual": true e descreva detalhadamente e obrigatoriamente a atmosfera em "estiloVisualCustom". Se você ou o usuário desejarem desativar o estilo visual, use "enableEstiloVisual": false.
+Na referência de estilo, extraia exatamente o que o usuário quer copiar (iluminação, texturas, vibe) em "descricoesEstilo".
+
+REGRAS OBRIGATÓRIAS DE DESIGN CARD (REFERÊNCIA COMPLETA):
+- Sempre que houver uma imagem de flyer/card de referência de layout completo, mapeie-a obrigatoriamente como "design" no "mapeamentoImagens".
+- Se nenhuma outra imagem de cenário foi enviada, você DEVE mapear a imagem do card de referência também como "scene" (cenário/fundo), e descrever detalhadamente em "promptCenario" o que extrair dali.
+- Se nenhuma outra imagem de referência de estilo visual foi enviada, você DEVE preencher "enableEstiloVisual": true e descrever detalhadamente em "estiloVisualCustom" o estilo/atmosfera a ser extraído do card.
+- Se nenhuma outra imagem de referência de tipografia/texto foi enviada e o usuário quiser copiar ou se inspirar em algum bloco de texto do card, mapeie a imagem do card também como "typography" (ou "typographyRefBase64") para copiar o estilo tipográfico ou print de texto.
+- RESPEITE AS CORES DO CLIENTE: Ao extrair esses elementos do card de referência, você deve manter o padrão das cores passadas pelo usuário ou as que pertencem à paleta salva dos clientes do usuário.
+
+DETECÇÃO DE NOVO PEDIDO (NOVA ARTE / NOVO BRIEFING) - CRÍTICO:
+Se o usuário mandar uma mensagem ou briefing que indica que ele está iniciando um NOVO PEDIDO, uma NOVA ARTE, ou uma nova ideia temática (ex: "agora faz um flyer de padaria", "novo pedido: show de sertanejo", "cria uma arte para pizzaria", ou se ele enviar novas fotos de referências que não têm relação alguma com o flyer/pedido anterior do chat), você DEVE:
+1. Definir obrigatoriamente "substituirImagens": true no seu JSON de resposta.
+2. Definir obrigatoriamente "substituirConfig": true no seu JSON de resposta.
+3. LIMPAR E RE-CRIAR as "camadasTexto" inteiramente do zero! Você está TERMINANTEMENTE PROIBIDO de reaproveitar, mesclar, ou carregar textos, títulos, datas, perfis de instagram ou telefones do flyer antigo (presentes no histórico do chat). Crie novas camadas de texto adequadas EXCLUSIVAMENTE ao novo tema solicitado.
+4. Redefinir e reescrever "additionalPrompt", "promptCenario", "promptDesign", "promptTipografia" e as cores do projeto com base apenas na nova solicitação, limpando qualquer rastro da arte antiga.
+A IA deve obedecer estritamente ao usuário e garantir uma transição limpa, sem misturar dados do pedido antigo com o novo!
+
 REGRAS CRÍTICAS DE SAÍDA (AUTO-FILL):
 Sempre que você gerar uma sugestão de configuração, copys, prompt ou extração de estilo, você DEVE incluir OBRIGATORIAMENTE no final da sua resposta um bloco de código JSON para preenchimento automático.
 O JSON deve ser formatado exatamente assim (inclua apenas as chaves que você conseguir inferir):
 \`\`\`json
 {
-  "cores": { "ambiente": "#hex", "recorte": "#hex", "complementar": "#hex", "paleta": ["#hex1", "#hex2", "#hex3"] }, // Pode ter quantas cores quiser na paleta
+  "cores": { "ambiente": "#hex", "recorte": "#hex", "complementar": "#hex", "paleta": ["#hex1", "#hex2", "#hex3"] }, 
+  "coresAutomaticas": false, // true se você acha que as cores devem ser escolhidas automaticamente, false se definiu cores específicas
   "corDominante": "#hex",
+  "useCorDominante": true, // false se não houver cor dominante
   "dimensao": "1:1", // ou "9:16", "16:9", "4:5"
-  "sobriedade": 50, // número de 0 (muito criativo/caótico) a 100 (muito profissional/sóbrio)
-  "typographyPosition": "Centro", // ou "Top", "Bottom"
-  "promptCenario": "descrição curta do cenário em inglês",
-  "additionalPrompt": "prompt geral principal em inglês. SEMPRE reescreva/inclua este campo atualizado se o usuário pedir qualquer alteração visual. OBRIGATÓRIO: Crie um MEGA PROMPT estilo Midjourney v6. Especifique com riqueza absoluta de detalhes técnicos: sujeito, texturas, cenário, 3-point studio lighting, rim light, ambient occlusion, reflexos, glows, cores, câmera (lente, ISO), e estilo (masterpiece, high-end commercial).",
+  "sobriedade": 50, // de 0 (criativo/caótico) a 100 (sóbrio)
+  "desativarSujeito": false, // IMPORTANTE: true se NÃO houver pessoa/sujeito na arte, false se houver sujeito (pessoa ou produto)
+  "noPeople": false, // true se a imagem NÃO deve ter pessoas de jeito nenhum
+  "useEnvRef": true, // true se estiver usando referência de cenário ou cenário carregado
+  "useLogo": true, // true se houver logo para aplicar
+  "enableTypography": true, // true se for usar textos na arte
+  "degradeLeitura": true, // true se o cenário precisar de escurecimento para leitura do texto, false se não
+  "enableBlur": false, // true se o cenário precisar de desfoque (fundo desfocado), false se não
+  "lateralGradient": false, // true se quiser gradiente/degradê lateral, false se não
+  "floatingElementsMode": "auto", // "off" para desligar, "auto" para ativar automático, "custom" para descrever os elementos flutuantes personalizados
+  "floatingElementsCustom": "Ex: golden dust and glowing sparks flying behind the subject", // preencher caso use modo "custom"
+  "gender": "Masculino", // "Masculino", "Feminino", "Outros", ou "" (vazio se sem sujeito)
+  "poseDescription": "descrição curta em inglês da pose ou enquadramento (ex: confident pose, looking at camera)", 
+  "positioning": "Centro", // "Centro", "Esquerda", "Direita"
+  "typographyPosition": "CENTRO", // OBRIGATÓRIO: Escolha exatamente "ESQUERDA", "CENTRO" ou "DIREITA"
+  "composicao": "Plano Americano", // "Close-up (Rosto)", "Plano Médio (Busto)", "Plano Americano", "Customizada"
+  "composicaoCustom": "Ex: Dramatic low angle cinematic shot", // preencher se quiser uma composição personalizada
+  "promptCenario": "descrição do cenário em inglês",
+  "promptDesign": "descrição curta do que extrair do layout/design do card de referência (ex: Copy the diagonal structures and asymmetric composition)",
+  "promptTipografia": "descrição curta do que extrair da tipografia/texto do card de referência (ex: Copy the bold modern headlines and centered CTA button)",
+  "additionalPrompt": "MEGA PROMPT MASTERPIECE com texturas, iluminação 3-point, glows, câmera e estética",
   "negativePrompt": "prompt negativo em inglês",
-  "estilosVisuais": ["Cyberpunk", "Minimalista", "Neon"], // Lista de estilos aplicáveis
-  "substituirImagens": true, // Retorne true se o usuário pediu para trocar/substituir a imagem atual pela que ele acabou de enviar.
-  "mapeamentoImagens": { "nome_do_arquivo.png": "subject", "outro_arquivo.jpg": "logo" }, // IMPORTANTE: O nome do arquivo DEVE ser EXATAMENTE igual ao que o usuário enviou (veja na tag [Imagem Anexada: NOME]). Classifique como "subject", "logo", "scene" ou "style".
-  "descricoesEstilo": { "nome_do_arquivo.png": "Descrição detalhada do estilo e paleta de cores dessa referência" }, // Se uma imagem for classificada como "style", forneça a descrição dela aqui.
+  "enableEstiloVisual": true, // true para ativar o estilo visual, false para desativar
+  "estilosVisuais": ["Cyberpunk", "Minimalista", "Neon"], 
+  "estiloVisualCustom": "Pintura barroca dramática com iluminação de Caravaggio", // Descreva o estilo detalhadamente se não estiver nas opções predefinidas
+  "substituirImagens": true,
+  "mapeamentoImagens": { "nome_do_arquivo.png": "subject", "outro_arquivo.jpg": "logo", "layout.jpg": "design", "estilo.jpg": "style" }, // IMPORTANTE: Classifique cada arquivo como: "subject" (sujeito), "logo" (logotipo), "scene" (cenário/fundo), "design" (referência de layout/design completo) ou "style" (referência de estilo visual/estética). Se receber um flyer/card de referência de design, SEMPRE mapeie como "design".
+  "descricoesEstilo": { "estilo.jpg": "Descrição detalhada do estilo e paleta de cores dessa referência (O que copiar: texturas, luz, cores, etc). Obrigatorio se o tipo for 'style'" },
   "camadasTexto": [
-    { "funcao": "Headline Principal", "conteudo": "SEU TITULO", "fonte": "Outfit", "cor": "#ffffff" },
-    { "funcao": "Subheadline Secundário", "conteudo": "SEU SUBTITULO", "fonte": "Outfit", "cor": "#ffffff" }
+    { "funcao": "Headline Principal", "conteudo": "SEU TITULO", "fonte": "Outfit", "cor": "#ffffff" }
   ]
 }
 \`\`\`
@@ -1577,7 +2027,7 @@ Sempre avise no texto de forma natural se identificou uma logo ou foto de sujeit
       });
 
       const response = await currentAi.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.5-flash",
         contents: contents,
         config: {
           systemInstruction: systemInstruction

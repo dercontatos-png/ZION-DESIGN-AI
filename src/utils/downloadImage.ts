@@ -1,58 +1,79 @@
 /**
- * Downloads the original image directly from its base64 representation as an unaltered binary Blob,
+ * Downloads the original image directly from its base64 representation,
  * preventing any browser canvas compression or pixel loss.
  */
-export const downloadImage = (base64Data: string, formatoSelecionado: string): Promise<void> => {
+export const downloadImage = (
+  base64Data: string,
+  formatoSelecionado: string,
+  logoConfig?: any,
+  typographyConfig?: any
+): Promise<void> => {
   return new Promise((resolve, reject) => {
     try {
-      const match = base64Data.match(/^data:image\/(\w+);base64,(.+)$/);
-      if (!match) {
-        // Fallback for non-base64 or direct links
+      const bgImg = new Image();
+      bgImg.crossOrigin = "anonymous";
+      bgImg.onload = async () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = bgImg.naturalWidth || 1024;
+        canvas.height = bgImg.naturalHeight || 1024;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          reject(new Error("Could not get canvas context"));
+          return;
+        }
+        
+        // 1. Draw background image
+        ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+
+        if (logoConfig?.useLogo && logoConfig?.logosList && logoConfig?.logosList.length > 0) {
+          const logoImg = new Image();
+          logoImg.crossOrigin = "anonymous";
+          await new Promise<void>((res) => {
+            logoImg.onload = () => {
+              const maxLogoHeight = canvas.height * 0.15; // 15% of height
+              const scale = maxLogoHeight / logoImg.naturalHeight;
+              const logoWidth = logoImg.naturalWidth * scale;
+              const logoHeight = logoImg.naturalHeight * scale;
+              
+              const marginY = canvas.height * 0.05;
+              const posX = (canvas.width - logoWidth) / 2;
+              const posY = marginY;
+              
+              ctx.drawImage(logoImg, posX, posY, logoWidth, logoHeight);
+              res();
+            };
+            logoImg.onerror = () => res();
+            logoImg.src = logoConfig.logosList[0];
+          });
+        }
+        
+        // 2. Output canvas to download trigger
+        let extension = formatoSelecionado.toLowerCase();
+        let mimeType = "image/png";
+        if (extension === "jpeg" || extension === "jpg") {
+          mimeType = "image/jpeg";
+        } else if (extension === "webp") {
+          mimeType = "image/webp";
+        }
+        
+        const dataUrl = canvas.toDataURL(mimeType, 0.95);
         const link = document.createElement("a");
-        link.href = base64Data;
-        link.download = `Zion_Premium_Card_${Date.now()}.${formatoSelecionado.toLowerCase()}`;
+        link.href = dataUrl;
+        link.download = `Zion_Premium_Card_${Date.now()}.${extension}`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        
         resolve();
-        return;
-      }
-
-      const originalMime = base64Data.match(/^data:([^;]+);/)?.[1] || "image/jpeg";
-      const base64Content = match[2];
+      };
       
-      // Decode base64 to raw binary bytes
-      const byteCharacters = atob(base64Content);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-      }
-      const byteArray = new Uint8Array(byteNumbers);
-      const blob = new Blob([byteArray], { type: originalMime });
+      bgImg.onerror = (e) => {
+        reject(new Error("Error loading background image: " + e));
+      };
       
-      const blobUrl = URL.createObjectURL(blob);
-      // Use original extension from mime or the requested extension (defaulting to the original format's extension for pristine fidelity)
-      let extension = formatoSelecionado.toLowerCase();
-      if (!formatoSelecionado) {
-        extension = originalMime.split("/")[1] || "jpeg";
-      }
-      
-      const link = document.createElement("a");
-      link.href = blobUrl;
-      link.download = `Zion_Premium_Card_${Date.now()}.${extension}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      // Revoke the object URL after download is triggered
-      setTimeout(() => {
-        URL.revokeObjectURL(blobUrl);
-      }, 200);
-      
-      resolve();
+      bgImg.src = base64Data;
     } catch (err) {
       reject(err);
     }
   });
 };
-

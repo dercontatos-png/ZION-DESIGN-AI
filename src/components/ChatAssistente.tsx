@@ -21,7 +21,9 @@ import {
   Bot,
   Trash2,
   File,
-  Check
+  Check,
+  Plus,
+  FolderOpen
 } from "lucide-react";
 
 interface ChatFile {
@@ -210,20 +212,37 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
     }
   }, [isOpen]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [chats, setChats] = useState<Record<string, ChatMessage[]>>(() => {
+    return Object.fromEntries(assistants.map((a) => [a.id, []]));
+  });
+
+  useEffect(() => {
     try {
-      const saved = localStorage.getItem("zion_assistant_chats_v2");
+      const saved = localStorage.getItem(`zion_assistant_chats_${store.activeProjectId}`);
       if (saved) {
-        return JSON.parse(saved);
+        setChats(JSON.parse(saved));
+      } else {
+        setChats(Object.fromEntries(assistants.map((a) => [a.id, []])));
       }
     } catch (e) {
       console.error("Error loading chat history:", e);
+      setChats(Object.fromEntries(assistants.map((a) => [a.id, []])));
     }
-    return Object.fromEntries(assistants.map((a) => [a.id, []]));
-  });
+  }, [store.activeProjectId]);
+
+  useEffect(() => {
+    try {
+      if (store.activeProjectId) {
+        localStorage.setItem(`zion_assistant_chats_${store.activeProjectId}`, JSON.stringify(chats));
+      }
+    } catch (e) {
+      console.error("Error saving chat history:", e);
+    }
+  }, [chats, store.activeProjectId]);
   const [inputText, setInputText] = useState("");
   const [attachedFiles, setAttachedFiles] = useState<ChatFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -234,14 +253,6 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const activeMessages = chats[activeAssistant.id] || [];
-
-  useEffect(() => {
-    try {
-      localStorage.setItem("zion_assistant_chats_v2", JSON.stringify(chats));
-    } catch (e) {
-      console.error("Error saving chat history:", e);
-    }
-  }, [chats]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -372,8 +383,80 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
     if (textareaRef.current) textareaRef.current.style.height = "auto";
     setIsTyping(true);
 
-    const activeClient = clients.find(c => c.id === activeClientId);
+    let currentActiveClientId = activeClientId;
+    if (!currentActiveClientId) {
+       const lowerText = (userMsg.content || "").toLowerCase();
+       const matchedClient = clients.find(c => {
+         const clientName = c.name.toLowerCase();
+         // Use regex for word boundary to avoid partial matches (e.g. "do" matching "dor")
+         const regex = new RegExp(`\\b${clientName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+         return regex.test(lowerText);
+       });
+       if (matchedClient) {
+          currentActiveClientId = matchedClient.id;
+          useClientStore.getState().setActiveClient(matchedClient.id);
+       }
+    }
+    const activeClient = clients.find(c => c.id === currentActiveClientId);
     const clientContext = activeClient ? `\n\n[CONTEXTO DO CLIENTE ATUAL]:\nCliente: ${activeClient.name}\nNicho: ${activeClient.niche}\nPaleta de Cores: ${activeClient.paletaCores?.join(', ') || 'Nenhuma'}\nInfo Adicional: ${activeClient.infoExtra}\nHistórico IA: ${activeClient.bancoDeDadosIA}\n[IMPORTANTE]: Use essa paleta de cores e informações para guiar o design. Se aprender algo novo sobre o cliente, retorne no JSON no campo "aprendizado_cliente".` : "";
+
+    const configContext = `\n\n[CONFIGURAÇÃO ATUAL DO EDITOR]:
+- Desativar Sujeito Principal: ${store.desativarSujeito ? "ATIVADO (O sujeito principal está DESATIVADO)" : "DESATIVADO (O sujeito principal está ATIVADO/HABILITADO)"}
+- Sem Pessoas (noPeople): ${store.noPeople ? "ATIVADO (Não há pessoas)" : "DESATIVADO (Pode conter pessoas)"}
+- Usar Referência de Cenário (useEnvRef): ${store.useEnvRef ? "ATIVADO" : "DESATIVADO"}
+- Usar Logotipo (useLogo): ${store.useLogo ? "ATIVADO" : "DESATIVADO"}
+- Habilitar Textos (enableTypography): ${store.enableTypography ? "ATIVADO" : "DESATIVADO"}
+- Degradê de Leitura (degradeLeitura): ${store.degradeLeitura ? "ATIVADO" : "DESATIVADO"}
+- Desfoque no Cenário (enableBlur): ${store.enableBlur ? "ATIVADO" : "DESATIVADO"}
+- Degradê Lateral (lateralGradient): ${store.lateralGradient ? "ATIVADO" : "DESATIVADO"}
+- Elementos Flutuantes (floatingElementsMode): ${store.floatingElementsMode} (personalizado: "${store.floatingElementsCustom}")
+- Composição/Enquadramento (composicao): ${store.composicao} (personalizado: "${store.composicaoCustom}")
+- Cores Atuais: Ambiente: ${store.cores.ambiente}, Recorte: ${store.cores.recorte}, Complementar: ${store.cores.complementar}
+- Cores Automáticas: ${store.coresAutomaticas ? "ATIVADO" : "DESATIVADO"}
+- Cor Dominante: ${store.corDominante} (Usar: ${store.useCorDominante ? "SIM" : "NÃO"})
+- Proporção: ${store.dimensao}
+- Nível Criativo / Sobriedade: ${store.nivelCriativo}%
+- Habilitar Estilo Visual: ${store.enableEstiloVisual ? "ATIVADO" : "DESATIVADO"}
+- Estilos Visuais Ativos: ${store.estilosVisuais.join(", ")}
+- Estilo Visual Customizado: "${store.estiloVisualCustom || ""}"
+- Posição Global do Texto (typographyPosition): "${store.typographyPosition || "CENTRO"}"
+- Prompt Cenário: "${store.promptCenario}"
+- Prompt Adicional Principal: "${store.additionalPrompt}"
+- Prompt Negativo: "${store.negativePrompt}"
+- Sujeitos Carregados: ${store.sujeitosBase64List?.length || 0} fotos
+- Cenários Carregados: ${store.cenariosBase64List?.length || 0} fotos
+- Logos Carregados: ${store.logosList?.length || 0} logos
+
+[ATENÇÃO DIRETOR CRIATIVO / ASSISTENTE]: O usuário EXIGE automação total da interface.
+VOCÊ DEVE tomar decisões ativas e ativar/desativar booleanos e preencher os textos conforme a necessidade para a arte perfeita ser gerada.
+1. Se a arte NÃO deve ter pessoas ou sujeito, mude "desativarSujeito": true e "noPeople": true.
+2. Se a arte TEM que ter sujeito ou pessoa, mude "desativarSujeito": false e "noPeople": false.
+3. Se a arte precisa de logo, mude "useLogo": true.
+4. Se a arte precisa de textos, mude "enableTypography": true e preencha "promptTipografia".
+5. Se a arte exige uma cor específica, atualize o objeto "cores" com os códigos HEX exatos.
+6. Se a arte precisa de um fundo/cenário de referência, mude "useEnvRef": true.
+
+SEMPRE gere um bloco JSON no final da sua resposta contendo TODAS as configurações atualizadas que a interface precisa aplicar. 
+
+Exemplo OBRIGATÓRIO de JSON no final da sua resposta:
+\`\`\`json
+{
+  "desativarSujeito": true,
+  "noPeople": true,
+  "enableTypography": true,
+  "useLogo": true,
+  "useEnvRef": true,
+  "estiloVisualCustom": "Estilo cyberpunk...",
+  "promptCenario": "Cenário...",
+  "promptTipografia": "Texto...",
+  "cores": {
+    "ambiente": "#000000",
+    "recorte": "#FF0055",
+    "complementar": "#00FFFF"
+  }
+}
+\`\`\`
+VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com a ativação/desativação refletida na sua decisão!`;;;;
 
     try {
       const res = await fetch("/api/chat-agentes", {
@@ -381,7 +464,7 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           assistantId: activeAssistant.id,
-          message: (userMsg.content || "Analise os arquivos enviados.") + clientContext,
+          message: (userMsg.content || "Analise os arquivos enviados.") + clientContext + configContext,
           attachedFiles: userMsg.files,
           history: currentMessages.map((m) => ({ 
             role: m.role, 
@@ -412,33 +495,222 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
 
   const applyModelMessageToEditor = (msgIndex: number, content: string) => {
     let filledItems: string[] = [];
+    let logCount = 0;
+    let newLogos: string[] = [];
+    let desCount = 0;
+    let newDesigns: string[] = [];
+    let updates: any = {};
     let jsonImageMap: Record<string, string> = {};
     let jsonStyleDescMap: Record<string, string> = {};
     let parsedConfigJson: any = null;
     let isReplaceMode = false;
 
-    // Tenta extrair JSON do texto gerado pela IA
-    const jsonMatch = content.match(/```json\s*(\{[\s\S]*?\})\s*```/);
+    // Helper robusto para mapear chaves da IA em português e inglês
+    const mapConfigKeys = (configJson: any) => {
+      const result: any = {};
+
+      const getBool = (keys: string[]) => {
+        for (const key of keys) {
+          if (typeof configJson[key] === "boolean") return configJson[key];
+          if (configJson[key] === "true" || configJson[key] === 1) return true;
+          if (configJson[key] === "false" || configJson[key] === 0) return false;
+        }
+        return undefined;
+      };
+
+      const getString = (keys: string[]) => {
+        for (const key of keys) {
+          if (typeof configJson[key] === "string" && configJson[key].trim() !== "") return configJson[key].trim();
+        }
+        return undefined;
+      };
+
+      // desativarSujeito
+      const desativar = getBool(["desativarSujeito", "desativar_sujeito", "disableSubject", "disable_subject"]);
+      if (desativar !== undefined) {
+        result.desativarSujeito = desativar;
+      } else {
+        const ativar = getBool(["ativarSujeito", "ativar_sujeito", "enableSubject", "enable_subject", "useSubject", "use_subject"]);
+        if (ativar !== undefined) {
+          result.desativarSujeito = !ativar;
+        }
+      }
+
+      // noPeople
+      const noPeep = getBool(["noPeople", "no_people", "semPessoas", "sem_pessoas"]);
+      if (noPeep !== undefined) result.noPeople = noPeep;
+
+      // useEnvRef
+      const envRef = getBool(["useEnvRef", "use_env_ref", "usarCenario", "usar_cenario", "usarFotosCenario", "usar_fotos_cenario", "useSceneRef", "use_scene_ref"]);
+      if (envRef !== undefined) result.useEnvRef = envRef;
+
+      // useLogo
+      const logo = getBool(["useLogo", "use_logo", "usarLogo", "usar_logo"]);
+      if (logo !== undefined) result.useLogo = logo;
+
+      // coresAutomaticas
+      const coresAuto = getBool(["coresAutomaticas", "cores_automaticas", "autoCores", "auto_cores"]);
+      if (coresAuto !== undefined) result.coresAutomaticas = coresAuto;
+
+      // useCorDominante
+      const corDom = getBool(["useCorDominante", "use_cor_dominante", "usarCorDominante", "usar_cor_dominante"]);
+      if (corDom !== undefined) result.useCorDominante = corDom;
+
+      // enableTypography
+      const typo = getBool(["enableTypography", "enable_typography", "adicionarTexto", "adicionar_texto", "usarTexto", "usar_texto", "enableText", "enable_text"]);
+      if (typo !== undefined) result.enableTypography = typo;
+
+      // degradeLeitura
+      const degLeitura = getBool(["degradeLeitura", "degrade_leitura", "degradeText", "degrade_text"]);
+      if (degLeitura !== undefined) result.degradeLeitura = degLeitura;
+
+      // enableBlur
+      const blur = getBool(["enableBlur", "enable_blur", "usarDesfoque", "usar_desfoque", "blur", "desfoque"]);
+      if (blur !== undefined) result.enableBlur = blur;
+
+      // lateralGradient
+      const latGrad = getBool(["lateralGradient", "lateral_gradient", "usarDegrade", "usar_degrade", "degradeLateral", "degrade_lateral"]);
+      if (latGrad !== undefined) result.lateralGradient = latGrad;
+
+      // floatingElementsMode
+      const floatMode = getString(["floatingElementsMode", "floating_elements_mode", "elementosFlutuantes", "elementos_flutuantes"]);
+      if (floatMode !== undefined) {
+        if (["off", "auto", "custom"].includes(floatMode)) {
+          result.floatingElementsMode = floatMode;
+        } else if (floatMode === "true" || floatMode === "ativar" || floatMode === "on" || floatMode === "auto") {
+          result.floatingElementsMode = "auto";
+        } else if (floatMode === "false" || floatMode === "desativar" || floatMode === "off") {
+          result.floatingElementsMode = "off";
+        } else {
+          result.floatingElementsMode = "custom";
+          result.floatingElementsCustom = floatMode;
+        }
+      }
+
+      // floatingElementsCustom
+      const floatCustom = getString(["floatingElementsCustom", "floating_elements_custom", "descElementosFlutuantes", "desc_elementos_flutuantes", "customFloatingElements", "custom_floating_elements"]);
+      if (floatCustom !== undefined) {
+        result.floatingElementsCustom = floatCustom;
+        result.floatingElementsMode = "custom";
+      }
+
+      // gender
+      const g = getString(["gender", "genero", "gênero", "sex"]);
+      if (g !== undefined) {
+        if (g.toLowerCase().includes("fem")) result.gender = "Feminino";
+        else if (g.toLowerCase().includes("masc")) result.gender = "Masculino";
+        else if (g.trim() !== "") result.gender = "Outros";
+      }
+
+      // multiplesPersons
+      const mp = getBool(["multiplesPersons", "multiples_persons", "multiplesPeople", "multiples_people", "multiplasPessoas", "multiplas_pessoas", "maisDeUmaPessoa", "mais_de_uma_pessoa"]);
+      if (mp !== undefined) result.multiplesPersons = mp;
+
+      // gendersDescription
+      const gd = getString(["gendersDescription", "genders_description", "descricaoGeneros", "descricao_generos", "generosIndividuais", "generos_individuais", "descGenders"]);
+      if (gd !== undefined) result.gendersDescription = gd;
+
+      // poseDescription
+      const pose = getString(["poseDescription", "pose_description", "descricaoPose", "descricao_pose", "pose"]);
+      if (pose !== undefined) result.poseDescription = pose;
+
+      // positioning
+      const pos = getString(["positioning", "posicionamento", "posição", "posicao"]);
+      if (pos !== undefined) result.positioning = pos;
+
+      // typographyPosition
+      const typoPos = getString(["typographyPosition", "typography_position", "posicaoTexto", "posicao_texto", "posicaoTextoGlobal", "posicao_texto_global", "posicaoGlobalTexto", "posicao_global_texto"]);
+      if (typoPos !== undefined) {
+        const typoPosUpper = typoPos.toUpperCase();
+        if (typoPosUpper.includes("ESQ") || typoPosUpper.includes("LEFT") || typoPosUpper.includes("TOP") || typoPosUpper.includes("UP")) {
+          result.typographyPosition = "ESQUERDA";
+        } else if (typoPosUpper.includes("DIR") || typoPosUpper.includes("RIGHT") || typoPosUpper.includes("BOT") || typoPosUpper.includes("DOWN")) {
+          result.typographyPosition = "DIREITA";
+        } else {
+          result.typographyPosition = "CENTRO";
+        }
+      }
+
+      // enableEstiloVisual
+      const styleVis = getBool(["enableEstiloVisual", "enable_estilo_visual", "ativarEstiloVisual", "ativar_estilo_visual", "usarEstiloVisual", "usar_estilo_visual", "styleVisualEnabled"]);
+      if (styleVis !== undefined) result.enableEstiloVisual = styleVis;
+
+      // estiloVisualCustom
+      const customStyle = getString(["estiloVisualCustom", "estilo_visual_custom", "customStyleDescription", "custom_style_description", "estiloCustomizado", "estilo_customizado", "descreverEstiloCustomizado", "custom_visual_style"]);
+      if (customStyle !== undefined) result.estiloVisualCustom = customStyle;
+
+      // promptDesign
+      const prDes = getString(["promptDesign", "prompt_design", "descricaoDesign", "descricao_design", "descDesign", "promptLayout", "prompt_layout"]);
+      if (prDes !== undefined) result.promptDesign = prDes;
+
+      // promptTipografia
+      const prTyp = getString(["promptTipografia", "prompt_tipografia", "descricaoTipografia", "descricao_tipografia", "descTipografia", "promptTexto", "prompt_texto"]);
+      if (prTyp !== undefined) result.promptTipografia = prTyp;
+
+      // estilosVisuais
+      if (configJson.estilosVisuais && Array.isArray(configJson.estilosVisuais)) {
+        result.estilosVisuais = configJson.estilosVisuais;
+      } else if (configJson.estiloVisual && typeof configJson.estiloVisual === "string") {
+        result.estilosVisuais = [configJson.estiloVisual];
+      }
+
+      // composicao
+      const comp = getString(["composicao", "composição", "framing", "camera_shot", "enquadramento"]);
+      if (comp !== undefined) {
+        const compLower = comp.toLowerCase();
+        if (compLower.includes("close") || compLower.includes("rosto") || compLower.includes("closeup")) {
+          result.composicao = "Close-up (Rosto)";
+        } else if (compLower.includes("médio") || compLower.includes("medio") || compLower.includes("busto")) {
+          result.composicao = "Plano Médio (Busto)";
+        } else if (compLower.includes("americano") || compLower.includes("plano americano")) {
+          result.composicao = "Plano Americano";
+        } else {
+          result.composicaoCustom = comp;
+        }
+      }
+
+      // composicaoCustom
+      const compCustom = getString(["composicaoCustom", "composicao_custom", "composiçãoCustom", "composição_custom"]);
+      if (compCustom !== undefined) {
+        result.composicaoCustom = compCustom;
+      }
+
+      return result;
+    };
+
+    // Tenta extrair JSON do texto gerado pela IA (incluindo bloco ou simples chaves)
+    const jsonMatch = content.match(/```json\s*(\{[\s\S]*?\})\s*```/) || content.match(/(\{[\s\S]*?"cores"[\s\S]*?\})/);
     if (jsonMatch) {
       try {
         const configJson = JSON.parse(jsonMatch[1]);
         parsedConfigJson = configJson;
-        const updates: any = {};
-        
-        if (configJson.substituirImagens === true) {
+                
+        if (configJson.substituirImagens === true || configJson.substituirConfig === true) {
           isReplaceMode = true;
+          updates.camadasTexto = [];
+          updates.additionalPrompt = "";
+          updates.promptCenario = "";
+          updates.promptDesign = "";
+          updates.promptTipografia = "";
+          updates.estiloVisualCustom = "";
+          updates.poseDescription = "";
+          updates.floatingElementsCustom = "";
+          updates.negativePrompt = "";
         }
 
         if (configJson.mapeamentoImagens) {
           jsonImageMap = configJson.mapeamentoImagens;
         } else if (configJson.imagemAnexadaTipo) {
-          // fallback legad
           jsonImageMap = { "*": configJson.imagemAnexadaTipo };
         }
 
         if (configJson.descricoesEstilo) {
           jsonStyleDescMap = configJson.descricoesEstilo;
         }
+
+        // Aplicar o mapeamento robusto de chaves
+        const mappedUpdates = mapConfigKeys(configJson);
+        updates = { ...updates, ...mappedUpdates };
 
         if (configJson.cores && Object.keys(configJson.cores).length > 0) {
           updates.cores = { ...store.cores, ...configJson.cores };
@@ -448,7 +720,9 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
         
         if (configJson.corDominante) {
           updates.corDominante = configJson.corDominante;
-          updates.useCorDominante = true;
+          if (typeof configJson.useCorDominante !== "boolean") {
+            updates.useCorDominante = true;
+          }
           filledItems.push("Cor Dominante");
         }
 
@@ -460,15 +734,14 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
         if (typeof configJson.sobriedade === "number") {
           updates.nivelCriativo = configJson.sobriedade;
           filledItems.push(`Sobriedade (${configJson.sobriedade}%)`);
-        }
-        
-        if (configJson.typographyPosition) {
-          updates.typographyPosition = configJson.typographyPosition;
+        } else if (typeof configJson.nivelCriativo === "number") {
+          updates.nivelCriativo = configJson.nivelCriativo;
+          filledItems.push(`Nível Criativo (${configJson.nivelCriativo}%)`);
         }
 
         if (configJson.camadasTexto && Array.isArray(configJson.camadasTexto)) {
           updates.enableTypography = true;
-          const currentLayers = store.camadasTexto || [];
+          const currentLayers = isReplaceMode ? [] : (store.camadasTexto || []);
           const newLayers = configJson.camadasTexto.map((item: any, idx: number) => {
              const existingLayer = currentLayers.find(l => l.funcao === item.funcao);
              return {
@@ -481,11 +754,22 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
           });
           updates.camadasTexto = newLayers;
           filledItems.push(`${newLayers.length} Textos`);
+        } else if (isReplaceMode) {
+          // Se for modo de substituição e não mandou nenhuma camada de texto no JSON, limpa todas as camadas de texto
+          updates.camadasTexto = [];
         }
         
         if (configJson.promptCenario) {
           updates.promptCenario = configJson.promptCenario;
           filledItems.push("Cenário");
+        }
+
+        if (updates.promptDesign) {
+          filledItems.push("Ref. Design");
+        }
+
+        if (updates.promptTipografia) {
+          filledItems.push("Ref. Texto/Tipografia");
         }
         
         if (configJson.additionalPrompt) {
@@ -503,6 +787,36 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
           filledItems.push("Estilos Visuais");
         }
 
+        if (configJson.multiplesPersons !== undefined) {
+          updates.multiplesPersons = configJson.multiplesPersons;
+          filledItems.push(configJson.multiplesPersons ? "Múltiplas Pessoas (Sim)" : "Múltiplas Pessoas (Não)");
+        }
+
+        if (configJson.gendersDescription !== undefined) {
+          updates.gendersDescription = configJson.gendersDescription;
+          filledItems.push("Gêneros Individuais");
+        }
+
+        // Registrar efeitos ativados/desativados para feedback visual do usuário
+        if (updates.enableBlur !== undefined) filledItems.push(updates.enableBlur ? "Desfoque (Ativo)" : "Desfoque (Inativo)");
+        if (updates.lateralGradient !== undefined) filledItems.push(updates.lateralGradient ? "Degradê Lateral (Ativo)" : "Degradê Lateral (Inativo)");
+        if (updates.degradeLeitura !== undefined) filledItems.push(updates.degradeLeitura ? "Degradê Leitura (Ativo)" : "Degradê Leitura (Inativo)");
+        if (updates.enableEstiloVisual !== undefined) {
+          filledItems.push(updates.enableEstiloVisual ? "Estilo Visual (Ativo)" : "Estilo Visual (Inativo)");
+        }
+        if (updates.estiloVisualCustom !== undefined && updates.estiloVisualCustom !== "") {
+          filledItems.push("Estilo Personalizado");
+        }
+        if (updates.typographyPosition !== undefined) {
+          filledItems.push(`Posição Texto (${updates.typographyPosition})`);
+        }
+        if (updates.floatingElementsMode !== undefined) {
+          filledItems.push(`Elementos Flutuantes (${updates.floatingElementsMode})`);
+        }
+        if (updates.composicao !== undefined) {
+          filledItems.push(`Composição (${updates.composicao})`);
+        }
+
         store.updateConfig(updates);
       } catch (e) {
         console.error("Falha ao fazer parse do JSON: ", e);
@@ -516,7 +830,7 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
       if (hexMatches && hexMatches.length > 0) {
         const uniqueColors = Array.from(new Set(hexMatches));
         
-        const newColors = { ...store.cores };
+        const newColors = { ...store.cores, ...(updates.cores || {}) };
         if (uniqueColors[0]) newColors.ambiente = uniqueColors[0];
         if (uniqueColors[1]) newColors.recorte = uniqueColors[1];
         if (uniqueColors[2]) newColors.complementar = uniqueColors[2];
@@ -550,7 +864,7 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
       });
       
       if (foundTexts.length > 0) {
-        store.updateConfig({ enableTypography: true });
+        if (updates && updates.enableTypography !== undefined) { store.updateConfig({ enableTypography: updates.enableTypography }); } else { store.updateConfig({ enableTypography: true }); }
         const currentLayers = [...(store.camadasTexto || [])];
         
         foundTexts.forEach(item => {
@@ -605,16 +919,12 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
       }
     }
 
-    // 4. Extrair e preencher imagens de referência do histórico
+    // 4. Extrair e preencher imagens de referência do histórico (apenas do input imediatamente anterior do usuário)
     let precedingUserMsg = null;
     if (msgIndex > 0) {
-      for (let i = msgIndex - 1; i >= 0; i--) {
-        if (activeMessages[i].role === 'user') {
-          if (activeMessages[i].files && activeMessages[i].files.length > 0) {
-            precedingUserMsg = activeMessages[i];
-          }
-          break; // Stop at the first preceding user message
-        }
+      const prevMsg = activeMessages[msgIndex - 1];
+      if (prevMsg && prevMsg.role === 'user' && prevMsg.files && prevMsg.files.length > 0) {
+        precedingUserMsg = prevMsg;
       }
     }
 
@@ -625,12 +935,12 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
         
         let subCount = 0;
         let sceCount = 0;
-        let logCount = 0;
         let styCount = 0;
+        let typoCount = 0;
         
         let newSubjects: string[] = [];
         let newScenes: string[] = [];
-        let newLogos: string[] = [];
+        let newTypographies: string[] = [];
         
         const jsonMapKeys = Object.keys(jsonImageMap);
         const jsonStyleDescKeys = Object.keys(jsonStyleDescMap);
@@ -638,30 +948,36 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
         const singleStyleDescVal = jsonStyleDescKeys.length === 1 ? jsonStyleDescMap[jsonStyleDescKeys[0]] : null;
 
         imagesOnly.forEach(img => {
-          let targetType = "style";
+          let targetType = activeAssistant.id === "diretor-criativo" ? "design" : "style";
           let styleDescription = "Referência de estilo gerada pelo assistente.";
           
           let matchedKey = null;
-          if (img.name && jsonImageMap[img.name]) {
-            matchedKey = img.name;
-          } else if (img.name) {
-            // fuzzy match
-            const nameLower = img.name.toLowerCase();
-            matchedKey = jsonMapKeys.find(k => k.toLowerCase() === nameLower || nameLower.includes(k.toLowerCase()) || k.toLowerCase().includes(nameLower.split('.')[0]));
-          }
+          if (activeAssistant.id !== "diretor-criativo") {
+            if (img.name && jsonImageMap[img.name]) {
+              matchedKey = img.name;
+            } else if (img.name) {
+              // fuzzy match
+              const nameLower = img.name.toLowerCase();
+              matchedKey = jsonMapKeys.find(k => k.toLowerCase() === nameLower || nameLower.includes(k.toLowerCase()) || k.toLowerCase().includes(nameLower.split('.')[0]));
+            }
 
-          if (matchedKey && jsonImageMap[matchedKey]) {
-            targetType = jsonImageMap[matchedKey];
-          } else if (imagesOnly.length === 1 && singleMappingVal) {
-            targetType = singleMappingVal;
-          } else if (jsonImageMap["*"]) {
-            targetType = jsonImageMap["*"];
-          } else if (textLower.includes("logo") || textLower.includes("marca") || textLower.includes("logomarca") || textLower.includes("logotipo")) {
-            targetType = "logo";
-          } else if (textLower.includes("sujeito") || textLower.includes("produto") || textLower.includes("subject") || textLower.includes("product") || textLower.includes("pessoa") || textLower.includes("modelo")) {
-            targetType = "subject";
-          } else if (textLower.includes("cenário") || textLower.includes("background") || textLower.includes("cenario") || textLower.includes("ambiente") || textLower.includes("scene") || textLower.includes("fundo")) {
-            targetType = "scene";
+            if (matchedKey && jsonImageMap[matchedKey]) {
+              targetType = jsonImageMap[matchedKey];
+            } else if (imagesOnly.length === 1 && singleMappingVal) {
+              targetType = singleMappingVal;
+            } else if (jsonImageMap["*"]) {
+              targetType = jsonImageMap["*"];
+            } else if (textLower.includes("logo") || textLower.includes("marca") || textLower.includes("logomarca") || textLower.includes("logotipo")) {
+              targetType = "logo";
+            } else if (textLower.includes("sujeito") || textLower.includes("produto") || textLower.includes("subject") || textLower.includes("product") || textLower.includes("pessoa") || textLower.includes("modelo")) {
+              targetType = "subject";
+            } else if (textLower.includes("cenário") || textLower.includes("background") || textLower.includes("cenario") || textLower.includes("ambiente") || textLower.includes("scene") || textLower.includes("fundo")) {
+              targetType = "scene";
+            } else if (textLower.includes("texto") || textLower.includes("tipografia") || textLower.includes("typography") || textLower.includes("print") || textLower.includes("font") || textLower.includes("letter")) {
+              targetType = "typography";
+            } else if (textLower.includes("layout") || textLower.includes("design") || textLower.includes("referência principal") || textLower.includes("flyer") || textLower.includes("card")) {
+              targetType = "design";
+            }
           }
 
           if (targetType === "style") {
@@ -693,15 +1009,26 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
           } else if (targetType === "logo") {
             newLogos.push(rawBase64);
             logCount++;
+          } else if (targetType === "design") {
+            newDesigns.push(rawBase64);
+            desCount++;
+          } else if (targetType === "typography") {
+            newTypographies.push(rawBase64);
+            typoCount++;
           } else {
             // style reference
             if (isReplaceMode && styCount === 0 && store.referenciasEstilo) {
               // Limpa as atuais se for a primeira do replace
               store.referenciasEstilo.forEach(r => store.removeReferenciaEstilo(r.id));
             }
-            if (!store.referenciasEstilo?.find(r => r.url === rawBase64)) {
-               store.addReferenciaEstilo(rawBase64, styleDescription);
-               styCount++;
+            const existingRef = store.referenciasEstilo?.find(r => r.url === rawBase64);
+            if (existingRef) {
+              if (styleDescription && styleDescription !== "Referência de estilo gerada pelo assistente.") {
+                store.updateReferenciaEstilo(existingRef.id, styleDescription);
+              }
+            } else {
+                store.addReferenciaEstilo(rawBase64, styleDescription);
+                styCount++;
             }
           }
         });
@@ -709,37 +1036,175 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
         if (subCount > 0) {
           const currentList = isReplaceMode ? [] : (store.sujeitosBase64List || []);
           store.setSujeitoBase64List([...currentList, ...newSubjects]);
-          store.updateConfig({ noPeople: false, desativarSujeito: false });
+          if (updates && updates.desativarSujeito !== undefined) {
+             store.updateConfig({ desativarSujeito: updates.desativarSujeito, noPeople: updates.noPeople !== undefined ? updates.noPeople : updates.desativarSujeito });
+          } else {
+             store.updateConfig({ noPeople: false, desativarSujeito: false });
+          }
           filledItems.push(`${subCount} Sujeito(s)`);
         }
         if (sceCount > 0) {
           const currentList = isReplaceMode ? [] : (store.cenariosBase64List || []);
           store.setCenarioBase64List([...currentList, ...newScenes]);
-          store.updateConfig({ useEnvRef: true });
+          if (updates && updates.useEnvRef === false) {
+             // respect AI
+          } else {
+             if (updates && updates.useEnvRef !== undefined) { store.updateConfig({ useEnvRef: updates.useEnvRef }); } else { store.updateConfig({ useEnvRef: true }); }
+          }
           filledItems.push(`${sceCount} Cenário(s)`);
         }
+        
         if (logCount > 0) {
           const currentList = isReplaceMode ? [] : (store.logosList || []);
           store.setLogosList([...currentList, ...newLogos]);
-          store.updateConfig({ useLogo: true });
+          if (updates && updates.useLogo !== undefined) {
+            store.updateConfig({ useLogo: updates.useLogo });
+          } else {
+            store.updateConfig({ useLogo: true });
+          }
           filledItems.push(`${logCount} Logo(s)`);
         }
-        if (logCount === 0 && activeClientId) {
-          const client = clients.find(c => c.id === activeClientId);
-          if (client && client.logoBase64) {
-             const currentList = isReplaceMode ? [] : (store.logosList || []);
-             store.setLogosList([...currentList, client.logoBase64]);
-             store.updateConfig({ useLogo: true });
-             filledItems.push("Logo do Cliente");
-          }
-        }
 
+        if (typoCount > 0) {
+          const currentList = isReplaceMode ? [] : (store.tipografiaRefsList || []);
+          store.setTipografiaRefsList([...currentList, ...newTypographies]);
+          filledItems.push(`${typoCount} Ref. Texto`);
+        }
+        
+        if (desCount > 0) {
+          const currentList = isReplaceMode ? [] : (store.designRefsList || []);
+          store.setDesignRefsList([...currentList, ...newDesigns]);
+          filledItems.push(`${desCount} Design(s)`);
+  
+          // 1. Cenário
+          const currentSceneList = isReplaceMode ? [] : (store.cenariosBase64List || []);
+          const sceneListWithCard = [...currentSceneList];
+          newDesigns.forEach(d => {
+            if (!sceneListWithCard.includes(d)) {
+              sceneListWithCard.push(d);
+            }
+          });
+          store.setCenarioBase64List(sceneListWithCard);
+          if (updates && updates.useEnvRef !== undefined) { store.updateConfig({ useEnvRef: updates.useEnvRef }); } else { store.updateConfig({ useEnvRef: true }); }
+          const defaultCen = parsedConfigJson?.promptCenario || updates.promptCenario || "Extrair o cenário/fundo desfocado com light glows e atmosfera premium deste card de referência.";
+          store.updateConfig({ promptCenario: defaultCen });
+          filledItems.push("Cenário (do Card)");
+
+          // 2. Estilo
+          const cardStyleDesc = parsedConfigJson?.estiloVisualCustom || updates.estiloVisualCustom || "Copiar as texturas de fundo, a iluminação cinematográfica, a vibe estética e atmosfera elegante do card de referência.";
+          newDesigns.forEach(d => {
+            const existingRef = store.referenciasEstilo?.find(r => r.url === d);
+            if (!existingRef) {
+              store.addReferenciaEstilo(d, cardStyleDesc);
+            }
+          });
+          if (updates && updates.enableEstiloVisual !== undefined) { store.updateConfig({ enableEstiloVisual: updates.enableEstiloVisual, estiloVisualCustom: cardStyleDesc }); } else { store.updateConfig({ enableEstiloVisual: true, estiloVisualCustom: cardStyleDesc }); }
+          filledItems.push("Estilo (do Card)");
+ 
+          // 3. Texto/Tipografia
+          const currentTypoList = isReplaceMode ? [] : (store.tipografiaRefsList || []);
+          const typoListWithCard = [...currentTypoList];
+          newDesigns.forEach(d => {
+            if (!typoListWithCard.includes(d)) {
+              typoListWithCard.push(d);
+            }
+          });
+          store.setTipografiaRefsList(typoListWithCard);
+          if (updates && updates.enableTypography !== undefined) { store.updateConfig({ enableTypography: updates.enableTypography }); } else { store.updateConfig({ enableTypography: true }); }
+          const defaultTypoPrompt = parsedConfigJson?.promptTipografia || updates.promptTipografia || "Copiar a estrutura do bloco de textos, estilo da fonte sans-serif moderna e a disposição hierárquica do card de referência.";
+          store.updateConfig({ promptTipografia: defaultTypoPrompt });
+          filledItems.push("Texto (do Card)");
+
+          // 4. Design/Layout
+          const defaultDesignPrompt = parsedConfigJson?.promptDesign || updates.promptDesign || "Copiar a proporção dos espaços vazios, o grid estrutural, e o posicionamento de composição de elementos deste card de referência.";
+          store.updateConfig({ promptDesign: defaultDesignPrompt });
+
+          // 5. Sujeito
+          const currentSubjectList = isReplaceMode ? [] : (store.sujeitosBase64List || []);
+          const subjectListWithCard = [...currentSubjectList];
+          newDesigns.forEach(d => {
+            if (!subjectListWithCard.includes(d)) {
+              subjectListWithCard.push(d);
+            }
+          });
+          store.setSujeitoBase64List(subjectListWithCard);
+          if (updates && updates.desativarSujeito !== undefined) {
+            store.updateConfig({ desativarSujeito: updates.desativarSujeito });
+          } else {
+            store.updateConfig({ desativarSujeito: false });
+          }
+          const defaultPose = parsedConfigJson?.poseDescription || updates.poseDescription || "Recortar e focar no sujeito ou produto principal presente no card de referência, mantendo a iluminação, sombras e integração com o fundo original.";
+          store.updateConfig({ poseDescription: defaultPose });
+          filledItems.push("Sujeito (do Card)");
+
+          // 6. Logotipo
+          const currentLogoList = isReplaceMode ? [] : (store.logosList || []);
+          const logoListWithCard = [...currentLogoList];
+          newDesigns.forEach(d => {
+            if (!logoListWithCard.includes(d)) {
+              logoListWithCard.push(d);
+            }
+          });
+          store.setLogosList(logoListWithCard);
+          if (updates && updates.useLogo !== undefined) {
+            store.updateConfig({ useLogo: updates.useLogo });
+          } else {
+            store.updateConfig({ useLogo: true });
+          }
+          filledItems.push("Logo (do Card)");
+        }
+  
         if (parsedConfigJson && parsedConfigJson.aprendizado_cliente && activeClientId) {
            appendAiLearnings(activeClientId, parsedConfigJson.aprendizado_cliente);
         }
-
+  
         if (styCount > 0) {
           filledItems.push(`${styCount} Estilo(s)`);
+        }
+      }
+    }
+
+    // 5. Sempre aplicar dados do cliente se existir (Logo e Cores)
+    if (activeClientId) {
+      const client = clients.find(c => c.id === activeClientId);
+      if (client) {
+        // Aplica a Logo do cliente se existir
+        if (client.logoBase64 && client.logoBase64.length > 50 && client.logoBase64 !== "undefined") {
+          // Precisamos pegar a lista atual do store OU os newLogos que acabaram de ser processados
+          let currentList = isReplaceMode ? [] : (store.logosList || []);
+          if (logCount > 0) {
+             currentList = [...currentList, ...newLogos];
+          }
+          if (!currentList.includes(client.logoBase64)) {
+             store.setLogosList([...currentList, client.logoBase64]);
+             if (updates && updates.useLogo !== undefined) {
+            store.updateConfig({ useLogo: updates.useLogo });
+          } else {
+            store.updateConfig({ useLogo: true });
+          }
+             if (!filledItems.includes("Logo do Cliente")) filledItems.push("Logo do Cliente");
+          }
+        }
+        
+        // Aplica a Paleta de Cores do cliente
+        if (client.paletaCores && client.paletaCores.length > 0) {
+          const newColors = { ...store.cores };
+          newColors.ambiente = client.paletaCores[0] || "#000000";
+          newColors.recorte = client.paletaCores[1] || "#ffffff";
+          newColors.complementar = client.paletaCores[2] || "#c5a880";
+          delete newColors.paleta;
+          
+          store.updateConfig({ cores: newColors, coresAutomaticas: false });
+          if (!filledItems.includes("Paleta do Cliente")) filledItems.push("Paleta do Cliente");
+          
+          if (client.paletaCores.length === 1) {
+            store.updateConfig({ corDominante: client.paletaCores[0], useCorDominante: true });
+          }
+        }
+        
+        // Verifica se há novos aprendizados para adicionar (caso venha fora de imagem)
+        if (parsedConfigJson && parsedConfigJson.aprendizado_cliente && !(precedingUserMsg && precedingUserMsg.files && precedingUserMsg.files.length > 0)) {
+           appendAiLearnings(activeClientId, parsedConfigJson.aprendizado_cliente);
         }
       }
     }
@@ -786,11 +1251,11 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
           setIsOpen(!isOpen);
           setIsDropdownOpen(false);
         }}
-        className="relative w-14 h-14 rounded-full shadow-[0_4px_20px_rgba(173,131,48,0.3)] flex items-center justify-center cursor-pointer transition-all duration-300 hover:scale-110 active:scale-95 bg-black border border-[#ad8330]"
+        className="relative w-14 h-14 rounded-full shadow-[0_4px_24px_rgba(197,168,128,0.25)] flex items-center justify-center cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 bg-[#121214]/90 border border-[#c5a880]/30 hover:border-[#c5a880]/60 text-[#c5a880]"
         title="Assistente ZION AI"
       >
-        {isOpen ? <X size={22} className="text-[#ad8330]" /> : <MessageSquare size={22} className="text-[#ad8330]" />}
-        {!isOpen && <span className="absolute inset-0 rounded-full animate-ping opacity-25 bg-[#ad8330]" />}
+        {isOpen ? <X size={22} className="text-[#c5a880]" /> : <MessageSquare size={22} className="text-[#c5a880]" />}
+        {!isOpen && <span className="absolute inset-0 rounded-full animate-ping opacity-20 bg-[#c5a880]" />}
       </button>
 
       {isOpen && (
@@ -823,9 +1288,27 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
                   {activeClientId ? clients.find(c => c.id === activeClientId)?.name : "Clientes"}
                 </button>
                 <button
+                  onClick={() => setIsHistoryOpen(!isHistoryOpen)}
+                  className={`p-2 rounded-lg transition-all cursor-pointer ${isHistoryOpen ? "text-[#ad8330] bg-zinc-900" : "text-zinc-500 hover:text-[#ad8330] hover:bg-zinc-900"}`}
+                  title="Histórico de Conversas"
+                >
+                  <FolderOpen size={14} />
+                </button>
+                <button
+                  onClick={() => {
+                    store.createProject();
+                    setActiveClient(null);
+                    showToast("Nova conversa iniciada. Configurações zeradas.", "success");
+                  }}
+                  className="p-2 text-zinc-500 hover:text-[#ad8330] hover:bg-zinc-900 rounded-lg transition-all cursor-pointer"
+                  title="Nova Conversa (Zerar tudo)"
+                >
+                  <Plus size={14} />
+                </button>
+                <button
                   onClick={clearChat}
                   className="p-2 text-zinc-500 hover:text-[#ad8330] hover:bg-zinc-900 rounded-lg transition-all cursor-pointer"
-                  title="Limpar conversa"
+                  title="Limpar chat do agente atual"
                 >
                   <Trash2 size={14} />
                 </button>
@@ -837,6 +1320,44 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
                 </button>
               </div>
             </div>
+
+            {/* History Dropdown */}
+            {isHistoryOpen && (
+              <div className="absolute top-16 right-4 left-4 z-50 bg-[#121214] border border-zinc-800 rounded-xl shadow-2xl p-3 max-h-60 overflow-y-auto custom-scrollbar">
+                <div className="flex justify-between items-center mb-3 pb-2 border-b border-zinc-800">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">Suas Conversas</span>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  {store.projectsList.map(p => (
+                    <div 
+                      key={p.id} 
+                      className={`flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition-colors ${p.id === store.activeProjectId ? "bg-[#ad8330]/10 border border-[#ad8330]/30" : "hover:bg-zinc-900 border border-transparent"}`}
+                      onClick={() => {
+                        store.loadProjectById(p.id);
+                        setIsHistoryOpen(false);
+                        showToast(`Conversa "${p.name}" carregada.`, "success");
+                      }}
+                    >
+                      <span className={`text-[11px] font-bold truncate pr-2 ${p.id === store.activeProjectId ? "text-[#ad8330]" : "text-zinc-300"}`}>{p.name}</span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          store.deleteProject(p.id);
+                          showToast("Conversa deletada.", "success");
+                          if (store.projectsList.length <= 1) {
+                            setIsHistoryOpen(false);
+                          }
+                        }}
+                        className="text-zinc-600 hover:text-red-500 transition-colors p-1"
+                        title="Deletar"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Quick agent bar */}
             <div className="flex items-center gap-2 mt-3 overflow-x-auto pb-0.5" style={{ scrollbarWidth: "none" }}>

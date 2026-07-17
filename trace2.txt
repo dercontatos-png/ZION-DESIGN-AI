@@ -1,0 +1,412 @@
+Line 0: depth=1, opens=1, closes=0 -> <div className="w-full lg:flex-1 bg-[#000000] flex flex-col h-[50vh] lg:h-full overflow-hidden relative">
+Line 1: depth=2, opens=1, closes=0 -> <div className="flex-1 flex overflow-hidden">
+Line 2: depth=2, opens=0, closes=0 -> {/* Main Workspace Canvas / Viewport */}
+Line 3: depth=3, opens=1, closes=0 -> <div className="flex-1 flex flex-col relative overflow-hidden bg-[#0A0A0A]">
+Line 4: depth=3, opens=0, closes=0 -> {/* Barra superior de controle do Zoom */}
+Line 5: depth=3, opens=0, closes=0 -> {activeImage && (
+Line 6: depth=4, opens=1, closes=0 -> <div className="absolute top-4 left-4 z-10 flex items-center gap-2 bg-black/85 border border-white/5 px-3 py-1.5 rounded-xl shadow-lg text-zinc-300">
+Line 7: depth=4, opens=0, closes=0 -> <button
+Line 8: depth=4, opens=0, closes=0 -> onClick={() => setZoomPercent(prev => Math.max(prev - 10, 30))}
+Line 9: depth=4, opens=0, closes=0 -> className="hover:text-white p-1 cursor-pointer transition-colors"
+Line 10: depth=4, opens=0, closes=0 -> title="Zoom Out"
+Line 11: depth=4, opens=0, closes=0 -> >
+Line 12: depth=4, opens=0, closes=0 -> <ZoomOut size={13} />
+Line 13: depth=4, opens=0, closes=0 -> </button>
+Line 14: depth=4, opens=0, closes=0 -> <span className="text-[9.5px] font-black tracking-wider uppercase px-1 min-w-[36px] text-center text-[#c99b3b]">
+Line 15: depth=4, opens=0, closes=0 -> {zoomPercent}%
+Line 16: depth=4, opens=0, closes=0 -> </span>
+Line 17: depth=4, opens=0, closes=0 -> <button
+Line 18: depth=4, opens=0, closes=0 -> onClick={() => setZoomPercent(prev => Math.min(prev + 10, 500))}
+Line 19: depth=4, opens=0, closes=0 -> className="hover:text-white p-1 cursor-pointer transition-colors"
+Line 20: depth=4, opens=0, closes=0 -> title="Zoom In"
+Line 21: depth=4, opens=0, closes=0 -> >
+Line 22: depth=4, opens=0, closes=0 -> <ZoomIn size={13} />
+Line 23: depth=4, opens=0, closes=0 -> </button>
+Line 24: depth=5, opens=1, closes=0 -> <div className="w-[1px] h-3.5 bg-zinc-800 mx-1" />
+Line 25: depth=5, opens=0, closes=0 -> <button
+Line 26: depth=5, opens=0, closes=0 -> onClick={resetZoomAndPan}
+Line 27: depth=5, opens=0, closes=0 -> className="hover:text-white text-[8px] font-black uppercase tracking-widest cursor-pointer px-1.5 py-0.5 bg-zinc-900 hover:bg-zinc-800 rounded border border-white/5"
+Line 28: depth=5, opens=0, closes=0 -> >
+Line 29: depth=5, opens=0, closes=0 -> Resetar
+Line 30: depth=5, opens=0, closes=0 -> </button>
+Line 31: depth=4, opens=0, closes=1 -> </div>
+Line 32: depth=4, opens=0, closes=0 -> )}
+Line 33: depth=4, opens=0, closes=0 -> 
+Line 34: depth=4, opens=0, closes=0 -> {/* Area Interativa de Imagem com Loading Progressivo Realista */}
+Line 35: depth=5, opens=1, closes=0 -> <div
+Line 36: depth=5, opens=0, closes=0 -> ref={viewportRef}
+Line 37: depth=5, opens=0, closes=0 -> onWheel={activeImage ? handleWheel : undefined}
+Line 38: depth=5, opens=0, closes=0 -> onMouseDown={activeImage ? handleMouseDown : undefined}
+Line 39: depth=5, opens=0, closes=0 -> onMouseMove={activeImage ? handleMouseMove : undefined}
+Line 40: depth=5, opens=0, closes=0 -> onMouseUp={activeImage ? handleMouseUpOrLeave : undefined}
+Line 41: depth=5, opens=0, closes=0 -> onMouseLeave={activeImage ? handleMouseUpOrLeave : undefined}
+Line 42: depth=5, opens=0, closes=0 -> className={`flex-1 flex items-center justify-center p-6 relative select-none overflow-hidden ${
+Line 43: depth=5, opens=0, closes=0 -> activeImage ? "cursor-grab" : ""
+Line 44: depth=5, opens=0, closes=0 -> } ${isDragging ? "cursor-grabbing" : ""}`}
+Line 45: depth=5, opens=0, closes=0 -> >
+Line 46: depth=5, opens=0, closes=0 -> {activeMenuTab === "Inspiração" ? (
+Line 47: depth=5, opens=0, closes=0 -> (() => {
+Line 48: depth=5, opens=0, closes=0 -> const template = templatePresets.find(t => t.id === selectedTemplateId) || templatePresets[0];
+Line 49: depth=5, opens=0, closes=0 -> return (
+Line 50: depth=6, opens=1, closes=0 -> <div className="w-full h-full flex flex-col items-center justify-center p-4 animate-in fade-in duration-500">
+Line 51: depth=7, opens=1, closes=0 -> <div className="text-center mb-4">
+Line 52: depth=7, opens=0, closes=0 -> <span className="text-[10px] font-black text-[#c99b3b] uppercase tracking-widest block mb-0.5">Pré-Visualização do Layout</span>
+Line 53: depth=7, opens=0, closes=0 -> <h4 className="text-sm font-extrabold uppercase tracking-wider text-zinc-100">{template.name}</h4>
+Line 54: depth=6, opens=0, closes=1 -> </div>
+Line 55: depth=6, opens=0, closes=0 -> 
+Line 56: depth=6, opens=0, closes=0 -> {/* Mockup Canvas */}
+Line 57: depth=7, opens=1, closes=0 -> <div
+Line 58: depth=7, opens=0, closes=0 -> className="relative rounded-2xl shadow-2xl border flex flex-col justify-between p-6 overflow-hidden transition-all duration-500"
+Line 59: depth=7, opens=0, closes=0 -> style={{
+Line 60: depth=7, opens=0, closes=0 -> ...template.mockBgStyle,
+Line 61: depth=7, opens=0, closes=0 -> width: template.dimensao === "16:9" ? "320px" : template.dimensao === "9:16" ? "210px" : template.dimensao === "4:5" ? "250px" : "280px",
+Line 62: depth=7, opens=0, closes=0 -> height: template.dimensao === "16:9" ? "180px" : template.dimensao === "9:16" ? "370px" : template.dimensao === "4:5" ? "312px" : "280px",
+Line 63: depth=7, opens=0, closes=0 -> boxShadow: `0 20px 40px rgba(0,0,0,0.6), 0 0 25px ${template.accentColor}25`
+Line 64: depth=7, opens=0, closes=0 -> }}
+Line 65: depth=7, opens=0, closes=0 -> >
+Line 66: depth=7, opens=0, closes=0 -> {/* Abstract background elements for high quality */}
+Line 67: depth=8, opens=1, closes=0 -> <div className="absolute inset-0 opacity-25 pointer-events-none">
+Line 68: depth=9, opens=1, closes=0 -> <div className="absolute top-[-10%] left-[-10%] w-[120%] h-[120%] bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.15)_0%,transparent_70%)]" />
+Line 69: depth=10, opens=1, closes=0 -> <div className="absolute top-1/4 left-1/4 w-32 h-32 rounded-full blur-3xl opacity-30" style={{ backgroundColor: template.corDominante }} />
+Line 70: depth=11, opens=1, closes=0 -> <div className="absolute bottom-1/4 right-1/4 w-24 h-24 rounded-full blur-3xl opacity-20" style={{ backgroundColor: template.accentColor }} />
+Line 71: depth=11, opens=0, closes=0 -> {/* Grid overlay */}
+Line 72: depth=12, opens=1, closes=0 -> <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff03_1px,transparent_1px),linear-gradient(to_bottom,#ffffff03_1px,transparent_1px)] bg-[size:15px_15px]" />
+Line 73: depth=11, opens=0, closes=1 -> </div>
+Line 74: depth=11, opens=0, closes=0 -> 
+Line 75: depth=11, opens=0, closes=0 -> {/* Header Logo */}
+Line 76: depth=12, opens=1, closes=0 -> <div className="z-10 flex justify-between items-center w-full">
+Line 77: depth=13, opens=1, closes=0 -> <div className="flex items-center gap-1.5 opacity-80">
+Line 78: depth=14, opens=1, closes=0 -> <div className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-black" style={{ backgroundColor: template.accentColor, color: "#000" }}>
+Line 79: depth=14, opens=0, closes=0 -> Z
+Line 80: depth=13, opens=0, closes=1 -> </div>
+Line 81: depth=13, opens=0, closes=0 -> <span className="text-[7.5px] font-black uppercase tracking-widest" style={{ color: "#fff" }}>ZION COMPANY</span>
+Line 82: depth=12, opens=0, closes=1 -> </div>
+Line 83: depth=13, opens=1, closes=0 -> <div className="text-[6.5px] font-bold uppercase px-1.5 py-0.5 rounded border opacity-60" style={{ color: template.accentColor, borderColor: `${template.accentColor}40` }}>
+Line 84: depth=13, opens=0, closes=0 -> PRESET
+Line 85: depth=12, opens=0, closes=1 -> </div>
+Line 86: depth=11, opens=0, closes=1 -> </div>
+Line 87: depth=11, opens=0, closes=0 -> 
+Line 88: depth=11, opens=0, closes=0 -> {/* Middle Graphic Silhouette (Simulating Sujeito/Produto) */}
+Line 89: depth=12, opens=1, closes=0 -> <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
+Line 90: depth=12, opens=0, closes=0 -> {template.id.includes("boteco") || template.id.includes("combo") ? (
+Line 91: depth=13, opens=1, closes=0 -> <div className="w-24 h-32 rounded-t-full border border-dashed border-zinc-600 flex items-center justify-center">
+Line 92: depth=13, opens=0, closes=0 -> <span className="text-[8px] uppercase tracking-wider font-bold">Produto/Sujeito</span>
+Line 93: depth=12, opens=0, closes=1 -> </div>
+Line 94: depth=12, opens=0, closes=0 -> ) : (
+Line 95: depth=13, opens=1, closes=0 -> <div className="w-20 h-20 rounded-full border border-dashed border-zinc-600 flex items-center justify-center">
+Line 96: depth=13, opens=0, closes=0 -> <span className="text-[8px] uppercase tracking-wider font-bold">Elemento Focal</span>
+Line 97: depth=12, opens=0, closes=1 -> </div>
+Line 98: depth=12, opens=0, closes=0 -> )}
+Line 99: depth=11, opens=0, closes=1 -> </div>
+Line 100: depth=11, opens=0, closes=0 -> 
+Line 101: depth=11, opens=0, closes=0 -> {/* Main Typography content */}
+Line 102: depth=12, opens=1, closes=0 -> <div className="z-10 flex flex-col gap-2.5 w-full mt-auto relative">
+Line 103: depth=12, opens=0, closes=0 -> {template.camadasTexto.map((layer, idx) => {
+Line 104: depth=12, opens=0, closes=0 -> const isHeadline = layer.funcao === "Headline Principal";
+Line 105: depth=12, opens=0, closes=0 -> const isSub = layer.funcao === "Subheadline Secundário";
+Line 106: depth=12, opens=0, closes=0 -> const isPrice = layer.funcao === "Preço / Valor";
+Line 107: depth=12, opens=0, closes=0 -> const isDate = layer.funcao === "Data / Horário";
+Line 108: depth=12, opens=0, closes=0 -> return (
+Line 109: depth=13, opens=1, closes=0 -> <div
+Line 110: depth=13, opens=0, closes=0 -> key={idx}
+Line 111: depth=13, opens=0, closes=0 -> className={`leading-tight text-center`}
+Line 112: depth=13, opens=0, closes=0 -> style={{
+Line 113: depth=13, opens=0, closes=0 -> color: layer.cor,
+Line 114: depth=13, opens=0, closes=0 -> fontFamily: layer.fonte === "Cinzel" ? "Cinzel" : layer.fonte === "Playfair Display" ? "Playfair Display" : "Montserrat",
+Line 115: depth=13, opens=0, closes=0 -> }}
+Line 116: depth=13, opens=0, closes=0 -> >
+Line 117: depth=13, opens=0, closes=0 -> {isHeadline && (
+Line 118: depth=13, opens=0, closes=0 -> <h1 className="text-sm font-black uppercase tracking-tighter" style={{ textShadow: "0 2px 4px rgba(0,0,0,0.8)" }}>
+Line 119: depth=13, opens=0, closes=0 -> {layer.conteudo}
+Line 120: depth=13, opens=0, closes=0 -> </h1>
+Line 121: depth=13, opens=0, closes=0 -> )}
+Line 122: depth=13, opens=0, closes=0 -> {isSub && (
+Line 123: depth=13, opens=0, closes=0 -> <p className="text-[8.5px] font-bold uppercase tracking-wide opacity-90">
+Line 124: depth=13, opens=0, closes=0 -> {layer.conteudo}
+Line 125: depth=13, opens=0, closes=0 -> </p>
+Line 126: depth=13, opens=0, closes=0 -> )}
+Line 127: depth=13, opens=0, closes=0 -> {isPrice && (
+Line 128: depth=13, opens=0, closes=0 -> <span className="inline-block px-2.5 py-0.5 bg-white text-black font-black text-[10px] uppercase rounded shadow-lg mt-0.5">
+Line 129: depth=13, opens=0, closes=0 -> {layer.conteudo}
+Line 130: depth=13, opens=0, closes=0 -> </span>
+Line 131: depth=13, opens=0, closes=0 -> )}
+Line 132: depth=13, opens=0, closes=0 -> {isDate && (
+Line 133: depth=13, opens=0, closes=0 -> <span className="text-[7.5px] font-black uppercase tracking-widest block mt-0.5 opacity-75">
+Line 134: depth=13, opens=0, closes=0 -> {layer.conteudo}
+Line 135: depth=13, opens=0, closes=0 -> </span>
+Line 136: depth=13, opens=0, closes=0 -> )}
+Line 137: depth=13, opens=0, closes=0 -> {!isHeadline && !isSub && !isPrice && !isDate && (
+Line 138: depth=13, opens=0, closes=0 -> <p className="text-[8px] font-medium leading-relaxed max-w-[90%] mx-auto opacity-80">
+Line 139: depth=13, opens=0, closes=0 -> {layer.conteudo}
+Line 140: depth=13, opens=0, closes=0 -> </p>
+Line 141: depth=13, opens=0, closes=0 -> )}
+Line 142: depth=12, opens=0, closes=1 -> </div>
+Line 143: depth=12, opens=0, closes=0 -> );
+Line 144: depth=12, opens=0, closes=0 -> })}
+Line 145: depth=11, opens=0, closes=1 -> </div>
+Line 146: depth=11, opens=0, closes=0 -> 
+Line 147: depth=11, opens=0, closes=0 -> {/* Footer Info */}
+Line 148: depth=12, opens=1, closes=0 -> <div className="z-10 w-full text-center mt-2 opacity-50">
+Line 149: depth=12, opens=0, closes=0 -> <span className="text-[6px] font-bold uppercase tracking-widest text-zinc-400">DESIGNER ZION DIGITAL ENGINE</span>
+Line 150: depth=11, opens=0, closes=1 -> </div>
+Line 151: depth=10, opens=0, closes=1 -> </div>
+Line 152: depth=10, opens=0, closes=0 -> 
+Line 153: depth=11, opens=1, closes=0 -> <div className="mt-4 max-w-xs text-center">
+Line 154: depth=11, opens=0, closes=0 -> <p className="text-[9px] text-zinc-400 leading-relaxed uppercase tracking-wider">
+Line 155: depth=11, opens=0, closes=0 -> Este layout utiliza a fonte <strong className="text-zinc-200">{template.camadasTexto[0]?.fonte}</strong> e tons de <strong style={{ color: template.accentColor }}>{template.corDominante}</strong>.
+Line 156: depth=11, opens=0, closes=0 -> </p>
+Line 157: depth=10, opens=0, closes=1 -> </div>
+Line 158: depth=9, opens=0, closes=1 -> </div>
+Line 159: depth=9, opens=0, closes=0 -> );
+Line 160: depth=9, opens=0, closes=0 -> })()
+Line 161: depth=9, opens=0, closes=0 -> ) : (
+Line 162: depth=9, opens=0, closes=0 -> activeImage ? (
+Line 163: depth=10, opens=1, closes=0 -> <div className="relative w-full h-full flex items-center justify-center pointer-events-none">
+Line 164: depth=10, opens=0, closes=0 -> {/* Resolution & Model Badge */}
+Line 165: depth=10, opens=0, closes=0 -> {activeImageDims && (
+Line 166: depth=11, opens=1, closes=0 -> <div className="absolute top-4 left-4 bg-black/95 backdrop-blur-md border border-white/5 rounded-xl px-3 py-2 flex flex-col gap-0.5 select-none text-[10px] pointer-events-auto font-mono text-zinc-400 z-10 shadow-2xl">
+Line 167: depth=12, opens=1, closes=0 -> <div className="flex items-center gap-1.5">
+Line 168: depth=12, opens=0, closes=0 -> <span className="w-1.5 h-1.5 rounded-full bg-[#c99b3b]" />
+Line 169: depth=12, opens=0, closes=0 -> <span className="text-zinc-200 font-bold uppercase text-[9px]">gemini-3-pro-image</span>
+Line 170: depth=11, opens=0, closes=1 -> </div>
+Line 171: depth=12, opens=1, closes=0 -> <div className="flex items-center gap-1 text-[9px]">
+Line 172: depth=12, opens=0, closes=0 -> <span>RESOLUÇÃO REAL:</span>
+Line 173: depth=12, opens=0, closes=0 -> <span className="text-[#c99b3b] font-bold">{activeImageDims.width} x {activeImageDims.height}</span>
+Line 174: depth=11, opens=0, closes=1 -> </div>
+Line 175: depth=10, opens=0, closes=1 -> </div>
+Line 176: depth=10, opens=0, closes=0 -> )}
+Line 177: depth=10, opens=0, closes=0 -> {/* The zoomable layer */}
+Line 178: depth=11, opens=1, closes=0 -> <div
+Line 179: depth=11, opens=0, closes=0 -> className="transition-transform duration-75 ease-out shadow-2xl border border-white/5 rounded-2xl bg-zinc-950 flex items-center justify-center overflow-hidden pointer-events-auto"
+Line 180: depth=11, opens=0, closes=0 -> style={{
+Line 181: depth=11, opens=0, closes=0 -> transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomPercent / 100})`,
+Line 182: depth=11, opens=0, closes=0 -> maxWidth: "90%",
+Line 183: depth=11, opens=0, closes=0 -> maxHeight: "90%",
+Line 184: depth=11, opens=0, closes=0 -> aspectRatio: store.dimensao === "16:9" ? "16/9" : store.dimensao === "9:16" ? "9/16" : store.dimensao === "4:5" ? "4/5" : "1/1"
+Line 185: depth=11, opens=0, closes=0 -> }}
+Line 186: depth=11, opens=0, closes=0 -> >
+Line 187: depth=11, opens=0, closes=0 -> <img
+Line 188: depth=11, opens=0, closes=0 -> src={activeImage}
+Line 189: depth=11, opens=0, closes=0 -> alt="Resultado Ativo"
+Line 190: depth=11, opens=0, closes=0 -> className="max-w-full max-h-full object-contain pointer-events-none"
+Line 191: depth=11, opens=0, closes=0 -> />
+Line 192: depth=10, opens=0, closes=1 -> </div>
+Line 193: depth=10, opens=0, closes=0 -> 
+Line 194: depth=10, opens=0, closes=0 -> {/* Floating Action Menu */}
+Line 195: depth=11, opens=1, closes=0 -> <div className="absolute bottom-6 left-[10%] pointer-events-auto flex flex-col gap-2 animate-in slide-in-from-bottom-2">
+Line 196: depth=11, opens=0, closes=0 -> {showImageOptions && (
+Line 197: depth=12, opens=1, closes=0 -> <div className="w-56 bg-black border border-white/5 rounded-xl shadow-2xl p-1.5 flex flex-col gap-1">
+Line 198: depth=12, opens=0, closes=0 -> <button
+Line 199: depth=12, opens=0, closes=0 -> onClick={() => { setShowImageOptions(false); setShowMaskPainter(true); }}
+Line 200: depth=12, opens=0, closes=0 -> className="flex items-center gap-3 p-2 hover:bg-zinc-900 rounded-lg text-zinc-300 hover:text-white transition-colors text-xs font-medium cursor-pointer"
+Line 201: depth=12, opens=0, closes=0 -> >
+Line 202: depth=12, opens=0, closes=0 -> <PenTool size={14} className="text-[#c99b3b]" />
+Line 203: depth=12, opens=0, closes=0 -> Pintar Máscara
+Line 204: depth=12, opens=0, closes=0 -> </button>
+Line 205: depth=12, opens=0, closes=0 -> <button
+Line 206: depth=12, opens=0, closes=0 -> onClick={() => { setShowImageOptions(false); store.updateConfig({ dimensao: "9:16" }); showToast("Dimensão alterada para Vertical!", "success"); }}
+Line 207: depth=12, opens=0, closes=0 -> className="flex items-center gap-3 p-2 hover:bg-zinc-900 rounded-lg text-zinc-300 hover:text-white transition-colors text-xs font-medium cursor-pointer"
+Line 208: depth=12, opens=0, closes=0 -> >
+Line 209: depth=12, opens=0, closes=0 -> <Smartphone size={14} className="text-[#c99b3b]" />
+Line 210: depth=12, opens=0, closes=0 -> Versão Vertical (9:16)
+Line 211: depth=12, opens=0, closes=0 -> </button>
+Line 212: depth=11, opens=0, closes=1 -> </div>
+Line 213: depth=11, opens=0, closes=0 -> )}
+Line 214: depth=11, opens=0, closes=0 -> 
+Line 215: depth=12, opens=1, closes=0 -> <div className="flex items-center gap-2">
+Line 216: depth=12, opens=0, closes=0 -> <button
+Line 217: depth=12, opens=0, closes=0 -> onClick={() => setShowExportMenu(true)}
+Line 218: depth=12, opens=0, closes=0 -> className="flex items-center gap-2 px-5 py-2.5 bg-white hover:bg-zinc-200 text-black text-xs font-bold uppercase tracking-wider rounded-xl transition-colors shadow-lg cursor-pointer"
+Line 219: depth=12, opens=0, closes=0 -> >
+Line 220: depth=12, opens=0, closes=0 -> <Maximize size={14} />
+Line 221: depth=12, opens=0, closes=0 -> DOWNLOAD
+Line 222: depth=12, opens=0, closes=0 -> </button>
+Line 223: depth=12, opens=0, closes=0 -> <button
+Line 224: depth=12, opens=0, closes=0 -> onClick={() => setShowImageOptions(!showImageOptions)}
+Line 225: depth=12, opens=0, closes=0 -> className={`p-2.5 rounded-xl transition-colors shadow-lg cursor-pointer ${showImageOptions ? 'bg-[#c99b3b] text-black' : 'bg-[#121215] hover:bg-[#1A1A1C] border border-white/10/80 text-zinc-400 hover:text-white'}`}
+Line 226: depth=12, opens=0, closes=0 -> >
+Line 227: depth=12, opens=0, closes=0 -> <MoreVertical size={16} />
+Line 228: depth=12, opens=0, closes=0 -> </button>
+Line 229: depth=11, opens=0, closes=1 -> </div>
+Line 230: depth=10, opens=0, closes=1 -> </div>
+Line 231: depth=9, opens=0, closes=1 -> </div>
+Line 232: depth=9, opens=0, closes=0 -> ) : (
+Line 233: depth=10, opens=1, closes=0 -> <div className="text-center p-6 select-none w-full max-w-sm">
+Line 234: depth=10, opens=0, closes=0 -> {isGenerating ? (
+Line 235: depth=11, opens=1, closes=0 -> <div className="flex flex-col items-center gap-5 w-full">
+Line 236: depth=11, opens=0, closes=0 -> 
+Line 237: depth=11, opens=0, closes=0 -> {/* Animação do Progress Ring ou Barra Horizontal elegante */}
+Line 238: depth=12, opens=1, closes=0 -> <div className="w-full bg-black/40 border border-white/5 p-6 rounded-2xl space-y-4 shadow-xl">
+Line 239: depth=13, opens=1, closes=0 -> <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-wider text-zinc-400">
+Line 240: depth=13, opens=0, closes=0 -> <span className="text-[#c99b3b] flex items-center gap-1.5 font-bold">
+Line 241: depth=13, opens=0, closes=0 -> <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse inline-block" />
+Line 242: depth=13, opens=0, closes=0 -> Renderizando Card Premium
+Line 243: depth=13, opens=0, closes=0 -> </span>
+Line 244: depth=13, opens=0, closes=0 -> <span className="font-mono text-[#c99b3b]">{progressPercent}%</span>
+Line 245: depth=12, opens=0, closes=1 -> </div>
+Line 246: depth=12, opens=0, closes=0 -> 
+Line 247: depth=12, opens=0, closes=0 -> {/* Contador Regressivo Inteligente */}
+Line 248: depth=13, opens=1, closes=0 -> <div className="text-center py-2 bg-zinc-900/50 border border-white/5 rounded-xl space-y-1">
+Line 249: depth=13, opens=0, closes=0 -> <span className="text-[9px] text-zinc-500 uppercase tracking-wider font-extrabold block">Tempo Estimado Restante</span>
+Line 250: depth=13, opens=0, closes=0 -> <span className="text-2xl font-black text-white font-mono tracking-tight block">
+Line 251: depth=13, opens=0, closes=0 -> {countdown > 1 ? `${countdown}s` : "Finalizando..."}
+Line 252: depth=13, opens=0, closes=0 -> </span>
+Line 253: depth=12, opens=0, closes=1 -> </div>
+Line 254: depth=12, opens=0, closes=0 -> 
+Line 255: depth=12, opens=0, closes=0 -> {/* Barra de progresso */}
+Line 256: depth=13, opens=1, closes=0 -> <div className="w-full h-2 bg-zinc-900 rounded-full overflow-hidden p-[2px] border border-white/5">
+Line 257: depth=14, opens=1, closes=0 -> <div
+Line 258: depth=14, opens=0, closes=0 -> className="h-full bg-gradient-to-r from-[#c99b3b] via-yellow-500 to-amber-600 transition-all duration-300 rounded-full"
+Line 259: depth=14, opens=0, closes=0 -> style={{ width: `${progressPercent}%` }}
+Line 260: depth=14, opens=0, closes=0 -> />
+Line 261: depth=13, opens=0, closes=1 -> </div>
+Line 262: depth=13, opens=0, closes=0 -> 
+Line 263: depth=13, opens=0, closes=0 -> {/* Mensagem atual */}
+Line 264: depth=13, opens=0, closes=0 -> <p className="text-[9px] text-zinc-400 font-medium tracking-wide text-center pt-1 transition-all duration-300 leading-relaxed min-h-[24px]">
+Line 265: depth=13, opens=0, closes=0 -> {progressMessage}
+Line 266: depth=13, opens=0, closes=0 -> </p>
+Line 267: depth=12, opens=0, closes=1 -> </div>
+Line 268: depth=12, opens=0, closes=0 -> 
+Line 269: depth=12, opens=0, closes=0 -> <p className="text-[8px] text-zinc-600 font-bold uppercase tracking-wider">Conectado ao Engine de IA</p>
+Line 270: depth=11, opens=0, closes=1 -> </div>
+Line 271: depth=11, opens=0, closes=0 -> ) : (
+Line 272: depth=12, opens=1, closes=0 -> <div className="flex flex-col items-center gap-3.5">
+Line 273: depth=13, opens=1, closes=0 -> <div className="w-10 h-10 rounded-full bg-[#1A1A1C] border border-white/10 flex items-center justify-center text-zinc-655 mb-1.5">
+Line 274: depth=13, opens=0, closes=0 -> <Eye size={16} />
+Line 275: depth=12, opens=0, closes=1 -> </div>
+Line 276: depth=12, opens=0, closes=0 -> <p className="text-[10.5px] font-black text-zinc-550 uppercase tracking-widest">Aguardando Criação</p>
+Line 277: depth=12, opens=0, closes=0 -> <p className="text-[9px] text-zinc-600 max-w-xs leading-relaxed mt-1">Monte os parâmetros no formulário central e inicie a geração da imagem.</p>
+Line 278: depth=11, opens=0, closes=1 -> </div>
+Line 279: depth=11, opens=0, closes=0 -> )}
+Line 280: depth=10, opens=0, closes=1 -> </div>
+Line 281: depth=10, opens=0, closes=0 -> )
+Line 282: depth=10, opens=0, closes=0 -> )}
+Line 283: depth=9, opens=0, closes=1 -> </div>
+Line 284: depth=9, opens=0, closes=0 -> 
+Line 285: depth=8, opens=0, closes=1 -> </div>
+Line 286: depth=8, opens=0, closes=0 -> 
+Line 287: depth=8, opens=0, closes=0 -> 
+Line 288: depth=8, opens=0, closes=0 -> 
+Line 289: depth=8, opens=0, closes=0 -> {/* AJUSTE LOCALIZADO / REFINAMENTO BAR (ESTILO EXCLUSIVO SCREENSHOT) */}
+Line 290: depth=9, opens=1, closes=0 -> <div className="border-t border-white/5 bg-[#0A0A0A] p-4 shrink-0 flex items-center gap-3">
+Line 291: depth=10, opens=1, closes=0 -> <div className="relative flex-1">
+Line 292: depth=10, opens=0, closes=0 -> <input
+Line 293: depth=10, opens=0, closes=0 -> type="text"
+Line 294: depth=10, opens=0, closes=0 -> placeholder="Instrução de ajuste localizado ou estilo..."
+Line 295: depth=10, opens=0, closes=0 -> value={refineQuery}
+Line 296: depth=10, opens=0, closes=0 -> onChange={(e) => setRefineQuery(e.target.value)}
+Line 297: depth=10, opens=0, closes=0 -> onKeyDown={(e) => e.key === "Enter" && handleRefine()}
+Line 298: depth=10, opens=0, closes=0 -> className="w-full bg-[#121215] border border-white/5 hover:border-zinc-700 text-xs rounded-lg px-4 py-2.5 text-zinc-200 placeholder:text-zinc-600 focus:outline-none transition-colors"
+Line 299: depth=10, opens=0, closes=0 -> />
+Line 300: depth=9, opens=0, closes=1 -> </div>
+Line 301: depth=9, opens=0, closes=0 -> <button
+Line 302: depth=9, opens=0, closes=0 -> onClick={handleRefine}
+Line 303: depth=9, opens=0, closes=0 -> className="px-6 py-2.5 bg-[#c99b3b] hover:bg-[#b5872c] text-black text-xs font-bold uppercase tracking-widest rounded-lg transition-all active:scale-95 cursor-pointer shadow-md"
+Line 304: depth=9, opens=0, closes=0 -> >
+Line 305: depth=9, opens=0, closes=0 -> Refinar
+Line 306: depth=9, opens=0, closes=0 -> </button>
+Line 307: depth=8, opens=0, closes=1 -> </div>
+Line 308: depth=8, opens=0, closes=0 -> 
+Line 309: depth=7, opens=0, closes=1 -> </div>
+Line 310: depth=7, opens=0, closes=0 -> 
+Line 311: depth=7, opens=0, closes=0 -> {/* Right Sidebar for Masonry Gallery and Info */}
+Line 312: depth=8, opens=1, closes=0 -> <div className="w-[300px] 2xl:w-[350px] bg-[#0A0A0A] border-l border-white/5 flex flex-col overflow-y-auto custom-scrollbar shrink-0">
+Line 313: depth=9, opens=1, closes=0 -> <div className="flex-1 flex flex-col">
+Line 314: depth=9, opens=0, closes=0 -> {/* Galeria Masonry inferior - Memoized */}
+Line 315: depth=10, opens=1, closes=0 -> <div className="border-t border-white/5 bg-black/35 p-5 shrink-0 select-none">
+Line 316: depth=11, opens=1, closes=0 -> <div className="flex justify-between items-center mb-3">
+Line 317: depth=11, opens=0, closes=0 -> <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Galeria Masonry</span>
+Line 318: depth=10, opens=0, closes=1 -> </div>
+Line 319: depth=10, opens=0, closes=0 -> <MasonryGallery
+Line 320: depth=10, opens=0, closes=0 -> exportFormat={exportFormat}
+Line 321: depth=10, opens=0, closes=0 -> showToast={showToast}
+Line 322: depth=10, opens=0, closes=0 -> />
+Line 323: depth=9, opens=0, closes=1 -> </div>
+Line 324: depth=9, opens=0, closes=0 -> 
+Line 325: depth=9, opens=0, closes=0 -> 
+Line 326: depth=9, opens=0, closes=0 -> {/* Instrução do Sistema (Colapsável) */}
+Line 327: depth=9, opens=0, closes=0 -> {store.lastSystemInstruction && (
+Line 328: depth=10, opens=1, closes=0 -> <div className="border-t border-white/5 bg-[#c99b3b]/5 shrink-0 transition-all duration-300">
+Line 329: depth=10, opens=0, closes=0 -> {/* Header / Gatilho */}
+Line 330: depth=11, opens=1, closes=0 -> <div
+Line 331: depth=11, opens=0, closes=0 -> onClick={() => setIsSystemInstructionExpanded(!isSystemInstructionExpanded)}
+Line 332: depth=11, opens=0, closes=0 -> className="flex items-center justify-between p-4 cursor-pointer hover:bg-[#c99b3b]/10 transition-colors select-none"
+Line 333: depth=11, opens=0, closes=0 -> >
+Line 334: depth=11, opens=0, closes=0 -> <span className="text-xs font-semibold text-[#c99b3b] flex items-center gap-1.5">
+Line 335: depth=11, opens=0, closes=0 -> {isSystemInstructionExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+Line 336: depth=11, opens=0, closes=0 -> <Sparkles size={11} /> Instrução do Sistema (Para Modelo AI)
+Line 337: depth=11, opens=0, closes=0 -> </span>
+Line 338: depth=11, opens=0, closes=0 -> 
+Line 339: depth=11, opens=0, closes=0 -> <button
+Line 340: depth=11, opens=0, closes=0 -> onClick={(e) => {
+Line 341: depth=11, opens=0, closes=0 -> e.stopPropagation();
+Line 342: depth=11, opens=0, closes=0 -> navigator.clipboard.writeText(store.lastSystemInstruction);
+Line 343: depth=11, opens=0, closes=0 -> showToast("Instrução do sistema copiada!", "success");
+Line 344: depth=11, opens=0, closes=0 -> }}
+Line 345: depth=11, opens=0, closes=0 -> className="text-[9px] font-bold uppercase tracking-wider text-[#c99b3b] hover:text-[#d4af37] transition-colors px-2 py-1 bg-[#c99b3b]/10 border border-[#c99b3b]/30 rounded-lg cursor-pointer flex items-center gap-1"
+Line 346: depth=11, opens=0, closes=0 -> >
+Line 347: depth=11, opens=0, closes=0 -> <Copy size={9} /> Copiar Instrução
+Line 348: depth=11, opens=0, closes=0 -> </button>
+Line 349: depth=10, opens=0, closes=1 -> </div>
+Line 350: depth=10, opens=0, closes=0 -> 
+Line 351: depth=10, opens=0, closes=0 -> {/* Conteúdo Expansível */}
+Line 352: depth=10, opens=0, closes=0 -> {isSystemInstructionExpanded && (
+Line 353: depth=11, opens=1, closes=0 -> <div className="p-4 pt-0 border-t border-white/5 animate-in fade-in duration-200">
+Line 354: depth=12, opens=1, closes=0 -> <div className="bg-zinc-950/80 border border-white/5 p-3.5 rounded-xl max-h-[90px] overflow-y-auto font-mono text-[10px] text-zinc-300 leading-relaxed scrollbar-thin select-all">
+Line 355: depth=12, opens=0, closes=0 -> {store.lastSystemInstruction}
+Line 356: depth=11, opens=0, closes=1 -> </div>
+Line 357: depth=11, opens=0, closes=0 -> <p className="text-[8px] text-zinc-500 mt-1.5 font-semibold">
+Line 358: depth=11, opens=0, closes=0 -> Coloque esta instrução do sistema no console do Google Cloud Agent Platform.
+Line 359: depth=11, opens=0, closes=0 -> </p>
+Line 360: depth=10, opens=0, closes=1 -> </div>
+Line 361: depth=10, opens=0, closes=0 -> )}
+Line 362: depth=9, opens=0, closes=1 -> </div>
+Line 363: depth=9, opens=0, closes=0 -> )}
+Line 364: depth=9, opens=0, closes=0 -> 
+Line 365: depth=9, opens=0, closes=0 -> {/* Prompt Completo (Colapsável) */}
+Line 366: depth=10, opens=1, closes=0 -> <div className="border-t border-white/5 bg-black/40 shrink-0 transition-all duration-300">
+Line 367: depth=10, opens=0, closes=0 -> {/* Header / Gatilho */}
+Line 368: depth=11, opens=1, closes=0 -> <div
+Line 369: depth=11, opens=0, closes=0 -> onClick={() => setIsFullPromptExpanded(!isFullPromptExpanded)}
+Line 370: depth=11, opens=0, closes=0 -> className="flex items-center justify-between p-4 cursor-pointer hover:bg-black/60 transition-colors select-none"
+Line 371: depth=11, opens=0, closes=0 -> >
+Line 372: depth=11, opens=0, closes=0 -> <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 flex items-center gap-1.5">
+Line 373: depth=11, opens=0, closes=0 -> {isFullPromptExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+Line 374: depth=11, opens=0, closes=0 -> <Sparkles size={11} /> Prompt Completo de Geração (Mestre)
+Line 375: depth=11, opens=0, closes=0 -> </span>
+Line 376: depth=11, opens=0, closes=0 -> 
+Line 377: depth=11, opens=0, closes=0 -> <button
+Line 378: depth=11, opens=0, closes=0 -> onClick={(e) => {
+Line 379: depth=11, opens=0, closes=0 -> e.stopPropagation();
+Line 380: depth=11, opens=0, closes=0 -> navigator.clipboard.writeText(store.lastGeneratedPrompt || buildMasterPrompt(store));
+Line 381: depth=11, opens=0, closes=0 -> showToast("Prompt mestre copiado!", "success");
+Line 382: depth=11, opens=0, closes=0 -> }}
+Line 383: depth=11, opens=0, closes=0 -> className="text-[9px] font-bold uppercase tracking-wider text-zinc-400 hover:text-white transition-colors px-2.5 py-1 bg-[#1A1A1C] border border-white/10 rounded-lg cursor-pointer flex items-center gap-1"
+Line 384: depth=11, opens=0, closes=0 -> >
+Line 385: depth=11, opens=0, closes=0 -> <Copy size={9} /> Copiar Prompt Completo
+Line 386: depth=11, opens=0, closes=0 -> </button>
+Line 387: depth=10, opens=0, closes=1 -> </div>
+Line 388: depth=10, opens=0, closes=0 -> 
+Line 389: depth=10, opens=0, closes=0 -> {/* Conteúdo Expansível */}
+Line 390: depth=10, opens=0, closes=0 -> {isFullPromptExpanded && (
+Line 391: depth=11, opens=1, closes=0 -> <div className="p-4 pt-0 border-t border-white/5 animate-in fade-in duration-200">
+Line 392: depth=12, opens=1, closes=0 -> <div className="bg-zinc-950/80 border border-white/5 p-3.5 rounded-xl max-h-[90px] overflow-y-auto font-mono text-[10px] text-zinc-400 leading-relaxed scrollbar-thin select-all">
+Line 393: depth=12, opens=0, closes=0 -> {store.lastGeneratedPrompt || buildMasterPrompt(store)}
+Line 394: depth=11, opens=0, closes=1 -> </div>
+Line 395: depth=11, opens=0, closes=0 -> <p className="text-[8px] text-zinc-600 mt-1.5">
+Line 396: depth=11, opens=0, closes=0 -> Use este prompt completo em outras ferramentas de IA para recriar ou aprimorar sua imagem com as mesmas diretrizes.
+Line 397: depth=11, opens=0, closes=0 -> </p>
+Line 398: depth=10, opens=0, closes=1 -> </div>
+Line 399: depth=10, opens=0, closes=0 -> )}
+Line 400: depth=9, opens=0, closes=1 -> </div>
+Line 401: depth=9, opens=0, closes=0 -> 
+Line 402: depth=9, opens=0, closes=0 -> 
+Line 403: depth=8, opens=0, closes=1 -> </div>
+Line 404: depth=7, opens=0, closes=1 -> </div>
+Line 405: depth=6, opens=0, closes=1 -> </div>
+Line 406: depth=5, opens=0, closes=1 -> </div>
+Line 407: depth=5, opens=0, closes=0 -> 
+Line 408: depth=4, opens=0, closes=1 -> </div>
+Line 409: depth=3, opens=0, closes=1 -> </div>
+Line 410: depth=2, opens=0, closes=1 -> </div>
+Line 411: depth=2, opens=0, closes=0 -> 

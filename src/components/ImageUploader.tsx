@@ -13,7 +13,37 @@ interface ImageUploaderProps {
 }
 
 const compressImage = (base64Str: string, maxWidth = 1024, maxHeight = 1024, quality = 0.75): Promise<string> => {
-  return Promise.resolve(base64Str);
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      let width = img.width;
+      let height = img.height;
+      if (width > maxWidth || height > maxHeight) {
+        if (width > height) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        } else {
+          width = Math.round((width * maxHeight) / height);
+          height = maxHeight;
+        }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/webp", quality));
+      } else {
+        resolve(base64Str);
+      }
+    };
+    img.onerror = () => {
+      resolve(base64Str);
+    };
+    img.src = base64Str;
+  });
 };
 
 export const ImageUploader: React.FC<ImageUploaderProps> = ({
@@ -177,7 +207,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
             <div className="grid grid-cols-4 gap-2 max-h-[140px] overflow-y-auto custom-scrollbar pr-1">
               {currentList.map((item, idx) => (
                 <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-zinc-800 bg-zinc-950 group">
-                  <img src={`data:image/jpeg;base64,${item}`} className="w-full h-full object-cover" alt={`Ref ${idx + 1}`} />
+                  <img src={item.startsWith("data:image/") ? item : `data:image/jpeg;base64,${item}`} className="w-full h-full object-cover" alt={`Ref ${idx + 1}`} />
                   <button
                     onClick={() => removeImage(idx)}
                     className="absolute top-1 right-1 p-1 bg-black/80 hover:bg-red-600 rounded text-white transition-colors cursor-pointer"
@@ -207,7 +237,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       if (base64) {
         return (
           <div className="relative aspect-square w-24 rounded-lg overflow-hidden border border-zinc-800 bg-zinc-950 group" onClick={(e) => e.stopPropagation()}>
-            <img src={`data:image/jpeg;base64,${base64}`} className="w-full h-full object-cover" alt="Anexo Ref" />
+            <img src={base64.startsWith("data:image/") ? base64 : `data:image/jpeg;base64,${base64}`} className="w-full h-full object-cover" alt="Anexo Ref" />
             <button
               onClick={(e) => {
                 e.stopPropagation();

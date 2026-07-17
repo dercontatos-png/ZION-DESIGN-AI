@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useProjectStore } from "../store/useProjectStore";
+import { useClientStore } from "../store/useClientStore";
 import {
   Sparkles,
   ChevronRight,
@@ -8,7 +9,10 @@ import {
   Play,
   RefreshCw,
   Edit2,
-  Check
+  Check,
+  Plus,
+  FolderOpen,
+  Trash2
 } from "lucide-react";
 
 interface SidebarProps {
@@ -23,9 +27,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   showToast
 }) => {
   const store = useProjectStore();
+  const { setActiveClient } = useClientStore();
   const [isTesting, setIsTesting] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempProjectName, setTempProjectName] = useState("");
+  const [showProjectSelector, setShowProjectSelector] = useState(false);
 
   const handleTestToken = () => {
     setIsTesting(true);
@@ -52,18 +58,43 @@ export const Sidebar: React.FC<SidebarProps> = ({
     setIsEditingName(false);
   };
 
+  const handleNewProject = () => {
+    store.createProject();
+    setActiveClient(null);
+    showToast("Nova conversa iniciada. Todas as configurações foram limpas.", "success");
+  };
+
+  const handleDeleteProject = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    store.deleteProject(id);
+    showToast("Conversa deletada.", "success");
+    if (store.projectsList.length <= 1) {
+      setShowProjectSelector(false);
+    }
+  };
+
   return (
     <div className="w-[15%] bg-[#0f0f11] border-r border-zinc-800/80 flex flex-col h-full shrink-0 select-none">
       
       {/* Header da Sidebar com Nome do Projeto Editável e Badge */}
-      <div className="p-6 flex flex-col gap-3 border-b border-zinc-800 shrink-0">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded bg-[#ad8330] flex items-center justify-center font-bold text-black text-sm shrink-0">
-            DZ
+      <div className="p-6 flex flex-col gap-3 border-b border-zinc-800 shrink-0 relative">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded bg-[#ad8330] flex items-center justify-center font-bold text-black text-sm shrink-0">
+              DZ
+            </div>
+            <span className="font-extrabold text-xs uppercase tracking-widest text-[#ad8330]">
+              Designer Zion
+            </span>
           </div>
-          <span className="font-extrabold text-xs uppercase tracking-widest text-[#ad8330]">
-            Designer Zion
-          </span>
+          
+          <button 
+            onClick={handleNewProject}
+            className="w-7 h-7 rounded bg-[#ad8330]/10 hover:bg-[#ad8330]/20 flex items-center justify-center text-[#ad8330] transition-colors"
+            title="Nova Conversa (Zerar Configurações)"
+          >
+            <Plus size={14} />
+          </button>
         </div>
         
         {/* Nome do projeto editável */}
@@ -79,7 +110,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
               autoFocus
             />
           ) : (
-            <span className="text-[10px] font-black uppercase tracking-wider text-zinc-300 truncate max-w-[80%]">
+            <span 
+              className="text-[10px] font-black uppercase tracking-wider text-zinc-300 truncate max-w-[80%] cursor-pointer hover:text-white"
+              onClick={() => setShowProjectSelector(!showProjectSelector)}
+              title="Trocar Conversa"
+            >
               {activeProjectName}
             </span>
           )}
@@ -91,10 +126,39 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {isEditingName ? <Check size={10} /> : <Edit2 size={10} className="opacity-40 group-hover:opacity-100 transition-opacity" />}
           </button>
         </div>
+        
+        {showProjectSelector && !isEditingName && (
+          <div className="absolute top-full left-6 right-6 mt-1 bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto">
+            {store.projectsList.map((p) => (
+              <div
+                key={p.id}
+                className={`w-full flex items-center justify-between px-3 py-2 border-b border-zinc-800/50 hover:bg-zinc-800 transition-colors cursor-pointer ${
+                  p.id === store.activeProjectId ? "text-[#ad8330]" : "text-zinc-400"
+                }`}
+                onClick={() => {
+                  store.loadProjectById(p.id);
+                  setShowProjectSelector(false);
+                  showToast(`Conversa "${p.name}" carregada.`, "success");
+                }}
+              >
+                <span className="text-[10px] font-bold uppercase tracking-wider truncate mr-2">
+                  {p.name}
+                </span>
+                <button
+                  onClick={(e) => handleDeleteProject(p.id, e)}
+                  className="text-zinc-600 hover:text-red-500 transition-colors p-1"
+                  title="Deletar Conversa"
+                >
+                  <Trash2 size={10} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
-        <div className="mt-0.5">
+        <div className="mt-0.5 flex justify-between items-center">
           <span className="inline-block bg-[#ad8330]/20 border border-[#ad8330]/40 text-[#ad8330] text-[9.5px] font-black uppercase tracking-widest px-3 py-1 rounded-full truncate max-w-full">
-            PROJETO ATIVO
+            CONVERSA ATIVA
           </span>
         </div>
       </div>

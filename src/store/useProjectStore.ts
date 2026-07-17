@@ -89,6 +89,8 @@ const defaultConfig: ProjectConfig = {
   lateralGradient: false,
   additionalPrompt: "",
   promptCenario: "",
+  promptDesign: "",
+  promptTipografia: "",
   negativePrompt: "",
   enableTypography: false,
   camadasTexto: [],
@@ -97,16 +99,24 @@ const defaultConfig: ProjectConfig = {
   designRefBase64: "",
   logoBase64: "",
   useLogo: false,
+  logoPosOverlay: "top_center",
+  logoSizeOverlay: 20,
+  logoInclusionType: "overlay",
   sujeitosBase64List: [],
   cenariosBase64List: [],
   tipografiaRefsList: [],
   designRefsList: [],
   logosList: [],
   variations: 1,
+  multiplesPersons: false,
+  gendersDescription: "",
   modoCriacao: "Criativo",
   nivelCriativo: 50,
   floatingElementsMode: "auto",
-  floatingElementsCustom: ""
+  floatingElementsCustom: "",
+  somentePrompt: false,
+  enableEstiloVisual: true,
+  estiloVisualCustom: ""
 };
 
 const saveProjectsToLocalStorage = (list: any[]) => {
@@ -222,13 +232,14 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
   },
 
   // Referências de estilo
-  addReferenciaEstilo: (url, data) => {
+  addReferenciaEstilo: (url, data, descricao = "") => {
     const current = get().referenciasEstilo;
+    const finalDesc = descricao || (typeof data === "string" && data.length < 500 ? data : "");
     const newRef: EstiloReferencia = {
       id: `ref_${Date.now()}`,
       url,
-      data,
-      descricao: ""
+      data: typeof data === "string" && data.length < 500 ? "" : data,
+      descricao: finalDesc
     };
     get().updateConfig({ referenciasEstilo: [...current, newRef] });
   },
@@ -325,7 +336,9 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
         activeProjectId: id,
         ...defaultConfig,
         galeriaImages: [],
-        activeImageIndex: 0
+        activeImageIndex: 0,
+        lastGeneratedPrompt: "",
+        lastSystemInstruction: ""
       };
     });
   },

@@ -52,6 +52,8 @@ export interface ProjectConfig {
   lateralGradient: boolean;
   additionalPrompt: string;
   promptCenario: string; // Prompt Adicional Cenário
+  promptDesign?: string; // Descrição de extração do layout do design obrigatório
+  promptTipografia?: string; // Descrição de extração do texto/tipografia do print
   negativePrompt: string;
   enableTypography: boolean;
   
@@ -64,6 +66,9 @@ export interface ProjectConfig {
   designRefBase64: string; // Referência de Design Obrigatório
   logoBase64: string; // Logotipo da Marca
   useLogo: boolean;
+  logoPosOverlay?: "top_center" | "top_left" | "top_right" | "bottom_left" | "bottom_right";
+  logoSizeOverlay?: number;
+  logoInclusionType?: "overlay" | "embedded";
 
   // Suporte a múltiplos arquivos
   sujeitosBase64List?: string[];
@@ -77,10 +82,15 @@ export interface ProjectConfig {
   noPeople?: boolean;
 
   variations: number;
+  multiplesPersons?: boolean;
+  gendersDescription?: string;
   modoCriacao: string;
   nivelCriativo: number; // Slider de 0 a 100
   floatingElementsMode: "off" | "auto" | "custom";
   floatingElementsCustom: string;
+  somentePrompt?: boolean;
+  enableEstiloVisual?: boolean;
+  estiloVisualCustom?: string;
 }
 
 export interface ImageResponse {
