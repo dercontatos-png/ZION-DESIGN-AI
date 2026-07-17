@@ -102,6 +102,7 @@ const defaultConfig: ProjectConfig = {
   logoPosOverlay: "top_center",
   logoSizeOverlay: 20,
   logoInclusionType: "overlay",
+  logoStyleOverlay: "original",
   sujeitosBase64List: [],
   cenariosBase64List: [],
   tipografiaRefsList: [],

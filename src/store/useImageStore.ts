@@ -188,7 +188,7 @@ export const useImageStore = create<ImageStoreState>((set, get) => ({
     environment: "",
     useEnvRef: false,
     envColor: "Neutro",
-    colorCode: "#ad8330",
+    colorCode: "#b8942b",
     enableAmbientColor: false,
     rimLight: "Nenhuma",
     enableRimLight: false,

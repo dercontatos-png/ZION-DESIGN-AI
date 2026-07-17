@@ -56,15 +56,15 @@ interface ChatAssistenteProps {
 
 const assistants: AssistantConfig[] = [
   // Designers / Creators
-  { id: "prompt-extrator", label: "Prompt Extractor", sublabel: "Technical Analyst", desc: "Extrai prompts técnicos de referências visuais.", icon: <Code size={14} />, color: "#ad8330" },
+  { id: "prompt-extrator", label: "Prompt Extractor", sublabel: "Technical Analyst", desc: "Extrai prompts técnicos de referências visuais.", icon: <Code size={14} />, color: "#b8942b" },
   { id: "creative-assistant", label: "Assistente Criativo", sublabel: "Creative Assistant", desc: "Ideias para cenários, iluminação e composições.", icon: <Sparkles size={14} />, color: "#d4af37" },
-  { id: "diretor-criativo", label: "Diretor Cr[IA]tivo", sublabel: "Creative Director", desc: "Saia da tela em branco com maestria e torne seu design ainda mais incrível.", icon: <Eye size={14} />, color: "#ad8330" },
+  { id: "diretor-criativo", label: "Diretor Cr[IA]tivo", sublabel: "Creative Director", desc: "Saia da tela em branco com maestria e torne seu design ainda mais incrível.", icon: <Eye size={14} />, color: "#b8942b" },
   { id: "analisador-paginas", label: "Analisador de Páginas", sublabel: "Critical Design Analyzer", desc: "Receba opiniões profissionais de uma IA treinada pra extrair seu melhor.", icon: <Search size={14} />, color: "#ffffff" },
   
   // Copywriters & Marketers
-  { id: "copy-ads", label: "Copy Builder [Ads]", sublabel: "Copywriter", desc: "Crie anúncios estáticos que param o scroll, ativam dor e puxam o clique.", icon: <Megaphone size={14} />, color: "#ad8330" },
+  { id: "copy-ads", label: "Copy Builder [Ads]", sublabel: "Copywriter", desc: "Crie anúncios estáticos que param o scroll, ativam dor e puxam o clique.", icon: <Megaphone size={14} />, color: "#b8942b" },
   { id: "copy-carroseis", label: "Copy Builder [Carrossel]", sublabel: "Copywriter", desc: "Crie carrosséis N3 que prendem, aprofundam a consciência e transformam atenção em ação.", icon: <Layers size={14} />, color: "#d4af37" },
-  { id: "easy-copy", label: "Easy Copy", sublabel: "Copywriter", desc: "Crie copys de alta conversão para sites/lps de qualquer nicho com alta qualidade.", icon: <FileText size={14} />, color: "#ad8330" },
+  { id: "easy-copy", label: "Easy Copy", sublabel: "Copywriter", desc: "Crie copys de alta conversão para sites/lps de qualquer nicho com alta qualidade.", icon: <FileText size={14} />, color: "#b8942b" },
   
   // Strategists
   { id: "analise-estrategica", label: "Análise Estratégica", sublabel: "Estrategista", desc: "Investigue seu lead a fundo, descubra dores reais e entre com vantagem estratégica.", icon: <Check size={14} />, color: "#4f46e5" },
@@ -173,7 +173,7 @@ const ClientForm = () => {
           ))}
         </div>
       </div>
-      <button type="submit" className="w-full bg-[#ad8330]/20 text-[#ad8330] border border-[#ad8330]/40 p-2 text-xs font-bold uppercase rounded-lg hover:bg-[#ad8330]/30 transition-colors">Cadastrar Cliente</button>
+      <button type="submit" className="w-full bg-[#b8942b]/20 text-[#b8942b] border border-[#b8942b]/40 p-2 text-xs font-bold uppercase rounded-lg hover:bg-[#b8942b]/30 transition-colors">Cadastrar Cliente</button>
     </form>
   );
 };
@@ -1191,7 +1191,7 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
           const newColors = { ...store.cores };
           newColors.ambiente = client.paletaCores[0] || "#000000";
           newColors.recorte = client.paletaCores[1] || "#ffffff";
-          newColors.complementar = client.paletaCores[2] || "#c5a880";
+          newColors.complementar = client.paletaCores[2] || "#d4af37";
           delete newColors.paleta;
           
           store.updateConfig({ cores: newColors, coresAutomaticas: false });
@@ -1251,11 +1251,11 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
           setIsOpen(!isOpen);
           setIsDropdownOpen(false);
         }}
-        className="relative w-14 h-14 rounded-full shadow-[0_4px_24px_rgba(197,168,128,0.25)] flex items-center justify-center cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 bg-[#121214]/90 border border-[#c5a880]/30 hover:border-[#c5a880]/60 text-[#c5a880]"
+        className="relative w-14 h-14 rounded-full shadow-[0_4px_24px_rgba(197,168,128,0.25)] flex items-center justify-center cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 bg-[#121214]/90 border border-[#d4af37]/30 hover:border-[#d4af37]/60 text-[#d4af37]"
         title="Assistente ZION AI"
       >
-        {isOpen ? <X size={22} className="text-[#c5a880]" /> : <MessageSquare size={22} className="text-[#c5a880]" />}
-        {!isOpen && <span className="absolute inset-0 rounded-full animate-ping opacity-20 bg-[#c5a880]" />}
+        {isOpen ? <X size={22} className="text-[#d4af37]" /> : <MessageSquare size={22} className="text-[#d4af37]" />}
+        {!isOpen && <span className="absolute inset-0 rounded-full animate-ping opacity-20 bg-[#d4af37]" />}
       </button>
 
       {isOpen && (
@@ -1268,28 +1268,28 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                 className="flex items-center gap-3 flex-1 group cursor-pointer rounded-xl p-1.5 -ml-1.5 hover:bg-zinc-900/60 transition-colors"
               >
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-lg text-black bg-[#ad8330]">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-lg text-black bg-[#b8942b]">
                   {activeAssistant.icon}
                 </div>
                 <div className="flex-1 text-left">
                   <div className="flex items-center gap-1.5">
                     <span className="text-[13px] font-black text-white uppercase tracking-wide">{activeAssistant.label}</span>
-                    <ChevronDown size={12} className="text-[#ad8330] group-hover:text-zinc-200 transition-all duration-200" style={{ transform: isDropdownOpen ? "rotate(180deg)" : "rotate(0)" }} />
+                    <ChevronDown size={12} className="text-[#b8942b] group-hover:text-zinc-200 transition-all duration-200" style={{ transform: isDropdownOpen ? "rotate(180deg)" : "rotate(0)" }} />
                   </div>
-                  <span className="text-[9px] font-bold tracking-widest uppercase mt-0.5 block text-[#ad8330]">{activeAssistant.sublabel}</span>
+                  <span className="text-[9px] font-bold tracking-widest uppercase mt-0.5 block text-[#b8942b]">{activeAssistant.sublabel}</span>
                 </div>
               </button>
               <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   onClick={() => setIsClientModalOpen(true)}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-400 hover:text-[#ad8330] hover:bg-zinc-900 rounded-lg transition-all cursor-pointer border border-transparent hover:border-[#ad8330]/30"
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-400 hover:text-[#b8942b] hover:bg-zinc-900 rounded-lg transition-all cursor-pointer border border-transparent hover:border-[#b8942b]/30"
                   title="Gerenciar Clientes"
                 >
                   {activeClientId ? clients.find(c => c.id === activeClientId)?.name : "Clientes"}
                 </button>
                 <button
                   onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-                  className={`p-2 rounded-lg transition-all cursor-pointer ${isHistoryOpen ? "text-[#ad8330] bg-zinc-900" : "text-zinc-500 hover:text-[#ad8330] hover:bg-zinc-900"}`}
+                  className={`p-2 rounded-lg transition-all cursor-pointer ${isHistoryOpen ? "text-[#b8942b] bg-zinc-900" : "text-zinc-500 hover:text-[#b8942b] hover:bg-zinc-900"}`}
                   title="Histórico de Conversas"
                 >
                   <FolderOpen size={14} />
@@ -1300,14 +1300,14 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
                     setActiveClient(null);
                     showToast("Nova conversa iniciada. Configurações zeradas.", "success");
                   }}
-                  className="p-2 text-zinc-500 hover:text-[#ad8330] hover:bg-zinc-900 rounded-lg transition-all cursor-pointer"
+                  className="p-2 text-zinc-500 hover:text-[#b8942b] hover:bg-zinc-900 rounded-lg transition-all cursor-pointer"
                   title="Nova Conversa (Zerar tudo)"
                 >
                   <Plus size={14} />
                 </button>
                 <button
                   onClick={clearChat}
-                  className="p-2 text-zinc-500 hover:text-[#ad8330] hover:bg-zinc-900 rounded-lg transition-all cursor-pointer"
+                  className="p-2 text-zinc-500 hover:text-[#b8942b] hover:bg-zinc-900 rounded-lg transition-all cursor-pointer"
                   title="Limpar chat do agente atual"
                 >
                   <Trash2 size={14} />
@@ -1331,14 +1331,14 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
                   {store.projectsList.map(p => (
                     <div 
                       key={p.id} 
-                      className={`flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition-colors ${p.id === store.activeProjectId ? "bg-[#ad8330]/10 border border-[#ad8330]/30" : "hover:bg-zinc-900 border border-transparent"}`}
+                      className={`flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition-colors ${p.id === store.activeProjectId ? "bg-[#b8942b]/10 border border-[#b8942b]/30" : "hover:bg-zinc-900 border border-transparent"}`}
                       onClick={() => {
                         store.loadProjectById(p.id);
                         setIsHistoryOpen(false);
                         showToast(`Conversa "${p.name}" carregada.`, "success");
                       }}
                     >
-                      <span className={`text-[11px] font-bold truncate pr-2 ${p.id === store.activeProjectId ? "text-[#ad8330]" : "text-zinc-300"}`}>{p.name}</span>
+                      <span className={`text-[11px] font-bold truncate pr-2 ${p.id === store.activeProjectId ? "text-[#b8942b]" : "text-zinc-300"}`}>{p.name}</span>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1370,11 +1370,11 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
                     title={a.label}
                     className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-white transition-all duration-200 cursor-pointer relative group ${
                       isActive 
-                        ? "ring-1 ring-[#ad8330] scale-110 shadow-md bg-zinc-900" 
+                        ? "ring-1 ring-[#b8942b] scale-110 shadow-md bg-zinc-900" 
                         : "opacity-45 hover:opacity-100 hover:scale-105 bg-zinc-950"
                     }`}
                   >
-                    <span className={isActive ? "text-[#ad8330]" : "text-zinc-400"}>{a.icon}</span>
+                    <span className={isActive ? "text-[#b8942b]" : "text-zinc-400"}>{a.icon}</span>
                     <span className="absolute bottom-10 left-1/2 -translate-x-1/2 bg-zinc-950 border border-zinc-800 text-[8px] font-black uppercase tracking-widest text-white px-2 py-1.5 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
                       {a.label}
                     </span>
@@ -1402,11 +1402,11 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
                     <p className="text-xs text-zinc-500 text-center py-4">Nenhum cliente cadastrado.</p>
                   ) : (
                     clients.map(c => (
-                      <div key={c.id} className={`p-3 rounded-xl border ${activeClientId === c.id ? 'border-[#ad8330] bg-[#ad8330]/5' : 'border-zinc-800 bg-zinc-900/50'} flex justify-between items-start`}>
+                      <div key={c.id} className={`p-3 rounded-xl border ${activeClientId === c.id ? 'border-[#b8942b] bg-[#b8942b]/5' : 'border-zinc-800 bg-zinc-900/50'} flex justify-between items-start`}>
                         <div className="flex-1 cursor-pointer" onClick={() => setActiveClient(activeClientId === c.id ? null : c.id)}>
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-xs font-black text-white uppercase tracking-wider">{c.name}</span>
-                            {activeClientId === c.id && <span className="text-[8px] bg-[#ad8330]/20 text-[#ad8330] px-2 py-0.5 rounded-full uppercase tracking-widest border border-[#ad8330]/30">Ativo</span>}
+                            {activeClientId === c.id && <span className="text-[8px] bg-[#b8942b]/20 text-[#b8942b] px-2 py-0.5 rounded-full uppercase tracking-widest border border-[#b8942b]/30">Ativo</span>}
                           </div>
                           <p className="text-[10px] text-zinc-400">Nicho: {c.niche}</p>
                           <div className="flex flex-wrap gap-1 mt-2">
@@ -1421,7 +1421,7 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
                 </div>
 
                 <div className="border-t border-zinc-800 pt-4 mt-2">
-                  <h4 className="text-[10px] font-black text-[#ad8330] uppercase tracking-widest mb-2">Novo Cliente</h4>
+                  <h4 className="text-[10px] font-black text-[#b8942b] uppercase tracking-widest mb-2">Novo Cliente</h4>
                   <ClientForm />
                 </div>
               </div>
@@ -1432,7 +1432,7 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
           {isDropdownOpen && (
             <div className="absolute top-[130px] left-3 right-3 z-50 bg-[#09090b] border border-zinc-800 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.9)] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
               <div className="p-2.5 border-b border-zinc-900">
-                <p className="text-[9px] font-black text-[#ad8330] uppercase tracking-widest">Selecionar Especialista</p>
+                <p className="text-[9px] font-black text-[#b8942b] uppercase tracking-widest">Selecionar Especialista</p>
               </div>
               <div className="overflow-y-auto max-h-[320px] divide-y divide-zinc-900/60" style={{ scrollbarWidth: "none" }}>
                 {assistants.map((a) => (
@@ -1443,14 +1443,14 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
                       activeAssistant.id === a.id ? "bg-white/[0.02]" : ""
                     }`}
                   >
-                    <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-black bg-[#ad8330] shadow-md">
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-black bg-[#b8942b] shadow-md">
                       {a.icon}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-[12px] font-black text-white uppercase tracking-wider truncate">{a.label}</span>
                         {activeAssistant.id === a.id && (
-                          <span className="text-[7.5px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-full shrink-0 bg-[#ad8330]/10 text-[#ad8330] border border-[#ad8330]/20">
+                          <span className="text-[7.5px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-full shrink-0 bg-[#b8942b]/10 text-[#b8942b] border border-[#b8942b]/20">
                             Ativo
                           </span>
                         )}
@@ -1473,9 +1473,9 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
             style={{ scrollbarWidth: "none" }}
           >
             {isDraggingOver && (
-              <div className="absolute inset-3 bg-black/95 border-2 border-dashed border-[#ad8330] rounded-2xl flex flex-col items-center justify-center gap-3 z-30 animate-in fade-in duration-150">
-                <div className="w-14 h-14 rounded-full flex items-center justify-center animate-bounce bg-[#ad8330]/10 border border-[#ad8330]/20">
-                  <UploadCloud size={28} className="text-[#ad8330]" />
+              <div className="absolute inset-3 bg-black/95 border-2 border-dashed border-[#b8942b] rounded-2xl flex flex-col items-center justify-center gap-3 z-30 animate-in fade-in duration-150">
+                <div className="w-14 h-14 rounded-full flex items-center justify-center animate-bounce bg-[#b8942b]/10 border border-[#b8942b]/20">
+                  <UploadCloud size={28} className="text-[#b8942b]" />
                 </div>
                 <p className="text-xs font-black text-white uppercase tracking-wider">Solte para Anexar Qualquer Arquivo</p>
                 <p className="text-[9px] text-zinc-500 uppercase tracking-widest">Imagens, PDFs, Documentos de Texto</p>
@@ -1484,7 +1484,7 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
 
             {activeMessages.length === 0 && !isTyping && (
               <div className="h-full flex flex-col items-center justify-center text-center gap-4 py-8">
-                <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-[#ad8330] shadow-xl bg-[#ad8330]/5 border border-[#ad8330]/15">
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-[#b8942b] shadow-xl bg-[#b8942b]/5 border border-[#b8942b]/15">
                   <Bot size={28} />
                 </div>
                 <div>
@@ -1519,7 +1519,7 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
                             key={fIdx} 
                             className="flex items-center gap-2.5 px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-xl w-48 shadow-sm text-left"
                           >
-                            <File size={16} className="text-[#ad8330] shrink-0" />
+                            <File size={16} className="text-[#b8942b] shrink-0" />
                             <div className="flex-1 min-w-0">
                               <p className="text-[10px] font-bold text-white truncate">{file.name}</p>
                               <p className="text-[8px] text-zinc-500 uppercase mt-0.5">{formatFileSize(file.size)}</p>
@@ -1534,7 +1534,7 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
                     className={`max-w-[88%] px-4 py-3 rounded-2xl text-[12px] leading-relaxed font-medium ${
                       isModel 
                         ? "bg-zinc-900/80 border border-zinc-800 text-zinc-200 rounded-tl-sm shadow-sm" 
-                        : "rounded-tr-sm text-white bg-[#ad8330]/10 border border-[#ad8330]/25 shadow-sm"
+                        : "rounded-tr-sm text-white bg-[#b8942b]/10 border border-[#b8942b]/25 shadow-sm"
                     }`}
                   >
                     {isModel ? formatMessage(msg.content) : <p className="whitespace-pre-wrap">{msg.content}</p>}
@@ -1543,7 +1543,7 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
                   {isModel && (
                     <button
                       onClick={() => applyModelMessageToEditor(index, msg.content)}
-                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider cursor-pointer transition-all active:scale-95 hover:scale-[1.02] shadow-md bg-[#ad8330]/10 border border-[#ad8330]/35 text-[#ad8330]"
+                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider cursor-pointer transition-all active:scale-95 hover:scale-[1.02] shadow-md bg-[#b8942b]/10 border border-[#b8942b]/35 text-[#b8942b]"
                     >
                       <Zap size={11} />
                       <span>Preencher Projeto ⚡</span>
@@ -1555,13 +1555,13 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
 
             {isTyping && (
               <div className="flex items-start gap-2 animate-pulse">
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-black bg-[#ad8330]">
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-black bg-[#b8942b]">
                   {activeAssistant.icon}
                 </div>
                 <div className="px-4 py-3 bg-zinc-900/70 border border-zinc-800 rounded-2xl rounded-tl-sm flex items-center gap-1.5 shadow-sm">
-                  <span className="w-1.5 h-1.5 rounded-full animate-bounce bg-[#ad8330]" style={{ animationDelay: "0ms" }} />
-                  <span className="w-1.5 h-1.5 rounded-full animate-bounce bg-[#ad8330]" style={{ animationDelay: "150ms" }} />
-                  <span className="w-1.5 h-1.5 rounded-full animate-bounce bg-[#ad8330]" style={{ animationDelay: "300ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full animate-bounce bg-[#b8942b]" style={{ animationDelay: "0ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full animate-bounce bg-[#b8942b]" style={{ animationDelay: "150ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full animate-bounce bg-[#b8942b]" style={{ animationDelay: "300ms" }} />
                 </div>
               </div>
             )}
@@ -1586,7 +1586,7 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
                           <img src={`data:${file.type};base64,${file.data}`} className="w-full h-full object-cover" alt="Preview" />
                         </div>
                       ) : (
-                        <File size={14} className="text-[#ad8330] shrink-0" />
+                        <File size={14} className="text-[#b8942b] shrink-0" />
                       )}
                       
                       <div className="flex-1 min-w-0">
@@ -1621,7 +1621,7 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
                 className="p-2.5 rounded-xl border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800 text-zinc-500 hover:text-white transition-all cursor-pointer shrink-0 mb-0.5 disabled:opacity-40"
                 title="Anexar qualquer tipo de arquivo"
               >
-                {isUploading ? <RefreshCw size={15} className="animate-spin text-[#ad8330]" /> : <Paperclip size={15} />}
+                {isUploading ? <RefreshCw size={15} className="animate-spin text-[#b8942b]" /> : <Paperclip size={15} />}
               </button>
               <textarea
                 ref={textareaRef}
@@ -1639,13 +1639,13 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
                 }}
                 placeholder={`Fale com ${activeAssistant.label}...`}
                 rows={1}
-                className="flex-1 bg-zinc-900/60 border border-zinc-800 rounded-xl px-4 py-2.5 text-[12px] text-white placeholder:text-zinc-650 focus:outline-none focus:border-[#ad8330]/50 resize-none font-medium leading-relaxed transition-colors focus:ring-1 focus:ring-[#ad8330]/20"
+                className="flex-1 bg-zinc-900/60 border border-zinc-800 rounded-xl px-4 py-2.5 text-[12px] text-white placeholder:text-zinc-650 focus:outline-none focus:border-[#b8942b]/50 resize-none font-medium leading-relaxed transition-colors focus:ring-1 focus:ring-[#b8942b]/20"
                 style={{ minHeight: "40px", maxHeight: "100px", scrollbarWidth: "none" }}
               />
               <button
                 onClick={handleSend}
                 disabled={isTyping || isUploading || (inputText.trim() === "" && attachedFiles.length === 0)}
-                className="w-10 h-10 rounded-xl flex items-center justify-center text-black bg-[#ad8330] cursor-pointer transition-all active:scale-90 disabled:opacity-30 disabled:cursor-not-allowed hover:brightness-110 shrink-0 shadow-md mb-0.5"
+                className="w-10 h-10 rounded-xl flex items-center justify-center text-black bg-[#b8942b] cursor-pointer transition-all active:scale-90 disabled:opacity-30 disabled:cursor-not-allowed hover:brightness-110 shrink-0 shadow-md mb-0.5"
               >
                 {isTyping ? <RefreshCw size={14} className="animate-spin" /> : <Send size={14} />}
               </button>

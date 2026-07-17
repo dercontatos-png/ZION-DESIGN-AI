@@ -39,7 +39,14 @@ export const downloadImage = (
               const posX = (canvas.width - logoWidth) / 2;
               const posY = marginY;
               
+              ctx.save();
+              if (logoConfig?.logoStyleOverlay === "white") {
+                ctx.filter = "brightness(0) invert(1)";
+              } else if (logoConfig?.logoStyleOverlay === "black") {
+                ctx.filter = "brightness(0)";
+              }
               ctx.drawImage(logoImg, posX, posY, logoWidth, logoHeight);
+              ctx.restore();
               res();
             };
             logoImg.onerror = () => res();

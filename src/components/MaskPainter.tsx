@@ -92,7 +92,7 @@ export const MaskPainter: React.FC<MaskPainterProps> = ({ imageUrl, onConfirm, o
       {/* Top Bar */}
       <div className="h-16 border-b border-zinc-800 bg-[#0f0f11] flex items-center justify-between px-6 shrink-0">
         <div className="flex items-center gap-3 text-zinc-100">
-          <PenTool size={18} className="text-[#ad8330]" />
+          <PenTool size={18} className="text-[#b8942b]" />
           <span className="font-bold text-sm tracking-wider uppercase">Pintar Área de Ajuste</span>
           
           <div className="ml-8 flex items-center gap-3">
@@ -103,7 +103,7 @@ export const MaskPainter: React.FC<MaskPainterProps> = ({ imageUrl, onConfirm, o
               max="100" 
               value={brushSize}
               onChange={(e) => setBrushSize(parseInt(e.target.value))}
-              className="w-32 h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-[#ad8330]"
+              className="w-32 h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-[#b8942b]"
             />
           </div>
         </div>
@@ -126,7 +126,7 @@ export const MaskPainter: React.FC<MaskPainterProps> = ({ imageUrl, onConfirm, o
 
           <button 
             onClick={handleConfirm}
-            className="px-6 py-2 bg-[#ad8330] hover:bg-[#c2963a] text-black text-xs font-black uppercase tracking-wider rounded-lg transition-colors flex items-center gap-2"
+            className="px-6 py-2 bg-[#b8942b] hover:bg-[#c2963a] text-black text-xs font-black uppercase tracking-wider rounded-lg transition-colors flex items-center gap-2"
           >
             Confirmar
           </button>
@@ -168,7 +168,7 @@ export const MaskPainter: React.FC<MaskPainterProps> = ({ imageUrl, onConfirm, o
       {/* Bottom helper text */}
       <div className="h-12 border-t border-zinc-800 bg-[#0f0f11] flex items-center justify-center">
         <div className="flex items-center gap-2 text-zinc-500 text-[11px] font-medium">
-          <div className="w-2 h-2 rounded-full bg-[#ad8330]"></div>
+          <div className="w-2 h-2 rounded-full bg-[#b8942b]"></div>
           Pinte sobre as áreas que deseja regenerar ou substituir no background.
         </div>
       </div>

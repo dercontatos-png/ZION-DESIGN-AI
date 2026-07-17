@@ -80,7 +80,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
 
   // Local UI States
   const [modoCriacao, setModoCriacao] = useState("Criativo (Padrão)");
-  const [paletaCores, setPaletaCores] = useState("#ad8330, #000000, #ffffff");
+  const [paletaCores, setPaletaCores] = useState("#b8942b, #000000, #ffffff");
   const [usarImagensFundo, setUsarImagensFundo] = useState(true);
 
   // Active Image Format/Zoom States
@@ -184,7 +184,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
                   environment: "",
                   useEnvRef: false,
                   envColor: "Neutro",
-                  colorCode: "#ad8330",
+                  colorCode: "#b8942b",
                   enableAmbientColor: false,
                   rimLight: "Nenhuma",
                   enableRimLight: false,
@@ -310,7 +310,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
                     type="text"
                     value={paletaCores}
                     onChange={(e) => setPaletaCores(e.target.value)}
-                    placeholder="Ex: #ad8330, #000000, #ffffff"
+                    placeholder="Ex: #b8942b, #000000, #ffffff"
                     className="w-full bg-zinc-950 border border-white/10 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-amber-500/50"
                   />
                 </div>
@@ -482,7 +482,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
                   <div className="flex gap-2">
                     <select
                       value={imgConfig.envColor}
-                      onChange={(e) => updateImgConfig({ envColor: e.target.value, colorCode: e.target.value === "Neutro" ? "#ad8330" : e.target.value })}
+                      onChange={(e) => updateImgConfig({ envColor: e.target.value, colorCode: e.target.value === "Neutro" ? "#b8942b" : e.target.value })}
                       className="flex-1 bg-zinc-950 border border-white/10 rounded-lg p-2 text-xs text-white focus:outline-none"
                     >
                       <option value="Neutro">Neutro (Dourado/Preto)</option>
@@ -495,7 +495,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
                     </select>
                     <input
                       type="color"
-                      value={imgConfig.colorCode || "#ad8330"}
+                      value={imgConfig.colorCode || "#b8942b"}
                       onChange={(e) => updateImgConfig({ colorCode: e.target.value, enableAmbientColor: true })}
                       className="w-8 h-8 rounded-lg bg-zinc-950 border border-white/10 p-0.5 cursor-pointer shrink-0"
                     />

@@ -69,6 +69,7 @@ export interface ProjectConfig {
   logoPosOverlay?: "top_center" | "top_left" | "top_right" | "bottom_left" | "bottom_right";
   logoSizeOverlay?: number;
   logoInclusionType?: "overlay" | "embedded";
+  logoStyleOverlay?: "original" | "white" | "black";
 
   // Suporte a múltiplos arquivos
   sujeitosBase64List?: string[];

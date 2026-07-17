@@ -341,11 +341,11 @@ Consigo analisar a saúde financeira dos seus **${clients.length} clientes**, su
   };
 
   return (
-    <div className="fixed bottom-0 right-0 w-full h-full sm:bottom-6 sm:right-6 sm:w-[460px] sm:h-[680px] bg-[#0b0b0c] border border-white/10 sm:rounded-3xl shadow-2xl z-50 flex flex-col overflow-hidden">
+    <div className="fixed bottom-0 right-0 w-full h-full sm:bottom-6 sm:right-6 sm:w-[460px] sm:h-[680px] glass-heavy sm:rounded-3xl shadow-2xl z-50 flex flex-col overflow-hidden animate-scale-in">
       {/* Header */}
-      <div className="p-4 border-b border-white/5 flex justify-between items-center bg-zinc-950/50">
+      <div className="p-4 border-b border-white/5 flex justify-between items-center bg-black/40">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-[#c5a880] flex items-center justify-center text-zinc-950 font-black text-sm">
+          <div className="w-8 h-8 rounded-lg bg-[#d4af37] flex items-center justify-center text-zinc-950 font-black text-sm">
             Z
           </div>
           <div>
@@ -365,16 +365,16 @@ Consigo analisar a saúde financeira dos seus **${clients.length} clientes**, su
       </div>
 
       {/* Modes */}
-      <div className="p-2 border-b border-white/5 flex gap-1 bg-zinc-950/20">
+      <div className="p-2 border-b border-white/5 flex gap-1 bg-black/20">
         <button
           onClick={() => setMode("chat")}
-          className={`flex-1 text-xs py-2 rounded-xl transition-all font-semibold ${mode === "chat" ? "bg-[#c5a880] text-zinc-950" : "text-zinc-400 hover:text-zinc-200"}`}
+          className={`flex-1 text-xs py-2 rounded-xl transition-all font-semibold ${mode === "chat" ? "bg-[#d4af37] text-zinc-950" : "text-zinc-400 hover:text-zinc-200"}`}
         >
           Chat Integrado
         </button>
         <button
           onClick={() => setMode("extract")}
-          className={`flex-1 text-xs py-2 rounded-xl transition-all font-semibold ${mode === "extract" ? "bg-[#c5a880] text-zinc-950" : "text-zinc-400 hover:text-zinc-200"}`}
+          className={`flex-1 text-xs py-2 rounded-xl transition-all font-semibold ${mode === "extract" ? "bg-[#d4af37] text-zinc-950" : "text-zinc-400 hover:text-zinc-200"}`}
         >
           Extrair de Referências
         </button>
@@ -399,14 +399,14 @@ Consigo analisar a saúde financeira dos seus **${clients.length} clientes**, su
                 onChange={handleImageUpload}
               />
               {isExtracting && (
-                <p className="mt-2 text-[#c5a880] animate-pulse text-xs">
+                <p className="mt-2 text-[#d4af37] animate-pulse text-xs">
                   Analisando imagem e extraindo prompt...
                 </p>
               )}
               {extractedPrompt && (
                 <div className="mt-3 p-3 bg-[#050505] rounded-xl border border-white/5 text-zinc-200 text-xs">
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="font-bold text-[#c5a880]">
+                    <span className="font-bold text-[#d4af37]">
                       Prompt Extraído:
                     </span>
                     <button
@@ -440,14 +440,14 @@ Consigo analisar a saúde financeira dos seus **${clients.length} clientes**, su
                 onChange={handleTypographyExtraction}
               />
               {isExtracting && (
-                <p className="mt-2 text-[#c5a880] animate-pulse text-xs">
+                <p className="mt-2 text-[#d4af37] animate-pulse text-xs">
                   Analisando fontes e layout...
                 </p>
               )}
               {extractedTypography && (
                 <div className="mt-3 p-3 bg-[#050505] rounded-xl border border-white/5 text-zinc-200 text-xs">
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="font-bold text-[#c5a880]">
+                    <span className="font-bold text-[#d4af37]">
                       Estilo Tipográfico:
                     </span>
                     <button
@@ -480,7 +480,7 @@ Consigo analisar a saúde financeira dos seus **${clients.length} clientes**, su
                 <div
                   className={`max-w-[90%] p-3.5 rounded-xl text-xs leading-relaxed ${
                     m.role === "user"
-                      ? "bg-[#c5a880] text-zinc-950 rounded-tr-none font-medium"
+                      ? "bg-[#d4af37] text-zinc-950 rounded-tr-none font-medium"
                       : "bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] text-zinc-200 rounded-tl-none"
                   }`}
                 >
@@ -502,7 +502,7 @@ Consigo analisar a saúde financeira dos seus **${clients.length} clientes**, su
             <button
               key={idx}
               onClick={() => handleSend(p.text)}
-              className="inline-block text-[10px] font-bold text-zinc-400 bg-[#0b0b0c] hover:bg-zinc-800 border border-white/5 rounded-full px-3 py-1.5 transition-all hover:text-[#c5a880]"
+              className="inline-block text-[10px] font-bold text-zinc-400 bg-[#0b0b0c] hover:bg-zinc-800 border border-white/5 rounded-full px-3 py-1.5 transition-all hover:text-[#d4af37]"
             >
               {p.label}
             </button>
@@ -522,12 +522,12 @@ Consigo analisar a saúde financeira dos seus **${clients.length} clientes**, su
               : "Selecione um recurso acima..."
           }
           disabled={mode === "extract"}
-          className="flex-1 bg-[#050505] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-[#c5a880]/50 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 bg-[#050505] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-[#d4af37]/50 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
         />
         <button
           onClick={() => handleSend()}
           disabled={mode === "extract" || !input.trim()}
-          className="bg-[#c5a880] text-zinc-950 p-2.5 rounded-xl hover:bg-[#c5a880]/80 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="bg-[#d4af37] text-zinc-950 p-2.5 rounded-xl hover:bg-[#d4af37]/80 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <Check size={16} className="stroke-[3]" />
         </button>
@@ -596,7 +596,7 @@ function CustomDatePicker({ value, onChange }: CustomDatePickerProps) {
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white text-left focus:outline-none focus:border-[#c5a880]/50 flex items-center justify-between font-mono hover:bg-[#0b0b0c] transition-colors"
+        className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white text-left focus:outline-none focus:border-[#d4af37]/50 flex items-center justify-between font-mono hover:bg-[#0b0b0c] transition-colors"
       >
         <span>{formattedDisplay}</span>
         <Calendar size={16} className="text-zinc-500" />
@@ -614,7 +614,7 @@ function CustomDatePicker({ value, onChange }: CustomDatePickerProps) {
               <select
                 value={pickerMonth}
                 onChange={(e) => setPickerMonth(Number(e.target.value))}
-                className="flex-1 bg-[#050505] border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50"
+                className="flex-1 bg-[#050505] border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-[#d4af37]/50"
               >
                 {months.map((m, idx) => (
                   <option key={idx} value={idx}>
@@ -626,7 +626,7 @@ function CustomDatePicker({ value, onChange }: CustomDatePickerProps) {
               <select
                 value={pickerYear}
                 onChange={(e) => setPickerYear(Number(e.target.value))}
-                className="bg-[#050505] border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50"
+                className="bg-[#050505] border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-[#d4af37]/50"
               >
                 {years.map((y) => (
                   <option key={y} value={y}>
@@ -669,7 +669,7 @@ function CustomDatePicker({ value, onChange }: CustomDatePickerProps) {
                     onClick={() => handleSelectDay(day)}
                     className={`h-7 w-7 rounded-lg text-xs font-bold transition-all flex items-center justify-center ${
                       isSelected
-                        ? "bg-[#c5a880] text-zinc-950 scale-105"
+                        ? "bg-[#d4af37] text-zinc-950 scale-105"
                         : "text-zinc-300 hover:bg-white/5"
                     }`}
                   >
@@ -3298,7 +3298,7 @@ ${textContent}`
             NUVEM CONECTADA
           </span>
           <div className="flex items-center gap-1.5">
-            <span className={`w-1.5 h-1.5 rounded-full ${isCloudSyncing ? "bg-[#c5a880] animate-ping" : "bg-emerald-500"}`} />
+            <span className={`w-1.5 h-1.5 rounded-full ${isCloudSyncing ? "bg-[#d4af37] animate-ping" : "bg-emerald-500"}`} />
 
           </div>
         </div>
@@ -3315,22 +3315,22 @@ ${textContent}`
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-[#050505] text-zinc-50 font-sans relative overflow-hidden">
         {/* Ambient background glow */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-[#c5a880]/10 rounded-full blur-[120px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-[#d4af37]/10 rounded-full blur-[120px]" />
         <div className="z-10 flex flex-col items-center gap-6">
-          <div className="w-16 h-16 bg-[#c5a880] rounded-xl flex items-center justify-center text-zinc-950 text-3xl font-black shadow-lg shadow-amber-500/20 animate-bounce">
+          <div className="w-16 h-16 bg-[#d4af37] rounded-xl flex items-center justify-center text-zinc-950 text-3xl font-black shadow-lg shadow-amber-500/20 animate-bounce">
             Z
           </div>
           <div className="flex flex-col items-center gap-2">
             <h2 className="text-xl font-bold tracking-tight text-white flex items-center gap-1.5">
               Carregando Workspace
-              <span className="text-[#c5a880] animate-pulse">.</span>
+              <span className="text-[#d4af37] animate-pulse">.</span>
             </h2>
             <p className="text-xs text-zinc-400 font-mono">
               Iniciando conexão segura...
             </p>
           </div>
           <div className="w-48 h-1.5 bg-[#0b0b0c] rounded-full overflow-hidden relative border border-white/5">
-            <div className="h-full bg-[#c5a880] rounded-full animate-slide w-1/3 absolute left-0" />
+            <div className="h-full bg-[#d4af37] rounded-full animate-slide w-1/3 absolute left-0" />
           </div>
         </div>
       </div>
@@ -3338,7 +3338,7 @@ ${textContent}`
   }
 
   return (
-    <div className="flex flex-col h-screen bg-[#0b0b0c] text-zinc-100 overflow-hidden relative select-none" style={{ fontFamily: "Montserrat, sans-serif" }}>
+    <div className="flex flex-col h-screen bg-black text-zinc-100 overflow-hidden relative select-none" style={{ fontFamily: "Montserrat, sans-serif" }}>
       {isOffline && (
         <div className="absolute top-0 left-0 right-0 z-50 bg-red-500 text-white text-center py-2 text-sm font-medium flex items-center justify-center gap-2 animate-in slide-in-from-top-full shadow-lg shadow-red-500/20">
           <WifiOff size={16} />
@@ -3348,12 +3348,12 @@ ${textContent}`
       
       {/* Premium Ambient Light Orbs */}
       <div
-        className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-[#ad8330]/5 rounded-full blur-[150px] pointer-events-none z-0 animate-pulse"
+        className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-[#d4af37]/3 rounded-full blur-[160px] pointer-events-none z-0 animate-pulse"
         style={{ animationDuration: "8s" }}
       />
 
       {/* Header Fixo no Topo */}
-      <header className="h-16 w-full bg-[#121214] border-b border-white/5 flex items-center justify-between px-6 fixed top-0 left-0 right-0 z-45 shrink-0">
+      <header className="h-16 w-full bg-black/45 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-6 fixed top-0 left-0 right-0 z-45 shrink-0 shadow-sm">
         {/* Esquerda: Logo Zion Design */}
         <div className="flex items-center gap-2.5">
           <button
@@ -3363,10 +3363,10 @@ ${textContent}`
           >
             <Menu size={20} />
           </button>
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#c5a880] to-[#ad8330] flex items-center justify-center text-zinc-950 shadow-md">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#d4af37] to-[#b8942b] flex items-center justify-center text-zinc-950 shadow-md">
             <Layers size={18} />
           </div>
-          <span className="font-montserrat font-black text-sm tracking-wider uppercase bg-gradient-to-r from-white via-zinc-200 to-[#c5a880] bg-clip-text text-transparent">
+          <span className="font-montserrat font-black text-sm tracking-wider uppercase bg-gradient-to-r from-white via-zinc-200 to-[#d4af37] bg-clip-text text-transparent">
             Zion Design
           </span>
         </div>
@@ -3378,7 +3378,7 @@ ${textContent}`
             <input
               type="text"
               placeholder="Buscar no workspace..."
-              className="w-full bg-[#0b0b0c] border border-white/10 rounded-full py-1.5 pl-10 pr-4 text-xs focus:outline-none focus:border-[#ad8330]/50 transition-colors text-white placeholder:text-zinc-650"
+              className="w-full bg-[#0a0a0c]/60 hover:bg-[#0a0a0c]/90 border border-white/5 rounded-full py-1.5 pl-10 pr-4 text-xs focus:outline-none focus:border-[#d4af37]/40 focus:ring-1 focus:ring-[#d4af37]/15 transition-all duration-300 text-white placeholder:text-zinc-500"
             />
           </div>
         </div>
@@ -3389,9 +3389,9 @@ ${textContent}`
           {/* Status da Chave API no Header */}
           {typeof window !== "undefined" &&
           localStorage.getItem("custom_gemini_api_key") ? (
-            <div className="p-1 bg-[#c5a880]/10 border border-[#c5a880]/20 rounded-lg hidden md:flex items-center gap-1.5 px-3 py-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#c5a880] animate-pulse" />
-              <span className="text-[10px] text-[#c5a880] font-black uppercase tracking-wider">API Ativa</span>
+            <div className="p-1 bg-[#d4af37]/10 border border-[#d4af37]/20 rounded-lg hidden md:flex items-center gap-1.5 px-3 py-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37] animate-pulse" />
+              <span className="text-[10px] text-[#d4af37] font-black uppercase tracking-wider">API Ativa</span>
             </div>
           ) : (
             <div 
@@ -3412,15 +3412,15 @@ ${textContent}`
               <img
                 src={myProfile.avatarUrl}
                 alt={myProfile?.name || "Zion"}
-                className="w-7 h-7 rounded-full object-cover border border-white/10 group-hover:border-[#ad8330] transition-colors"
+                className="w-7 h-7 rounded-full object-cover border border-white/10 group-hover:border-[#b8942b] transition-colors"
                 referrerPolicy="no-referrer"
               />
             ) : (
-              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#c5a880] to-[#ad8330] text-zinc-950 flex items-center justify-center text-[10px] font-bold uppercase">
+              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#d4af37] to-[#b8942b] text-zinc-950 flex items-center justify-center text-[10px] font-bold uppercase">
                 {(myProfile?.name || "Zion").substring(0, 2)}
               </div>
             )}
-            <span className="text-xs font-bold text-white group-hover:text-[#ad8330] transition-colors hidden sm:inline">
+            <span className="text-xs font-bold text-white group-hover:text-[#b8942b] transition-colors hidden sm:inline">
               {myProfile?.name || "Equipe Zion"}
             </span>
           </div>
@@ -3431,7 +3431,7 @@ ${textContent}`
       <div className="flex h-[calc(100vh-64px)] mt-16 overflow-hidden relative w-full">
         
         {/* Menu Lateral Estreito Vertical (Desktop) */}
-        <aside className="hidden lg:flex w-20 bg-[#121214] border-r border-white/5 flex-col items-center py-4 flex-shrink-0 select-none overflow-y-auto scrollbar-none h-full">
+        <aside className="hidden lg:flex w-20 bg-black/45 backdrop-blur-md border-r border-white/5 flex-col items-center py-4 flex-shrink-0 select-none overflow-y-auto scrollbar-none h-full">
           <nav className="w-full px-2 space-y-3">
             <SidebarItemMini icon={<LayoutDashboard size={20} />} active={activeTab === "dashboard"} onClick={() => setActiveTab("dashboard")} tooltip="Explorar" />
             <SidebarItemMini icon={<Layers size={20} />} active={activeTab === "agents"} onClick={() => setActiveTab("agents")} tooltip="Agentes" />
@@ -3472,10 +3472,10 @@ ${textContent}`
             >
               <div className="flex items-center justify-between mb-6">
                 <div className="text-xl font-bold tracking-tight text-white flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#c5a880] to-[#ad8330] flex items-center justify-center text-zinc-950">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#d4af37] to-[#b8942b] flex items-center justify-center text-zinc-950">
                     <Layers size={18} />
                   </div>
-                  <span className="font-montserrat font-black text-sm tracking-wider uppercase bg-gradient-to-r from-white to-[#c5a880] bg-clip-text text-transparent">
+                  <span className="font-montserrat font-black text-sm tracking-wider uppercase bg-gradient-to-r from-white to-[#d4af37] bg-clip-text text-transparent">
                     DESIGNBUILDER
                   </span>
                 </div>
@@ -3583,10 +3583,10 @@ ${textContent}`
               <div className="border-t border-white/5 pt-4 space-y-3">
                 {typeof window !== "undefined" &&
                 localStorage.getItem("custom_gemini_api_key") ? (
-                  <div className="p-2 bg-[#c5a880]/10 border border-[#c5a880]/20 rounded-xl flex items-center justify-between">
+                  <div className="p-2 bg-[#d4af37]/10 border border-[#d4af37]/20 rounded-xl flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-[#c5a880] animate-pulse" />
-                      <span className="text-xs text-[#c5a880] font-medium">
+                      <span className="w-2 h-2 rounded-full bg-[#d4af37] animate-pulse" />
+                      <span className="text-xs text-[#d4af37] font-medium">
                         Sua API Ativa
                       </span>
                     </div>
@@ -3652,7 +3652,7 @@ ${textContent}`
                       referrerPolicy="no-referrer"
                     />
                   ) : (
-                    <div className="w-9 h-9 rounded-full bg-[#c5a880] text-zinc-950 flex items-center justify-center text-xs font-bold uppercase">
+                    <div className="w-9 h-9 rounded-full bg-[#d4af37] text-zinc-950 flex items-center justify-center text-xs font-bold uppercase">
                       {(myProfile?.name || "Zion").substring(0, 2)}
                     </div>
                   )}
@@ -3684,7 +3684,7 @@ ${textContent}`
             >
               <div className="mb-8">
                 <h1 className="text-xl sm:text-3xl font-bold text-white mb-2 flex items-center gap-2 sm:gap-3">
-                  <FileText className="text-[#c5a880]" size={28} /> Notas & Docs
+                  <FileText className="text-[#d4af37]" size={28} /> Notas & Docs
                 </h1>
                 <p className="text-zinc-400">
                   Armazene e consulte rapidamente briefings, ideias de cópias e
@@ -3693,7 +3693,7 @@ ${textContent}`
               </div>
 
               {savedNotes.length === 0 ? (
-                <div className="text-center py-20 bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl flex flex-col items-center justify-center">
+                <div className="text-center py-20 bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 flex flex-col items-center justify-center">
                   <FileText className="text-zinc-700 mb-4" size={48} />
                   <p className="text-zinc-400 text-lg font-medium">
                     Nenhuma nota salva ainda.
@@ -3707,10 +3707,10 @@ ${textContent}`
                   {savedNotes.map((note) => (
                     <div
                       key={note.id}
-                      className="bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-8 flex flex-col hover:border-[#c5a880]/20 transition-all shadow-lg hover:shadow-amber-500/5"
+                      className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 p-8 flex flex-col hover:border-[#d4af37]/20 transition-all shadow-lg hover:shadow-amber-500/5"
                     >
                       <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-2 text-[#c5a880] bg-[#c5a880]/10 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider">
+                        <div className="flex items-center gap-2 text-[#d4af37] bg-[#d4af37]/10 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider">
                           <User size={12} />
                           {note.clientName}
                         </div>
@@ -3752,14 +3752,14 @@ ${textContent}`
             >
               <div className="mb-8">
                 <h1 className="text-xl sm:text-3xl font-bold text-white mb-2 flex items-center gap-2 sm:gap-3">
-                  <ImageIcon className="text-[#c5a880]" size={28} /> Galeria de
+                  <ImageIcon className="text-[#d4af37]" size={28} /> Galeria de
                   Cards
                 </h1>
                 <p className="text-zinc-400">Gerencie seus cards gerados.</p>
               </div>
 
               {savedCards.length === 0 ? (
-                <div className="text-center py-20 bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl">
+                <div className="text-center py-20 bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300">
                   <p className="text-zinc-500">Nenhum card salvo na galeria.</p>
                 </div>
               ) : (
@@ -3767,7 +3767,7 @@ ${textContent}`
                   {savedCards.map((img, idx) => (
                     <div
                       key={idx}
-                      className="relative group bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl overflow-hidden"
+                      className="relative group bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 overflow-hidden"
                     >
                       <img
                         src={img}
@@ -3775,15 +3775,24 @@ ${textContent}`
                         className="w-full h-auto"
                         referrerPolicy="no-referrer"
                       />
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3">
+                        <a
+                          href={img}
+                          download={`zion-card-${idx}.png`}
+                          className="p-2.5 bg-[#d4af37]/15 border border-[#d4af37]/30 text-[#d4af37] rounded-xl hover:bg-[#d4af37]/30 transition-all duration-300 cursor-pointer shadow-lg"
+                          title="Baixar Imagem"
+                        >
+                          <Download size={16} />
+                        </a>
                         <button
                           onClick={() => {
                             const newCards = savedCards.filter((_, i) => i !== idx);
                             setSavedCards(newCards);
                           }}
-                          className="p-2 bg-red-500/20 text-red-400 rounded-full hover:bg-red-500/40 transition-colors"
+                          className="p-2.5 bg-red-500/15 border border-red-500/30 text-red-400 rounded-xl hover:bg-red-500/30 transition-all duration-300 cursor-pointer shadow-lg"
+                          title="Excluir"
                         >
-                          <Trash2 size={20} />
+                          <Trash2 size={16} />
                         </button>
                       </div>
                     </div>
@@ -3804,7 +3813,7 @@ ${textContent}`
               <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                   <h1 className="text-xl sm:text-3xl font-bold text-white mb-2 flex items-center gap-2 sm:gap-3">
-                    <Users className="text-[#c5a880] animate-pulse" size={28} />{" "}
+                    <Users className="text-[#d4af37] animate-pulse" size={28} />{" "}
                     Gestão de Clientes
                   </h1>
                   <p className="text-zinc-400">
@@ -3814,7 +3823,7 @@ ${textContent}`
                 </div>
                 <button
                   onClick={() => openClientModal()}
-                  className="bg-[#c5a880] text-zinc-950 px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-[#c5a880]/80 transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/15"
+                  className="bg-[#d4af37] text-zinc-950 px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-[#d4af37]/80 transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/15"
                 >
                   <Plus size={16} /> Cadastrar Novo Cliente
                 </button>
@@ -3822,7 +3831,7 @@ ${textContent}`
 
               {/* Client Metrics Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 w-full place-content-center">
-                <div className="bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-8 min-w-0">
+                <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 p-8 min-w-0">
                   <span className="text-sm font-bold text-white block break-words leading-tight">
                     Total Carteira
                   </span>
@@ -3830,7 +3839,7 @@ ${textContent}`
                     {clients.length}
                   </p>
                 </div>
-                <div className="bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-8 min-w-0">
+                <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 p-8 min-w-0">
                   <span className="text-sm font-bold text-white block break-words leading-tight">
                     Clientes Ativos
                   </span>
@@ -3838,7 +3847,7 @@ ${textContent}`
                     {clients.filter((c) => c.status === "Ativo").length}
                   </p>
                 </div>
-                <div className="bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-8 min-w-0">
+                <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 p-8 min-w-0">
                   <span className="text-sm font-bold text-white block break-words leading-tight">
                     Em Prospecção
                   </span>
@@ -3846,7 +3855,7 @@ ${textContent}`
                     {clients.filter((c) => c.status === "Prospecção").length}
                   </p>
                 </div>
-                <div className="bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-8 min-w-0">
+                <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 p-8 min-w-0">
                   <span className="text-sm font-bold text-white block break-words leading-tight">
                     Faturamento Previsto (MRR)
                   </span>
@@ -3857,7 +3866,7 @@ ${textContent}`
               </div>
 
               {/* CRM Filters Bar */}
-              <div className="bg-[#0b0b0c] border border-white/5 p-4 rounded-xl mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 p-4 rounded-2xl shadow-lg shadow-black/30 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex flex-1 items-center gap-2">
                   <div className="relative w-full max-w-md">
                     <Search
@@ -3869,7 +3878,7 @@ ${textContent}`
                       placeholder="Buscar por nome, nicho ou contato..."
                       value={clientSearch}
                       onChange={(e) => setClientSearch(e.target.value)}
-                      className="w-full bg-[#050505] border border-white/10 rounded-lg py-2 pl-10 pr-4 text-xs focus:outline-none focus:border-[#c5a880]/50 text-white placeholder:text-zinc-600 transition-all"
+                      className="w-full bg-[#050505] border border-white/10 rounded-lg py-2 pl-10 pr-4 text-xs focus:outline-none focus:border-[#d4af37]/50 text-white placeholder:text-zinc-600 transition-all"
                     />
                   </div>
                   {clientSearch && (
@@ -3894,7 +3903,7 @@ ${textContent}`
                       onClick={() => setClientFilterStatus(btn.value)}
                       className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
                         clientFilterStatus === btn.value
-                          ? "bg-[#c5a880] text-zinc-950 shadow-md shadow-amber-500/10"
+                          ? "bg-[#d4af37] text-zinc-950 shadow-md shadow-amber-500/10"
                           : "bg-[#050505] text-zinc-400 hover:text-white hover:bg-zinc-800"
                       }`}
                     >
@@ -3905,7 +3914,7 @@ ${textContent}`
               </div>
 
               {/* Table wrapper */}
-              <div className="bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl overflow-x-auto shadow-xl">
+              <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 overflow-x-auto shadow-xl">
                 {filteredClients.length === 0 ? (
                   <div className="p-12 text-center">
                     <div className="w-12 h-12 bg-zinc-800 rounded-full flex items-center justify-center text-zinc-600 mx-auto mb-4">
@@ -3922,7 +3931,7 @@ ${textContent}`
                 ) : (
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="bg-[#050505] border-b border-white/5">
+                      <tr className="bg-black/35 border-b border-white/5">
                         <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-zinc-400">
                           Cliente
                         </th>
@@ -3965,7 +3974,7 @@ ${textContent}`
                                   referrerPolicy="no-referrer"
                                 />
                               ) : (
-                                <div className="w-9 h-9 rounded-full bg-zinc-800 border border-white/5 flex items-center justify-center text-[#c5a880] font-bold text-sm">
+                                <div className="w-9 h-9 rounded-full bg-zinc-800 border border-white/5 flex items-center justify-center text-[#d4af37] font-bold text-sm">
                                   {client.name.charAt(0)}
                                 </div>
                               )}
@@ -4002,7 +4011,7 @@ ${textContent}`
                                 client.paymentStatus === "Em dia"
                                   ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/10"
                                   : client.paymentStatus === "Pendente"
-                                    ? "bg-[#c5a880]/15 text-[#c5a880] border border-[#c5a880]/10"
+                                    ? "bg-[#d4af37]/15 text-[#d4af37] border border-[#d4af37]/10"
                                     : "bg-red-500/15 text-red-400 border border-red-500/10"
                               }`}
                             >
@@ -4025,7 +4034,7 @@ ${textContent}`
                           <td className="px-6 py-4 text-right">
                             <button
                               onClick={() => openClientModal(client)}
-                              className="bg-zinc-800 text-zinc-300 hover:bg-[#c5a880] hover:text-zinc-950 font-bold text-xs px-3 py-1.5 rounded-lg transition-all"
+                              className="bg-white/[0.02] border border-white/5 text-zinc-300 hover:bg-[#d4af37] hover:text-zinc-950 font-semibold text-xs px-3 py-1.5 rounded-lg transition-all duration-300 cursor-pointer"
                             >
                               Editar
                             </button>
@@ -4068,7 +4077,7 @@ ${textContent}`
             >
               <div className="mb-8">
                 <h1 className="text-xl sm:text-3xl font-bold text-white mb-2 flex items-center gap-2 sm:gap-3">
-                  <Sparkles className="text-[#c5a880]" size={28} />{" "}
+                  <Sparkles className="text-[#d4af37]" size={28} />{" "}
                   Copiloto Zion (Texto)
                 </h1>
                 <p className="text-zinc-400">
@@ -4079,7 +4088,7 @@ ${textContent}`
 
               <div className="grid lg:grid-cols-2 gap-8">
                 {/* Input Section */}
-                <div className="bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-8 flex flex-col gap-6">
+                <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 p-8 flex flex-col gap-6">
                   <div>
                     <label className="block text-sm font-medium text-zinc-400 mb-2">
                       O que vamos criar hoje?
@@ -4087,7 +4096,7 @@ ${textContent}`
                     <select
                       value={copyType}
                       onChange={(e) => setCopyType(e.target.value)}
-                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#c5a880]/50 transition-colors appearance-none"
+                      className="w-full bg-[#050505]/45 hover:bg-[#050505]/75 border border-white/5 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#d4af37]/40 focus:ring-1 focus:ring-[#d4af37]/15 transition-all duration-300 appearance-none"
                     >
                       <option>Legenda para Instagram</option>
                       <option>Copy para Facebook/Instagram Ads</option>
@@ -4118,14 +4127,14 @@ ${textContent}`
                       value={copyTopic}
                       onChange={(e) => setCopyTopic(e.target.value)}
                       placeholder="Ex: Lançamento de uma nova clínica de estética em São Paulo focada em harmonização facial. O diferencial é o atendimento premium e tecnologia indolor..."
-                      className="w-full flex-1 min-h-[200px] bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#c5a880]/50 transition-colors resize-none placeholder:text-zinc-700"
+                      className="w-full flex-1 min-h-[200px] bg-[#050505]/45 hover:bg-[#050505]/75 border border-white/5 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#d4af37]/40 focus:ring-1 focus:ring-[#d4af37]/15 transition-all duration-300 resize-none placeholder:text-zinc-700"
                     />
                   </div>
 
                   <button
                     onClick={handleGenerateCopy}
                     disabled={isGenerating || !copyTopic.trim()}
-                    className="w-full bg-[#c5a880] text-zinc-950 py-3.5 rounded-xl font-bold text-base hover:bg-[#b0936b] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="w-full bg-[#d4af37] text-zinc-950 py-3.5 rounded-xl font-bold text-base hover:bg-[#b8942b] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     {isGenerating ? (
                       <>
@@ -4141,7 +4150,7 @@ ${textContent}`
                 </div>
 
                 {/* Output Section */}
-                <div className="bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-8 flex flex-col">
+                <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 p-8 flex flex-col">
                   <div className="flex items-center justify-between mb-4">
                     <label className="block text-sm font-medium text-zinc-400">
                       Resultado
@@ -4160,7 +4169,7 @@ ${textContent}`
                           className="text-zinc-400 hover:text-white transition-colors flex items-center gap-1.5 text-sm bg-zinc-800 px-3 py-1.5 rounded-lg"
                         >
                           {copied ? (
-                            <Check size={14} className="text-[#c5a880]" />
+                            <Check size={14} className="text-[#d4af37]" />
                           ) : (
                             <Copy size={14} />
                           )}
@@ -4210,7 +4219,7 @@ ${textContent}`
                 <div>
                   <h1 className="text-xl sm:text-3xl font-bold text-white mb-2 flex items-center gap-2 sm:gap-3">
                     <CheckSquare
-                      className="text-[#c5a880] animate-pulse"
+                      className="text-[#d4af37] animate-pulse"
                       size={28}
                     />{" "}
                     Painel de Produção
@@ -4221,14 +4230,14 @@ ${textContent}`
                 </div>
                 <button
                   onClick={() => openTaskModal()}
-                  className="bg-[#c5a880] text-zinc-950 px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-[#c5a880]/80 transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/15 active:scale-95 self-start md:self-auto"
+                  className="bg-[#d4af37] text-zinc-950 px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-[#d4af37]/80 transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/15 active:scale-95 self-start md:self-auto"
                 >
                   <Plus size={16} /> Criar Nova Tarefa
                 </button>
               </div>
 
               {/* Filtering Controls Card */}
-              <div className="bg-[#0b0b0c] border border-white/5 rounded-xl p-4 sm:p-5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] space-y-3.5">
+              <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 rounded-2xl p-4 sm:p-5 shadow-lg shadow-black/40 hover:border-white/10 transition-all duration-300 space-y-3.5">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   {/* Search bar */}
                   <div className="relative flex-1 max-w-md w-full">
@@ -4238,7 +4247,7 @@ ${textContent}`
                       placeholder="Buscar por título ou descrição..."
                       value={taskSearch}
                       onChange={(e) => setTaskSearch(e.target.value)}
-                      className="w-full bg-[#050505] border border-white/10 rounded-xl pl-9 pr-9 py-1.5 sm:py-2 text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[#c5a880]/50 transition-colors"
+                      className="w-full bg-[#050505]/45 hover:bg-[#050505]/75 border border-white/5 rounded-xl pl-9 pr-9 py-1.5 sm:py-2 text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[#d4af37]/45 focus:ring-1 focus:ring-[#d4af37]/15 transition-all duration-300"
                     />
                     {taskSearch && (
                       <button
@@ -4253,14 +4262,14 @@ ${textContent}`
                   {/* View Switcher Controls */}
                   <div className="flex items-center gap-2 self-stretch sm:self-auto justify-between sm:justify-end">
                     <span className="text-[11px] text-zinc-400 flex items-center gap-1 font-medium whitespace-nowrap">
-                      <Layers size={12} className="text-[#c5a880]" /> Ver por:
+                      <Layers size={12} className="text-[#d4af37]" /> Ver por:
                     </span>
                     <div className="bg-[#050505] p-0.5 rounded-lg border border-white/5 flex shrink-0">
                       <button
                         onClick={() => setTaskViewMode("kanban")}
                         className={`px-2.5 py-1 rounded-md text-[10px] sm:text-xs font-bold transition-all ${
                           taskViewMode === "kanban"
-                            ? "bg-[#c5a880] text-zinc-950 shadow-md shadow-amber-500/10"
+                            ? "bg-[#d4af37] text-zinc-950 shadow-md shadow-amber-500/10"
                             : "text-zinc-500 hover:text-white"
                         }`}
                       >
@@ -4270,7 +4279,7 @@ ${textContent}`
                         onClick={() => setTaskViewMode("client")}
                         className={`px-2.5 py-1 rounded-md text-[10px] sm:text-xs font-bold transition-all ${
                           taskViewMode === "client"
-                            ? "bg-[#c5a880] text-zinc-950 shadow-md shadow-amber-500/10"
+                            ? "bg-[#d4af37] text-zinc-950 shadow-md shadow-amber-500/10"
                             : "text-zinc-500 hover:text-white"
                         }`}
                       >
@@ -4283,7 +4292,7 @@ ${textContent}`
                 {/* Horizontal Client Filter Chips */}
                 <div className="space-y-1.5 pt-1.5 border-t border-white/[0.03]">
                   <div className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-zinc-500 font-bold px-0.5">
-                    <Filter size={10} className="text-[#c5a880]" />
+                    <Filter size={10} className="text-[#d4af37]" />
                     Filtrar por Cliente:
                   </div>
                   <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 scrollbar-none max-w-full">
@@ -4291,7 +4300,7 @@ ${textContent}`
                       onClick={() => setTaskClientFilter("all")}
                       className={`px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold whitespace-nowrap transition-all border ${
                         taskClientFilter === "all"
-                          ? "bg-[#c5a880]/10 border-[#c5a880] text-[#c5a880] shadow-sm shadow-amber-500/5"
+                          ? "bg-[#d4af37]/10 border-[#d4af37] text-[#d4af37] shadow-sm shadow-amber-500/5"
                           : "bg-[#050505] border-white/5 text-zinc-400 hover:text-white hover:border-white/10"
                       }`}
                     >
@@ -4302,7 +4311,7 @@ ${textContent}`
                       onClick={() => setTaskClientFilter("none")}
                       className={`px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold whitespace-nowrap transition-all border ${
                         taskClientFilter === "none"
-                          ? "bg-[#c5a880]/10 border-[#c5a880] text-[#c5a880] shadow-sm shadow-amber-500/5"
+                          ? "bg-[#d4af37]/10 border-[#d4af37] text-[#d4af37] shadow-sm shadow-amber-500/5"
                           : "bg-[#050505] border-white/5 text-zinc-400 hover:text-white hover:border-white/10"
                       }`}
                     >
@@ -4317,7 +4326,7 @@ ${textContent}`
                           onClick={() => setTaskClientFilter(clientName)}
                           className={`px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold whitespace-nowrap transition-all border ${
                             taskClientFilter === clientName
-                              ? "bg-[#c5a880]/10 border-[#c5a880] text-[#c5a880] shadow-sm shadow-amber-500/5"
+                              ? "bg-[#d4af37]/10 border-[#d4af37] text-[#d4af37] shadow-sm shadow-amber-500/5"
                               : "bg-[#050505] border-white/5 text-zinc-400 hover:text-white hover:border-white/10"
                           }`}
                         >
@@ -4333,7 +4342,7 @@ ${textContent}`
               {taskViewMode === "kanban" && (
                 <div className="grid md:grid-cols-3 gap-4 lg:gap-6 flex-1 min-h-0 pb-2">
                   {/* To Do Column */}
-                  <div className="bg-[#0b0b0c] rounded-xl p-4 lg:p-5 border border-white/5 shadow-xl flex flex-col min-h-0 h-[450px] md:h-auto md:max-h-[calc(100vh-270px)]">
+                  <div className="bg-[#0a0a0c]/40 backdrop-blur-md border border-white/5 shadow-lg shadow-black/30 rounded-2xl p-4 lg:p-5 flex flex-col min-h-0 h-[450px] md:h-auto md:max-h-[calc(100vh-270px)] hover:border-white/10 transition-all duration-300">
                     <div className="flex items-center justify-between px-1 pb-3 shrink-0">
                       <h3 className="font-semibold text-zinc-300 flex items-center gap-2 text-sm">
                         <span className="w-2.5 h-2.5 rounded-full bg-zinc-500"></span>{" "}
@@ -4364,7 +4373,7 @@ ${textContent}`
                   </div>
 
                   {/* Doing Column */}
-                  <div className="bg-[#0b0b0c] rounded-xl p-4 lg:p-5 border border-white/5 shadow-xl flex flex-col min-h-0 h-[450px] md:h-auto md:max-h-[calc(100vh-270px)]">
+                  <div className="bg-[#0a0a0c]/40 backdrop-blur-md border border-white/5 shadow-lg shadow-black/30 rounded-2xl p-4 lg:p-5 flex flex-col min-h-0 h-[450px] md:h-auto md:max-h-[calc(100vh-270px)] hover:border-white/10 transition-all duration-300">
                     <div className="flex items-center justify-between px-1 pb-3 shrink-0">
                       <h3 className="font-semibold text-zinc-300 flex items-center gap-2 text-sm">
                         <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse"></span>{" "}
@@ -4395,7 +4404,7 @@ ${textContent}`
                   </div>
 
                   {/* Done Column */}
-                  <div className="bg-[#0b0b0c] rounded-xl p-4 lg:p-5 border border-white/5 shadow-xl flex flex-col min-h-0 h-[450px] md:h-auto md:max-h-[calc(100vh-270px)]">
+                  <div className="bg-[#0a0a0c]/40 backdrop-blur-md border border-white/5 shadow-lg shadow-black/30 rounded-2xl p-4 lg:p-5 flex flex-col min-h-0 h-[450px] md:h-auto md:max-h-[calc(100vh-270px)] hover:border-white/10 transition-all duration-300">
                     <div className="flex items-center justify-between px-1 pb-3 shrink-0">
                       <h3 className="font-semibold text-zinc-300 flex items-center gap-2 text-sm">
                         <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>{" "}
@@ -4450,7 +4459,7 @@ ${textContent}`
                           {/* Client Header Card */}
                           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-white/5 pb-4 mb-5">
                             <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-xl bg-[#c5a880]/10 border border-[#c5a880]/20 flex items-center justify-center text-[#c5a880] font-bold shrink-0">
+                              <div className="w-10 h-10 rounded-xl bg-[#d4af37]/10 border border-[#d4af37]/20 flex items-center justify-center text-[#d4af37] font-bold shrink-0">
                                 {clientName.substring(0, 2).toUpperCase()}
                               </div>
                               <div>
@@ -4585,7 +4594,7 @@ ${textContent}`
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-white/5">
                 <div>
                   <h1 className="text-xl sm:text-3xl font-bold text-white flex items-center gap-2 sm:gap-3">
-                    <LayoutDashboard className="text-[#c5a880]" size={28} />{" "}
+                    <LayoutDashboard className="text-[#d4af37]" size={28} />{" "}
                     Dashboard & Finanças
                   </h1>
                   <p className="text-zinc-400 text-sm mt-1">
@@ -4596,7 +4605,7 @@ ${textContent}`
                 <div className="flex gap-3">
                   <button
                     onClick={() => openTransactionModal()}
-                    className="bg-[#c5a880] text-zinc-950 px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#c5a880]/80 transition-colors flex items-center gap-2"
+                    className="bg-[#d4af37] text-zinc-950 px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#d4af37]/80 transition-colors flex items-center gap-2"
                   >
                     <Plus size={16} /> Nova Transação
                   </button>
@@ -4605,10 +4614,10 @@ ${textContent}`
 
               {/* Welcome state when empty */}
               {clients.length === 0 && transactions.length === 0 && (
-                <div className="bg-gradient-to-br from-amber-500/10 via-zinc-900 to-zinc-900 border border-[#c5a880]/10 rounded-xl p-6 sm:p-8 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-64 h-64 bg-[#c5a880]/5 rounded-full blur-3xl pointer-events-none" />
+                <div className="bg-gradient-to-br from-amber-500/10 via-zinc-900 to-zinc-900 border border-[#d4af37]/10 rounded-xl p-6 sm:p-8 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-[#d4af37]/5 rounded-full blur-3xl pointer-events-none" />
                   <div className="max-w-2xl relative z-10">
-                    <span className="bg-[#c5a880]/20 text-[#c5a880] text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider inline-block mb-4">
+                    <span className="bg-[#d4af37]/20 text-[#d4af37] text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider inline-block mb-4">
                       Boas-vindas ao Zion!
                     </span>
                     <h2 className="text-xl sm:text-2xl font-bold text-white mb-3">
@@ -4622,7 +4631,7 @@ ${textContent}`
                     <div className="flex flex-wrap gap-3">
                       <button
                         onClick={() => setActiveTab("clients")}
-                        className="bg-[#c5a880] hover:bg-[#c5a880]/80 text-zinc-950 px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-2"
+                        className="bg-[#d4af37] hover:bg-[#d4af37]/80 text-zinc-950 px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-2"
                       >
                         <Users size={16} /> Cadastrar Novo Cliente
                       </button>
@@ -4635,15 +4644,15 @@ ${textContent}`
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="bg-[#c5a880]/10 border border-[#c5a880]/30 rounded-xl p-8 flex items-start gap-4 shadow-lg shadow-amber-500/5"
+                  className="bg-[#d4af37]/10 border border-[#d4af37]/30 rounded-xl p-8 flex items-start gap-4 shadow-lg shadow-amber-500/5"
                 >
-                  <div className="bg-[#c5a880]/20 p-2 rounded-lg text-[#c5a880] shrink-0 mt-0.5">
+                  <div className="bg-[#d4af37]/20 p-2 rounded-lg text-[#d4af37] shrink-0 mt-0.5">
                     <Bell size={20} />
                   </div>
                   <div>
                     <h3 className="text-white font-bold text-sm sm:text-base flex items-center gap-2">
                       Faturas próximas do vencimento
-                      <span className="bg-[#c5a880] text-zinc-950 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider">
+                      <span className="bg-[#d4af37] text-zinc-950 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider">
                         {pendingInvoicesExpiringSoon.length} Cliente(s)
                       </span>
                     </h3>
@@ -4660,13 +4669,13 @@ ${textContent}`
               {/* KPI Cards Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 md:gap-6 w-full place-content-center">
                 {/* Card 1: MRR */}
-                <div className="bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-8 sm:p-5 hover:border-white/10 transition-colors relative overflow-hidden group min-w-0">
-                  <div className="absolute top-0 left-0 w-1.5 h-full bg-[#c5a880]" />
+                <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 p-8 sm:p-5 hover:border-white/10 transition-colors relative overflow-hidden group min-w-0">
+                  <div className="absolute top-0 left-0 w-1.5 h-full bg-[#d4af37]" />
                   <div className="flex justify-between items-start text-zinc-400 mb-2 sm:mb-3">
                     <span className="text-sm font-bold text-white block break-words leading-tight mb-1 pr-2">
                       Recorrência (MRR)
                     </span>
-                    <Wallet size={18} className="text-[#c5a880] shrink-0" />
+                    <Wallet size={18} className="text-[#d4af37] shrink-0" />
                   </div>
                   <h3 className="text-xl sm:text-2xl font-medium text-zinc-400 truncate">
                     R$ {mrr.toLocaleString("pt-BR")}
@@ -4682,7 +4691,7 @@ ${textContent}`
                 </div>
 
                 {/* Card 2: Recebimentos */}
-                <div className="bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-8 sm:p-5 hover:border-white/10 transition-colors relative overflow-hidden min-w-0">
+                <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 p-8 sm:p-5 hover:border-white/10 transition-colors relative overflow-hidden min-w-0">
                   <div className="absolute top-0 left-0 w-1.5 h-full bg-emerald-500" />
                   <div className="flex justify-between items-start text-zinc-400 mb-2 sm:mb-3">
                     <span className="text-sm font-bold text-white block break-words leading-tight mb-1 pr-2">
@@ -4708,7 +4717,7 @@ ${textContent}`
                 </div>
 
                 {/* Card 3: A Receber */}
-                <div className="bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-8 sm:p-5 hover:border-white/10 transition-colors relative overflow-hidden min-w-0">
+                <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 p-8 sm:p-5 hover:border-white/10 transition-colors relative overflow-hidden min-w-0">
                   <div className="absolute top-0 left-0 w-1.5 h-full bg-violet-500" />
                   <div className="flex justify-between items-start text-zinc-400 mb-2 sm:mb-3">
                     <span className="text-sm font-bold text-white block break-words leading-tight mb-1 pr-2">
@@ -4734,7 +4743,7 @@ ${textContent}`
                 </div>
 
                 {/* Card 3: Despesas */}
-                <div className="bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-8 sm:p-5 hover:border-white/10 transition-colors relative overflow-hidden min-w-0">
+                <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 p-8 sm:p-5 hover:border-white/10 transition-colors relative overflow-hidden min-w-0">
                   <div className="absolute top-0 left-0 w-1.5 h-full bg-red-500" />
                   <div className="flex justify-between items-start text-zinc-400 mb-2 sm:mb-3">
                     <span className="text-sm font-bold text-white block break-words leading-tight mb-1 pr-2">
@@ -4757,7 +4766,7 @@ ${textContent}`
                 </div>
 
                 {/* Card 4: Saldo */}
-                <div className="bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-8 sm:p-5 hover:border-white/10 transition-colors relative overflow-hidden min-w-0">
+                <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 p-8 sm:p-5 hover:border-white/10 transition-colors relative overflow-hidden min-w-0">
                   <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-500" />
                   <div className="flex justify-between items-start text-zinc-400 mb-2 sm:mb-3">
                     <span className="text-sm font-bold text-white block break-words leading-tight mb-1 pr-2">
@@ -4786,7 +4795,7 @@ ${textContent}`
               {/* Chart Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* SVG Line Chart */}
-                <div className="bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-8 lg:col-span-2">
+                <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 p-8 lg:col-span-2">
                   <div className="flex items-center justify-between mb-6">
                     <div>
                       <h3 className="text-sm font-bold uppercase tracking-wider text-white">
@@ -4799,7 +4808,7 @@ ${textContent}`
                     </div>
                     <div className="flex gap-4 text-xs">
                       <div className="flex items-center gap-1.5">
-                        <span className="w-3 h-3 bg-[#c5a880] rounded-full inline-block" />
+                        <span className="w-3 h-3 bg-[#d4af37] rounded-full inline-block" />
                         <span className="text-zinc-400">Receitas</span>
                       </div>
                       <div className="flex items-center gap-1.5">
@@ -4810,7 +4819,7 @@ ${textContent}`
                   </div>
 
                   {/* Responsive Vector Chart */}
-                  <div className="w-full h-64 sm:h-80 bg-[#050505] rounded-xl border border-white/5 p-4 relative flex items-center justify-center">
+                  <div className="w-full h-64 sm:h-80 bg-[#050505]/40 rounded-2xl border border-white/5 p-4 relative flex items-center justify-center">
                     <svg
                       className="w-full h-full overflow-visible"
                       viewBox="0 0 500 240"
@@ -5057,7 +5066,7 @@ ${textContent}`
                           <div className="mt-1.5 space-y-1">
                             <div className="flex justify-between items-center">
                               <span className="flex items-center gap-1.5 text-zinc-400">
-                                <span className="w-1.5 h-1.5 rounded-full bg-[#c5a880]" />
+                                <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37]" />
                                 Receitas
                               </span>
                               <span className="font-bold font-mono text-white">
@@ -5098,7 +5107,7 @@ ${textContent}`
                           <p className="font-bold text-white flex items-center gap-1.5">
                             <Sparkles
                               size={12}
-                              className="text-[#c5a880] animate-pulse"
+                              className="text-[#d4af37] animate-pulse"
                             />
                             Relatório Dinâmico
                           </p>
@@ -5128,7 +5137,7 @@ ${textContent}`
                 </div>
 
                 {/* Distribution of Despesas */}
-                <div className="bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-8">
+                <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 p-8">
                   <h3 className="text-sm font-bold uppercase tracking-wider text-white mb-4">
                     Divisão de Custos
                   </h3>
@@ -5137,7 +5146,7 @@ ${textContent}`
                       {
                         name: "Ferramentas de IA & SaaS",
                         key: "Ferramentas",
-                        color: "bg-[#c5a880]",
+                        color: "bg-[#d4af37]",
                       },
                       {
                         name: "Freelancers & Produção",
@@ -5194,14 +5203,14 @@ ${textContent}`
               {/* Transactions & Billing lists */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Ledger / Transactions List */}
-                <div className="bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-8">
+                <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 p-8">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-sm font-bold uppercase tracking-wider text-white">
                       Transações Recentes
                     </h3>
                     <button
                       onClick={() => openTransactionModal()}
-                      className="text-[#c5a880] hover:text-[#c5a880] text-xs font-bold"
+                      className="text-[#d4af37] hover:text-[#d4af37] text-xs font-bold"
                     >
                       + Lançar manual
                     </button>
@@ -5211,7 +5220,7 @@ ${textContent}`
                     {transactions.map((t) => (
                       <div
                         key={t.id}
-                        className="p-3 bg-[#050505] border border-white/5 hover:border-white/10 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 transition-colors"
+                        className="p-3 bg-black/20 border border-white/5 hover:border-white/10 rounded-2xl transition-all duration-300 flex flex-col sm:flex-row sm:items-center justify-between gap-2 transition-colors"
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           <div
@@ -5265,7 +5274,7 @@ ${textContent}`
                 </div>
 
                 {/* Client Billing Health Board */}
-                <div className="bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-8">
+                <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 p-8">
                   <h3 className="text-sm font-bold uppercase tracking-wider text-white mb-4">
                     Vencimentos e Cobrança de Clientes
                   </h3>
@@ -5288,7 +5297,7 @@ ${textContent}`
                                   c.paymentStatus === "Em dia"
                                     ? "bg-emerald-500/10 text-emerald-400"
                                     : c.paymentStatus === "Pendente"
-                                      ? "bg-[#c5a880]/10 text-[#c5a880]"
+                                      ? "bg-[#d4af37]/10 text-[#d4af37]"
                                       : "bg-red-500/10 text-red-400"
                                 }`}
                               >
@@ -5404,7 +5413,7 @@ ${textContent}`
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-4 border-b border-white/5">
                     <div>
                       <h1 className="text-xl sm:text-3xl font-bold text-white flex items-center gap-2 sm:gap-3">
-                        <Calendar className="text-[#c5a880]" size={28} />{" "}
+                        <Calendar className="text-[#d4af37]" size={28} />{" "}
                         Calendário & Agenda
                       </h1>
                       <p className="text-zinc-400 text-sm mt-1">
@@ -5428,10 +5437,10 @@ ${textContent}`
                             {isGcalSyncing ? (
                               <Loader2
                                 size={14}
-                                className="animate-spin text-[#c5a880]"
+                                className="animate-spin text-[#d4af37]"
                               />
                             ) : (
-                              <RefreshCw size={14} className="text-[#c5a880]" />
+                              <RefreshCw size={14} className="text-[#d4af37]" />
                             )}
                             Sincronizar
                           </button>
@@ -5456,7 +5465,7 @@ ${textContent}`
                             `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-25`,
                           )
                         }
-                        className="bg-[#c5a880] text-zinc-950 px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#c5a880]/80 transition-colors flex items-center gap-2"
+                        className="bg-[#d4af37] text-zinc-950 px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#d4af37]/80 transition-colors flex items-center gap-2"
                       >
                         <Plus size={16} /> Agendar Compromisso
                       </button>
@@ -5465,7 +5474,7 @@ ${textContent}`
 
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Calendar Matrix layout */}
-                    <div className="bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-8 lg:col-span-2">
+                    <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 p-8 lg:col-span-2">
                       <div className="flex items-center justify-between mb-6">
                         <h2 className="text-lg font-bold text-white flex items-center gap-2 font-mono">
                           {monthNames[currentMonth]} {currentYear}
@@ -5551,12 +5560,12 @@ ${textContent}`
                               }
                               className={`aspect-square p-2 bg-[#050505] border rounded-xl flex flex-col justify-between hover:bg-zinc-800/40 cursor-pointer transition-colors relative group ${
                                 isToday
-                                  ? "border-[#c5a880] bg-[#c5a880]/5"
+                                  ? "border-[#d4af37] bg-[#d4af37]/5"
                                   : "border-white/5"
                               }`}
                             >
                               <span
-                                className={`text-xs font-bold font-mono ${isToday ? "text-[#c5a880]" : "text-zinc-400"}`}
+                                className={`text-xs font-bold font-mono ${isToday ? "text-[#d4af37]" : "text-zinc-400"}`}
                               >
                                 {day}
                               </span>
@@ -5571,7 +5580,7 @@ ${textContent}`
                                     }}
                                     className={`px-1 py-0.5 rounded text-[8px] font-bold truncate ${
                                       e.type === "post"
-                                        ? "bg-[#c5a880]/15 text-[#c5a880]"
+                                        ? "bg-[#d4af37]/15 text-[#d4af37]"
                                         : e.type === "reuniao"
                                           ? "bg-blue-500/15 text-blue-400"
                                           : "bg-purple-500/15 text-purple-400"
@@ -5584,7 +5593,7 @@ ${textContent}`
                               </div>
 
                               {/* Quick add Indicator show on hover */}
-                              <span className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 text-[9px] text-[#c5a880] font-bold transition-opacity">
+                              <span className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 text-[9px] text-[#d4af37] font-bold transition-opacity">
                                 +
                               </span>
                             </div>
@@ -5594,7 +5603,7 @@ ${textContent}`
                     </div>
 
                     {/* Sidebar events logger */}
-                    <div className="bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-8 flex flex-col justify-between h-full min-h-[400px]">
+                    <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 p-8 flex flex-col justify-between h-full min-h-[400px]">
                       <div>
                         <div className="flex items-center justify-between mb-4 pb-2 border-b border-white/5">
                           <h3 className="text-sm font-bold uppercase tracking-wider text-white">
@@ -5621,7 +5630,7 @@ ${textContent}`
                                   <span
                                     className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
                                       e.type === "post"
-                                        ? "bg-[#c5a880]/10 text-[#c5a880]"
+                                        ? "bg-[#d4af37]/10 text-[#d4af37]"
                                         : e.type === "reuniao"
                                           ? "bg-blue-500/10 text-blue-400"
                                           : "bg-purple-500/10 text-purple-400"
@@ -5637,7 +5646,7 @@ ${textContent}`
                                     {e.date} às {e.time}
                                   </span>
                                 </div>
-                                <h4 className="text-sm font-bold text-zinc-100 mt-2 group-hover:text-[#c5a880] transition-colors">
+                                <h4 className="text-sm font-bold text-zinc-100 mt-2 group-hover:text-[#d4af37] transition-colors">
                                   {e.title}
                                 </h4>
                                 <p className="text-xs text-zinc-500 mt-1 font-semibold">
@@ -5657,7 +5666,7 @@ ${textContent}`
                       <div className="mt-6 pt-4 border-t border-white/5">
                         <div className="flex gap-2 text-[10px] text-zinc-400 justify-center">
                           <span className="flex items-center gap-1">
-                            <span className="w-2 h-2 rounded bg-[#c5a880]" />{" "}
+                            <span className="w-2 h-2 rounded bg-[#d4af37]" />{" "}
                             Postagem
                           </span>
                           <span className="flex items-center gap-1">
@@ -5692,7 +5701,7 @@ ${textContent}`
               <div className="flex items-center justify-between mb-6 pb-3 border-b border-white/5">
                 <div>
                   <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                    <Users size={22} className="text-[#c5a880]" />
+                    <Users size={22} className="text-[#d4af37]" />
                     {editingClient
                       ? "Editar Cadastro do Cliente"
                       : "Cadastrar Novo Cliente"}
@@ -5713,7 +5722,7 @@ ${textContent}`
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
                 {/* Coluna 1: Informações Cadastrais */}
                 <div className="space-y-4">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#c5a880] font-mono">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#d4af37] font-mono">
                     1. Dados do Cliente
                   </h3>
 
@@ -5738,7 +5747,7 @@ ${textContent}`
                       onChange={(e) =>
                         setClientForm({ ...clientForm, name: e.target.value })
                       }
-                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 focus:ring-1 focus:ring-amber-500/20"
+                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#d4af37]/50 focus:ring-1 focus:ring-amber-500/20"
                       placeholder="Ex: Dr. Silva (Odonto)"
                     />
                   </div>
@@ -5766,7 +5775,7 @@ ${textContent}`
                       onChange={(e) =>
                         setClientForm({ ...clientForm, niche: e.target.value })
                       }
-                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 focus:ring-1 focus:ring-amber-500/20"
+                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#d4af37]/50 focus:ring-1 focus:ring-amber-500/20"
                       placeholder="Ex: Odontologia"
                     />
                   </div>
@@ -5784,7 +5793,7 @@ ${textContent}`
                           contact: e.target.value,
                         })
                       }
-                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 focus:ring-1 focus:ring-amber-500/20 font-mono"
+                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#d4af37]/50 focus:ring-1 focus:ring-amber-500/20 font-mono"
                       placeholder="Ex: (11) 99999-9999"
                     />
                   </div>
@@ -5800,7 +5809,7 @@ ${textContent}`
                           <img
                             src={clientForm.avatarUrl}
                             alt="Visualização"
-                            className="w-12 h-12 rounded-full object-cover border border-[#c5a880]/50"
+                            className="w-12 h-12 rounded-full object-cover border border-[#d4af37]/50"
                             referrerPolicy="no-referrer"
                           />
                         ) : (
@@ -5865,7 +5874,7 @@ ${textContent}`
                               }
                               className={`w-8 h-8 rounded-full overflow-hidden border flex-shrink-0 transition-all ${
                                 clientForm.avatarUrl === url
-                                  ? "border-[#c5a880] scale-110 ring-2 ring-amber-500/20"
+                                  ? "border-[#d4af37] scale-110 ring-2 ring-amber-500/20"
                                   : "border-white/10 hover:border-white/30"
                               }`}
                             >
@@ -5885,7 +5894,7 @@ ${textContent}`
 
                 {/* Coluna 2: Dados Financeiros e Contrato */}
                 <div className="space-y-4">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#c5a880] font-mono">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#d4af37] font-mono">
                     2. Valores & Faturamento
                   </h3>
 
@@ -5903,7 +5912,7 @@ ${textContent}`
                             planValue: Number(e.target.value),
                           })
                         }
-                        className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 focus:ring-1 focus:ring-amber-500/20 font-mono"
+                        className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#d4af37]/50 focus:ring-1 focus:ring-amber-500/20 font-mono"
                         placeholder="Ex: 1500"
                       />
                     </div>
@@ -5920,7 +5929,7 @@ ${textContent}`
                             dueDate: e.target.value,
                           })
                         }
-                        className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 focus:ring-1 focus:ring-amber-500/20 font-mono"
+                        className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#d4af37]/50 focus:ring-1 focus:ring-amber-500/20 font-mono"
                       />
                     </div>
                   </div>
@@ -5939,7 +5948,7 @@ ${textContent}`
                               .value as Client["paymentStatus"],
                           })
                         }
-                        className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 focus:ring-1 focus:ring-amber-500/20"
+                        className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#d4af37]/50 focus:ring-1 focus:ring-amber-500/20"
                       >
                         <option value="Em dia">ðŸŸ¢ Em dia</option>
                         <option value="Pendente">ðŸŸ¡ Pendente</option>
@@ -5959,7 +5968,7 @@ ${textContent}`
                             startDate: e.target.value,
                           })
                         }
-                        className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 focus:ring-1 focus:ring-amber-500/20"
+                        className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#d4af37]/50 focus:ring-1 focus:ring-amber-500/20"
                       />
                     </div>
                   </div>
@@ -5975,7 +5984,7 @@ ${textContent}`
                           status: e.target.value as Client["status"],
                         })
                       }
-                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 focus:ring-1 focus:ring-amber-500/20"
+                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#d4af37]/50 focus:ring-1 focus:ring-amber-500/20"
                     >
                       <option value="Ativo">Ativo</option>
                       <option value="Inativo">Inativo</option>
@@ -5992,7 +6001,7 @@ ${textContent}`
                       onChange={(e) =>
                         setClientForm({ ...clientForm, notes: e.target.value })
                       }
-                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 focus:ring-1 focus:ring-amber-500/20 min-h-[70px]"
+                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#d4af37]/50 focus:ring-1 focus:ring-amber-500/20 min-h-[70px]"
                       placeholder="Notas adicionais, contatos de emergência, senhas compartilhadas..."
                     />
                   </div>
@@ -6033,7 +6042,7 @@ ${textContent}`
                                 plan: e.target.value,
                               })
                             }
-                            className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50"
+                            className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#d4af37]/50"
                             placeholder="Ex: Plano Intermediário"
                           />
                         </div>
@@ -6049,7 +6058,7 @@ ${textContent}`
                                 planDetails: e.target.value,
                               })
                             }
-                            className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 min-h-[60px]"
+                            className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#d4af37]/50 min-h-[60px]"
                             placeholder="Ex: 2 Posts/semana, 1 Reels/semana, R$ 200 tráfego embutido..."
                           />
                         </div>
@@ -6063,7 +6072,7 @@ ${textContent}`
                 savedNotes.filter((n) => n.clientName === editingClient.name)
                   .length > 0 && (
                   <div className="mt-6 pt-6 border-t border-white/5">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#c5a880] font-mono flex items-center gap-2 mb-4">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#d4af37] font-mono flex items-center gap-2 mb-4">
                       <FileText size={14} /> Notas & Documentos do Cliente
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -6112,7 +6121,7 @@ ${textContent}`
                   </button>
                   <button
                     onClick={handleSaveClient}
-                    className="bg-[#c5a880] hover:bg-[#c5a880]/80 text-zinc-950 px-5 py-2.5 rounded-xl font-black text-xs transition-all shadow-md shadow-amber-500/15"
+                    className="bg-[#d4af37] hover:bg-[#d4af37]/80 text-zinc-950 px-5 py-2.5 rounded-xl font-black text-xs transition-all shadow-md shadow-amber-500/15"
                   >
                     Gravar Alterações
                   </button>
@@ -6133,7 +6142,7 @@ ${textContent}`
               <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/5">
                 <div>
                   <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                    <Save size={20} className="text-[#c5a880]" />
+                    <Save size={20} className="text-[#d4af37]" />
                     Salvar Nota / Copy
                   </h2>
                   <p className="text-xs text-zinc-500 mt-0.5">
@@ -6156,7 +6165,7 @@ ${textContent}`
                   <select
                     value={noteClient}
                     onChange={(e) => setNoteClient(e.target.value)}
-                    className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50"
+                    className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#d4af37]/50"
                   >
                     <option value="">Selecione o Cliente</option>
                     <option value="Geral (Sem cliente)">
@@ -6177,7 +6186,7 @@ ${textContent}`
                     type="text"
                     value={noteTitle}
                     onChange={(e) => setNoteTitle(e.target.value)}
-                    className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50"
+                    className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#d4af37]/50"
                     placeholder="Ex: Copy para Campanha de Black Friday"
                   />
                 </div>
@@ -6209,7 +6218,7 @@ ${textContent}`
                       setNoteTitle("");
                       alert("Nota salva com sucesso!");
                     }}
-                    className="bg-[#c5a880] text-zinc-950 px-6 py-2 rounded-xl font-bold text-sm hover:bg-[#c5a880]/80 transition-colors shadow-lg shadow-amber-500/10 active:scale-95"
+                    className="bg-[#d4af37] text-zinc-950 px-6 py-2 rounded-xl font-bold text-sm hover:bg-[#d4af37]/80 transition-colors shadow-lg shadow-amber-500/10 active:scale-95"
                   >
                     Salvar
                   </button>
@@ -6230,7 +6239,7 @@ ${textContent}`
               <div className="flex items-center justify-between mb-6 pb-3 border-b border-white/5">
                 <div>
                   <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                    <User size={20} className="text-[#c5a880]" />
+                    <User size={20} className="text-[#d4af37]" />
                     Configurações da Minha Conta
                   </h2>
                   <p className="text-xs text-zinc-500 mt-0.5">
@@ -6252,11 +6261,11 @@ ${textContent}`
                     <img
                       src={myProfile.avatarUrl}
                       alt={myProfile.name}
-                      className="w-20 h-20 rounded-full object-cover border-2 border-[#c5a880]/50 shadow-lg shadow-amber-500/10"
+                      className="w-20 h-20 rounded-full object-cover border-2 border-[#d4af37]/50 shadow-lg shadow-amber-500/10"
                       referrerPolicy="no-referrer"
                     />
                   ) : (
-                    <div className="w-20 h-20 rounded-full bg-[#c5a880] text-zinc-950 flex items-center justify-center text-2xl font-black uppercase">
+                    <div className="w-20 h-20 rounded-full bg-[#d4af37] text-zinc-950 flex items-center justify-center text-2xl font-black uppercase">
                       {myProfile.name.substring(0, 2)}
                     </div>
                   )}
@@ -6320,7 +6329,7 @@ ${textContent}`
                           }
                           className={`w-8 h-8 rounded-full overflow-hidden border transition-all ${
                             myProfile.avatarUrl === url
-                              ? "border-[#c5a880] scale-110"
+                              ? "border-[#d4af37] scale-110"
                               : "border-white/10"
                           }`}
                         >
@@ -6347,7 +6356,7 @@ ${textContent}`
                     onChange={(e) =>
                       setMyProfile({ ...myProfile, name: e.target.value })
                     }
-                    className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50"
+                    className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#d4af37]/50"
                     placeholder="Ex: Equipe Zion"
                   />
                 </div>
@@ -6362,13 +6371,13 @@ ${textContent}`
                     onChange={(e) =>
                       setMyProfile({ ...myProfile, role: e.target.value })
                     }
-                    className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50"
+                    className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#d4af37]/50"
                     placeholder="Ex: Agência Digital"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-[#c5a880] mb-1.5 uppercase flex items-center gap-1.5">
+                  <label className="block text-xs font-semibold text-[#d4af37] mb-1.5 uppercase flex items-center gap-1.5">
                     <Wand2 size={12} /> Chave API Gemini (Opcional)
                   </label>
                   <input
@@ -6380,7 +6389,7 @@ ${textContent}`
                         geminiApiKey: e.target.value,
                       })
                     }
-                    className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50"
+                    className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#d4af37]/50"
                     placeholder="Cole sua API Key do Google AI Studio aqui"
                   />
                   <p className="text-[10px] text-zinc-500 mt-1.5">
@@ -6394,7 +6403,7 @@ ${textContent}`
               <div className="mt-8 pt-4 border-t border-white/5 flex justify-end">
                 <button
                   onClick={() => setIsProfileModalOpen(false)}
-                  className="bg-[#c5a880] hover:bg-[#c5a880]/80 text-zinc-950 px-5 py-2.5 rounded-xl font-black text-xs transition-all shadow-md shadow-amber-500/15"
+                  className="bg-[#d4af37] hover:bg-[#d4af37]/80 text-zinc-950 px-5 py-2.5 rounded-xl font-black text-xs transition-all shadow-md shadow-amber-500/15"
                 >
                   Confirmar Alterações
                 </button>
@@ -6440,7 +6449,7 @@ ${textContent}`
                   onClick={() => setTaskMode('ai')}
                   className={`flex-1 py-2 text-xs font-bold rounded-lg ${
                     taskMode === 'ai'
-                      ? 'bg-[#c5a880] text-zinc-950'
+                      ? 'bg-[#d4af37] text-zinc-950'
                       : 'text-zinc-500 hover:text-white'
                   }`}
                 >
@@ -6450,8 +6459,8 @@ ${textContent}`
 
               <div className="space-y-4">
                 {taskMode === 'ai' && !editingTask && (
-                  <div className="bg-[#c5a880]/10 border border-[#c5a880]/20 rounded-xl p-8 mb-4">
-                    <h3 className="text-[#c5a880] text-sm font-bold flex items-center gap-1.5 mb-2">
+                  <div className="bg-[#d4af37]/10 border border-[#d4af37]/20 rounded-xl p-8 mb-4">
+                    <h3 className="text-[#d4af37] text-sm font-bold flex items-center gap-1.5 mb-2">
                       <Sparkles size={14} /> Criação Inteligente com IA
                     </h3>
                     <p className="text-xs text-zinc-400 mb-3">
@@ -6461,7 +6470,7 @@ ${textContent}`
                       value={parseInputText}
                       onChange={(e) => setParseInputText(e.target.value)}
                       placeholder="Descreva a tarefa ou cole anotações..."
-                      className="w-full bg-[#050505] border border-[#c5a880]/20 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#c5a880]/50 text-sm min-h-[60px] resize-none mb-2"
+                      className="w-full bg-[#050505] border border-[#d4af37]/20 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#d4af37]/50 text-sm min-h-[60px] resize-none mb-2"
                     />
                     <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center w-full">
                       <div className="flex flex-1 items-center gap-2 w-full">
@@ -6477,7 +6486,7 @@ ${textContent}`
                       <button
                         onClick={handleParseTask}
                         disabled={isParsingTask}
-                        className="bg-[#c5a880] text-zinc-950 px-3 py-2 rounded-lg text-xs font-bold hover:bg-[#c5a880]/80 whitespace-nowrap disabled:opacity-50 w-full sm:w-auto"
+                        className="bg-[#d4af37] text-zinc-950 px-3 py-2 rounded-lg text-xs font-bold hover:bg-[#d4af37]/80 whitespace-nowrap disabled:opacity-50 w-full sm:w-auto"
                       >
                         {isParsingTask ? "Analisando..." : "Organizar"}
                       </button>
@@ -6563,7 +6572,7 @@ ${textContent}`
                           hasDeadline: e.target.checked,
                         })
                       }
-                      className="rounded border-zinc-700 bg-[#050505] text-[#c5a880] focus:ring-amber-500/50 focus:ring-offset-0 w-4 h-4"
+                      className="rounded border-zinc-700 bg-[#050505] text-[#d4af37] focus:ring-amber-500/50 focus:ring-offset-0 w-4 h-4"
                     />
                     <span className="text-sm font-medium text-zinc-300 group-hover:text-white transition-colors">
                       Possui prazo de entrega?
@@ -6638,7 +6647,7 @@ ${textContent}`
             >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                  <DollarSign className="text-[#c5a880]" size={20} />
+                  <DollarSign className="text-[#d4af37]" size={20} />
                   {editingTransaction ? "Editar Transação" : "Nova Transação"}
                 </h2>
                 <button
@@ -6763,7 +6772,7 @@ ${textContent}`
                             placeholder="Nova Categoria"
                             value={newCategoryName}
                             onChange={(e) => setNewCategoryName(e.target.value)}
-                            className="flex-1 bg-[#050505] border border-white/10 rounded-lg px-2.5 py-1.5 text-white text-xs focus:outline-none focus:border-[#c5a880]/50"
+                            className="flex-1 bg-[#050505]/45 hover:bg-[#050505]/75 border border-white/5 rounded-lg px-2.5 py-1.5 text-white text-xs focus:outline-none focus:border-[#d4af37]/40 focus:ring-1 focus:ring-[#d4af37]/15 transition-all duration-300"
                             autoFocus
                           />
                           <button
@@ -6787,7 +6796,7 @@ ${textContent}`
                               setNewCategoryName("");
                               setIsAddingNewCategory(false);
                             }}
-                            className="bg-[#c5a880] hover:bg-[#c5a880]/80 text-zinc-950 text-[10px] font-black px-2.5 py-1.5 rounded-lg transition-colors"
+                            className="bg-[#d4af37] hover:bg-[#d4af37]/80 text-zinc-950 text-[10px] font-black px-2.5 py-1.5 rounded-lg transition-colors"
                           >
                             Add
                           </button>
@@ -6820,7 +6829,7 @@ ${textContent}`
                             });
                           }
                         }}
-                        className="w-full bg-[#050505] border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#c5a880]/50 text-sm"
+                        className="w-full bg-[#050505]/45 hover:bg-[#050505]/75 border border-white/5 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#d4af37]/40 focus:ring-1 focus:ring-[#d4af37]/15 transition-all duration-300 text-sm"
                       >
                         {transactionCategories.map((cat) => (
                           <option key={cat} value={cat}>
@@ -6879,7 +6888,7 @@ ${textContent}`
                   </button>
                   <button
                     onClick={handleSaveTransaction}
-                    className="bg-[#c5a880] text-zinc-950 px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#c5a880]/80 transition-colors"
+                    className="bg-[#d4af37] text-zinc-950 px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#d4af37]/80 transition-colors"
                   >
                     Salvar
                   </button>
@@ -6899,7 +6908,7 @@ ${textContent}`
             >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                  <Calendar className="text-[#c5a880]" size={20} />
+                  <Calendar className="text-[#d4af37]" size={20} />
                   {editingEvent ? "Editar Evento" : "Novo Compromisso"}
                 </h2>
                 <button
@@ -7052,7 +7061,7 @@ ${textContent}`
                   </button>
                   <button
                     onClick={handleSaveEvent}
-                    className="bg-[#c5a880] text-zinc-950 px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#c5a880]/80 transition-colors"
+                    className="bg-[#d4af37] text-zinc-950 px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#d4af37]/80 transition-colors"
                   >
                     Salvar
                   </button>
@@ -7149,7 +7158,7 @@ function Toggle({
       onClick={() => onChange(!checked)}
     >
       <div
-        className={`w-10 h-5 rounded-full transition-colors relative ${checked ? "bg-[#c5a880]" : "bg-zinc-800"}`}
+        className={`w-10 h-5 rounded-full transition-colors relative ${checked ? "bg-[#d4af37]" : "bg-zinc-800"}`}
       >
         <div
           className={`absolute top-1 left-1 w-3 h-3 rounded-full bg-white transition-transform ${checked ? "translate-x-5" : "translate-x-0"}`}
@@ -7175,16 +7184,19 @@ function SidebarItemMini({
     <div className="relative group flex justify-center w-full">
       <button
         onClick={onClick}
-        className={`p-3 rounded-xl transition-all ${
+        className={`p-3 rounded-xl transition-all duration-300 relative cursor-pointer ${
           active
-            ? "bg-[#c5a880]/15 text-[#c5a880] border border-[#c5a880]/20 font-bold"
-            : "text-zinc-500 hover:text-white hover:bg-white/[0.03] border border-transparent"
+            ? "bg-[#d4af37]/10 text-[#d4af37] border border-[#d4af37]/20 shadow-md shadow-[#d4af37]/5 font-bold scale-105"
+            : "text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.02] border border-transparent"
         }`}
       >
+        {active && (
+          <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-[#d4af37] rounded-r-full" />
+        )}
         {icon}
       </button>
-      {/* Tooltip on Hover */}
-      <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-[#121214] border border-white/10 text-white text-[10px] font-bold py-1.5 px-3 rounded-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap shadow-xl">
+      {/* Tooltip on Hover with micro-animation */}
+      <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-[#0a0a0c]/95 backdrop-blur-md border border-white/10 text-white text-[10px] font-bold py-1.5 px-3 rounded-lg opacity-0 pointer-events-none group-hover:opacity-100 group-hover:translate-x-2 transition-all duration-300 z-50 whitespace-nowrap shadow-2xl">
         {tooltip}
       </div>
     </div>
@@ -7205,13 +7217,16 @@ function SidebarItem({
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all text-xs font-semibold uppercase tracking-wider ${
+      className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-300 text-xs font-semibold uppercase tracking-wider cursor-pointer relative ${
         active
-          ? "bg-[#c5a880]/15 text-[#c5a880] border border-[#c5a880]/20 font-bold scale-[1.01] shadow-lg shadow-[#c5a880]/[0.02]"
-          : "text-zinc-400 hover:bg-white/[0.03] hover:text-zinc-200 border border-transparent"
+          ? "bg-[#d4af37]/10 text-[#d4af37] border border-[#d4af37]/20 font-bold scale-[1.02] shadow-md shadow-[#d4af37]/5"
+          : "text-zinc-400 hover:bg-white/[0.02] hover:text-zinc-200 border border-transparent"
       }`}
     >
-      <span className={active ? "text-[#c5a880]" : "text-zinc-500 group-hover:text-zinc-350"}>{icon}</span>
+      {active && (
+        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-[#d4af37] rounded-r-full" />
+      )}
+      <span className={active ? "text-[#d4af37]" : "text-zinc-500 group-hover:text-zinc-350 transition-colors"}>{icon}</span>
       <span>{label}</span>
     </button>
   );
@@ -7232,14 +7247,14 @@ const TaskCard: React.FC<{
   return (
     <div
       onClick={onClick}
-      className={`bg-[#0b0b0c] border p-4 rounded-xl transition-all cursor-pointer group hover:bg-zinc-800/50 relative overflow-hidden ${
+      className={`bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 p-4 rounded-2xl hover:border-white/10 transition-all duration-300 transition-all cursor-pointer group hover:bg-zinc-800/50 relative overflow-hidden ${
         isOverdue
           ? "border-red-500/30 hover:border-red-500/50 shadow-md shadow-red-500/5"
           : "border-white/5 hover:border-white/10"
       }`}
     >
       <div className="flex items-center justify-between gap-2 mb-2">
-        <span className="text-[10px] uppercase font-bold tracking-wider text-[#c5a880] bg-[#c5a880]/10 px-2 py-0.5 rounded">
+        <span className="text-[10px] uppercase font-bold tracking-wider text-[#d4af37] bg-[#d4af37]/10 px-2 py-0.5 rounded">
           {task.client}
         </span>
         <span className="text-[9px] text-zinc-500 font-mono font-medium">
@@ -7263,7 +7278,7 @@ const TaskCard: React.FC<{
             </span>
           ) : (
             <span className="text-[10px] bg-[#050505] text-zinc-400 border border-white/5 px-2 py-0.5 rounded flex items-center gap-1 font-medium">
-              <Clock size={10} className="text-[#c5a880]/70" /> Prazo:{" "}
+              <Clock size={10} className="text-[#d4af37]/70" /> Prazo:{" "}
               {typeof task.dueDate === "string" && task.dueDate.includes("-")
                 ? task.dueDate.split("-").reverse().slice(0, 2).join("/")
                 : task.dueDate}

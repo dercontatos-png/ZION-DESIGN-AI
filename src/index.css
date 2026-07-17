@@ -4,9 +4,22 @@
   --font-sans: "Poppins", sans-serif;
   --font-montserrat: "Montserrat", sans-serif;
   --font-poppins: "Poppins", sans-serif;
+  
+  /* Gold custom colors for Tailwind v4 */
+  --color-gold-50: #fbf7e6;
+  --color-gold-100: #f5ebbf;
+  --color-gold-200: #ead680;
+  --color-gold-300: #ddbf43;
+  --color-gold-400: #d4af37; /* Premium Gold Ouro */
+  --color-gold-500: #b8942b;
+  --color-gold-600: #947320;
+  --color-gold-700: #70551a;
+  --color-gold-800: #4c3913;
+  --color-gold-900: #2c200b;
 }
 
 @layer utilities {
+  /* Scrollbar Customization */
   .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -15,21 +28,45 @@
     background: transparent;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.08);
     border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.03);
   }
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(212, 175, 55, 0.2);
   }
 
   .scrollbar-none::-webkit-scrollbar {
     display: none;
   }
   .scrollbar-none {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
-  
+
+  /* Glassmorphism Presets */
+  .glass {
+    background: rgba(10, 10, 12, 0.7) !important;
+    backdrop-filter: blur(16px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  }
+
+  .glass-heavy {
+    background: rgba(5, 5, 5, 0.85) !important;
+    backdrop-filter: blur(24px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(160%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.09) !important;
+  }
+
+  .glass-gold {
+    background: rgba(212, 175, 55, 0.03) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(212, 175, 55, 0.15) !important;
+  }
+
+  /* Micro-animations */
   @keyframes slide {
     0% { transform: translateX(-100%); }
     100% { transform: translateX(300%); }
@@ -37,12 +74,57 @@
   .animate-slide {
     animation: slide 1.5s infinite linear;
   }
-  
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  .animate-fade-in {
+    animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-slide-up {
+    animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .animate-scale-in {
+    animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .animate-shimmer {
+    background: linear-gradient(90deg, #101012 25%, #1c1c20 50%, #101012 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.8s infinite;
+  }
+
+  /* Glow effects */
+  .glow-gold {
+    box-shadow: 0 0 20px rgba(212, 175, 55, 0.15);
+  }
+  .glow-gold-hover:hover {
+    box-shadow: 0 0 25px rgba(212, 175, 55, 0.25);
+    border-color: rgba(212, 175, 55, 0.3) !important;
+  }
+
   /* Markdown Styles */
-  .markdown-body h1 { @apply text-xl font-bold mb-2; }
-  .markdown-body h2 { @apply text-lg font-bold mb-2; }
-  .markdown-body p { @apply mb-2; }
-  .markdown-body ul { @apply list-disc list-inside mb-2; }
-  .markdown-body ol { @apply list-decimal list-inside mb-2; }
-  .markdown-body code { @apply bg-zinc-950 px-1 rounded; }
+  .markdown-body h1 { @apply text-xl font-bold text-white mb-2 mt-4 first:mt-0; }
+  .markdown-body h2 { @apply text-lg font-bold text-zinc-100 mb-2 mt-3; }
+  .markdown-body p { @apply mb-2.5 text-zinc-300 leading-relaxed; }
+  .markdown-body ul { @apply list-disc list-inside mb-3 text-zinc-300 space-y-1; }
+  .markdown-body ol { @apply list-decimal list-inside mb-3 text-zinc-300 space-y-1; }
+  .markdown-body code { @apply bg-[#050505] text-gold-400 font-mono text-[11px] px-1.5 py-0.5 rounded border border-white/5; }
+  .markdown-body strong { @apply text-white font-semibold; }
+  .markdown-body blockquote { @apply border-l-2 border-gold-400 pl-3 my-3 italic text-zinc-400; }
 }

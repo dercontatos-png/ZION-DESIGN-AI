@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { useProjectStore } from "../store/useProjectStore";
 import { useClientStore } from "../store/useClientStore";
 import {
-  Sparkles,
   ChevronRight,
   ExternalLink,
   Activity,
@@ -11,7 +10,6 @@ import {
   Edit2,
   Check,
   Plus,
-  FolderOpen,
   Trash2
 } from "lucide-react";
 
@@ -74,23 +72,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   return (
-    <div className="w-[15%] bg-[#0f0f11] border-r border-zinc-800/80 flex flex-col h-full shrink-0 select-none">
+    <div className="w-[18%] bg-black/45 backdrop-blur-md border-r border-zinc-800/80 flex flex-col h-full shrink-0 select-none">
       
       {/* Header da Sidebar com Nome do Projeto Editável e Badge */}
-      <div className="p-6 flex flex-col gap-3 border-b border-zinc-800 shrink-0 relative">
+      <div className="p-5 flex flex-col gap-3 border-b border-white/5 shrink-0 relative">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded bg-[#ad8330] flex items-center justify-center font-bold text-black text-sm shrink-0">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#d4af37] to-[#b8942b] flex items-center justify-center font-bold text-zinc-950 text-xs shrink-0 shadow-sm">
               DZ
             </div>
-            <span className="font-extrabold text-xs uppercase tracking-widest text-[#ad8330]">
+            <span className="font-montserrat font-black text-[10px] uppercase tracking-wider bg-gradient-to-r from-white to-[#d4af37] bg-clip-text text-transparent">
               Designer Zion
             </span>
           </div>
           
           <button 
             onClick={handleNewProject}
-            className="w-7 h-7 rounded bg-[#ad8330]/10 hover:bg-[#ad8330]/20 flex items-center justify-center text-[#ad8330] transition-colors"
+            className="w-7 h-7 rounded-lg bg-[#d4af37]/10 hover:bg-[#d4af37]/20 flex items-center justify-center text-[#d4af37] border border-[#d4af37]/20 transition-all cursor-pointer"
             title="Nova Conversa (Zerar Configurações)"
           >
             <Plus size={14} />
@@ -98,7 +96,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
         
         {/* Nome do projeto editável */}
-        <div className="mt-1 flex items-center justify-between gap-1 bg-zinc-950/60 p-2 rounded-lg border border-zinc-900 group">
+        <div className="mt-1 flex items-center justify-between gap-1 bg-[#050505]/45 hover:bg-[#050505]/80 border border-white/5 p-2 rounded-xl group transition-all duration-300">
           {isEditingName ? (
             <input
               type="text"
@@ -121,19 +119,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
           
           <button
             onClick={isEditingName ? saveProjectName : startEditingName}
-            className="text-zinc-550 hover:text-[#ad8330] transition-colors shrink-0"
+            className="text-zinc-500 hover:text-[#d4af37] transition-colors shrink-0 cursor-pointer"
           >
             {isEditingName ? <Check size={10} /> : <Edit2 size={10} className="opacity-40 group-hover:opacity-100 transition-opacity" />}
           </button>
         </div>
         
         {showProjectSelector && !isEditingName && (
-          <div className="absolute top-full left-6 right-6 mt-1 bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto">
+          <div className="absolute top-full left-5 right-5 mt-1 bg-[#0a0a0c]/95 backdrop-blur-lg border border-white/10 rounded-xl shadow-2xl z-50 max-h-48 overflow-y-auto custom-scrollbar animate-scale-in">
             {store.projectsList.map((p) => (
               <div
                 key={p.id}
-                className={`w-full flex items-center justify-between px-3 py-2 border-b border-zinc-800/50 hover:bg-zinc-800 transition-colors cursor-pointer ${
-                  p.id === store.activeProjectId ? "text-[#ad8330]" : "text-zinc-400"
+                className={`w-full flex items-center justify-between px-3 py-2.5 border-b border-white/5 hover:bg-white/[0.03] transition-colors cursor-pointer ${
+                  p.id === store.activeProjectId ? "text-[#d4af37]" : "text-zinc-400"
                 }`}
                 onClick={() => {
                   store.loadProjectById(p.id);
@@ -146,7 +144,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </span>
                 <button
                   onClick={(e) => handleDeleteProject(p.id, e)}
-                  className="text-zinc-600 hover:text-red-500 transition-colors p-1"
+                  className="text-zinc-650 hover:text-red-500 transition-colors p-1 cursor-pointer"
                   title="Deletar Conversa"
                 >
                   <Trash2 size={10} />
@@ -157,7 +155,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
 
         <div className="mt-0.5 flex justify-between items-center">
-          <span className="inline-block bg-[#ad8330]/20 border border-[#ad8330]/40 text-[#ad8330] text-[9.5px] font-black uppercase tracking-widest px-3 py-1 rounded-full truncate max-w-full">
+          <span className="inline-block bg-[#d4af37]/10 border border-[#d4af37]/20 text-[#d4af37] text-[9.5px] font-black uppercase tracking-widest px-3 py-1 rounded-full truncate max-w-full shadow-sm">
             CONVERSA ATIVA
           </span>
         </div>
@@ -175,12 +173,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <button
             key={tab.name}
             onClick={() => setActiveMenuTab(tab.name === "Designer Zion" ? "Design Builder" : tab.name)}
-            className={`w-full flex items-center justify-between px-4 py-3.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-300 cursor-pointer relative ${
               tab.active || (activeMenuTab === tab.name)
-                ? "bg-[#ad8330]/10 text-[#ad8330] border border-[#ad8330]/20 ring-1 ring-[#ad8330]/10"
-                : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/40"
+                ? "bg-[#d4af37]/10 text-[#d4af37] border border-[#d4af37]/20 font-bold scale-[1.02] shadow-md shadow-[#d4af37]/5"
+                : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.02] border border-transparent"
             }`}
           >
+            { (tab.active || activeMenuTab === tab.name) && (
+              <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-[#d4af37] rounded-r-full" />
+            )}
             <span>{tab.name}</span>
             {(tab.active || activeMenuTab === tab.name) && <ChevronRight size={12} />}
           </button>
@@ -195,10 +196,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 key={source}
                 href="#"
                 onClick={(e) => { e.preventDefault(); showToast(`Importando referências de ${source}...`, "success"); }}
-                className="flex items-center justify-between py-2.5 text-[10.5px] font-bold text-zinc-400 hover:text-white uppercase tracking-wider transition-colors"
+                className="flex items-center justify-between py-2 text-[10.5px] font-semibold text-zinc-400 hover:text-white uppercase tracking-wider transition-colors duration-200"
               >
                 <span>{source}</span>
-                <ExternalLink size={10} className="text-zinc-600" />
+                <ExternalLink size={10} className="text-zinc-650" />
               </a>
             ))}
           </div>
@@ -206,12 +207,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Painel de Status da API */}
-      <div className="p-5 border-t border-zinc-800 bg-black/15 shrink-0 space-y-3.5">
+      <div className="p-5 border-t border-white/5 bg-black/10 shrink-0 space-y-3">
         {/* Status Indicator */}
-        <div className="flex items-center justify-between px-3.5 py-3 rounded-lg bg-zinc-900/60 border border-zinc-800">
+        <div className="flex items-center justify-between px-3.5 py-3 rounded-xl bg-[#050505]/40 border border-white/5">
           <div className="flex items-center gap-2">
             <span className={`w-2 h-2 rounded-full ${store.apiStatus === "Online" ? "bg-emerald-500 animate-pulse" : "bg-red-500"} shrink-0`} />
-            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-450">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
               {store.apiStatus === "Online" ? "Status: Online" : "Erro API"}
             </span>
           </div>
@@ -222,16 +223,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <button
           onClick={handleTestToken}
           disabled={isTesting}
-          className="w-full flex items-center justify-center gap-2 py-2.5 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 active:scale-95 disabled:opacity-50 text-[10px] font-extrabold uppercase tracking-widest text-zinc-300 rounded-lg transition-all cursor-pointer"
+          className="w-full flex items-center justify-center gap-2 py-2.5 bg-zinc-900 border border-white/5 hover:border-white/10 active:scale-95 disabled:opacity-50 text-[10px] font-extrabold uppercase tracking-widest text-zinc-300 rounded-xl transition-all cursor-pointer"
         >
           {isTesting ? (
             <>
-              <RefreshCw size={11} className="animate-spin text-[#ad8330]" />
+              <RefreshCw size={11} className="animate-spin text-[#d4af37]" />
               <span>Testando...</span>
             </>
           ) : (
             <>
-              <Play size={11} className="text-[#ad8330]" />
+              <Play size={11} className="text-[#d4af37]" />
               <span>Testar Token</span>
             </>
           )}

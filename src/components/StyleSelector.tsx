@@ -47,7 +47,7 @@ export const StyleSelector: React.FC<StyleSelectorProps> = ({
         <button
           onClick={() => setEnableEstiloVisual(!enableEstiloVisual)}
           className="w-11 h-6 bg-zinc-800 rounded-full p-0.5 relative transition-colors duration-200"
-          style={{ backgroundColor: enableEstiloVisual ? "#ad8330" : "" }}
+          style={{ backgroundColor: enableEstiloVisual ? "#b8942b" : "" }}
         >
           <div
             className="w-5 h-5 bg-white rounded-full transition-transform duration-200"
@@ -67,8 +67,8 @@ export const StyleSelector: React.FC<StyleSelectorProps> = ({
                   onClick={() => handleStyleClick(opt)}
                   className={`px-3 py-2 rounded-full border text-[10px] font-black transition-all duration-300 uppercase tracking-wider cursor-pointer ${
                     isSelected
-                      ? "bg-[#ad8330] border-[#ad8330] text-black ring-1 ring-[#ad8330]"
-                      : "bg-zinc-900/60 border-zinc-800 text-zinc-400 hover:text-white hover:border-[#ad8330]/20 hover:bg-zinc-900/80"
+                      ? "bg-[#b8942b] border-[#b8942b] text-black ring-1 ring-[#b8942b]"
+                      : "bg-zinc-900/60 border-zinc-800 text-zinc-400 hover:text-white hover:border-[#b8942b]/20 hover:bg-zinc-900/80"
                   }`}
                 >
                   {opt}
@@ -87,7 +87,7 @@ export const StyleSelector: React.FC<StyleSelectorProps> = ({
               value={store.estiloVisualCustom || ""}
               onChange={(e) => store.updateConfig({ estiloVisualCustom: e.target.value })}
               placeholder="Descreva o estilo se não encontrar nas tags acima..."
-              className="w-full bg-zinc-950/60 border border-white/5 rounded-lg px-3 py-1.5 text-xs text-zinc-200 placeholder-zinc-700 focus:outline-none focus:border-[#ad8330]/40 tracking-wide"
+              className="w-full bg-zinc-950/60 border border-white/5 rounded-lg px-3 py-1.5 text-xs text-zinc-200 placeholder-zinc-700 focus:outline-none focus:border-[#b8942b]/40 tracking-wide"
             />
           </div>
         </div>

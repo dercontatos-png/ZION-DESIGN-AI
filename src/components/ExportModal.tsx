@@ -37,14 +37,14 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               onClick={() => setExportFormat(fmt.id as any)}
               className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all ${
                 exportFormat === fmt.id 
-                ? 'bg-[#ad8330]/10 border-[#ad8330] text-[#ad8330]' 
+                ? 'bg-[#b8942b]/10 border-[#b8942b] text-[#b8942b]' 
                 : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-700 hover:bg-zinc-800'
               }`}
             >
-              <Download size={14} className={exportFormat === fmt.id ? 'text-[#ad8330]' : 'text-zinc-500'} />
+              <Download size={14} className={exportFormat === fmt.id ? 'text-[#b8942b]' : 'text-zinc-500'} />
               <div className="flex flex-col items-start">
                 <span className="text-xs font-bold">{fmt.id}</span>
-                <span className={`text-[10px] ${exportFormat === fmt.id ? 'text-[#ad8330]/70' : 'text-zinc-500'}`}>{fmt.label}</span>
+                <span className={`text-[10px] ${exportFormat === fmt.id ? 'text-[#b8942b]/70' : 'text-zinc-500'}`}>{fmt.label}</span>
               </div>
             </button>
           ))}
@@ -70,7 +70,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
         </div>
 
         <button className="w-full flex items-center justify-center gap-2 p-3 mt-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-xs font-bold transition-all group">
-          <RefreshCw size={14} className="text-zinc-500 group-hover:text-[#ad8330]" />
+          <RefreshCw size={14} className="text-zinc-500 group-hover:text-[#b8942b]" />
           Recortar rosto
         </button>
       </div>

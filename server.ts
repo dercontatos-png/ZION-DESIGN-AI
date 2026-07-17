@@ -118,7 +118,7 @@ function getResolutionDimensions(resolution: string, aspectRatio: string): { wid
   }
 }
 
-async function upscaleImage(base64Image: string, targetWidth: number): Promise<{ image: string; width: number; height: number }> {
+async function upscaleImage(base64Image: string, targetWidth: number, formatInput?: string): Promise<{ image: string; width: number; height: number }> {
   try {
     const cleanBase64 = base64Image.replace(/^data:image\/\w+;base64,/, "");
     const buffer = Buffer.from(cleanBase64, "base64");
@@ -157,12 +157,30 @@ async function upscaleImage(base64Image: string, targetWidth: number): Promise<{
       (image as any).resize(targetW, targetH);
     }
 
-    const scaledBuffer = await image.getBuffer("image/jpeg");
-    return {
-      image: `data:image/jpeg;base64,${scaledBuffer.toString("base64")}`,
-      width: image.width,
-      height: image.height
-    };
+    const fmt = (formatInput || "PNG").toUpperCase();
+    if (fmt === "PNG") {
+      const scaledBuffer = await image.getBuffer("image/png");
+      return {
+        image: `data:image/png;base64,${scaledBuffer.toString("base64")}`,
+        width: image.width,
+        height: image.height
+      };
+    } else if (fmt === "WEBP") {
+      const scaledBuffer = await image.getBuffer("image/webp");
+      return {
+        image: `data:image/webp;base64,${scaledBuffer.toString("base64")}`,
+        width: image.width,
+        height: image.height
+      };
+    } else {
+      image.quality(98);
+      const scaledBuffer = await image.getBuffer("image/jpeg");
+      return {
+        image: `data:image/jpeg;base64,${scaledBuffer.toString("base64")}`,
+        width: image.width,
+        height: image.height
+      };
+    }
   } catch (err: any) {
     console.error("Super-Resolution scaling failed, returning original image:", err.message || err);
     return { image: base64Image, width: 1024, height: 1024 };
@@ -274,7 +292,7 @@ ${textContent}`
       });
 
       const response = await currentAi.models.generateContent({
-        model: "gemini-3.5-flash",
+        model: "gemini-2.5-flash",
         config: {
           responseMimeType: "application/json",
         },
@@ -502,7 +520,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
       let finalPrompt = "";
       try {
         const thinkResponse = await currentAi.models.generateContent({
-          model: "gemini-3.5-flash",
+          model: "gemini-2.5-flash",
           contents: thinkParts,
         });
         finalPrompt = thinkResponse.text || "";
@@ -581,8 +599,9 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         else selectedRatio = "1:1";
       }
 
-      const targetModel = "gemini-3-pro-image";
-      const sizeSelected = imgConfig?.imageSize || "1K";
+      const targetModel = "gemini-3-pro-image-preview";
+      const inputSize = imgConfig?.imageSize || "1K";
+        const sizeSelected = inputSize === "8K" ? "4K" : inputSize;
       let modelUsed = `Vertex AI (${targetModel})`;
       let lastErrors: string[] = [];
 
@@ -597,7 +616,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
           console.log({
             provider: "Vertex AI",
             location: "global",
-            model: "gemini-3-pro-image",
+            model: "gemini-3-pro-image-preview",
             requestedSize: sizeSelected,
             aspectRatio: selectedRatio
           });
@@ -764,7 +783,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
 
       console.log("\n--- CONFIGURAÇÃO DE GERAÇÃO (/api/generate) ---");
       console.log({
-        model: "gemini-3-pro-image",
+        model: "gemini-3-pro-image-preview",
         resolution: imgConfig?.imageSize || "1K",
         aspectRatio: imgConfig?.aspectRatio || "1:1",
         variations: imgConfig?.variations || 1,
@@ -1018,7 +1037,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
 
       const results: string[] = [];
       const variationsCount = Math.min(Math.max(imgConfig?.variations || 1, 1), 4);
-      const targetModel = "gemini-3-pro-image";
+      const targetModel = "gemini-3-pro-image-preview";
       let modelUsed = `Google AI Studio (${targetModel})`;
       let lastErrors: string[] = [];
 
@@ -1034,7 +1053,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
           console.log({
             provider: "Vertex AI",
             location: "global",
-            model: "gemini-3-pro-image",
+            model: "gemini-3-pro-image-preview",
             requestedSize: sizeSelected,
             aspectRatio: selectedRatio
           });
@@ -1227,7 +1246,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
 
       console.log("\n--- CONFIGURAÇÃO DE GERAÇÃO (/api/gerar) ---");
       console.log({
-        model: "gemini-3-pro-image",
+        model: "gemini-3-pro-image-preview",
         resolution: resolutionInput,
         aspectRatio: dimensao,
         format: formato,
@@ -1267,7 +1286,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
       const isVertex = fs.existsSync(credentialsPath) || token.startsWith('AQ.');
 
       // We use the requested model gemini-3-pro-image
-      const targetModel = "gemini-3-pro-image";
+      const targetModel = "gemini-3-pro-image-preview";
       
       let targetAspectRatio = "1:1";
       const validRatios = ["1:1", "3:4", "4:3", "9:16", "16:9"];
@@ -1281,7 +1300,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
 
       // --- START PROMPT & SYSTEM INSTRUCTION EXPANSION (MAXIMUM SIZE & DETAIL) ---
       let expandedPrompt = promptTraduzido;
-      let expandedSystemInstruction = `You are an absolute master generative AI image prompt engineer, art director, and elite graphic designer specializing in High-End Brazilian Flyers (Flyer BR Style / "Design de Eventos e Shows brasileiro"). Your mission is to generate ultra-realistic, premium, and impactful visual compositions that serve as high-end backgrounds or complete layouts for shows, concerts, nightlife, and festivals.`;
+      let expandedSystemInstruction = `You are an absolute master generative AI image prompt engineer, art director, and elite graphic designer capable of generating any niche of design, corporate cards, commercial advertisements, products, services, flyers, or social media posts across any niche (including events, clinics, unions, e-commerce, corporate, luxury, or minimal styles). Your mission is to generate ultra-realistic, premium, and impactful visual compositions tailored to the requested niche, layout grid, and branding style.`;
 
       try {
         console.log("[api/gerar] Initiating premium multimodal prompt & instruction expansion...");
@@ -1325,26 +1344,33 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
 
         const logoInclusionRule = logoBase64 ? `\n5. BRAND LOGO EMBEDDING (ABSOLUTELY CRITICAL): You MUST look for the brand logo region in the reference. You MUST COMPLETELY ERASE any generic logo present in the reference flyer. You MUST DRAW, PAINT, and BAKE the client's provided brand logo ("Referência de Logotipo") directly into the image canvas. YOU ARE FORBIDDEN FROM MODIFYING THE LOGO'S SHAPE OR FONT. The ONLY allowed modification is altering the logo's color (e.g., making it all white or all black) to ensure perfect contrast with the background. Otherwise, it must be an exact structural clone.` : "";
         const logoCompositionRule = logoBase64 ? `\n10. FULL COMPOSITION WITH HIGH-FIDELITY EMBEDDED TYPOGRAPHY AND LOGOS (CRITICAL): Do NOT generate just a blank background. You MUST generate the complete graphic composition, including all layouts, panel cards, curved borders, divided sections, background textures, lighting setups, and the beautifully stylized subject photo, WITH all text layers and the client's original brand logo ("Referência de Logotipo") professionally rendered, printed, and embedded directly inside their corresponding visual sectors as beautiful, crisp, un-deformed elements, preserving the logo's original symbols, texts, and exact branding structures with 100% fidelity (color adaptation for contrast is allowed).` : "";
-        const logoPromptRule = logosList && logosList.length > 0 ? `\n5. Text & Logo Integration: Explicitly instruct the generator to NOT draw any logos. The system will overlay the original logo file on top of the generated image. Instruct it to ONLY use the text provided in the prompt, replacing any text from the reference while respecting the original text placements, and leave space for the logo.` : "";
-        const logoPrintRule = logosList && logosList.length > 0 ? `\n9. EXACT TEXT REPLACEMENT: Explicitly instruct the generator to NEVER copy text or logos from the Design Reference. It must print all specified titles, social handles, and event details. It MUST NOT draw any logos.` : "";
-        const logoSysInstructionRule = logosList && logosList.length > 0 ? `\n5. Logo & Text Replacement: Instruct the generator to completely ignore any text, names, handles, or brand logos found in the background design reference. It must use ONLY the explicitly requested text, drawing and printing them directly on the card canvas with 100% complete exactness.` : "";
-        const logoEmbeddedRule = logosList && logosList.length > 0 ? `\n9. STRICT TYPOGRAPHY REPLACEMENT RULE: Dictate that the image generator MUST NOT hallucinate or copy old text/logos. It MUST print, write, embed, and render ONLY the provided texts, titles, words, acronyms, letters, numbers directly onto the image canvas.` : "";
-        const instructionPrompt = `You are the absolute ultimate master Generative AI Image Prompt Engineer, Art Director, and Elite Graphic Designer specializing in High-End Brazilian Flyers (Flyer BR Style / "Design de Eventos e Shows brasileiro").
+        const logoPromptRule = `\n5. Brand Logo Rendering: Instruct the generator to NEVER draw any logo shapes, text, or blank white squares. The background in the logo banner must remain perfectly clean, solid, and uniform.`;
+        const logoPrintRule = `\n9. LOGO AREA CLEANLINESS: Replicate the background layout of the reference but leave the logo placement zone completely empty and clean, with 0% text or placeholders.`;
+        const logoSysInstructionRule = `\n5. Logo Rendering: Strictly instruct the generator to NOT print any logo symbol, text, or blank white boxes on the layout. Keep the background clean.`;
+        const logoEmbeddedRule = `\n9. LOGO INTEGRATION: Command the generator to keep the logo area completely solid and clean without rendering any white squares or text.`;
+        const instructionPrompt = `You are the absolute ultimate master Generative AI Image Prompt Engineer, Art Director, and Elite Graphic Designer capable of generating any niche of design, corporate cards, commercial advertisements, products, services, flyers, or social media posts across any niche (including events, clinics, unions, e-commerce, corporate, luxury, or minimal styles).
 Your job is to analyze the attached visual references (especially the Design Layout Reference images) along with the following initial layout and composition specification:
 "${promptTraduzido}"
 
 Based on this complete multimodal context, you must generate an extremely descriptive, highly accurate, professional prompt and system instruction. The absolute number one goal is extreme structural, compositional, stylistic, and visual faithfulness to the design details of the reference image.
 
 CRITICAL VISUAL DESIGN RULES TO EXTRACT FROM THE ATTACHED DESIGN LAYOUT REFERENCE:
-1. STRICT DESIGN FIDELITY & NO ARBITRARY INVENTIONS: You are strictly FORBIDDEN from inventing arbitrary backdrops, stage lights, lasers, smoke, stars, gold particles, dust, or geometric layers unless they are explicitly visible in the "Design Layout Reference" image. If the reference design has a clean, solid, dark, minimal, gradient, or simple textured background, you MUST describe exactly that clean background. Mirror the exact level of simplicity or complexity, replicating its aesthetic, depth, colors, and layout precisely.
-2. LAYOUT, ALIGNMENT & TYPOGRAPHY FIDELITY: Look closely at the text alignment, composition grid, font weights, and spacing of the Design Layout Reference. Replicate the text placement and typography style exactly as styled on the reference, drawing and embedding the specified text parameters directly inside those regions with beautiful, modern, extremely crisp, and highly-legible typography.
+1. ABSOLUTE STYLE CLONING & VISUAL FIDELITY (CRITICAL): You MUST carefully analyze and extract the entire visual style, aesthetics, and design choices of the primary "Design Layout Reference" image and instruct the generator to copy them perfectly onto the new image:
+   - MEDIUM & ART STYLE DETECTION (2D VS 3D): Identify if the Design Layout Reference is a 2D flat vector illustration, cartoon drawing, flat graphic design, or a 3D realistic render/photo. If it is a 2D flat vector/cartoon (like flat colored outlines of a hand/phone), you MUST strictly command the generator to produce a "2D flat vector illustration, flat cartoon graphics, clean vector outlines, uniform flat colors, solid fills, 0% 3D depth, 0% realism, 0% gradients, 0% drop shadows".
+   - TEXT EFFECTS & SHADING: Replicate the exact styling of the titles and texts. Describe if they have 3D bevels, glowing neon outlines, metallic textures, cursive calligraphic styling overlaid on bold fonts, solid color-blocked backgrounds (badges/labels), drop shadows, or layered masks.
+   - LIGHTING & ATMOSPHERE: Describe the exact lighting setup of the reference (e.g. volumetric stage laser beams, soft warm golden bokeh backgrounds, colorful neon spotlights, backlights, high-contrast shadows).
+   - BACKGROUND TEXTURES & GEOMETRY: Replicate the background texture exactly (e.g. grunge paper tears, paint splatters, clean color blocking, halftone dots, solid sheets).
+   - DECORATIVE GRAPHIC ELEMENTS: Replicate any structural decorations, diagonal stripes, borders, stars, floating sparkles, or leaf motifs.
+2. STRICT LAYOUT & COMPOSITION GRID: Mirror the exact positioning and composition of the reference (e.g., if the main subject is centered, or if there is a group of models, replicate that layout). Put the user's requested text in the exact corresponding spatial positions as the reference design text blocks.
+3. ADAPTATION TO USER BRAND PALETTE: If the user provides custom brand colors (like black and gold or blue), adapt the layout and structural elements of the reference to use these brand colors, but preserve the style (e.g., use black/gold instead of orange/black, but keep the paint splatters, fonts, and drop shadows).
 3. SUPPORTING GRAPHIC ELEMENTS & SOCIAL MEDIA: Look for any social media handles, symbols, or small details (like the Instagram logo/handle, website text, small badges). Command the generator to write and render these elements beautifully and cleanly on the image canvas in their exact corresponding positions.
 4. SECONDARY PHOTOS & VISUAL MOTIFS: Look for any secondary photos or decorative graphics in the reference card. For instance, if there is a photo of people's hands joining, hands holding, or any supporting imagery, you MUST specify its presence and describe its integration: "subtly integrated into the bottom or background layer is a clear, polished photographic motif of people's hands joining together, representing connection, with warm rim lighting."
 ${logoInclusionRule}
 6. SOCIAL HANDLE CASE FIDELITY (STRICTLY LOWERCASE): Explicitly instruct the generator to render any social media usernames or handles (containing "@") strictly in lowercase letters, using a thin, modern, high-contrast sans-serif font.
 7. BRAND COLOR PALETTE ENFORCEMENT (CRITICAL): Look closely at the client's specification in: "${promptTraduzido}". If the client has provided custom brand colors, specific hex codes (#xxxxxx), or specific colors for "Color Palette" or "Lighting Setup" (e.g., specific ambient color, rim color, or fill color), you MUST strictly enforce these custom brand colors as the primary, dominant colors of the flyer's design, lighting, glows, and accents. Do NOT copy the color palette of the Design Layout Reference if the client has specified their own custom brand colors! Instead, adapt the layout, composition structure, and atmospheric depth of the reference to be perfectly styled under the client's custom brand colors.
+8. ANTI-ARTIFACTS & CLEAN BACKGROUNDS (CRITICAL): If the design reference or prompt specifies a solid, flat, or clean background (e.g. solid dark blue, clean flat shapes), you MUST explicitly command the generator to use "0% film grain, 0% noise, 0% compression blocks, 0% texture artifacts, perfectly smooth flat solid colors, uniform gradients, and sharp clean vector lines". Do NOT allow the generator to add random textures, grunge effects, particle dust, lights, or blurs on top of solid background areas. There must be 0% rectangular seams, 0% blending borders, 0% grid boundaries, or color mismatch squares. The background must flow perfectly under and around all elements as a single, continuous, uniform plane.
 8. FULL TYPOGRAPHY EMBEDDING (CRITICAL): You MUST command the generator to write, draw, print, and beautifully integrate all titles, text layers, event dates, contact details, and social handles directly onto the image canvas. Style them with gorgeous, sharp, modern typography, ensuring high legibility and precise alignment matching the reference design layout.
-9. CREATIVE SUBJECT INTERPRETATION & PREMIUMIZATION (CRITICAL): Do NOT clone or copy the exact same person, face, gender, pose, or object from the photo inside the Design Layout Reference. Instead, interpret the general context, subject category, and style of that photo (e.g., if there's a businessman, an elegant woman, a speaker, or a specific product), and instruct the image generator to create a completely new, fresh, extremely high-end, and visually superior premium subject of similar visual category. This ensures the output is highly professional, customized, and original while respecting the compositional grid.
+9. SUBJECT IDENTITY PRESERVATION VS DESIGN REFERENCE INTERPRETATION (CRITICAL): Look closely at the provided references. If a "Referência do Sujeito" (Subject Reference) image is provided, you MUST command the generator to perfectly copy, preserve, and clone the exact faces, identities, hair styles, facial features, and likenesses of ALL people / models present in that Subject Reference image into the generated design flyer (e.g., if there are two people, a couple, or a family, generate ALL of them together in their respective positions). Do NOT generate new faces or change their identities. However, if there is a person inside the "Design Layout Reference" image, you MUST NOT copy the face/person from that design layout reference; instead, interpret their pose/category and substitute them with the exact faces/likenesses of the client's provided "Referência do Sujeito" (Subject Reference).
 ${logoCompositionRule}
 11. CARD DESIGN PRESERVATION: Replicate the exact shape of the card panels (e.g., if there's a rounded panel on the right side of the canvas where the photo of hands is placed, generate a rounded panel exactly there). The image must contain the full, beautiful card layouts and panels, not just a plain backdrop.
 12. STRICT REFERENCE PRESERVATION (WHEN EDITING): If the user's specification requests an edit to a specific reference image (e.g. "remove text and keep the symbol" on a logo), you MUST instruct the generator to preserve the original visual structure, shapes, colors, and details of the provided reference with absolute 100% exact fidelity. DO NOT redesign, reimagine, stylize, or alter the core shapes of the reference. It must look identical, only applying the requested edit (e.g. erasing the text).
@@ -1375,7 +1401,7 @@ CRITICAL RULES FOR "systemInstruction":
 ${logoSysInstructionRule}
 6. Lowercase Instagram Handles: Require the generator to render any social media handle containing "@" strictly in lowercase letters, printing them directly on the canvas.
 7. Custom Text Enforcement & Printing: Strictly instruct the generator to replace any text content, social media usernames, or contact details present in the visual reference with the customized text parameters supplied in the prompt, and write/render them beautifully and cleanly onto the card image canvas.
-8. Original Subject Generation: Explicitly command the generator to create a new, high-quality, professional subject matching the visual category/context of the reference photo instead of attempting to copy or clone the reference face, person, or pose.
+8. Subject Likeness & Identity Preservation: Instruct the generator to perfectly preserve the faces, likenesses, expressions, and identities of ALL people / models provided in the "Referência do Sujeito" (Subject Reference) image (e.g. if the image contains two models, clone and place BOTH models together in the final design layout). It must place these exact people into the design layout, adapting only their lighting/shadows to match the scene. If no Subject Reference is provided, only then generate a new high-quality model.
 9. Strict Visual Fidelity on Edited References: If the user explicitly asks to edit a provided reference (like stripping text from a logo), command the image generator to treat the remaining parts of that reference as a holy artifact, preserving 100% of its original shape, vector lines, colors, and proportions without any hallucinated alterations.
 ${logoEmbeddedRule}
 
@@ -1384,7 +1410,7 @@ Return ONLY the JSON object. Do not include any conversational text or markdown 
         expansionParts.push({ text: instructionPrompt });
 
         const expResponse = await client.models.generateContent({
-          model: "gemini-3.5-flash",
+          model: "gemini-2.5-flash",
           contents: [
             {
               role: "user",
@@ -1456,9 +1482,7 @@ Return ONLY the JSON object. Do not include any conversational text or markdown 
 
       
       // Force append absolute critical constraints to the prompt so both gemini-3-pro-image and fallbacks receive them
-      const logoMandatoryRule = logosList && logosList.length > 0
-        ? `- LOGO PLACEMENT: Do NOT attempt to draw, write, or hallucinate the logo. The UI will automatically overlay the client's logo on top of the image later. You must leave an appropriate empty space (preferably at the top center) for the logo to be placed. Do NOT generate any text for the logo.`
-        : `- NO RANDOM LOGOS: Do not invent or hallucinate logos if not provided. Erase any existing logos from the reference image.`;
+      const logoMandatoryRule = `- NO LOGO CONTAINERS OR SQUARES (CRITICAL): The AI generator is STRICTLY FORBIDDEN from drawing, printing, or creating any logo placeholder, blank square, white box, text, label, or colored container/card backgrounds to hold the logo (e.g. no black/yellow/blue squares or rectangles behind the logo). Erase any logo container boxes from the reference design. The background behind the logo must be 100% continuous and uniform with the main background, with absolutely NO local squares or borders holding it.`;
 
       const mandatorySuffix = `\n\n=== ABSOLUTE CRITICAL CONSTRAINTS (MANDATORY) ===
 - TOTAL FIDELITY & ZERO OMISSIONS (CRITICAL): If a Design Layout Reference is provided, you MUST perfectly clone EVERYTHING from it (the layout, the spatial positioning of texts, the graphic elements, the background, the subject pose/lighting). You MUST put the texts EXACTLY in the same spatial locations as they are in the reference. DO NOT skip any text fields. Replicate the exact typography hierarchy.
@@ -1588,14 +1612,14 @@ ${logoMandatoryRule}`;
       let modelUsed = `Google AI Studio (${targetModel})`;
 
       try {
-        const sizeSelected = resolutionInput === "4K" ? "4K" : (resolutionInput === "2K" ? "2K" : "1K");
+        const sizeSelected = (resolutionInput === "4K" || resolutionInput === "8K") ? "4K" : (resolutionInput === "2K" ? "2K" : "1K");
         console.log(`[api/gerar] Generating image with ${targetModel} - Target resolution: ${sizeSelected}...`);
         
         // REQUIRED BEFORE LOG
         console.log({
           provider: "Vertex AI",
           location: "global",
-          model: "gemini-3-pro-image",
+          model: "gemini-3-pro-image-preview",
           requestedSize: sizeSelected,
           aspectRatio: targetAspectRatio
         });
@@ -1724,15 +1748,32 @@ ${logoMandatoryRule}`;
           console.warn(`[api/gerar] WARNING: Requested 4K, but received resolution of ${width}x${height}px. Skipping any upscaling or modifications.`);
         }
 
+        let finalImage = responseImgUrl;
+        let finalWidth = width;
+        let finalHeight = height;
+
+        if (resolutionInput === "8K" && responseImgUrl) {
+          console.log(`[api/gerar] 8K requested! Applying bicubic Super-Resolution upscale to 7680px...`);
+          try {
+            const upscaled = await upscaleImage(responseImgUrl, 7680, formato);
+            finalImage = upscaled.image;
+            finalWidth = upscaled.width;
+            finalHeight = upscaled.height;
+            modelUsed = `${modelUsed} + 8K Super-Resolution Upscale`;
+          } catch (err) {
+            console.error("[api/gerar] Upscale error:", err);
+          }
+        }
+
         res.json({ 
-          image: responseImgUrl, 
+          image: finalImage, 
           prompt: expandedPrompt, 
           systemInstruction: expandedSystemInstruction,
           modelUsed,
           debugInfo,
           requestedResolution: resolutionInput,
-          returnedWidth: width,
-          returnedHeight: height
+          returnedWidth: finalWidth,
+          returnedHeight: finalHeight
         });
 
       } catch (genErr: any) {
@@ -1773,7 +1814,7 @@ ${logoMandatoryRule}`;
 
       const cleanData = imageData.replace(/^data:image\/\w+;base64,/, "");
       const response = await currentAi.models.generateContent({
-        model: "gemini-3.5-flash",
+        model: "gemini-2.5-flash",
         contents: [
           {
             role: "user",
@@ -2027,7 +2068,7 @@ Sempre avise no texto de forma natural se identificou uma logo ou foto de sujeit
       });
 
       const response = await currentAi.models.generateContent({
-        model: "gemini-3.5-flash",
+        model: "gemini-2.5-flash",
         contents: contents,
         config: {
           systemInstruction: systemInstruction
@@ -2070,9 +2111,9 @@ Sempre avise no texto de forma natural se identificou uma logo ou foto de sujeit
     const server = app.listen(PORT, "0.0.0.0", () => {
       console.log(`Server running on http://localhost:${PORT}`);
     });
-    server.timeout = 120000;
-    server.headersTimeout = 120000;
-    server.requestTimeout = 120000;
+    server.timeout = 360000; // 6 minutos de timeout para geração 4K
+    server.headersTimeout = 360000;
+    server.requestTimeout = 360000;
   }
 
   return app;

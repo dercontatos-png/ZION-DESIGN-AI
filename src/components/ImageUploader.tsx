@@ -173,13 +173,13 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     if (compressProgress) {
       return (
         <div className="text-center py-4">
-          <RefreshCw size={24} className="text-[#ad8330] animate-spin mx-auto mb-2.5" />
+          <RefreshCw size={24} className="text-[#b8942b] animate-spin mx-auto mb-2.5" />
           <span className="text-[10px] font-black text-zinc-350 uppercase tracking-widest block">
             Comprimindo ({compressProgress.current}/{compressProgress.total})...
           </span>
           <div className="w-24 h-1 bg-zinc-800 rounded-full mx-auto mt-2 overflow-hidden">
             <div 
-              className="h-full bg-[#ad8330] transition-all duration-300"
+              className="h-full bg-[#b8942b] transition-all duration-300"
               style={{ width: `${(compressProgress.current / compressProgress.total) * 100}%` }}
             />
           </div>
@@ -217,7 +217,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
                 </div>
               ))}
               
-              <div className="relative aspect-square rounded-lg border border-dashed border-zinc-800 hover:border-[#ad8330]/40 flex flex-col items-center justify-center cursor-pointer bg-zinc-950/40 hover:bg-zinc-900/20 transition-all">
+              <div className="relative aspect-square rounded-lg border border-dashed border-zinc-800 hover:border-[#b8942b]/40 flex flex-col items-center justify-center cursor-pointer bg-zinc-950/40 hover:bg-zinc-900/20 transition-all">
                 <Plus size={16} className="text-zinc-550 group-hover:text-zinc-400 mb-0.5" />
                 <span className="text-[8px] font-black text-zinc-550 uppercase tracking-wider">Adicionar</span>
                 <input
@@ -254,7 +254,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
 
     return (
       <div className="text-center pointer-events-none">
-        <div className="mx-auto mb-2 text-[#ad8330]">{icon}</div>
+        <div className="mx-auto mb-2 text-[#b8942b]">{icon}</div>
         <span className="text-[10px] font-black text-zinc-350 uppercase tracking-widest block">{label}</span>
         <span className="text-[8px] text-zinc-500 block mt-1 uppercase tracking-wider font-extrabold">
           Arraste múltiplos, clique ou cole (Ctrl + V)
@@ -270,7 +270,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       className={`border border-dashed rounded-xl p-5 flex flex-col items-center justify-center cursor-pointer transition-all bg-zinc-900/20 relative min-h-[110px] ${
-        isDragOver ? "border-[#ad8330] bg-[#ad8330]/5" : "border-zinc-800 hover:border-[#ad8330]/30 hover:bg-zinc-900/40"
+        isDragOver ? "border-[#b8942b] bg-[#b8942b]/5" : "border-zinc-800 hover:border-[#b8942b]/30 hover:bg-zinc-900/40"
       }`}
     >
       {/* Hide input if compress is running or if multiple images exist to avoid clicking overlay conflicts */}

@@ -1,10 +1,43 @@
 import { useProjectStore } from "../store/useProjectStore";
 import { buildMasterPrompt } from "../utils/buildMasterPrompt";
 
+const playSuccessChime = () => {
+  try {
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
+    
+    const playTone = (freq: number, startTime: number, duration: number) => {
+      const osc = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, startTime);
+      
+      gainNode.gain.setValueAtTime(0.12, startTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+      
+      osc.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      
+      osc.start(startTime);
+      osc.stop(startTime + duration);
+    };
+    
+    const now = ctx.currentTime;
+    playTone(587.33, now, 0.15); // D5
+    playTone(880.00, now + 0.1, 0.45); // A5 (premium chime)
+  } catch (e) {
+    console.warn("Web Audio chime failed:", e);
+  }
+};
+
 export const useGenerateImage = (customApiKey: string, showToast: (msg: string, type: "success" | "error" | "warning") => void) => {
   const store = useProjectStore();
 
   const generatePremiumImage = async () => {
+
+
     // Validação se a imagem do Sujeito foi enviada
     const hasSujeito = (store.sujeitoBase64 && store.sujeitoBase64.trim() !== "") || (store.sujeitosBase64List && store.sujeitosBase64List.length > 0);
     if (!store.desativarSujeito && !hasSujeito) {
@@ -50,7 +83,7 @@ export const useGenerateImage = (customApiKey: string, showToast: (msg: string, 
     console.log("[FRONT] Tamanho do Payload enviado (bytes):", payloadString.length);
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 segundos de timeout
+    const timeoutId = setTimeout(() => controller.abort(), 360000); // 360 segundos (6 minutos) de timeout para 4K
 
     try {
       const response = await fetch("/api/gerar", {
@@ -96,10 +129,12 @@ export const useGenerateImage = (customApiKey: string, showToast: (msg: string, 
         // Adiciona à lista de imagens geradas
         store.setGaleriaImages((prev) => [data.image, ...prev]);
         store.setActiveImageIndex(0);
+        playSuccessChime();
         showToast("Imagem premium gerada com sucesso!", "success");
       } else if (data.images && data.images.length > 0) {
         store.setGaleriaImages((prev) => [...data.images, ...prev]);
         store.setActiveImageIndex(0);
+        playSuccessChime();
         showToast("Imagens premium geradas com sucesso!", "success");
       } else {
         throw new Error("Nenhum dado de imagem retornado pela API.");

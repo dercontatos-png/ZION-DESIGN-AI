@@ -54,8 +54,15 @@ export const buildMasterPrompt = (config: ProjectConfig): string => {
     if (isProduct) {
       promptParts.push(`Main Focus: A premium e-commerce product ${poseText}, perfectly positioned at the ${positioning.toLowerCase()} of the canvas. (If a product reference image is provided, integrate it seamlessly retaining its core identity).`);
     } else {
-      const gender = config.gender || "Masculino";
-      promptParts.push(`Main Focus: A high-end commercial model (${gender}) ${poseText}, positioned at the ${positioning.toLowerCase()} of the canvas. (Match the provided subject reference image exactly if supplied).`);
+      if (config.multiplesPersons) {
+        const modelsDesc = config.gendersDescription && config.gendersDescription.trim() !== ""
+          ? config.gendersDescription.trim()
+          : "multiple models/people (as shown in the Subject Reference image)";
+        promptParts.push(`Main Focus: Multiple subjects / people (${modelsDesc}) ${poseText}, positioned at the ${positioning.toLowerCase()} of the canvas. (STRICT MULTIPLE SUBJECT CLONING: Replicate ALL persons/models present in the Subject Reference image with 100% likeness, drawing all of them together in the composition layout).`);
+      } else {
+        const gender = config.gender || "Masculino";
+        promptParts.push(`Main Focus: A high-end commercial model (${gender}) ${poseText}, positioned at the ${positioning.toLowerCase()} of the canvas. (STRICT SUBJECT CLONING: Replicate the exact face, hair, and likeness of the person in the Subject Reference image with 100% likeness).`);
+      }
     }
   }
 

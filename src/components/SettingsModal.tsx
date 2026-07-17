@@ -17,6 +17,7 @@ const SettingsModal: React.FC<{
   setCalendarEvents: (calendarEvents: CalendarEvent[]) => void;
 }> = ({ 
   onClose, myProfile, setMyProfile, 
+  apiKey: propApiKey, // unused parameter fallback
   googleToken, clients, transactions, tasks, calendarEvents,
   setClients, setTransactions, setTasks, setCalendarEvents 
 }) => {
@@ -50,17 +51,19 @@ const SettingsModal: React.FC<{
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-zinc-900 border border-white/10 rounded-3xl p-6 w-full max-w-sm max-h-[92vh] overflow-y-auto shadow-2xl">
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+      <div className="glass-heavy rounded-3xl p-6 w-full max-w-sm max-h-[92vh] overflow-y-auto shadow-2xl animate-scale-in">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-white">Configurações</h2>
-          <button onClick={onClose} className="text-zinc-400 hover:text-white transition-colors"><X size={20} /></button>
+          <h2 className="text-lg font-montserrat font-bold text-white uppercase tracking-wider">Configurações</h2>
+          <button onClick={onClose} className="text-zinc-400 hover:text-white p-1 hover:bg-white/5 rounded-lg transition-all cursor-pointer">
+            <X size={18} />
+          </button>
         </div>
 
         {/* API Key Section */}
-        <div className="mb-6 p-4 bg-zinc-950 rounded-2xl border border-white/5">
-          <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2 flex items-center gap-2">
-            <Key size={14} className="text-[#c5a880]" /> Chave de API Google Gemini
+        <div className="mb-5 p-4 bg-black/25 rounded-2xl border border-white/5 shadow-sm">
+          <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+            <Key size={12} className="text-[#d4af37]" /> Chave de API Google Gemini
           </label>
           <div className="flex gap-2">
             <input 
@@ -68,65 +71,67 @@ const SettingsModal: React.FC<{
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               placeholder="Cole sua chave API (AIzaSy...)"
-              className="flex-1 bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder:text-zinc-650 focus:outline-none focus:border-[#c5a880]/50"
+              className="flex-1 bg-[#050505]/45 hover:bg-[#050505]/75 border border-white/5 rounded-xl px-3 py-2 text-xs text-white placeholder:text-zinc-650 focus:outline-none focus:border-[#d4af37]/40 focus:ring-1 focus:ring-[#d4af37]/15 transition-all duration-300"
             />
             <button 
               onClick={handleSaveKey}
-              className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${
-                saved ? 'bg-emerald-500 text-zinc-950' : 'bg-[#c5a880] text-zinc-950 hover:bg-[#b59b75]'
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-300 cursor-pointer flex items-center justify-center shrink-0 ${
+                saved ? 'bg-emerald-500 text-zinc-950' : 'bg-[#d4af37] text-zinc-950 hover:bg-[#b8942b]'
               }`}
             >
-              {saved ? <Check size={14} /> : 'Confirmar'}
+              {saved ? <Check size={14} /> : 'Salvar'}
             </button>
           </div>
-          <p className="text-[10px] text-zinc-500 mt-2 leading-normal">
-            A chave inserida será salva de forma segura no seu navegador (localStorage) e utilizada para todas as gerações e assistentes do site.
+          <p className="text-[10px] text-zinc-550 mt-2 leading-normal">
+            A chave será salva localmente de forma segura e utilizada para todas as gerações e assistentes da agência.
           </p>
         </div>
 
         {/* Diagnostics Section */}
-        <div className="mb-6 p-4 bg-zinc-950 rounded-2xl border border-white/5 space-y-3">
-          <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-2">
-            <Wifi size={14} className="text-emerald-500" /> Diagnóstico da API
+        <div className="mb-5 p-4 bg-black/25 rounded-2xl border border-white/5 space-y-3 shadow-sm">
+          <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
+            <Wifi size={12} className="text-emerald-500 animate-pulse" /> Diagnóstico da API
           </label>
-          <div className="flex items-center justify-between bg-zinc-900/50 p-2.5 rounded-xl border border-white/[0.03]">
+          <div className="flex items-center justify-between bg-black/10 p-2.5 rounded-xl border border-white/5">
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-xs text-zinc-300 font-medium">Status da Conexão:</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">Status:</span>
             </div>
-            <span className="text-xs font-bold text-emerald-400">Ativa (API OK)</span>
+            <span className="text-[10px] font-black text-emerald-450 uppercase tracking-wider">Conexão Ativa</span>
           </div>
           <button
             onClick={handleTestToken}
             disabled={isTesting}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-zinc-900 hover:bg-zinc-800 border border-white/5 hover:border-white/10 text-xs font-bold text-zinc-300 rounded-xl transition-all cursor-pointer disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-zinc-900 border border-white/5 hover:border-white/10 text-[10px] font-bold uppercase tracking-wider text-zinc-300 rounded-xl transition-all duration-300 cursor-pointer disabled:opacity-50"
           >
-            <RefreshCw size={12} className={isTesting ? "animate-spin text-[#c5a880]" : "text-[#c5a880]"} />
+            <RefreshCw size={11} className={isTesting ? "animate-spin text-[#d4af37]" : "text-[#d4af37]"} />
             <span>{isTesting ? "Testando Conexão..." : testSuccess ? "Conexão Estabelecida!" : "Testar Token de Geração"}</span>
           </button>
         </div>
 
-        <div className="space-y-2">
+        {/* Action buttons */}
+        <div className="space-y-1 pt-1 border-t border-white/5">
           <button 
             onClick={() => { localStorage.removeItem('chatMessages'); onClose(); window.location.reload(); }}
-            className="w-full text-left p-3 rounded-xl hover:bg-zinc-800 text-zinc-300 text-xs transition-colors"
+            className="w-full text-left px-3.5 py-2.5 rounded-xl hover:bg-white/[0.02] text-zinc-400 hover:text-zinc-250 text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer"
           >
-            Limpar Chat
+            Limpar Conversa Chat
           </button>
           <button 
             onClick={() => { localStorage.removeItem('savedCards'); onClose(); window.location.reload(); }}
-            className="w-full text-left p-3 rounded-xl hover:bg-zinc-800 text-zinc-300 transition-colors"
+            className="w-full text-left px-3.5 py-2.5 rounded-xl hover:bg-white/[0.02] text-zinc-400 hover:text-zinc-250 text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer"
           >
-            Limpar Galeria
+            Limpar Galeria de Cards
           </button>
           <button 
             onClick={() => { localStorage.clear(); onClose(); window.location.reload(); }}
-            className="w-full text-left p-3 rounded-xl hover:bg-zinc-800 text-red-400 transition-colors"
+            className="w-full text-left px-3.5 py-2.5 rounded-xl hover:bg-red-500/10 text-red-400 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer"
           >
-            Resetar Tudo
+            Resetar Banco de Dados
           </button>
         </div>
-        <button onClick={onClose} className="mt-6 w-full py-2 bg-zinc-800 rounded-xl text-white hover:bg-zinc-700 transition-colors">Fechar</button>
+        
+        <button onClick={onClose} className="mt-5 w-full py-2.5 bg-[#d4af37] hover:bg-[#b8942b] rounded-xl text-zinc-950 font-bold text-xs uppercase tracking-wider transition-all duration-300 cursor-pointer shadow-md shadow-[#d4af37]/5">Fechar Configurações</button>
       </div>
     </div>
   );
