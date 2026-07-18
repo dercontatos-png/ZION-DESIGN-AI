@@ -1495,6 +1495,10 @@ Return ONLY the JSON object. Do not include any conversational text or markdown 
       }
 
       
+      // Inject explicit color palette enforcement directly from user config
+      const userColorsRule = `\n\n=== MANDATORY COLOR PALETTE ===\n- Color Palette: The dominant color palette of the design must be strictly: Background: ${cores.ambiente || "#000000"}, Highlights/Rim-lights: ${cores.recorte || "#ffffff"}, Complementary accents: ${cores.complementar || "#ad8330"}. You MUST completely override any colors from the Design Layout Reference with these colors. The background must be exactly ${cores.ambiente || "#000000"}.`;
+      fullPrompt += userColorsRule;
+
       // Force append absolute critical constraints to the prompt so both gemini-3-pro-image and fallbacks receive them
       const logoMandatoryRule = `- NO LOGO CONTAINERS OR SQUARES (CRITICAL): The AI generator is STRICTLY FORBIDDEN from drawing, printing, or creating any logo placeholder, blank square, white box, text, label, or colored container/card backgrounds to hold the logo (e.g. no black/yellow/blue squares or rectangles behind the logo). Erase any logo container boxes from the reference design. The background behind the logo must be 100% continuous and uniform with the main background, with absolutely NO local squares or borders holding it.`;
 
@@ -1509,9 +1513,9 @@ Return ONLY the JSON object. Do not include any conversational text or markdown 
 ${logoMandatoryRule}`;
 
       if (negativePrompt && negativePrompt.trim() !== "") {
-        fullPrompt += `\nAvoid / Negative constraints: old logos, original reference text, hallucinated words, ${negativePrompt.trim()}`;
+        fullPrompt += `\nAvoid / Negative constraints: old logos, original reference text, hallucinated words, noise, film grain, banding, color blocks, compression grids, blocky artifacts, pixelation, blurry, low resolution, JPEG compression noise, compression squares, ${negativePrompt.trim()}`;
       } else {
-        fullPrompt += `\nAvoid / Negative constraints: old logos, original reference text, original reference logos, hallucinated words, incorrect spelling`;
+        fullPrompt += `\nAvoid / Negative constraints: old logos, original reference text, original reference logos, hallucinated words, incorrect spelling, noise, film grain, banding, color blocks, compression grids, blocky artifacts, pixelation, blurry, low resolution, JPEG compression noise, compression squares`;
       }
       
       fullPrompt += mandatorySuffix;

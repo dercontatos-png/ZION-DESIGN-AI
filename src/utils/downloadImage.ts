@@ -25,7 +25,7 @@ export const downloadImage = (
         // 1. Draw background image
         ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
 
-        if (logoConfig?.useLogo && logoConfig?.logosList && logoConfig?.logosList.length > 0) {
+        if (logoConfig?.logosList && logoConfig?.logosList.length > 0) {
           const logoImg = new Image();
           logoImg.crossOrigin = "anonymous";
           await new Promise<void>((res) => {
