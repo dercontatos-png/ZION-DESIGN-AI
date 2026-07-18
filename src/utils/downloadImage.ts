@@ -25,31 +25,7 @@ export const downloadImage = (
         // 1. Draw background image
         ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
 
-        if (logoConfig?.logosList && logoConfig?.logosList.length > 0) {
-          const logoImg = new Image();
-          logoImg.crossOrigin = "anonymous";
-          await new Promise<void>((res) => {
-            logoImg.onload = () => {
-              const maxLogoHeight = canvas.height * 0.15; // 15% of height
-              const scale = maxLogoHeight / logoImg.naturalHeight;
-              const logoWidth = logoImg.naturalWidth * scale;
-              const logoHeight = logoImg.naturalHeight * scale;
-              
-              const marginY = canvas.height * 0.05;
-              const posX = (canvas.width - logoWidth) / 2;
-              const posY = marginY;
-              
-              ctx.save();
-              ctx.drawImage(logoImg, posX, posY, logoWidth, logoHeight);
-              ctx.restore();
-              res();
-            };
-            logoImg.onerror = () => res();
-            logoImg.src = logoConfig.logosList[0].startsWith("data:image/") 
-              ? logoConfig.logosList[0] 
-              : `data:image/png;base64,${logoConfig.logosList[0]}`;
-          });
-        }
+
         
         // 2. Output canvas to download trigger
         let extension = formatoSelecionado.toLowerCase();

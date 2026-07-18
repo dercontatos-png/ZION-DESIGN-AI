@@ -2611,18 +2611,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                       alt="Preview"
                       className="max-w-full max-h-[70vh] object-contain rounded-xl border border-white/10 shadow-2xl select-none pointer-events-none"
                     />
-                    {store.logosList && store.logosList[0] && store.logosList[0].trim() !== "" && (
-                      <div className="absolute top-[5%] left-0 right-0 flex justify-center pointer-events-none select-none z-10">
-                         <img 
-                            src={store.logosList[0].startsWith("data:image/") ? store.logosList[0] : `data:image/png;base64,${store.logosList[0]}`} 
-                            style={{ 
-                              maxHeight: '15%'
-                            }} 
-                            className="object-contain opacity-95 drop-shadow-2xl" 
-                            alt="" 
-                          />
-                      </div>
-                    )}
+
                   </div>
                 </div>
               ) : (
