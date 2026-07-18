@@ -1301,7 +1301,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
 
       // --- START SIMPLE DIRECT PROMPT PASS ---
       let expandedPrompt = promptTraduzido;
-      let expandedSystemInstruction = "You are a professional graphic designer. Replicate the general visual style and composition of the Design Layout Reference using the provided brand colors: Background: " + (cores.ambiente || "#000000") + ", highlights: " + (cores.recorte || "#ffffff") + ", complementary accents: " + (cores.complementar || "#ad8330") + ". Do not draw any logo placeholder boxes, squares, header cards, or text labels containing the word 'LOGO' - keep the header/logo area completely empty, solid, clean, and uniform with the rest of the background. If the reference layout is a flat 2D vector graphic/illustration (e.g. flat colored outlines of hands/phones), generate a flat 2D vector illustration with clean cartoon outlines, uniform flat color fills, 0% 3D depth, 0% gradients, 0% light reflections, 0% shading, and 0% drop shadows.";
+      let expandedSystemInstruction = "You are a professional graphic designer. Replicate the general visual style and composition of the Design Layout Reference. YOU MUST STRICTLY AND EXCLUSIVELY USE THE PROVIDED COLOR PALETTE: Background color: " + (cores.ambiente || "#000000") + ", Outlines/Highlights/Rim-lights: " + (cores.recorte || "#ffffff") + ", Accent details: " + (cores.complementar || "#ad8330") + ". DO NOT USE any colors from the reference images if they are not in this palette. The background must be painted EXACTLY with the background color hex " + (cores.ambiente || "#000000") + ". Keep the entire top header section (top left, top center, and top right) completely empty, solid, clean, and uniform with the rest of the background, without generating any boxes, containers, black squares, or white cards. If the reference layout is a flat 2D vector graphic/illustration (e.g. flat colored outlines of hands/phones), generate a flat 2D vector illustration with clean cartoon outlines, uniform flat color fills, 0% 3D depth, 0% gradients, 0% light reflections, 0% shading, and 0% drop shadows.";
       
       const hasCustomLogo = logoBase64 || (Array.isArray(logosList) && logosList.length > 0);
       // --- END SIMPLE DIRECT PROMPT PASS ---
@@ -1311,16 +1311,16 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
 
       // Combine user input colors, cleanliness rules, and illustration medium overrides
       let fullPrompt = expandedPrompt + "\n\n" + 
-        "=== MANDATORY COLOR PALETTE ===\n" +
-        "Background color: " + (cores.ambiente || "#000000") + "\n" +
-        "Highlights/Rim-lights: " + (cores.recorte || "#ffffff") + "\n" +
-        "Complementary accent details: " + (cores.complementar || "#ad8330") + "\n" +
-        "Override any color palette from the Design Layout Reference with these colors.\n\n" +
+        "=== STRICT COLOR PALETTE ENFORCEMENT (MANDATORY) ===\n" +
+        "- Background Color: " + (cores.ambiente || "#000000") + " (You MUST paint the entire background exactly this HEX color, with NO gradients or lighting effects that deviate from this shade)\n" +
+        "- Highlights/Rim-lights: " + (cores.recorte || "#ffffff") + " (Use this color for outlines, glares, or glowing borders)\n" +
+        "- Complementary Accent Details: " + (cores.complementar || "#ad8330") + " (Use this color for supporting graphic elements)\n" +
+        "- ABSOLUTE COLOR ISOLATION: Do NOT inherit, copy, or pull any color from the Design Reference Layout image. If the reference has blue, green, or red details, you must replace them with the complementary accent or highlight color from the palette above. Never generate colors that are not specified in the three palette colors above.\n\n" +
         "=== ABSOLUTE QUALITY & STYLE CONSTRAINTS ===\n" +
         "- SEAMLESS BLENDING: All graphic elements and background colors must be perfectly blended with 0% visual seams, 0% cut-off shapes, or blocky shadow boundaries. The background must be a continuous, smooth, uniform surface.\n" +
         "- NO PIXELATION OR COMPRESSION ARTIFACTS: Avoid all noise, film grain, banding, color blocks, compression grids, blocky artifacts, pixelation, blurry texture, low resolution, JPEG compression noise, or compression squares.\n" +
         "- LOGO ERASURE (CRITICAL): " + (hasCustomLogo 
-           ? "Do NOT generate, draw, print, create, or paint any logo symbol, brand text, logo placeholder, blank white square, label card, or logo containers. Keep the logo zone (typically top center) completely solid, clean, and uniform with the rest of the background flyer." 
+           ? "Do NOT generate, draw, print, create, or paint any logo symbol, brand text, logo placeholder, blank square, black box, white card, label card, or containers. Keep the ENTIRE top area of the image (top left, top center, and top right) completely solid, clean, and uniform with the rest of the background flyer. Absolutely NO background boxes or cards should be created to hold the logo." 
            : "Replicate the logo present in the reference layout.") + "\n" +
         "- 2D ILLUSTRATION OVERRIDE: If the primary reference is a 2D flat vector/cartoon illustration, strictly generate: Flat 2D vector illustration style, clean cartoon drawing, solid flat color fills, thick clean borders, uniform shapes, 0% 3D depth, 0% gradients, 0% light reflections, 0% shading, 0% drop shadows. Ignore all realistic or 3D photography rules.";
 
@@ -1496,7 +1496,8 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
       let modelUsed = `Google AI Studio (${targetModel})`;
 
       try {
-        const sizeSelected = (resolutionInput === "4K" || resolutionInput === "8K") ? "4K" : (resolutionInput === "2K" ? "2K" : "1K");
+        // Always request native "1K" size to avoid tiled generation artifacts (white squares) from the AI model
+        const sizeSelected = "1K";
         console.log(`[api/gerar] Generating image with ${targetModel} - Target resolution: ${sizeSelected}...`);
         
         // REQUIRED BEFORE LOG
@@ -1636,14 +1637,18 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         let finalWidth = width;
         let finalHeight = height;
 
-        if (resolutionInput === "8K" && responseImgUrl) {
-          console.log(`[api/gerar] 8K requested! Applying bicubic Super-Resolution upscale to 7680px...`);
+        if ((resolutionInput === "2K" || resolutionInput === "4K" || resolutionInput === "8K") && responseImgUrl) {
+          let targetW = 2048;
+          if (resolutionInput === "4K") targetW = 4096;
+          if (resolutionInput === "8K") targetW = 7680;
+          
+          console.log(`[api/gerar] ${resolutionInput} requested! Applying clean bicubic upscale to ${targetW}px...`);
           try {
-            const upscaled = await upscaleImage(responseImgUrl, 7680, formato);
+            const upscaled = await upscaleImage(responseImgUrl, targetW, formato);
             finalImage = upscaled.image;
             finalWidth = upscaled.width;
             finalHeight = upscaled.height;
-            modelUsed = `${modelUsed} + 8K Super-Resolution Upscale`;
+            modelUsed = `${modelUsed} + ${resolutionInput} Upscale`;
           } catch (err) {
             console.error("[api/gerar] Upscale error:", err);
           }
