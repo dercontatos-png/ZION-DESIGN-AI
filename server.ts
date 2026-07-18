@@ -1951,13 +1951,53 @@ Sempre avise no texto de forma natural se identificou uma logo ou foto de sujeit
         parts: userParts
       });
 
-      const response = await currentAi.models.generateContent({
-        model: "gemini-2.5-pro",
-        contents: contents,
-        config: {
-          systemInstruction: systemInstruction
+      let response;
+      let modelUsedForChat = "gemini-2.5-pro";
+      try {
+        console.log("[api/chat-agentes] Trying gemini-2.5-pro...");
+        response = await currentAi.models.generateContent({
+          model: "gemini-2.5-pro",
+          contents: contents,
+          config: {
+            systemInstruction: systemInstruction
+          }
+        });
+      } catch (err1: any) {
+        console.warn("[api/chat-agentes] gemini-2.5-pro failed, falling back to gemini-2.5-flash...", err1.message || err1);
+        try {
+          modelUsedForChat = "gemini-2.5-flash";
+          response = await currentAi.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: contents,
+            config: {
+              systemInstruction: systemInstruction
+            }
+          });
+        } catch (err2: any) {
+          console.warn("[api/chat-agentes] gemini-2.5-flash failed, falling back to gemini-1.5-pro...", err2.message || err2);
+          try {
+            modelUsedForChat = "gemini-1.5-pro";
+            response = await currentAi.models.generateContent({
+              model: "gemini-1.5-pro",
+              contents: contents,
+              config: {
+                systemInstruction: systemInstruction
+              }
+            });
+          } catch (err3: any) {
+            console.warn("[api/chat-agentes] gemini-1.5-pro failed, falling back to gemini-1.5-flash...", err3.message || err3);
+            modelUsedForChat = "gemini-1.5-flash";
+            response = await currentAi.models.generateContent({
+              model: "gemini-1.5-flash",
+              contents: contents,
+              config: {
+                systemInstruction: systemInstruction
+              }
+            });
+          }
         }
-      });
+      }
+      console.log(`[api/chat-agentes] Chat generated successfully using model ${modelUsedForChat}`);
       res.json({ response: response.text || "" });
     } catch (error: any) {
       console.error("Chat Assistente Error:", error);
