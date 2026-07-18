@@ -1595,7 +1595,7 @@ ${logoMandatoryRule}`;
       // Build separate parts for the image generator so it recreates layout from scratch ("do zero")
       // and does NOT try to stitch/patch the reference layout image.
       const imageGeneratorParts: any[] = [];
-      imageGeneratorParts.push({ text: promptCompleto });
+      imageGeneratorParts.push({ text: fullPrompt });
       
       if (!desativarSujeito) {
         if (base64DoSujeito) {
