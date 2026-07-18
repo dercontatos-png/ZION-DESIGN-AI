@@ -550,13 +550,17 @@ const processLogoBase64 = (base64Str: string, bgColorHex: string, styleMode: str
           const b = data[i+2];
           const a = data[i+3];
 
-          // 1. Remove white background (chroma key)
-          if (r > 235 && g > 235 && b > 235) {
-            data[i+3] = 0;
+          // 1. Remove white background with clean feathered alpha keying
+          const minWhite = 200;
+          const maxWhite = 255;
+          const brightness = (r + g + b) / 3;
+          if (brightness > minWhite) {
+            const factor = (maxWhite - brightness) / (maxWhite - minWhite);
+            data[i+3] = Math.round(a * Math.pow(factor, 2));
             continue;
           }
 
-          if (a > 10) {
+          if (data[i+3] > 10) {
             if (styleMode === "white") {
               data[i] = 255;
               data[i+1] = 255;
@@ -566,8 +570,13 @@ const processLogoBase64 = (base64Str: string, bgColorHex: string, styleMode: str
               data[i+1] = 0;
               data[i+2] = 0;
             } else if (styleMode === "original" && isDarkBg) {
-              // Convert dark text to white, keep colorful symbols intact
-              if (r < 95 && g < 95 && b < 95) {
+              // Convert dark/black text to white, leaving colorful pixels untouched
+              const maxVal = Math.max(r, g, b);
+              const minVal = Math.min(r, g, b);
+              const saturation = maxVal - minVal;
+              const brightnessVal = (r + g + b) / 3;
+
+              if (saturation < 30 && brightnessVal < 140) {
                 data[i] = 255;
                 data[i+1] = 255;
                 data[i+2] = 255;
