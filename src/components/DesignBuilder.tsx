@@ -1588,6 +1588,20 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                       </select>
                     </div>
 
+                    {/* Style/Color Selector */}
+                    <div className="space-y-1.5">
+                      <span className="text-[9.5px] font-bold text-zinc-400 uppercase tracking-wider block">Estilo/Cor da Logo</span>
+                      <select
+                        value={store.logoStyleOverlay || "original"}
+                        onChange={(e) => store.updateConfig({ logoStyleOverlay: e.target.value as any })}
+                        className="w-full bg-zinc-900 border border-white/5 rounded-lg p-2.5 text-xs text-zinc-200 focus:outline-none focus:border-[#d4af37]/40 tracking-wide"
+                      >
+                        <option value="original">Cores Originais (Com Contraste Automático)</option>
+                        <option value="white">Totalmente Branca (Silhueta)</option>
+                        <option value="black">Totalmente Preta (Silhueta)</option>
+                      </select>
+                    </div>
+
                     {/* Size Slider */}
                     <div className="space-y-1.5">
                       <div className="flex justify-between items-center">
@@ -2656,9 +2670,33 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                             src={store.logosList[0].startsWith("data:image/") ? store.logosList[0] : `data:image/png;base64,${store.logosList[0]}`} 
                             style={{ 
                               maxHeight: `${store.logoSizeOverlay || 15}%`,
-                              maxWidth: `${(store.logoSizeOverlay || 15) * 2.5}%`
+                              maxWidth: `${(store.logoSizeOverlay || 15) * 2.5}%`,
+                              filter: (() => {
+                                const styleMode = store.logoStyleOverlay || "original";
+                                if (styleMode === "white") return "brightness(0) invert(1)";
+                                if (styleMode === "black") return "brightness(0)";
+                                
+                                try {
+                                  const hex = store.cores.ambiente || "#000000";
+                                  const c = hex.replace("#", "");
+                                  const r = parseInt(c.substring(0, 2), 16);
+                                  const g = parseInt(c.substring(2, 4), 16);
+                                  const b = parseInt(c.substring(4, 6), 16);
+                                  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+                                  
+                                  if (lum < 0.3) {
+                                    return "drop-shadow(1px 1px 0px rgba(255,255,255,0.85)) drop-shadow(-1px 1px 0px rgba(255,255,255,0.85)) drop-shadow(1px -1px 0px rgba(255,255,255,0.85)) drop-shadow(-1px -1px 0px rgba(255,255,255,0.85)) drop-shadow(0px 0px 4px rgba(255,255,255,0.9))";
+                                  }
+                                  if (lum > 0.85) {
+                                    return "drop-shadow(1px 1px 0px rgba(0,0,0,0.6)) drop-shadow(-1px 1px 0px rgba(0,0,0,0.6)) drop-shadow(1px -1px 0px rgba(0,0,0,0.6)) drop-shadow(-1px -1px 0px rgba(0,0,0,0.6))";
+                                  }
+                                  return "none";
+                                } catch (e) {
+                                  return "none";
+                                }
+                              })()
                             }} 
-                            className="object-contain opacity-95 drop-shadow-2xl" 
+                            className="object-contain opacity-95" 
                             alt="" 
                           />
                       </div>

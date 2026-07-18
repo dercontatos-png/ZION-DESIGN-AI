@@ -60,6 +60,28 @@ export const downloadImage = (
               }
               
               ctx.save();
+              try {
+                const styleMode = logoConfig?.logoStyleOverlay || "original";
+                if (styleMode === "white") {
+                  ctx.filter = "brightness(0) invert(1)";
+                } else if (styleMode === "black") {
+                  ctx.filter = "brightness(0)";
+                } else {
+                  const hex = logoConfig?.ambienteColor || "#000000";
+                  const c = hex.replace("#", "");
+                  const r = parseInt(c.substring(0, 2), 16);
+                  const g = parseInt(c.substring(2, 4), 16);
+                  const b = parseInt(c.substring(4, 6), 16);
+                  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+                  if (lum < 0.3) {
+                    ctx.filter = "drop-shadow(1px 1px 0px rgba(255,255,255,0.85)) drop-shadow(-1px 1px 0px rgba(255,255,255,0.85)) drop-shadow(1px -1px 0px rgba(255,255,255,0.85)) drop-shadow(-1px -1px 0px rgba(255,255,255,0.85)) drop-shadow(0px 0px 4px rgba(255,255,255,0.9))";
+                  } else if (lum > 0.85) {
+                    ctx.filter = "drop-shadow(1px 1px 0px rgba(0,0,0,0.6)) drop-shadow(-1px 1px 0px rgba(0,0,0,0.6)) drop-shadow(1px -1px 0px rgba(0,0,0,0.6)) drop-shadow(-1px -1px 0px rgba(0,0,0,0.6))";
+                  }
+                }
+              } catch (e) {
+                console.warn("Canvas filter application failed:", e);
+              }
               ctx.drawImage(logoImg, posX, posY, logoWidth, logoHeight);
               ctx.restore();
               res();
