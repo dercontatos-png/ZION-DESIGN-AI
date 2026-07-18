@@ -6,7 +6,9 @@ export const downloadImage = (
   base64Data: string,
   formatoSelecionado: string,
   logoConfig?: any,
-  typographyConfig?: any
+  typographyConfig?: any,
+  resolution?: string,
+  aspectRatio?: string
 ): Promise<void> => {
   return new Promise((resolve, reject) => {
     try {
@@ -14,8 +16,43 @@ export const downloadImage = (
       bgImg.crossOrigin = "anonymous";
       bgImg.onload = async () => {
         const canvas = document.createElement("canvas");
-        canvas.width = bgImg.naturalWidth || 1024;
-        canvas.height = bgImg.naturalHeight || 1024;
+        
+        let targetMax = 1024;
+        const rInput = resolution || "1K";
+        if (rInput === "2K") targetMax = 2048;
+        else if (rInput === "4K") targetMax = 4096;
+        else if (rInput === "8K") targetMax = 7680;
+
+        let w = targetMax;
+        let h = targetMax;
+        const aspect = aspectRatio || "1:1";
+
+        if (aspect === "4:5") {
+          w = Math.round(targetMax * 0.8);
+          h = targetMax;
+        } else if (aspect === "3:4") {
+          w = Math.round(targetMax * 0.75);
+          h = targetMax;
+        } else if (aspect === "9:16") {
+          w = Math.round(targetMax * 0.5625);
+          h = targetMax;
+        } else if (aspect === "16:9") {
+          w = targetMax;
+          h = Math.round(targetMax * 0.5625);
+        } else {
+          const imgRatio = bgImg.naturalWidth / bgImg.naturalHeight;
+          if (imgRatio >= 1) {
+            w = targetMax;
+            h = Math.round(targetMax / imgRatio);
+          } else {
+            h = targetMax;
+            w = Math.round(targetMax * imgRatio);
+          }
+        }
+
+        canvas.width = w;
+        canvas.height = h;
+
         const ctx = canvas.getContext("2d");
         if (!ctx) {
           reject(new Error("Could not get canvas context"));

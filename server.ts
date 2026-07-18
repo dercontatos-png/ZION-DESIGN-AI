@@ -1742,22 +1742,8 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         let finalWidth = width;
         let finalHeight = height;
 
-        if ((resolutionInput === "2K" || resolutionInput === "4K" || resolutionInput === "8K") && responseImgUrl) {
-          let targetW = 2048;
-          if (resolutionInput === "4K") targetW = 4096;
-          if (resolutionInput === "8K") targetW = 7680;
-          
-          console.log(`[api/gerar] ${resolutionInput} requested! Applying clean bicubic upscale to ${targetW}px...`);
-          try {
-            const upscaled = await upscaleImage(responseImgUrl, targetW, formato);
-            finalImage = upscaled.image;
-            finalWidth = upscaled.width;
-            finalHeight = upscaled.height;
-            modelUsed = `${modelUsed} + ${resolutionInput} Upscale`;
-          } catch (err) {
-            console.error("[api/gerar] Upscale error:", err);
-          }
-        }
+        // Backend upscale removed to run instantaneously and prevent server memory freezes.
+        // High-resolution (2K, 4K, 8K) upscaling is performed client-side on canvas download.
 
         res.json({ 
           image: finalImage, 

@@ -839,12 +839,15 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
           logoPosOverlay: store.logoPosOverlay,
           logoSizeOverlay: store.logoSizeOverlay,
           logoInclusionType: store.logoInclusionType,
-          ambienteColor: store.cores.ambiente
+          ambienteColor: store.cores.ambiente,
+          logoStyleOverlay: store.logoStyleOverlay
         },
         {
           enableTypography: store.enableTypography,
           camadasTexto: store.camadasTexto
-        }
+        },
+        store.resolucao || "1K",
+        store.dimensao || "1:1"
       );
       showToast("Download concluído com sucesso!", "success");
     } catch (e) {
