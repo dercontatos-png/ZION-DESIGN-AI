@@ -127,7 +127,7 @@ function forceSolidBackgroundBuffer(bitmap: { data: Buffer; width: number; heigh
 
   const isBgLike = (r: number, g: number, b: number) => {
     const dist = Math.abs(r - tgtR) + Math.abs(g - tgtG) + Math.abs(b - tgtB);
-    return dist < 45;
+    return dist < 80;
   };
 
   const w = width;
@@ -1528,7 +1528,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
       if (somentePrompt) {
         return res.json({
           image: "",
-          prompt: expandedPrompt,
+          prompt: fullPrompt,
           systemInstruction: expandedSystemInstruction,
           modelUsed: "Zion AI (Premium Prompt Generator)",
           requestedResolution: resolutionInput,
@@ -1744,8 +1744,19 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         let finalWidth = width;
         let finalHeight = height;
 
-        // Backend upscale removed to run instantaneously and prevent server memory freezes.
-        // High-resolution (2K, 4K, 8K) upscaling is performed client-side on canvas download.
+        // For 8K: Gemini max native is 4K, so upscale from 4K to 8K on backend
+        if (resolutionInput === "8K" && Math.max(finalWidth, finalHeight) < 7000) {
+          console.log(`[api/gerar] 8K requested! Applying backend upscale from ${finalWidth}x${finalHeight} to 8K...`);
+          try {
+            const upscaled = await upscaleImage(finalImage, 7680, formato);
+            finalImage = upscaled.image;
+            finalWidth = upscaled.width;
+            finalHeight = upscaled.height;
+            console.log(`[api/gerar] Backend upscale to 8K complete: ${finalWidth}x${finalHeight}`);
+          } catch (upErr) {
+            console.error("[api/gerar] 8K backend upscale failed, returning native 4K:", upErr);
+          }
+        }
 
         res.json({ 
           image: finalImage, 
