@@ -76,7 +76,8 @@ export const useGenerateImage = (customApiKey: string, showToast: (msg: string, 
       logoPosOverlay: store.logoPosOverlay || "top_center",
       logoSizeOverlay: store.logoSizeOverlay || 20,
       dimensao: store.dimensao,
-      somentePrompt: store.somentePrompt
+      somentePrompt: store.somentePrompt,
+      cores: store.cores
     };
 
     const payloadString = JSON.stringify(payload);
