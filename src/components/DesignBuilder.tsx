@@ -1572,8 +1572,40 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                 />
                 {store.logosList && store.logosList.length > 0 && (
                   <div className="space-y-4 p-4 bg-zinc-950/60 rounded-xl border border-white/5">
+                    {/* Position Selector */}
+                    <div className="space-y-1.5">
+                      <span className="text-[9.5px] font-bold text-zinc-400 uppercase tracking-wider block">Posição da Logo</span>
+                      <select
+                        value={store.logoPosOverlay || "top_center"}
+                        onChange={(e) => store.updateConfig({ logoPosOverlay: e.target.value as any })}
+                        className="w-full bg-zinc-900 border border-white/5 rounded-lg p-2.5 text-xs text-zinc-200 focus:outline-none focus:border-[#d4af37]/40 tracking-wide"
+                      >
+                        <option value="top_center">Superior Centro</option>
+                        <option value="top_left">Superior Esquerda</option>
+                        <option value="top_right">Superior Direita</option>
+                        <option value="bottom_left">Inferior Esquerda</option>
+                        <option value="bottom_right">Inferior Direita</option>
+                      </select>
+                    </div>
+
+                    {/* Size Slider */}
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[9.5px] font-bold text-zinc-400 uppercase tracking-wider">Tamanho da Logo ({store.logoSizeOverlay || 15}%)</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="5"
+                        max="35"
+                        step="1"
+                        value={store.logoSizeOverlay || 15}
+                        onChange={(e) => store.updateConfig({ logoSizeOverlay: parseInt(e.target.value) })}
+                        className="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-[#d4af37]"
+                      />
+                    </div>
+
                     <div className="p-3 bg-[#d4af37]/5 border border-[#d4af37]/10 rounded-lg text-[9px] font-medium leading-normal text-zinc-400 uppercase tracking-wider">
-                      A logo será sobreposta automaticamente na imagem final. A cor da logo será adaptada de forma 100% inteligente conforme a cor do fundo do criativo.
+                      A logo original será sobreposta no local e tamanho escolhidos de forma 100% nítida e transparente.
                     </div>
                   </div>
                 )}
@@ -2611,6 +2643,26 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                       alt="Preview"
                       className="max-w-full max-h-[70vh] object-contain rounded-xl border border-white/10 shadow-2xl select-none pointer-events-none"
                     />
+                    {store.useLogo && store.logosList && store.logosList[0] && store.logosList[0].trim() !== "" && (
+                      <div className={(() => {
+                        const pos = store.logoPosOverlay || "top_center";
+                        if (pos === "top_left") return "absolute top-[5%] left-[5%] pointer-events-none select-none z-10";
+                        if (pos === "top_right") return "absolute top-[5%] right-[5%] pointer-events-none select-none z-10";
+                        if (pos === "bottom_left") return "absolute bottom-[5%] left-[5%] pointer-events-none select-none z-10";
+                        if (pos === "bottom_right") return "absolute bottom-[5%] right-[5%] pointer-events-none select-none z-10";
+                        return "absolute top-[5%] left-0 right-0 flex justify-center pointer-events-none select-none z-10";
+                      })()}>
+                         <img 
+                            src={store.logosList[0].startsWith("data:image/") ? store.logosList[0] : `data:image/png;base64,${store.logosList[0]}`} 
+                            style={{ 
+                              maxHeight: `${store.logoSizeOverlay || 15}%`,
+                              maxWidth: `${(store.logoSizeOverlay || 15) * 2.5}%`
+                            }} 
+                            className="object-contain opacity-95 drop-shadow-2xl" 
+                            alt="" 
+                          />
+                      </div>
+                    )}
 
                   </div>
                 </div>

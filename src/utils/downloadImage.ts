@@ -27,6 +27,50 @@ export const downloadImage = (
 
 
         
+        if (logoConfig?.useLogo && logoConfig?.logosList && logoConfig?.logosList.length > 0) {
+          const logoImg = new Image();
+          logoImg.crossOrigin = "anonymous";
+          await new Promise<void>((res) => {
+            logoImg.onload = () => {
+              const sizePercent = (logoConfig.logoSizeOverlay || 15) / 100;
+              const maxLogoHeight = canvas.height * sizePercent;
+              const scale = maxLogoHeight / logoImg.naturalHeight;
+              const logoWidth = logoImg.naturalWidth * scale;
+              const logoHeight = logoImg.naturalHeight * scale;
+              
+              const marginX = canvas.width * 0.05;
+              const marginY = canvas.height * 0.05;
+              
+              let posX = (canvas.width - logoWidth) / 2;
+              let posY = marginY;
+              
+              const pos = logoConfig.logoPosOverlay || "top_center";
+              if (pos === "top_left") {
+                posX = marginX;
+                posY = marginY;
+              } else if (pos === "top_right") {
+                posX = canvas.width - logoWidth - marginX;
+                posY = marginY;
+              } else if (pos === "bottom_left") {
+                posX = marginX;
+                posY = canvas.height - logoHeight - marginY;
+              } else if (pos === "bottom_right") {
+                posX = canvas.width - logoWidth - marginX;
+                posY = canvas.height - logoHeight - marginY;
+              }
+              
+              ctx.save();
+              ctx.drawImage(logoImg, posX, posY, logoWidth, logoHeight);
+              ctx.restore();
+              res();
+            };
+            logoImg.onerror = () => res();
+            logoImg.src = logoConfig.logosList[0].startsWith("data:image/") 
+              ? logoConfig.logosList[0] 
+              : `data:image/png;base64,${logoConfig.logosList[0]}`;
+          });
+        }
+
         // 2. Output canvas to download trigger
         let extension = formatoSelecionado.toLowerCase();
         let mimeType = "image/png";
