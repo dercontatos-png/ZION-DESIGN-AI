@@ -1520,7 +1520,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
             contents: [
               {
                 role: "user",
-                parts: imageGeneratorParts
+                parts: parts
               }
             ],
             config: {
