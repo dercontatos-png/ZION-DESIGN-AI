@@ -1574,8 +1574,8 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
       let modelUsed = `Google AI Studio (${targetModel})`;
 
       try {
-        // Always request native "1K" size to avoid tiled generation artifacts (white squares) from the AI model
-        const sizeSelected = "1K";
+        // Request resolution natively from Gemini (1K, 2K, 4K, 8K)
+        const sizeSelected = (resolutionInput === "4K" || resolutionInput === "8K") ? "4K" : (resolutionInput === "2K" ? "2K" : "1K");
         console.log(`[api/gerar] Generating image with ${targetModel} - Target resolution: ${sizeSelected}...`);
         
         // REQUIRED BEFORE LOG
@@ -1608,7 +1608,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
               imageConfig: {
                 aspectRatio: targetAspectRatio,
                 imageSize: sizeSelected,
-                outputMimeType: "image/png"
+                outputMimeType: "image/jpeg"
               }
             }
           });
