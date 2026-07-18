@@ -1510,7 +1510,8 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         });
       }
 
-      // 7. Add Logo References
+      // 7. Add Logo References (Removed to prevent the AI model from generating duplicate/distorted logos or white boxes natively in the background flyer)
+      /*
       if (logoBase64) {
         addImagePart(logoBase64, "Referência de Logotipo");
       }
@@ -1522,6 +1523,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
           }
         });
       }
+      */
 
       if (somentePrompt) {
         return res.json({
