@@ -1301,7 +1301,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
 
       // --- START PROMPT & SYSTEM INSTRUCTION EXPANSION (MAXIMUM SIZE & DETAIL) ---
       let expandedPrompt = promptTraduzido;
-      let expandedSystemInstruction = `You are an absolute master generative AI image prompt engineer, art director, and elite graphic designer capable of generating any niche of design, corporate cards, commercial advertisements, products, services, flyers, or social media posts across any niche (including events, clinics, unions, e-commerce, corporate, luxury, or minimal styles). Your mission is to generate ultra-realistic, premium, and impactful visual compositions tailored to the requested niche, layout grid, and branding style.`;
+      let expandedSystemInstruction = "You are a professional graphic design system. Generate the requested layout with absolute visual fidelity.";
 
       try {
         console.log("[api/gerar] Initiating premium multimodal prompt & instruction expansion...");
@@ -1344,51 +1344,25 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         }
 
         const hasCustomLogo = logoBase64 || (Array.isArray(logosList) && logosList.length > 0);
-        const logoInclusionRule = hasCustomLogo
-          ? `\n5. LOGO & CONTAINER ERASURE (CRITICAL): You MUST completely ignore and erase any brand logos, logo symbols, logo container boxes, or header banners meant to hold logos that are present in the Design Layout Reference image. Do NOT copy them, do NOT describe them, and do NOT write "LOGO" or generate any white square placeholder cards. The area must remain completely clean and uniform with the rest of the background.`
-          : `\n5. Brand Logo Replication: Replicate and draw the logo present in the Design Layout Reference image, placing it in its corresponding position.`;
-        const logoCompositionRule = hasCustomLogo
-          ? `\n10. LOGO AREA CLEANLINESS: Replicate the background layout of the reference but leave the logo placement zone completely empty and clean, with 0% text, 0% placeholders, and 0% card container borders.`
-          : `\n10. Logo Replication: Replicate the logo present in the reference layout.`;
-        const logoPromptRule = hasCustomLogo
-          ? `\n5. Brand Logo Rendering: Instruct the generator to NEVER draw any logo shapes, text, or blank white squares. The background in the logo banner must remain perfectly clean, solid, and uniform. Never generate placeholders or white squares with text like "LOGO" in them.`
-          : `\n5. Brand Logo Replication: Replicate and draw the logo present in the Design Layout Reference image, placing it in its corresponding position.`;
-        const logoPrintRule = hasCustomLogo
-          ? `\n9. LOGO AREA CLEANLINESS: Replicate the background layout of the reference but leave the logo placement zone completely empty and clean, with 0% text or placeholders. Under no circumstances draw blank squares or the word "LOGO".`
-          : `\n9. Logo Replication: Replicate the logo present in the reference layout.`;
-        const logoSysInstructionRule = hasCustomLogo
-          ? `\n5. Logo Rendering: Strictly instruct the generator to NOT print any logo symbol, text, or blank white boxes on the layout. Keep the background clean and solid.`
-          : `\n5. Logo Replication: Replicate the logo present in the reference layout.`;
-        const logoEmbeddedRule = hasCustomLogo
-          ? `\n9. LOGO INTEGRATION: Command the generator to keep the logo area completely solid and clean without rendering any white squares, placeholder blocks, or text.`
-          : `\n9. Logo Replication: Replicate the logo present in the reference layout.`;
-        const instructionPrompt = `You are the absolute ultimate master Generative AI Image Prompt Engineer, Art Director, and Elite Graphic Designer capable of generating any niche of design, corporate cards, commercial advertisements, products, services, flyers, or social media posts across any niche (including events, clinics, unions, e-commerce, corporate, luxury, or minimal styles).
+
+        const instructionPrompt = `You are the absolute ultimate master Generative AI Image Prompt Engineer, Art Director, and Elite Graphic Designer.
 Your job is to analyze the attached visual references (especially the Design Layout Reference images) along with the following initial layout and composition specification:
 "${promptTraduzido}"
 
-Based on this complete multimodal context, you must generate an extremely descriptive, highly accurate, professional prompt and system instruction. The absolute number one goal is extreme structural, compositional, stylistic, and visual faithfulness to the design details of the reference image.
+Based on this complete multimodal context, you must generate an extremely descriptive, highly accurate, professional prompt and system instruction.
 
-CRITICAL VISUAL DESIGN RULES TO EXTRACT FROM THE ATTACHED DESIGN LAYOUT REFERENCE:
-1. ABSOLUTE STYLE CLONING & VISUAL FIDELITY (CRITICAL): You MUST carefully analyze and extract the entire visual style, aesthetics, and design choices of the primary "Design Layout Reference" image and instruct the generator to copy them perfectly onto the new image:
-   - MEDIUM & ART STYLE DETECTION (2D VS 3D): Identify if the Design Layout Reference is a 2D flat vector illustration, cartoon drawing, flat graphic design, or a 3D realistic render/photo. If it is a 2D flat vector/cartoon (like flat colored outlines of a hand/phone), you MUST strictly command the generator to produce a "2D flat vector illustration, flat cartoon graphics, clean vector outlines, uniform flat colors, solid fills, 0% 3D depth, 0% realism, 0% gradients, 0% drop shadows".
-   - ARTISTIC MEDIUM OVERRIDE (CRITICAL): If you detect that the primary Design Layout Reference is a 2D flat vector illustration, cartoon, drawing, flat layout, or minimalist graphic design, you MUST completely ignore and override any instructions in the prompt asking for "realism, 3D renders, studio lighting, volumetric light, realistic skin, photography, or depth of field". You MUST strictly command the image generator to produce: "Flat 2D vector illustration style, clean cartoon drawing, solid flat color fills, thick clean borders, uniform shapes, 0% 3D depth, 0% gradients, 0% light reflections, 0% shading, 0% drop shadows".
-   - TEXT EFFECTS & SHADING: Replicate the exact styling of the titles and texts. Describe if they have 3D bevels, glowing neon outlines, metallic textures, cursive calligraphic styling overlaid on bold fonts, solid color-blocked backgrounds (badges/labels), drop shadows, or layered masks.
-   - LIGHTING & ATMOSPHERE: Describe the exact lighting setup of the reference (e.g. volumetric stage laser beams, soft warm golden bokeh backgrounds, colorful neon spotlights, backlights, high-contrast shadows).
-   - BACKGROUND TEXTURES & GEOMETRY: Replicate the background texture exactly (e.g. grunge paper tears, paint splatters, clean color blocking, halftone dots, solid sheets).
-   - DECORATIVE GRAPHIC ELEMENTS: Replicate any structural decorations, diagonal stripes, borders, stars, floating sparkles, or leaf motifs.
-2. STRICT LAYOUT & COMPOSITION GRID: Mirror the exact positioning and composition of the reference (e.g., if the main subject is centered, or if there is a group of models, replicate that layout). Put the user's requested text in the exact corresponding spatial positions as the reference design text blocks.
-3. ADAPTATION TO USER BRAND PALETTE: If the user provides custom brand colors (like black and gold or blue), adapt the layout and structural elements of the reference to use these brand colors, but preserve the style (e.g., use black/gold instead of orange/black, but keep the paint splatters, fonts, and drop shadows).
-3. SUPPORTING GRAPHIC ELEMENTS & SOCIAL MEDIA: Look for any social media handles, symbols, or small details (like the Instagram logo/handle, website text, small badges). Command the generator to write and render these elements beautifully and cleanly on the image canvas in their exact corresponding positions.
-4. SECONDARY PHOTOS & VISUAL MOTIFS: Look for any secondary photos or decorative graphics in the reference card. For instance, if there is a photo of people's hands joining, hands holding, or any supporting imagery, you MUST specify its presence and describe its integration: "subtly integrated into the bottom or background layer is a clear, polished photographic motif of people's hands joining together, representing connection, with warm rim lighting."
-${logoInclusionRule}
-6. SOCIAL HANDLE CASE FIDELITY (STRICTLY LOWERCASE): Explicitly instruct the generator to render any social media usernames or handles (containing "@") strictly in lowercase letters, using a thin, modern, high-contrast sans-serif font.
-7. BRAND COLOR PALETTE ENFORCEMENT (CRITICAL): Look closely at the client's specification in: "${promptTraduzido}". If the client has provided custom brand colors, specific hex codes (#xxxxxx), or specific colors for "Color Palette" or "Lighting Setup" (e.g., specific ambient color, rim color, or fill color), you MUST strictly enforce these custom brand colors as the primary, dominant colors of the flyer's design, lighting, glows, and accents. Do NOT copy the color palette of the Design Layout Reference if the client has specified their own custom brand colors! Instead, adapt the layout, composition structure, and atmospheric depth of the reference to be perfectly styled under the client's custom brand colors.
-8. ANTI-ARTIFACTS & CLEAN BACKGROUNDS (CRITICAL): If the design reference or prompt specifies a solid, flat, or clean background (e.g. solid dark blue, clean flat shapes), you MUST explicitly command the generator to use "0% film grain, 0% noise, 0% compression blocks, 0% texture artifacts, perfectly smooth flat solid colors, uniform gradients, and sharp clean vector lines". Do NOT allow the generator to add random textures, grunge effects, particle dust, lights, or blurs on top of solid background areas. There must be 0% rectangular seams, 0% blending borders, 0% grid boundaries, or color mismatch squares. The background must flow perfectly under and around all elements as a single, continuous, uniform plane.
-8. FULL TYPOGRAPHY EMBEDDING (CRITICAL): You MUST command the generator to write, draw, print, and beautifully integrate all titles, text layers, event dates, contact details, and social handles directly onto the image canvas. Style them with gorgeous, sharp, modern typography, ensuring high legibility and precise alignment matching the reference design layout.
-9. SUBJECT IDENTITY PRESERVATION VS DESIGN REFERENCE INTERPRETATION (CRITICAL): Look closely at the provided references. If a "Referência do Sujeito" (Subject Reference) image is provided, you MUST command the generator to perfectly copy, preserve, and clone the exact faces, identities, hair styles, facial features, and likenesses of ALL people / models present in that Subject Reference image into the generated design flyer (e.g., if there are two people, a couple, or a family, generate ALL of them together in their respective positions). Do NOT generate new faces or change their identities. However, if there is a person inside the "Design Layout Reference" image, you MUST NOT copy the face/person from that design layout reference; instead, interpret their pose/category and substitute them with the exact faces/likenesses of the client's provided "Referência do Sujeito" (Subject Reference).
-${logoCompositionRule}
-11. CARD DESIGN PRESERVATION: Replicate the exact shape of the card panels (e.g., if there's a rounded panel on the right side of the canvas where the photo of hands is placed, generate a rounded panel exactly there). The image must contain the full, beautiful card layouts and panels, not just a plain backdrop.
-12. STRICT REFERENCE PRESERVATION (WHEN EDITING): If the user's specification requests an edit to a specific reference image (e.g. "remove text and keep the symbol" on a logo), you MUST instruct the generator to preserve the original visual structure, shapes, colors, and details of the provided reference with absolute 100% exact fidelity. DO NOT redesign, reimagine, stylize, or alter the core shapes of the reference. It must look identical, only applying the requested edit (e.g. erasing the text).
+CRITICAL RULES:
+1. ABSOLUTE STYLE CLONING: You MUST copy the exact art medium of the Design Layout Reference:
+   - If it is a 2D flat vector illustration, cartoon drawing, or flat graphic design (like flat colored outlines of a hand or phone), you MUST strictly output "Flat 2D vector illustration style, clean cartoon drawing, solid flat color fills, thick clean borders, uniform shapes, 0% 3D depth, 0% gradients, 0% light reflections, 0% shading, 0% drop shadows". Ignore all realistic lighting or photography words!
+   - If it is a 3D render or photo, output high-end studio lighting and depth.
+2. ABSOLUTE COLOR PALETTE ENFORCEMENT (CRITICAL): The dominant color palette of the design must be strictly: Background: ${cores.ambiente || "#000000"}, Highlights/Rim-lights: ${cores.recorte || "#ffffff"}, Complementary accents: ${cores.complementar || "#ad8330"}. You MUST completely override any colors from the Design Layout Reference with these colors. The background must be exactly ${cores.ambiente || "#000000"}.
+3. LOGO & CONTAINER ERASURE:
+   ${hasCustomLogo 
+     ? "You MUST completely ignore and erase any brand logos, logo symbols, logo container boxes, or header banners meant to hold logos that are present in the Design Layout Reference image. Do NOT copy them, do NOT describe them, and do NOT write 'LOGO' or generate any white square placeholder cards. The area must remain completely clean and uniform with the rest of the background."
+     : "Replicate the logo present in the Design Layout Reference image, placing it in its corresponding position."}
+4. NO PIXELATION OR COMPRESSION ARTIFACTS: Demand 0% noise, 0% film grain, 0% compression blocks, 0% texture artifacts. The background must be a single, continuous, uniform plane with absolutely 0% rectangular seams, 0% blending borders, or color mismatch squares.
+5. TYPOGRAPHY: You MUST command the generator to write, draw, print, and beautifully integrate all titles, text layers, event dates, contact details, and social handles directly onto the image canvas in their exact spatial positions, preserving lowercase letters for social handles starting with "@".
+6. SUBJECTS: Replicate the pose and number of people from the Subject Reference. If it has 2 people, place both.
 
 The output must be returned as a JSON object with exactly two string fields:
 {
@@ -1397,28 +1371,18 @@ The output must be returned as a JSON object with exactly two string fields:
 }
 
 CRITICAL RULES FOR "prompt" (Mega Prompt Mestre):
-1. Must be written in technical, descriptive, high-fidelity English to achieve absolute perfection in image generators (like gemini-3-pro-image, Imagen 3, or Midjourney V6).
+1. Must be written in technical, descriptive, high-fidelity English.
 2. Do NOT write generic text-to-image filler text. Keep the description concise, precise, and targeted directly at copying the reference image's true structure, background, lighting, and elements.
-3. Replicate the precise lighting direction and color palette of the Design Layout Reference. If the reference is dark gray and white, do not add golden elements. If the reference is warm brown, make it warm brown. CRITICAL OVERRIDE: If the client specifies custom brand colors in their layout specification (e.g. "Color Palette: #xxxxxx" or explicit ambient, rim, and complementary colors), you MUST completely override the reference's color palette with the client's custom brand colors. Apply these client colors to all background shades, ambient glows, lighting beams, and graphic highlights, ensuring the layout layout strictly matches the reference, but the color styling strictly matches the client's brand colors.
-4. Exclusions/Negative constraints: specify exactly what should NOT appear (e.g. generic templates, deformed faces, text hallucinations, bad hands, low resolution).
-${logoPromptRule}
-6. Lowercase Social Handles: Mandate that all social media usernames/handles (containing "@") be written strictly in lowercase letters and printed directly on the image canvas.
-7. Typography Rendering: Replicate and write all custom texts, titles, websites, numbers, and handles directly on the card canvas, styling them with high-definition, sharp, professional typography.
-8. Request a completely new, high-end, original custom subject (person or element) matching the context of the reference photo, avoiding exact face or identity copies.
-9. Exact Visual Trace (Edit Mode): If the user edits a reference, demand the generator to perfectly trace and retain the exact shape and proportions of the original, without hallucinating variations.
-${logoPrintRule}
+3. Replicate the precise lighting direction and color palette, but strictly override it with the custom brand colors: Background: ${cores.ambiente || "#000000"}, Highlights: ${cores.recorte || "#ffffff"}, Complementary: ${cores.complementar || "#ad8330"}.
+4. Exclusions/Negative constraints: specify exactly what should NOT appear (noise, film grain, banding, color blocks, compression grids, blocky artifacts, pixelation, blurry, low resolution, JPEG compression noise, compression squares, old logos, original reference text, hallucinated words, incorrect spelling).
+5. Brand Logo Rendering: ${hasCustomLogo ? "NEVER draw any logo shapes, text, or blank white squares. The background in the logo banner must remain perfectly clean, solid, and uniform. Never generate placeholders or white squares with text like 'LOGO' in them." : "Replicate and draw the logo present in the Design Layout Reference."}
 
 CRITICAL RULES FOR "systemInstruction":
 1. Must be written in highly professional, technical, authoritative English, serving as a strict rules guide for the image generator.
-2. It must act as the ultimate set of strict rules/guidelines for the image generator, dictating exactly how to interpret, parse, and execute the prompt with absolute visual fidelity.
-3. Strict Adherence to Card Layout and Panels: Instruct the generator to replicate the full layout structure, panel divisions, cards, background textures, lighting style, and overall styling of the reference image. Do NOT generate just a plain background backdrop; generate all card panels, split backgrounds, and graphic dividers exactly.
-4. Custom Brand Color Palette Override: Explicitly instruct the image generator that if custom brand color hex codes or palette colors are defined in the prompt (e.g., custom accent colors or specific lighting colors), it must strictly use those exact colors for the scene's ambient lighting, highlights, text colors, card panels, and backdrop accents, completely overriding the colors of the design layout reference image while preserving its design composition structure.
-${logoSysInstructionRule}
-6. Lowercase Instagram Handles: Require the generator to render any social media handle containing "@" strictly in lowercase letters, printing them directly on the canvas.
-7. Custom Text Enforcement & Printing: Strictly instruct the generator to replace any text content, social media usernames, or contact details present in the visual reference with the customized text parameters supplied in the prompt, and write/render them beautifully and cleanly onto the card image canvas.
-8. Subject Likeness & Identity Preservation: Instruct the generator to perfectly preserve the faces, likenesses, expressions, and identities of ALL people / models provided in the "Referência do Sujeito" (Subject Reference) image (e.g. if the image contains two models, clone and place BOTH models together in the final design layout). It must place these exact people into the design layout, adapting only their lighting/shadows to match the scene. If no Subject Reference is provided, only then generate a new high-quality model.
-9. Strict Visual Fidelity on Edited References: If the user explicitly asks to edit a provided reference (like stripping text from a logo), command the image generator to treat the remaining parts of that reference as a holy artifact, preserving 100% of its original shape, vector lines, colors, and proportions without any hallucinated alterations.
-${logoEmbeddedRule}
+2. Direct the image generator to replicate the full layout structure, panel divisions, cards, background textures, lighting style, and overall styling of the reference image.
+3. Custom Brand Color Palette Override: Explicitly instruct the image generator that it must strictly use: Background: ${cores.ambiente || "#000000"}, Highlights: ${cores.recorte || "#ffffff"}, Complementary: ${cores.complementar || "#ad8330"} for all ambient lighting, highlights, text colors, card panels, and backdrop accents, completely overriding the colors of the design layout reference image.
+4. Logo rendering rule: ${hasCustomLogo ? "Strictly instruct the generator to NOT print any logo symbol, text, or blank white boxes on the layout. Keep the background clean and solid." : "Replicate the logo present in the reference layout."}
+5. Subject Likeness: Instruct the generator to perfectly preserve the faces, likenesses, expressions, and identities of ALL people / models provided in the Subject Reference image.
 
 Return ONLY the JSON object. Do not include any conversational text or markdown formatting except the json code block itself.`;
 
