@@ -1608,6 +1608,41 @@ ${logoMandatoryRule}`;
         });
       }
 
+      // Build separate parts for the image generator so it recreates layout from scratch ("do zero")
+      // and does NOT try to stitch/patch the reference layout image.
+      const imageGeneratorParts: any[] = [];
+      imageGeneratorParts.push({ text: promptCompleto });
+      
+      if (!desativarSujeito) {
+        if (base64DoSujeito) {
+          const cleaned = cleanBase64(base64DoSujeito);
+          if (cleaned) {
+            imageGeneratorParts.push({
+              inlineData: {
+                data: cleaned,
+                mimeType: "image/jpeg"
+              }
+            });
+            imageGeneratorParts.push({ text: "Referência do Sujeito Principal" });
+          }
+        }
+        if (Array.isArray(sujeitosBase64List)) {
+          sujeitosBase64List.forEach((ref: any, idx: number) => {
+            const dataStr = typeof ref === 'string' ? ref : (ref?.data || ref?.url);
+            const cleaned = dataStr ? cleanBase64(dataStr) : null;
+            if (cleaned) {
+              imageGeneratorParts.push({
+                inlineData: {
+                  data: cleaned,
+                  mimeType: "image/jpeg"
+                }
+              });
+              imageGeneratorParts.push({ text: `Referência de Sujeito Adicional ${idx + 1}` });
+            }
+          });
+        }
+      }
+
       let responseImgUrl = "";
       let modelUsed = `Google AI Studio (${targetModel})`;
 
@@ -1636,7 +1671,7 @@ ${logoMandatoryRule}`;
             contents: [
               {
                 role: "user",
-                parts: parts
+                parts: imageGeneratorParts
               }
             ],
             config: {
