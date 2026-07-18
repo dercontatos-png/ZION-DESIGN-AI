@@ -1238,6 +1238,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         logosList = [],
         useLogo = false,
         logoInclusionType = "overlay",
+        cores = { ambiente: "#000000", recorte: "#ffffff", complementar: "#ad8330" },
         logoPosOverlay = "top_center",
         logoSizeOverlay = 20,
         dimensao = "1:1",
