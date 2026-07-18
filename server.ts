@@ -1342,12 +1342,25 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
           addImagePartToExpansion(base64DoSujeito, "Subject/Person Reference");
         }
 
-        const logoInclusionRule = `\n5. LOGO & CONTAINER ERASURE (CRITICAL): You MUST completely ignore and erase any brand logos, logo symbols, logo container boxes, or header banners meant to hold logos that are present in the Design Layout Reference image. Do NOT copy them, do NOT describe them, and do NOT write "LOGO" or generate any white square placeholder cards. The area must remain completely clean and uniform with the rest of the background.`;
-        const logoCompositionRule = `\n10. LOGO AREA CLEANLINESS: Replicate the background layout of the reference but leave the logo placement zone completely empty and clean, with 0% text, 0% placeholders, and 0% card container borders.`;
-        const logoPromptRule = `\n5. Brand Logo Rendering: Instruct the generator to NEVER draw any logo shapes, text, or blank white squares. The background in the logo banner must remain perfectly clean, solid, and uniform.`;
-        const logoPrintRule = `\n9. LOGO AREA CLEANLINESS: Replicate the background layout of the reference but leave the logo placement zone completely empty and clean, with 0% text or placeholders.`;
-        const logoSysInstructionRule = `\n5. Logo Rendering: Strictly instruct the generator to NOT print any logo symbol, text, or blank white boxes on the layout. Keep the background clean.`;
-        const logoEmbeddedRule = `\n9. LOGO INTEGRATION: Command the generator to keep the logo area completely solid and clean without rendering any white squares or text.`;
+        const hasCustomLogo = logoBase64 || (Array.isArray(logosList) && logosList.length > 0);
+        const logoInclusionRule = hasCustomLogo
+          ? `\n5. LOGO & CONTAINER ERASURE (CRITICAL): You MUST completely ignore and erase any brand logos, logo symbols, logo container boxes, or header banners meant to hold logos that are present in the Design Layout Reference image. Do NOT copy them, do NOT describe them, and do NOT write "LOGO" or generate any white square placeholder cards. The area must remain completely clean and uniform with the rest of the background.`
+          : `\n5. Brand Logo Replication: Replicate and draw the logo present in the Design Layout Reference image, placing it in its corresponding position.`;
+        const logoCompositionRule = hasCustomLogo
+          ? `\n10. LOGO AREA CLEANLINESS: Replicate the background layout of the reference but leave the logo placement zone completely empty and clean, with 0% text, 0% placeholders, and 0% card container borders.`
+          : `\n10. Logo Replication: Replicate the logo present in the reference layout.`;
+        const logoPromptRule = hasCustomLogo
+          ? `\n5. Brand Logo Rendering: Instruct the generator to NEVER draw any logo shapes, text, or blank white squares. The background in the logo banner must remain perfectly clean, solid, and uniform. Never generate placeholders or white squares with text like "LOGO" in them.`
+          : `\n5. Brand Logo Replication: Replicate and draw the logo present in the Design Layout Reference image, placing it in its corresponding position.`;
+        const logoPrintRule = hasCustomLogo
+          ? `\n9. LOGO AREA CLEANLINESS: Replicate the background layout of the reference but leave the logo placement zone completely empty and clean, with 0% text or placeholders. Under no circumstances draw blank squares or the word "LOGO".`
+          : `\n9. Logo Replication: Replicate the logo present in the reference layout.`;
+        const logoSysInstructionRule = hasCustomLogo
+          ? `\n5. Logo Rendering: Strictly instruct the generator to NOT print any logo symbol, text, or blank white boxes on the layout. Keep the background clean and solid.`
+          : `\n5. Logo Replication: Replicate the logo present in the reference layout.`;
+        const logoEmbeddedRule = hasCustomLogo
+          ? `\n9. LOGO INTEGRATION: Command the generator to keep the logo area completely solid and clean without rendering any white squares, placeholder blocks, or text.`
+          : `\n9. Logo Replication: Replicate the logo present in the reference layout.`;
         const instructionPrompt = `You are the absolute ultimate master Generative AI Image Prompt Engineer, Art Director, and Elite Graphic Designer capable of generating any niche of design, corporate cards, commercial advertisements, products, services, flyers, or social media posts across any niche (including events, clinics, unions, e-commerce, corporate, luxury, or minimal styles).
 Your job is to analyze the attached visual references (especially the Design Layout Reference images) along with the following initial layout and composition specification:
 "${promptTraduzido}"
@@ -1485,9 +1498,10 @@ Return ONLY the JSON object. Do not include any conversational text or markdown 
       // Force append absolute critical constraints to the prompt so both gemini-3-pro-image and fallbacks receive them
       const logoMandatoryRule = `- NO LOGO CONTAINERS OR SQUARES (CRITICAL): The AI generator is STRICTLY FORBIDDEN from drawing, printing, or creating any logo placeholder, blank square, white box, text, label, or colored container/card backgrounds to hold the logo (e.g. no black/yellow/blue squares or rectangles behind the logo). Erase any logo container boxes from the reference design. The background behind the logo must be 100% continuous and uniform with the main background, with absolutely NO local squares or borders holding it.`;
 
-      const mandatorySuffix = `\n\n=== ABSOLUTE CRITICAL CONSTRAINTS (MANDATORY) ===
-- TOTAL FIDELITY & ZERO OMISSIONS (CRITICAL): If a Design Layout Reference is provided, you MUST perfectly clone EVERYTHING from it (the layout, the spatial positioning of texts, the graphic elements, the background, the subject pose/lighting). You MUST put the texts EXACTLY in the same spatial locations as they are in the reference. DO NOT skip any text fields. Replicate the exact typography hierarchy.
-- EXACT VISUAL CLONE OF DESIGN REFERENCE: You MUST perfectly trace and clone the exact shapes, layout grids, panel structures, background gradients, textures, and geometric dimensions of the provided Design Layout Reference. Do NOT invent new shapes, structures, or change the composition grid. It must look 100% identical in layout and structural design, simply applying the new text, logos, and colors.
+      const mandatorySuffix = `\n\n=== DESIGN QUALITY & HARMONY CONSTRAINTS (MANDATORY) ===
+- SEAMLESS BLENDING & NO GLITCHES: Ensure all graphic elements, background colors, and overlays are perfectly blended with 0% visual seams, 0% cut-off shapes, or blocky shadow boundaries. The background must be a continuous, smooth, uniform surface.
+- LAYOUT COMPOSITION: Replicate the general spatial placement of texts, buttons, and mockups from the Design Layout Reference, placing them in their corresponding areas to preserve a balanced composition.
+- HIGH-QUALITY RENDERING: All hands, phones, mockups, and text characters must be rendered cleanly with correct anatomy, sharp details, and realistic shadows. Avoid overlapping artifacts.
 - BRAND COLOR PALETTE ENFORCEMENT (CRITICAL): If custom colors, hex codes, or light setup colors are specified in the prompt above, you MUST strictly and aggressively use those EXACT colors for the entire graphic composition, background panels, highlights, glows, and ambient lighting. You MUST completely OVERRIDE the original reference flyer's colors with the requested colors. Do NOT use the reference colors if custom colors are provided!
 - TEXT COMPLETENESS & PLACEMENT (CRITICAL): You MUST print ALL provided text fields, titles, and words exactly as requested. DO NOT SKIP ANY TEXT. You MUST place the text EXACTLY in the same spatial positions as the original text blocks found in the Design Layout Reference. DO NOT put text in random places. Replicate the original typographical hierarchy and alignment perfectly, but using the new text.
 - COMPLETE CARD LAYOUT GENERATION: Do NOT generate just a plain empty background backdrop. You MUST generate the complete graphic composition, including all layouts, cards, panels, curved border divides, background textures, lighting setups, and the main visual subjects (e.g., joining hands, models, or products) in their exact spatial positions, proportions, and layouts as shown in the Design Layout Reference image.
