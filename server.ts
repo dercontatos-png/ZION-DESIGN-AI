@@ -118,6 +118,84 @@ function getResolutionDimensions(resolution: string, aspectRatio: string): { wid
   }
 }
 
+function forceSolidBackgroundBuffer(bitmap: { data: Buffer; width: number; height: number }, targetColorHex: string) {
+  const { data, width, height } = bitmap;
+  const hex = targetColorHex.replace("#", "");
+  const tgtR = parseInt(hex.substring(0, 2), 16) || 0;
+  const tgtG = parseInt(hex.substring(2, 4), 16) || 0;
+  const tgtB = parseInt(hex.substring(4, 6), 16) || 0;
+
+  const isBgLike = (r: number, g: number, b: number) => {
+    const dist = Math.abs(r - tgtR) + Math.abs(g - tgtG) + Math.abs(b - tgtB);
+    return dist < 45;
+  };
+
+  const w = width;
+  const h = height;
+  const visited = new Uint8Array(w * h);
+  const queue = [];
+
+  for (let x = 0; x < w; x++) {
+    queue.push(x, 0);
+    visited[x] = 1;
+    const yBot = h - 1;
+    queue.push(x, yBot);
+    visited[yBot * w + x] = 1;
+  }
+  for (let y = 1; y < h - 1; y++) {
+    queue.push(0, y);
+    visited[y * w] = 1;
+    const xRight = w - 1;
+    queue.push(xRight, y);
+    visited[y * w + xRight] = 1;
+  }
+
+  let head = 0;
+  while (head < queue.length) {
+    const cx = queue[head++];
+    const cy = queue[head++];
+
+    const idx = (cy * w + cx) * 4;
+    const r = data[idx];
+    const g = data[idx+1];
+    const b = data[idx+2];
+
+    if (isBgLike(r, g, b)) {
+      data[idx] = tgtR;
+      data[idx+1] = tgtG;
+      data[idx+2] = tgtB;
+
+      const nx1 = cx + 1;
+      const ny1 = cy;
+      if (nx1 < w) {
+        const nIdx = ny1 * w + nx1;
+        if (!visited[nIdx]) { visited[nIdx] = 1; queue.push(nx1, ny1); }
+      }
+
+      const nx2 = cx - 1;
+      const ny2 = cy;
+      if (nx2 >= 0) {
+        const nIdx = ny2 * w + nx2;
+        if (!visited[nIdx]) { visited[nIdx] = 1; queue.push(nx2, ny2); }
+      }
+
+      const nx3 = cx;
+      const ny3 = cy + 1;
+      if (ny3 < h) {
+        const nIdx = ny3 * w + nx3;
+        if (!visited[nIdx]) { visited[nIdx] = 1; queue.push(nx3, ny3); }
+      }
+
+      const nx4 = cx;
+      const ny4 = cy - 1;
+      if (ny4 >= 0) {
+        const nIdx = ny4 * w + nx4;
+        if (!visited[nIdx]) { visited[nIdx] = 1; queue.push(nx4, ny4); }
+      }
+    }
+  }
+}
+
 async function upscaleImage(base64Image: string, targetWidth: number, formatInput?: string): Promise<{ image: string; width: number; height: number }> {
   try {
     const cleanBase64 = base64Image.replace(/^data:image\/\w+;base64,/, "");
@@ -1631,6 +1709,33 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         // === VALIDATION ===
         if (sizeSelected === "4K" && (width < 3000 || height < 3000)) {
           console.warn(`[api/gerar] WARNING: Requested 4K, but received resolution of ${width}x${height}px. Skipping any upscaling or modifications.`);
+        }
+
+        if (responseImgUrl && cores && cores.ambiente) {
+          console.log(`[api/gerar] Forcing solid background color (${cores.ambiente})...`);
+          try {
+            const cleanBase64 = responseImgUrl.replace(/^data:image\/\w+;base64,/, "");
+            const buffer = Buffer.from(cleanBase64, "base64");
+            const image = await Jimp.read(buffer);
+            
+            forceSolidBackgroundBuffer(image.bitmap, cores.ambiente);
+            
+            const fmt = (formato || "PNG").toUpperCase();
+            let processedBuffer;
+            if (fmt === "PNG") {
+              processedBuffer = await image.getBuffer("image/png");
+              responseImgUrl = `data:image/png;base64,${processedBuffer.toString("base64")}`;
+            } else if (fmt === "WEBP") {
+              processedBuffer = await image.getBuffer("image/webp");
+              responseImgUrl = `data:image/webp;base64,${processedBuffer.toString("base64")}`;
+            } else {
+              image.quality(98);
+              processedBuffer = await image.getBuffer("image/jpeg");
+              responseImgUrl = `data:image/jpeg;base64,${processedBuffer.toString("base64")}`;
+            }
+          } catch (err) {
+            console.error("[api/gerar] Error forcing solid background color:", err);
+          }
         }
 
         let finalImage = responseImgUrl;
