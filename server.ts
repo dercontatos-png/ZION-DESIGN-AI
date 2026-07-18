@@ -1324,6 +1324,10 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
            : "Replicate the logo present in the reference layout.") + "\n" +
         "- 2D ILLUSTRATION OVERRIDE: If the primary reference is a 2D flat vector/cartoon illustration, strictly generate: Flat 2D vector illustration style, clean cartoon drawing, solid flat color fills, thick clean borders, uniform shapes, 0% 3D depth, 0% gradients, 0% light reflections, 0% shading, 0% drop shadows. Ignore all realistic or 3D photography rules.";
 
+      if (!desativarSujeito) {
+        fullPrompt += "\n- SUBJECT REPLICATION & FACE CLONING (CRITICAL): You MUST analyze the attached 'Referência do Sujeito Principal' image. You MUST clone, copy, and perfectly replicate the exact face, expression, features, hair style, skin tone, and identity of the person/subject shown in that image. Place this exact person as the main model in the design layout, adapting only their lighting and shading to fit seamlessly into the scene. Never generate a random face or different person.";
+      }
+
       parts.push({ text: fullPrompt });
 
       // Helper to add base64 images to parts
