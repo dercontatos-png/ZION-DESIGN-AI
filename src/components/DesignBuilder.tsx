@@ -2616,20 +2616,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                          <img 
                             src={store.logosList[0].startsWith("data:image/") ? store.logosList[0] : `data:image/png;base64,${store.logosList[0]}`} 
                             style={{ 
-                              maxHeight: '15%',
-                              filter: (() => {
-                                try {
-                                  const hex = store.cores.ambiente || "#000000";
-                                  const c = hex.replace("#", "");
-                                  const r = parseInt(c.substring(0, 2), 16);
-                                  const g = parseInt(c.substring(2, 4), 16);
-                                  const b = parseInt(c.substring(4, 6), 16);
-                                  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-                                  return lum < 0.4 ? "brightness(0) invert(1)" : "none";
-                                } catch (e) {
-                                  return "brightness(0) invert(1)";
-                                }
-                              })()
+                              maxHeight: '15%'
                             }} 
                             className="object-contain opacity-95 drop-shadow-2xl" 
                             alt="" 

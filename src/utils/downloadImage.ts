@@ -40,19 +40,6 @@ export const downloadImage = (
               const posY = marginY;
               
               ctx.save();
-              try {
-                const hex = logoConfig?.ambienteColor || "#000000";
-                const c = hex.replace("#", "");
-                const r = parseInt(c.substring(0, 2), 16);
-                const g = parseInt(c.substring(2, 4), 16);
-                const b = parseInt(c.substring(4, 6), 16);
-                const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-                if (lum < 0.4) {
-                  ctx.filter = "brightness(0) invert(1)";
-                }
-              } catch (e) {
-                console.warn("Auto logo color detection failed:", e);
-              }
               ctx.drawImage(logoImg, posX, posY, logoWidth, logoHeight);
               ctx.restore();
               res();
