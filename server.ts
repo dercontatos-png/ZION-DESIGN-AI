@@ -1299,191 +1299,31 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         targetAspectRatio = "4:3";
       }
 
-      // --- START PROMPT & SYSTEM INSTRUCTION EXPANSION (MAXIMUM SIZE & DETAIL) ---
+      // --- START SIMPLE DIRECT PROMPT PASS ---
       let expandedPrompt = promptTraduzido;
-      let expandedSystemInstruction = "You are a professional graphic design system. Generate the requested layout with absolute visual fidelity.";
-
-      try {
-        console.log("[api/gerar] Initiating premium multimodal prompt & instruction expansion...");
-        const expansionParts: any[] = [];
-
-        // Helper to add clean base64 image part to prompt expansion
-        const addImagePartToExpansion = (b64: string, label: string) => {
-          const cleaned = cleanBase64(b64);
-          if (cleaned) {
-            expansionParts.push({
-              inlineData: {
-                data: cleaned,
-                mimeType: "image/jpeg"
-              }
-            });
-            expansionParts.push({ text: `[Multimodal Visual Reference for ${label}]` });
-          }
-        };
-
-        // Attach design references (up to 2) to the prompt expansion model so it can analyze the layout!
-        let addedDesignCount = 0;
-        if (designRefBase64) {
-          addImagePartToExpansion(designRefBase64, "Primary Design Layout Reference");
-          addedDesignCount++;
-        }
-        if (Array.isArray(designRefsList)) {
-          for (const ref of designRefsList) {
-            if (addedDesignCount >= 2) break;
-            const dataStr = typeof ref === 'string' ? ref : (ref?.data || ref?.url);
-            if (dataStr) {
-              addImagePartToExpansion(dataStr, `Design Layout Reference #${addedDesignCount + 1}`);
-              addedDesignCount++;
-            }
-          }
-        }
-
-        // Attach subject reference (up to 1) so it knows what subject/object we are dealing with
-        if (base64DoSujeito) {
-          addImagePartToExpansion(base64DoSujeito, "Subject/Person Reference");
-        }
-
-        const hasCustomLogo = logoBase64 || (Array.isArray(logosList) && logosList.length > 0);
-
-        const instructionPrompt = `You are the absolute ultimate master Generative AI Image Prompt Engineer, Art Director, and Elite Graphic Designer.
-Your job is to analyze the attached visual references (especially the Design Layout Reference images) along with the following initial layout and composition specification:
-"${promptTraduzido}"
-
-Based on this complete multimodal context, you must generate an extremely descriptive, highly accurate, professional prompt and system instruction.
-
-CRITICAL RULES:
-1. ABSOLUTE STYLE CLONING: You MUST copy the exact art medium of the Design Layout Reference:
-   - If it is a 2D flat vector illustration, cartoon drawing, or flat graphic design (like flat colored outlines of a hand or phone), you MUST strictly output "Flat 2D vector illustration style, clean cartoon drawing, solid flat color fills, thick clean borders, uniform shapes, 0% 3D depth, 0% gradients, 0% light reflections, 0% shading, 0% drop shadows". Ignore all realistic lighting or photography words!
-   - If it is a 3D render or photo, output high-end studio lighting and depth.
-2. ABSOLUTE COLOR PALETTE ENFORCEMENT (CRITICAL): The dominant color palette of the design must be strictly: Background: ${cores.ambiente || "#000000"}, Highlights/Rim-lights: ${cores.recorte || "#ffffff"}, Complementary accents: ${cores.complementar || "#ad8330"}. You MUST completely override any colors from the Design Layout Reference with these colors. The background must be exactly ${cores.ambiente || "#000000"}.
-3. LOGO & CONTAINER ERASURE:
-   ${hasCustomLogo 
-     ? "You MUST completely ignore and erase any brand logos, logo symbols, logo container boxes, or header banners meant to hold logos that are present in the Design Layout Reference image. Do NOT copy them, do NOT describe them, and do NOT write 'LOGO' or generate any white square placeholder cards. The area must remain completely clean and uniform with the rest of the background."
-     : "Replicate the logo present in the Design Layout Reference image, placing it in its corresponding position."}
-4. NO PIXELATION OR COMPRESSION ARTIFACTS: Demand 0% noise, 0% film grain, 0% compression blocks, 0% texture artifacts. The background must be a single, continuous, uniform plane with absolutely 0% rectangular seams, 0% blending borders, or color mismatch squares.
-5. TYPOGRAPHY: You MUST command the generator to write, draw, print, and beautifully integrate all titles, text layers, event dates, contact details, and social handles directly onto the image canvas in their exact spatial positions, preserving lowercase letters for social handles starting with "@".
-6. SUBJECTS: Replicate the pose and number of people from the Subject Reference. If it has 2 people, place both.
-
-The output must be returned as a JSON object with exactly two string fields:
-{
-  "prompt": "...",
-  "systemInstruction": "..."
-}
-
-CRITICAL RULES FOR "prompt" (Mega Prompt Mestre):
-1. Must be written in technical, descriptive, high-fidelity English.
-2. Do NOT write generic text-to-image filler text. Keep the description concise, precise, and targeted directly at copying the reference image's true structure, background, lighting, and elements.
-3. Replicate the precise lighting direction and color palette, but strictly override it with the custom brand colors: Background: ${cores.ambiente || "#000000"}, Highlights: ${cores.recorte || "#ffffff"}, Complementary: ${cores.complementar || "#ad8330"}.
-4. Exclusions/Negative constraints: specify exactly what should NOT appear (noise, film grain, banding, color blocks, compression grids, blocky artifacts, pixelation, blurry, low resolution, JPEG compression noise, compression squares, old logos, original reference text, hallucinated words, incorrect spelling).
-5. Brand Logo Rendering: ${hasCustomLogo ? "NEVER draw any logo shapes, text, or blank white squares. The background in the logo banner must remain perfectly clean, solid, and uniform. Never generate placeholders or white squares with text like 'LOGO' in them." : "Replicate and draw the logo present in the Design Layout Reference."}
-
-CRITICAL RULES FOR "systemInstruction":
-1. Must be written in highly professional, technical, authoritative English, serving as a strict rules guide for the image generator.
-2. Direct the image generator to replicate the full layout structure, panel divisions, cards, background textures, lighting style, and overall styling of the reference image.
-3. Custom Brand Color Palette Override: Explicitly instruct the image generator that it must strictly use: Background: ${cores.ambiente || "#000000"}, Highlights: ${cores.recorte || "#ffffff"}, Complementary: ${cores.complementar || "#ad8330"} for all ambient lighting, highlights, text colors, card panels, and backdrop accents, completely overriding the colors of the design layout reference image.
-4. Logo rendering rule: ${hasCustomLogo ? "Strictly instruct the generator to NOT print any logo symbol, text, or blank white boxes on the layout. Keep the background clean and solid." : "Replicate the logo present in the reference layout."}
-5. Subject Likeness: Instruct the generator to perfectly preserve the faces, likenesses, expressions, and identities of ALL people / models provided in the Subject Reference image.
-
-Return ONLY the JSON object. Do not include any conversational text or markdown formatting except the json code block itself.`;
-
-        expansionParts.push({ text: instructionPrompt });
-
-        const expResponse = await client.models.generateContent({
-          model: "gemini-2.5-pro",
-          contents: [
-            {
-              role: "user",
-              parts: expansionParts
-            }
-          ],
-          config: {
-            responseMimeType: "application/json",
-            responseSchema: {
-              type: "object",
-              properties: {
-                prompt: { type: "string" },
-                systemInstruction: { type: "string" }
-              },
-              required: ["prompt", "systemInstruction"]
-            }
-          }
-        });
-
-        const expText = expResponse.text || "";
-        console.log("[api/gerar] Gemini prompt/system instruction expanded. Raw response length:", expText.length);
-        
-        let cleanedExpText = expText.trim();
-        if (cleanedExpText.startsWith("```")) {
-          cleanedExpText = cleanedExpText.replace(/^```[a-zA-Z]*\n?/, "").replace(/\n?```$/, "").trim();
-        }
-        try {
-          const parsed = JSON.parse(cleanedExpText);
-          if (parsed.prompt && parsed.prompt.trim() !== "") {
-            expandedPrompt = parsed.prompt.trim();
-          }
-          if (parsed.systemInstruction && parsed.systemInstruction.trim() !== "") {
-            expandedSystemInstruction = parsed.systemInstruction.trim();
-          }
-          console.log("[api/gerar] JSON parsed successfully. Expanded prompt length:", expandedPrompt.length, "Expanded instruction length:", expandedSystemInstruction.length);
-        } catch (jsonErr) {
-          console.warn("[api/gerar] Failed to parse expanded JSON, trying regex...", jsonErr);
-          const promptMatch = expText.match(/"prompt"\s*:\s*"([^"]+)"/);
-          const sysMatch = expText.match(/"systemInstruction"\s*:\s*"([^"]+)"/);
-          if (promptMatch && promptMatch[1]) {
-            expandedPrompt = promptMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"');
-          }
-          if (sysMatch && sysMatch[1]) {
-            expandedSystemInstruction = sysMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"');
-          }
-        }
-      } catch (expErr) {
-        console.error("[api/gerar] Error generating premium prompt/system expansion with Gemini:", expErr);
-      }
-      // --- END PROMPT & SYSTEM INSTRUCTION EXPANSION ---
+      let expandedSystemInstruction = "You are a professional graphic designer. Replicate the general visual style and composition of the Design Layout Reference using the provided brand colors: Background: " + (cores.ambiente || "#000000") + ", highlights: " + (cores.recorte || "#ffffff") + ", complementary accents: " + (cores.complementar || "#ad8330") + ". Do not draw any logo placeholder boxes, squares, header cards, or text labels containing the word 'LOGO' - keep the header/logo area completely empty, solid, clean, and uniform with the rest of the background. If the reference layout is a flat 2D vector graphic/illustration (e.g. flat colored outlines of hands/phones), generate a flat 2D vector illustration with clean cartoon outlines, uniform flat color fills, 0% 3D depth, 0% gradients, 0% light reflections, 0% shading, and 0% drop shadows.";
+      
+      const hasCustomLogo = logoBase64 || (Array.isArray(logosList) && logosList.length > 0);
+      // --- END SIMPLE DIRECT PROMPT PASS ---
 
       // Build the parts array for gemini-3-pro-image (multimodal generateContent)
       const parts: any[] = [];
 
-      // 1. Core text prompt (using the beautiful, mega expanded prompt!)
-      let fullPrompt = expandedPrompt;
+      // Combine user input colors, cleanliness rules, and illustration medium overrides
+      let fullPrompt = expandedPrompt + "\n\n" + 
+        "=== MANDATORY COLOR PALETTE ===\n" +
+        "Background color: " + (cores.ambiente || "#000000") + "\n" +
+        "Highlights/Rim-lights: " + (cores.recorte || "#ffffff") + "\n" +
+        "Complementary accent details: " + (cores.complementar || "#ad8330") + "\n" +
+        "Override any color palette from the Design Layout Reference with these colors.\n\n" +
+        "=== ABSOLUTE QUALITY & STYLE CONSTRAINTS ===\n" +
+        "- SEAMLESS BLENDING: All graphic elements and background colors must be perfectly blended with 0% visual seams, 0% cut-off shapes, or blocky shadow boundaries. The background must be a continuous, smooth, uniform surface.\n" +
+        "- NO PIXELATION OR COMPRESSION ARTIFACTS: Avoid all noise, film grain, banding, color blocks, compression grids, blocky artifacts, pixelation, blurry texture, low resolution, JPEG compression noise, or compression squares.\n" +
+        "- LOGO ERASURE: " + (hasCustomLogo 
+           ? "Do NOT generate, draw, print, or create any logo symbol, text, placeholder, blank white square, label, or colored container/card backgrounds to hold the logo. Keep the logo area completely solid, clean, and uniform with the rest of the background." 
+           : "Replicate the logo present in the reference layout.") + "\n" +
+        "- 2D ILLUSTRATION OVERRIDE: If the primary reference is a 2D flat vector/cartoon illustration, strictly generate: Flat 2D vector illustration style, clean cartoon drawing, solid flat color fills, thick clean borders, uniform shapes, 0% 3D depth, 0% gradients, 0% light reflections, 0% shading, 0% drop shadows. Ignore all realistic or 3D photography rules.";
 
-      // Extract typography block from the original prompt to ensure it is NOT lost in LLM translation
-      const typoMatch = promptTraduzido.match(/=== TYPOGRAPHY & TEXT LAYOUT ===[\s\S]*?(?=\n===|$)/);
-      if (typoMatch && typoMatch[0]) {
-        fullPrompt += "\n\n" + typoMatch[0];
-      }
-      
-      // Also extract color palette if present
-      const colorMatch = promptTraduzido.match(/Color Palette: [^\n]*/);
-      if (colorMatch && colorMatch[0]) {
-        fullPrompt += "\n\n" + colorMatch[0];
-      }
-
-      
-      // Inject explicit color palette enforcement directly from user config
-      const userColorsRule = `\n\n=== MANDATORY COLOR PALETTE ===\n- Color Palette: The dominant color palette of the design must be strictly: Background: ${cores.ambiente || "#000000"}, Highlights/Rim-lights: ${cores.recorte || "#ffffff"}, Complementary accents: ${cores.complementar || "#ad8330"}. You MUST completely override any colors from the Design Layout Reference with these colors. The background must be exactly ${cores.ambiente || "#000000"}.`;
-      fullPrompt += userColorsRule;
-
-      // Force append absolute critical constraints to the prompt so both gemini-3-pro-image and fallbacks receive them
-      const logoMandatoryRule = `- NO LOGO CONTAINERS OR SQUARES (CRITICAL): The AI generator is STRICTLY FORBIDDEN from drawing, printing, or creating any logo placeholder, blank square, white box, text, label, or colored container/card backgrounds to hold the logo (e.g. no black/yellow/blue squares or rectangles behind the logo). Erase any logo container boxes from the reference design. The background behind the logo must be 100% continuous and uniform with the main background, with absolutely NO local squares or borders holding it.`;
-
-      const mandatorySuffix = `\n\n=== DESIGN QUALITY & HARMONY CONSTRAINTS (MANDATORY) ===
-- SEAMLESS BLENDING & NO GLITCHES: Ensure all graphic elements, background colors, and overlays are perfectly blended with 0% visual seams, 0% cut-off shapes, or blocky shadow boundaries. The background must be a continuous, smooth, uniform surface.
-- LAYOUT COMPOSITION: Replicate the general spatial placement of texts, buttons, and mockups from the Design Layout Reference, placing them in their corresponding areas to preserve a balanced composition.
-- HIGH-QUALITY RENDERING: All hands, phones, mockups, and text characters must be rendered cleanly with correct anatomy, sharp details, and realistic shadows. Avoid overlapping artifacts.
-- BRAND COLOR PALETTE ENFORCEMENT (CRITICAL): If custom colors, hex codes, or light setup colors are specified in the prompt above, you MUST strictly and aggressively use those EXACT colors for the entire graphic composition, background panels, highlights, glows, and ambient lighting. You MUST completely OVERRIDE the original reference flyer's colors with the requested colors. Do NOT use the reference colors if custom colors are provided!
-- TEXT COMPLETENESS & PLACEMENT (CRITICAL): You MUST print ALL provided text fields, titles, and words exactly as requested. DO NOT SKIP ANY TEXT. You MUST place the text EXACTLY in the same spatial positions as the original text blocks found in the Design Layout Reference. DO NOT put text in random places. Replicate the original typographical hierarchy and alignment perfectly, but using the new text.
-- COMPLETE CARD LAYOUT GENERATION: Do NOT generate just a plain empty background backdrop. You MUST generate the complete graphic composition, including all layouts, cards, panels, curved border divides, background textures, lighting setups, and the main visual subjects (e.g., joining hands, models, or products) in their exact spatial positions, proportions, and layouts as shown in the Design Layout Reference image.
-- EMBEDDED TYPOGRAPHY (MANDATORY): You MUST print, write, embed, and render all actual written texts, titles, words, acronyms, letters, numbers, and website URLs directly onto the image canvas. Style them with beautiful, modern, extremely crisp, and highly-legible typography matching the alignments and visual style of the reference design. All social media usernames or handles (starting with "@") must be printed strictly in lowercase letters.
-${logoMandatoryRule}`;
-
-      if (negativePrompt && negativePrompt.trim() !== "") {
-        fullPrompt += `\nAvoid / Negative constraints: old logos, original reference text, hallucinated words, noise, film grain, banding, color blocks, compression grids, blocky artifacts, pixelation, blurry, low resolution, JPEG compression noise, compression squares, ${negativePrompt.trim()}`;
-      } else {
-        fullPrompt += `\nAvoid / Negative constraints: old logos, original reference text, original reference logos, hallucinated words, incorrect spelling, noise, film grain, banding, color blocks, compression grids, blocky artifacts, pixelation, blurry, low resolution, JPEG compression noise, compression squares`;
-      }
-      
-      fullPrompt += mandatorySuffix;
       parts.push({ text: fullPrompt });
 
       // Helper to add base64 images to parts
