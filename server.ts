@@ -292,7 +292,7 @@ ${textContent}`
       });
 
       const response = await currentAi.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-2.5-pro",
         config: {
           responseMimeType: "application/json",
         },
@@ -520,7 +520,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
       let finalPrompt = "";
       try {
         const thinkResponse = await currentAi.models.generateContent({
-          model: "gemini-2.5-flash",
+          model: "gemini-2.5-pro",
           contents: thinkParts,
         });
         finalPrompt = thinkResponse.text || "";
@@ -1411,7 +1411,7 @@ Return ONLY the JSON object. Do not include any conversational text or markdown 
         expansionParts.push({ text: instructionPrompt });
 
         const expResponse = await client.models.generateContent({
-          model: "gemini-2.5-flash",
+          model: "gemini-2.5-pro",
           contents: [
             {
               role: "user",
@@ -1850,7 +1850,7 @@ ${logoMandatoryRule}`;
 
       const cleanData = imageData.replace(/^data:image\/\w+;base64,/, "");
       const response = await currentAi.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-2.5-pro",
         contents: [
           {
             role: "user",
@@ -2104,7 +2104,7 @@ Sempre avise no texto de forma natural se identificou uma logo ou foto de sujeit
       });
 
       const response = await currentAi.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-2.5-pro",
         contents: contents,
         config: {
           systemInstruction: systemInstruction
