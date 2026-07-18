@@ -518,6 +518,77 @@ const communityCreations = [
   }
 ];
 
+const processLogoBase64 = (base64Str: string, bgColorHex: string, styleMode: string): Promise<string> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        resolve(base64Str);
+        return;
+      }
+      ctx.drawImage(img, 0, 0);
+      try {
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imgData.data;
+
+        const hex = bgColorHex || "#000000";
+        const c = hex.replace("#", "");
+        const rBg = parseInt(c.substring(0, 2), 16) || 0;
+        const gBg = parseInt(c.substring(2, 4), 16) || 0;
+        const bBg = parseInt(c.substring(4, 6), 16) || 0;
+        const lum = (0.299 * rBg + 0.587 * gBg + 0.114 * bBg) / 255;
+        const isDarkBg = lum < 0.45;
+
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i];
+          const g = data[i+1];
+          const b = data[i+2];
+          const a = data[i+3];
+
+          // 1. Remove white background (chroma key)
+          if (r > 235 && g > 235 && b > 235) {
+            data[i+3] = 0;
+            continue;
+          }
+
+          if (a > 10) {
+            if (styleMode === "white") {
+              data[i] = 255;
+              data[i+1] = 255;
+              data[i+2] = 255;
+            } else if (styleMode === "black") {
+              data[i] = 0;
+              data[i+1] = 0;
+              data[i+2] = 0;
+            } else if (styleMode === "original" && isDarkBg) {
+              // Convert dark text to white, keep colorful symbols intact
+              if (r < 95 && g < 95 && b < 95) {
+                data[i] = 255;
+                data[i+1] = 255;
+                data[i+2] = 255;
+              }
+            }
+          }
+        }
+        ctx.putImageData(imgData, 0, 0);
+        resolve(canvas.toDataURL("image/png"));
+      } catch (err) {
+        console.error("Error processing logo pixels:", err);
+        resolve(base64Str);
+      }
+    };
+    img.onerror = () => {
+      resolve(base64Str);
+    };
+    img.src = base64Str.startsWith("data:image/") ? base64Str : `data:image/png;base64,${base64Str}`;
+  });
+};
+
 interface DesignBuilderProps {
   customApiKey: string;
   myProfile?: any;
@@ -525,6 +596,17 @@ interface DesignBuilderProps {
 
 export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilderProps) {
   const store = useProjectStore();
+  const [processedLogo, setProcessedLogo] = useState<string>("");
+
+  useEffect(() => {
+    if (store.logosList && store.logosList[0] && store.logosList[0].trim() !== "") {
+      processLogoBase64(store.logosList[0], store.cores.ambiente || "#000000", store.logoStyleOverlay || "original")
+        .then((url) => setProcessedLogo(url))
+        .catch(() => setProcessedLogo(store.logosList[0]));
+    } else {
+      setProcessedLogo("");
+    }
+  }, [store.logosList, store.cores.ambiente, store.logoStyleOverlay]);
 
   const [activeMenuTab, setActiveMenuTab] = useState<string>("Design Builder");
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -2657,7 +2739,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                       alt="Preview"
                       className="max-w-full max-h-[70vh] object-contain rounded-xl border border-white/10 shadow-2xl select-none pointer-events-none"
                     />
-                    {store.useLogo && store.logosList && store.logosList[0] && store.logosList[0].trim() !== "" && (
+                    {store.useLogo && processedLogo && (
                       <div className={(() => {
                         const pos = store.logoPosOverlay || "top_center";
                         if (pos === "top_left") return "absolute top-[5%] left-[5%] pointer-events-none select-none z-10";
@@ -2667,36 +2749,12 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                         return "absolute top-[5%] left-0 right-0 flex justify-center pointer-events-none select-none z-10";
                       })()}>
                          <img 
-                            src={store.logosList[0].startsWith("data:image/") ? store.logosList[0] : `data:image/png;base64,${store.logosList[0]}`} 
+                            src={processedLogo} 
                             style={{ 
                               maxHeight: `${store.logoSizeOverlay || 15}%`,
-                              maxWidth: `${(store.logoSizeOverlay || 15) * 2.5}%`,
-                              filter: (() => {
-                                const styleMode = store.logoStyleOverlay || "original";
-                                if (styleMode === "white") return "brightness(0) invert(1)";
-                                if (styleMode === "black") return "brightness(0)";
-                                
-                                try {
-                                  const hex = store.cores.ambiente || "#000000";
-                                  const c = hex.replace("#", "");
-                                  const r = parseInt(c.substring(0, 2), 16);
-                                  const g = parseInt(c.substring(2, 4), 16);
-                                  const b = parseInt(c.substring(4, 6), 16);
-                                  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-                                  
-                                  if (lum < 0.3) {
-                                    return "drop-shadow(1px 1px 0px rgba(255,255,255,0.85)) drop-shadow(-1px 1px 0px rgba(255,255,255,0.85)) drop-shadow(1px -1px 0px rgba(255,255,255,0.85)) drop-shadow(-1px -1px 0px rgba(255,255,255,0.85)) drop-shadow(0px 0px 4px rgba(255,255,255,0.9))";
-                                  }
-                                  if (lum > 0.85) {
-                                    return "drop-shadow(1px 1px 0px rgba(0,0,0,0.6)) drop-shadow(-1px 1px 0px rgba(0,0,0,0.6)) drop-shadow(1px -1px 0px rgba(0,0,0,0.6)) drop-shadow(-1px -1px 0px rgba(0,0,0,0.6))";
-                                  }
-                                  return "none";
-                                } catch (e) {
-                                  return "none";
-                                }
-                              })()
+                              maxWidth: `${(store.logoSizeOverlay || 15) * 2.5}%`
                             }} 
-                            className="object-contain opacity-95" 
+                            className="object-contain opacity-95 drop-shadow-2xl" 
                             alt="" 
                           />
                       </div>

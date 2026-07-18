@@ -1301,7 +1301,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
 
       // --- START SIMPLE DIRECT PROMPT PASS ---
       let expandedPrompt = promptTraduzido;
-      let expandedSystemInstruction = "You are a professional graphic designer. Replicate the general visual style and composition of the Design Layout Reference using the provided brand colors: Background: " + (cores.ambiente || "#000000") + ", highlights: " + (cores.recorte || "#ffffff") + ", complementary accents: " + (cores.complementar || "#ad8330") + ". Do not draw any logo placeholder boxes, squares, header cards, or text labels containing the word 'LOGO' - generate and integrate the logo natively into the design flyer. If the reference layout is a flat 2D vector graphic/illustration (e.g. flat colored outlines of hands/phones), generate a flat 2D vector illustration with clean cartoon outlines, uniform flat color fills, 0% 3D depth, 0% gradients, 0% light reflections, 0% shading, and 0% drop shadows.";
+      let expandedSystemInstruction = "You are a professional graphic designer. Replicate the general visual style and composition of the Design Layout Reference using the provided brand colors: Background: " + (cores.ambiente || "#000000") + ", highlights: " + (cores.recorte || "#ffffff") + ", complementary accents: " + (cores.complementar || "#ad8330") + ". Do not draw any logo placeholder boxes, squares, header cards, or text labels containing the word 'LOGO' - keep the header/logo area completely empty, solid, clean, and uniform with the rest of the background. If the reference layout is a flat 2D vector graphic/illustration (e.g. flat colored outlines of hands/phones), generate a flat 2D vector illustration with clean cartoon outlines, uniform flat color fills, 0% 3D depth, 0% gradients, 0% light reflections, 0% shading, and 0% drop shadows.";
       
       const hasCustomLogo = logoBase64 || (Array.isArray(logosList) && logosList.length > 0);
       // --- END SIMPLE DIRECT PROMPT PASS ---
@@ -1319,8 +1319,8 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         "=== ABSOLUTE QUALITY & STYLE CONSTRAINTS ===\n" +
         "- SEAMLESS BLENDING: All graphic elements and background colors must be perfectly blended with 0% visual seams, 0% cut-off shapes, or blocky shadow boundaries. The background must be a continuous, smooth, uniform surface.\n" +
         "- NO PIXELATION OR COMPRESSION ARTIFACTS: Avoid all noise, film grain, banding, color blocks, compression grids, blocky artifacts, pixelation, blurry texture, low resolution, JPEG compression noise, or compression squares.\n" +
-        "- LOGO INTEGRATION (CRITICAL): " + (hasCustomLogo 
-           ? "You MUST analyze the attached 'Referência de Logotipo' image. You MUST natively generate, draw, place, and integrate this exact logo design, icon, text, and brand styling into the generated image. Place it beautifully in the layout's logo zone (typically top center), blending it perfectly into the design of the flyer as a native graphic element." 
+        "- LOGO ERASURE (CRITICAL): " + (hasCustomLogo 
+           ? "Do NOT generate, draw, print, create, or paint any logo symbol, brand text, logo placeholder, blank white square, label card, or logo containers. Keep the logo zone (typically top center) completely solid, clean, and uniform with the rest of the background flyer." 
            : "Replicate the logo present in the reference layout.") + "\n" +
         "- 2D ILLUSTRATION OVERRIDE: If the primary reference is a 2D flat vector/cartoon illustration, strictly generate: Flat 2D vector illustration style, clean cartoon drawing, solid flat color fills, thick clean borders, uniform shapes, 0% 3D depth, 0% gradients, 0% light reflections, 0% shading, 0% drop shadows. Ignore all realistic or 3D photography rules.";
 

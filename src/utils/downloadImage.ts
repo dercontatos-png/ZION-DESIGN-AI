@@ -32,58 +32,91 @@ export const downloadImage = (
           logoImg.crossOrigin = "anonymous";
           await new Promise<void>((res) => {
             logoImg.onload = () => {
-              const sizePercent = (logoConfig.logoSizeOverlay || 15) / 100;
-              const maxLogoHeight = canvas.height * sizePercent;
-              const scale = maxLogoHeight / logoImg.naturalHeight;
-              const logoWidth = logoImg.naturalWidth * scale;
-              const logoHeight = logoImg.naturalHeight * scale;
-              
-              const marginX = canvas.width * 0.05;
-              const marginY = canvas.height * 0.05;
-              
-              let posX = (canvas.width - logoWidth) / 2;
-              let posY = marginY;
-              
-              const pos = logoConfig.logoPosOverlay || "top_center";
-              if (pos === "top_left") {
-                posX = marginX;
-                posY = marginY;
-              } else if (pos === "top_right") {
-                posX = canvas.width - logoWidth - marginX;
-                posY = marginY;
-              } else if (pos === "bottom_left") {
-                posX = marginX;
-                posY = canvas.height - logoHeight - marginY;
-              } else if (pos === "bottom_right") {
-                posX = canvas.width - logoWidth - marginX;
-                posY = canvas.height - logoHeight - marginY;
-              }
-              
-              ctx.save();
-              try {
-                const styleMode = logoConfig?.logoStyleOverlay || "original";
-                if (styleMode === "white") {
-                  ctx.filter = "brightness(0) invert(1)";
-                } else if (styleMode === "black") {
-                  ctx.filter = "brightness(0)";
-                } else {
+              const procCanvas = document.createElement("canvas");
+              procCanvas.width = logoImg.naturalWidth;
+              procCanvas.height = logoImg.naturalHeight;
+              const procCtx = procCanvas.getContext("2d");
+              if (procCtx) {
+                procCtx.drawImage(logoImg, 0, 0);
+                try {
+                  const imgData = procCtx.getImageData(0, 0, procCanvas.width, procCanvas.height);
+                  const data = imgData.data;
+
                   const hex = logoConfig?.ambienteColor || "#000000";
                   const c = hex.replace("#", "");
-                  const r = parseInt(c.substring(0, 2), 16);
-                  const g = parseInt(c.substring(2, 4), 16);
-                  const b = parseInt(c.substring(4, 6), 16);
-                  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-                  if (lum < 0.3) {
-                    ctx.filter = "drop-shadow(1px 1px 0px rgba(255,255,255,0.85)) drop-shadow(-1px 1px 0px rgba(255,255,255,0.85)) drop-shadow(1px -1px 0px rgba(255,255,255,0.85)) drop-shadow(-1px -1px 0px rgba(255,255,255,0.85)) drop-shadow(0px 0px 4px rgba(255,255,255,0.9))";
-                  } else if (lum > 0.85) {
-                    ctx.filter = "drop-shadow(1px 1px 0px rgba(0,0,0,0.6)) drop-shadow(-1px 1px 0px rgba(0,0,0,0.6)) drop-shadow(1px -1px 0px rgba(0,0,0,0.6)) drop-shadow(-1px -1px 0px rgba(0,0,0,0.6))";
+                  const rBg = parseInt(c.substring(0, 2), 16) || 0;
+                  const gBg = parseInt(c.substring(2, 4), 16) || 0;
+                  const bBg = parseInt(c.substring(4, 6), 16) || 0;
+                  const lum = (0.299 * rBg + 0.587 * gBg + 0.114 * bBg) / 255;
+                  const isDarkBg = lum < 0.45;
+                  const styleMode = logoConfig?.logoStyleOverlay || "original";
+
+                  for (let i = 0; i < data.length; i += 4) {
+                    const r = data[i];
+                    const g = data[i+1];
+                    const b = data[i+2];
+                    const a = data[i+3];
+
+                    // Chroma key white background
+                    if (r > 235 && g > 235 && b > 235) {
+                      data[i+3] = 0;
+                      continue;
+                    }
+
+                    if (a > 10) {
+                      if (styleMode === "white") {
+                        data[i] = 255;
+                        data[i+1] = 255;
+                        data[i+2] = 255;
+                      } else if (styleMode === "black") {
+                        data[i] = 0;
+                        data[i+1] = 0;
+                        data[i+2] = 0;
+                      } else if (styleMode === "original" && isDarkBg) {
+                        if (r < 95 && g < 95 && b < 95) {
+                          data[i] = 255;
+                          data[i+1] = 255;
+                          data[i+2] = 255;
+                        }
+                      }
+                    }
                   }
+                  procCtx.putImageData(imgData, 0, 0);
+
+                  const sizePercent = (logoConfig.logoSizeOverlay || 15) / 100;
+                  const maxLogoHeight = canvas.height * sizePercent;
+                  const scale = maxLogoHeight / logoImg.naturalHeight;
+                  const logoWidth = logoImg.naturalWidth * scale;
+                  const logoHeight = logoImg.naturalHeight * scale;
+
+                  const marginX = canvas.width * 0.05;
+                  const marginY = canvas.height * 0.05;
+
+                  let posX = (canvas.width - logoWidth) / 2;
+                  let posY = marginY;
+
+                  const pos = logoConfig.logoPosOverlay || "top_center";
+                  if (pos === "top_left") {
+                    posX = marginX;
+                    posY = marginY;
+                  } else if (pos === "top_right") {
+                    posX = canvas.width - logoWidth - marginX;
+                    posY = marginY;
+                  } else if (pos === "bottom_left") {
+                    posX = marginX;
+                    posY = canvas.height - logoHeight - marginY;
+                  } else if (pos === "bottom_right") {
+                    posX = canvas.width - logoWidth - marginX;
+                    posY = canvas.height - logoHeight - marginY;
+                  }
+
+                  ctx.save();
+                  ctx.drawImage(procCanvas, posX, posY, logoWidth, logoHeight);
+                  ctx.restore();
+                } catch (e) {
+                  console.error("Canvas draw processing failed:", e);
                 }
-              } catch (e) {
-                console.warn("Canvas filter application failed:", e);
               }
-              ctx.drawImage(logoImg, posX, posY, logoWidth, logoHeight);
-              ctx.restore();
               res();
             };
             logoImg.onerror = () => res();
