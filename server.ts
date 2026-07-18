@@ -1325,7 +1325,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
 
       console.log("\n--- CONFIGURAÇÃO DE GERAÇÃO (/api/gerar) ---");
       console.log({
-        model: "gemini-3-pro-image-preview",
+        model: "gemini-3.1-flash-image",
         resolution: resolutionInput,
         aspectRatio: dimensao,
         format: formato,
@@ -1364,8 +1364,8 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
       const credentialsPath = path.join(process.cwd(), 'chave-vertex.json');
       const isVertex = fs.existsSync(credentialsPath) || token.startsWith('AQ.');
 
-      // We use the requested model gemini-3-pro-image
-      const targetModel = "gemini-3-pro-image-preview";
+      // Nano Banana 2 (gemini-3.1-flash-image) — supports native 1K, 2K, 4K
+      const targetModel = "gemini-3.1-flash-image";
       
       let targetAspectRatio = "1:1";
       const validRatios = ["1:1", "3:4", "4:3", "9:16", "16:9"];
@@ -1377,14 +1377,14 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         targetAspectRatio = "4:3";
       }
 
-      // --- START SIMPLE DIRECT PROMPT PASS ---
+      // --- START SIMPLE DIRECT PROMPT PASS (Nano Banana 2) ---
       let expandedPrompt = promptTraduzido;
       let expandedSystemInstruction = "You are a professional graphic designer. Replicate the general visual style and composition of the Design Layout Reference. YOU MUST STRICTLY AND EXCLUSIVELY USE THE PROVIDED COLOR PALETTE: Background color: " + (cores.ambiente || "#000000") + ", Outlines/Highlights/Rim-lights: " + (cores.recorte || "#ffffff") + ", Accent details: " + (cores.complementar || "#ad8330") + ". DO NOT USE any colors from the reference images if they are not in this palette. The background must be painted EXACTLY with the background color hex " + (cores.ambiente || "#000000") + ". Keep the entire top header section (top left, top center, and top right) completely empty, solid, clean, and uniform with the rest of the background, without generating any boxes, containers, black squares, or white cards. If the reference layout is a flat 2D vector graphic/illustration (e.g. flat colored outlines of hands/phones), generate a flat 2D vector illustration with clean cartoon outlines, uniform flat color fills, 0% 3D depth, 0% gradients, 0% light reflections, 0% shading, and 0% drop shadows.";
       
       const hasCustomLogo = logoBase64 || (Array.isArray(logosList) && logosList.length > 0);
       // --- END SIMPLE DIRECT PROMPT PASS ---
 
-      // Build the parts array for gemini-3-pro-image (multimodal generateContent)
+      // Build the parts array for Nano Banana 2 (multimodal generateContent)
       const parts: any[] = [];
 
       // Combine user input colors, cleanliness rules, and illustration medium overrides
@@ -1487,7 +1487,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
       }
 
       // 5. Add Design References
-      // We ALWAYS feed the design reference image so that gemini-3-pro-image knows the exact layout, structure, panel divisions, and geometry to replicate.
+      // We ALWAYS feed the design reference image so that Nano Banana 2 knows the exact layout, structure, panel divisions, and geometry to replicate.
       if (designRefBase64) {
         addImagePart(designRefBase64, "Referência de Design/Layout");
       }
@@ -1576,15 +1576,16 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
       let modelUsed = `Google AI Studio (${targetModel})`;
 
       try {
-        // Request resolution natively from Gemini (1K, 2K, 4K, 8K)
-        const sizeSelected = (resolutionInput === "4K" || resolutionInput === "8K") ? "4K" : (resolutionInput === "2K" ? "2K" : "1K");
-        console.log(`[api/gerar] Generating image with ${targetModel} - Target resolution: ${sizeSelected}...`);
+        // Nano Banana 2 supports native 1K, 2K, 4K — pass resolution directly, no upscale
+        const sizeMap: Record<string, string> = { "1K": "1K", "2K": "2K", "4K": "4K", "8K": "4K" };
+        const sizeSelected = sizeMap[resolutionInput] || "1K";
+        console.log(`[api/gerar] Generating image with ${targetModel} (Nano Banana 2) - Native resolution: ${sizeSelected}...`);
         
         // REQUIRED BEFORE LOG
         console.log({
           provider: "Vertex AI",
           location: "global",
-          model: "gemini-3-pro-image-preview",
+          model: targetModel,
           requestedSize: sizeSelected,
           aspectRatio: targetAspectRatio
         });
@@ -1615,7 +1616,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
             }
           });
 
-          console.log("[BACK] Resposta recebida com sucesso de gemini-3-pro-image.");
+          console.log("[BACK] Resposta recebida com sucesso de Nano Banana 2 (gemini-3.1-flash-image).");
 
           if (response?.candidates?.[0]?.content?.parts) {
             for (const part of response.candidates[0].content.parts) {
@@ -1629,13 +1630,13 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
           }
 
           if (!responseImgUrl) {
-            throw new Error("Nenhuma imagem gerada retornada no corpo da resposta do gemini-3-pro-image.");
+            throw new Error("Nenhuma imagem gerada retornada no corpo da resposta do Nano Banana 2.");
           }
 
-          modelUsed = `Vertex AI (gemini-3-pro-image)`;
+          modelUsed = `Vertex AI (Nano Banana 2 — gemini-3.1-flash-image)`;
 
         } catch (genErr: any) {
-          console.warn("[api/gerar] Primary model gemini-3-pro-image failed. Attempting fallback to imagen-3.0-generate-002...", genErr.message || genErr);
+          console.warn("[api/gerar] Primary model Nano Banana 2 (gemini-3.1-flash-image) failed. Attempting fallback to imagen-3.0-generate-002...", genErr.message || genErr);
           
           try {
             console.log(`[api/gerar] Calling generateImages with model: imagen-3.0-generate-002`);
@@ -1684,7 +1685,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
               }
             } catch (fallbackErr2: any) {
               console.error("[api/gerar] All image generation attempts and fallbacks failed.");
-              throw genErr; // throw original gemini-3-pro-image error to show user the core quota limit or error
+              throw genErr; // throw original Nano Banana 2 error to show user the core quota limit or error
             }
           }
         }
@@ -1744,19 +1745,8 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         let finalWidth = width;
         let finalHeight = height;
 
-        // For 8K: Gemini max native is 4K, so upscale from 4K to 8K on backend
-        if (resolutionInput === "8K" && Math.max(finalWidth, finalHeight) < 7000) {
-          console.log(`[api/gerar] 8K requested! Applying backend upscale from ${finalWidth}x${finalHeight} to 8K...`);
-          try {
-            const upscaled = await upscaleImage(finalImage, 7680, formato);
-            finalImage = upscaled.image;
-            finalWidth = upscaled.width;
-            finalHeight = upscaled.height;
-            console.log(`[api/gerar] Backend upscale to 8K complete: ${finalWidth}x${finalHeight}`);
-          } catch (upErr) {
-            console.error("[api/gerar] 8K backend upscale failed, returning native 4K:", upErr);
-          }
-        }
+        // Nano Banana 2: 1K, 2K, 4K are native — no post-processing upscale needed
+        // If 8K was requested, the max native is 4K from the model. Client-side canvas handles the rest.
 
         res.json({ 
           image: finalImage, 
