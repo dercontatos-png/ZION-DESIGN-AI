@@ -1667,68 +1667,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
               </button>
             </div>
 
-            {/* Custom Palette Input & Presets */}
-            {!store.coresAutomaticas && (
-              <div className="space-y-4 pt-1 pb-2 animate-in fade-in duration-300">
-                <div className="p-4 bg-zinc-950/40 border border-white/5 rounded-xl space-y-3.5">
-                  <div className="flex flex-col gap-1 border-l-2 border-[#d4af37] pl-2.5">
-                    <span className="text-[11px] font-bold text-zinc-300 uppercase tracking-wider">Paleta de Cores do Sujeito / Marca</span>
-                    <span className="text-[8.5px] text-zinc-500">Selecione uma combinação rápida ou cole os códigos hexadecimais para preencher automaticamente.</span>
-                  </div>
-                  
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      { name: "Preto & Ouro", colors: ["#000000", "#ffffff", "#ad8330"] },
-                      { name: "Azul & Amarelo", colors: ["#0d1b2a", "#ffffff", "#f5b700"] },
-                      { name: "Verde & Branco", colors: ["#0a1c18", "#ffffff", "#2ec4b6"] },
-                      { name: "Lounge Cyberpunk", colors: ["#03071e", "#ff007f", "#3a0ca3"] },
-                      { name: "Lounge Vermelho", colors: ["#000000", "#ffffff", "#ff0000"] },
-                    ].map((preset, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => {
-                          store.updateConfig({
-                            cores: {
-                              ambiente: preset.colors[0],
-                              recorte: preset.colors[1],
-                              complementar: preset.colors[2]
-                            }
-                          });
-                        }}
-                        className="px-2.5 py-1.5 bg-[#1A1A1C] hover:bg-[#252528] border border-white/5 rounded text-[9.5px] font-medium text-zinc-300 transition-colors flex items-center gap-1.5 cursor-pointer"
-                      >
-                        <span className="flex gap-0.5">
-                          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: preset.colors[0] }} />
-                          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: preset.colors[1] }} />
-                          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: preset.colors[2] }} />
-                        </span>
-                        {preset.name}
-                      </button>
-                    ))}
-                  </div>
 
-                  <div className="space-y-1.5">
-                    <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest block font-mono">Colar Hexadecimais (ex: #000000,#ffffff,#ff0000)</span>
-                    <input
-                      type="text"
-                      placeholder="Ex: #0d1b2a, #ffffff, #f5b700"
-                      onChange={(e) => {
-                        const vals = e.target.value.split(",").map(s => s.trim());
-                        if (vals.length > 0 && vals[0].startsWith("#")) {
-                          const newCores = { ...store.cores };
-                          if (vals[0]) newCores.ambiente = vals[0];
-                          if (vals[1]) newCores.recorte = vals[1];
-                          if (vals[2]) newCores.complementar = vals[2];
-                          store.updateConfig({ cores: newCores });
-                        }
-                      }}
-                      className="w-full bg-[#1A1A1C] border border-white/10 rounded px-2.5 py-1.5 text-[10px] text-white focus:outline-none focus:border-[#d4af37]/50 placeholder-zinc-700 tracking-wide font-mono"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
 
             {!store.coresAutomaticas && (
               <div className="space-y-3 pt-1 animate-in fade-in duration-300">
