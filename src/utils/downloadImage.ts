@@ -58,7 +58,9 @@ export const downloadImage = (
               res();
             };
             logoImg.onerror = () => res();
-            logoImg.src = logoConfig.logosList[0];
+            logoImg.src = logoConfig.logosList[0].startsWith("data:image/") 
+              ? logoConfig.logosList[0] 
+              : `data:image/png;base64,${logoConfig.logosList[0]}`;
           });
         }
         
