@@ -748,7 +748,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
           logoPosOverlay: store.logoPosOverlay,
           logoSizeOverlay: store.logoSizeOverlay,
           logoInclusionType: store.logoInclusionType,
-          logoStyleOverlay: store.logoStyleOverlay
+          ambienteColor: store.cores.ambiente
         },
         {
           enableTypography: store.enableTypography,
@@ -1573,20 +1573,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                 {store.logosList && store.logosList.length > 0 && (
                   <div className="space-y-4 p-4 bg-zinc-950/60 rounded-xl border border-white/5">
                     <div className="p-3 bg-[#d4af37]/5 border border-[#d4af37]/10 rounded-lg text-[9px] font-medium leading-normal text-zinc-400 uppercase tracking-wider">
-                      A logo será sobreposta automaticamente na imagem final. O gerador não tentará recriar ou alterar a logo, mantendo 100% da fidelidade original.
-                    </div>
-                    
-                    <div className="space-y-1.5 pt-1">
-                      <span className="text-[9px] font-bold text-zinc-450 uppercase tracking-wider">Cor / Filtro da Logo</span>
-                      <select
-                        value={store.logoStyleOverlay || "original"}
-                        onChange={(e) => store.updateConfig({ logoStyleOverlay: e.target.value as any })}
-                        className="w-full bg-[#1A1A1C] border border-white/10 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#d4af37]/50"
-                      >
-                        <option value="original">Original (Cores padrão)</option>
-                        <option value="white">Branco (Inverter cores escuras)</option>
-                        <option value="black">Preto Monocromático</option>
-                      </select>
+                      A logo será sobreposta automaticamente na imagem final. A cor da logo será adaptada de forma 100% inteligente conforme a cor do fundo do criativo.
                     </div>
                   </div>
                 )}
@@ -2691,11 +2678,19 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                             src={store.logosList[0]} 
                             style={{ 
                               maxHeight: '15%',
-                              filter: store.logoStyleOverlay === "white" 
-                                ? "brightness(0) invert(1)" 
-                                : store.logoStyleOverlay === "black"
-                                  ? "brightness(0)"
-                                  : "none"
+                              filter: (() => {
+                                try {
+                                  const hex = store.cores.ambiente || "#000000";
+                                  const c = hex.replace("#", "");
+                                  const r = parseInt(c.substring(0, 2), 16);
+                                  const g = parseInt(c.substring(2, 4), 16);
+                                  const b = parseInt(c.substring(4, 6), 16);
+                                  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+                                  return lum < 0.4 ? "brightness(0) invert(1)" : "none";
+                                } catch (e) {
+                                  return "brightness(0) invert(1)";
+                                }
+                              })()
                             }} 
                             className="object-contain opacity-95 drop-shadow-2xl" 
                             alt="" 
