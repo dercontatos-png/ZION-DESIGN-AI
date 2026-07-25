@@ -1,58 +1,53 @@
 import { useProjectStore } from "../store/useProjectStore";
 import { buildMasterPrompt } from "../utils/buildMasterPrompt";
 
-const playSuccessChime = () => {
-  try {
-    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-    if (!AudioContextClass) return;
-    const ctx = new AudioContextClass();
-    
-    const playTone = (freq: number, startTime: number, duration: number) => {
-      const osc = ctx.createOscillator();
-      const gainNode = ctx.createGain();
-      
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(freq, startTime);
-      
-      gainNode.gain.setValueAtTime(0.12, startTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-      
-      osc.connect(gainNode);
-      gainNode.connect(ctx.destination);
-      
-      osc.start(startTime);
-      osc.stop(startTime + duration);
-    };
-    
-    const now = ctx.currentTime;
-    playTone(587.33, now, 0.15); // D5
-    playTone(880.00, now + 0.1, 0.45); // A5 (premium chime)
-  } catch (e) {
-    console.warn("Web Audio chime failed:", e);
-  }
-};
-
-export const useGenerateImage = (customApiKey: string, showToast: (msg: string, type: "success" | "error" | "warning") => void) => {
+export const useGenerateImage = (
+  customApiKey: string,
+  showToast: (msg: string, type: "success" | "error" | "warning") => void,
+  onStart?: () => void,
+  onSuccess?: () => void,
+  onError?: (errMessage: string) => void
+) => {
   const store = useProjectStore();
 
-  const generatePremiumImage = async () => {
-
-
-    // Validação se a imagem do Sujeito foi enviada
-    const hasSujeito = (store.sujeitoBase64 && store.sujeitoBase64.trim() !== "") || (store.sujeitosBase64List && store.sujeitosBase64List.length > 0);
-    if (!store.desativarSujeito && !hasSujeito) {
-      showToast("Por favor, faça o upload de pelo menos uma imagem do Sujeito para prosseguir.", "warning");
+  const generatePremiumImage = async (options?: { isRefinement?: boolean; previousImageBase64?: string }) => {
+    const targetProjectId = store.activeProjectId;
+    if (!targetProjectId) {
+      showToast("Nenhum projeto ativo selecionado.", "warning");
       return;
     }
 
-    store.setIsGenerating(true);
+    const targetProjectName = store.projectsList.find((p) => p.id === targetProjectId)?.name || "Projeto";
 
-    const masterPrompt = buildMasterPrompt(store);
-    if (store.setLastGeneratedPrompt) {
+    // Validação se a imagem do Sujeito foi enviada
+    let desativarSujeitoAtual = store.desativarSujeito;
+    const hasSujeito = (store.sujeitoBase64 && store.sujeitoBase64.trim() !== "") || (store.sujeitosBase64List && store.sujeitosBase64List.length > 0);
+    if (!desativarSujeitoAtual && !hasSujeito) {
+      showToast("Nenhuma imagem de Sujeito detectada. Ativando modo 'Sem Sujeito' e gerando composição de Background...", "warning");
+      store.updateConfig({ desativarSujeito: true });
+      desativarSujeitoAtual = true;
+    }
+
+    store.setIsProjectGenerating(targetProjectId, true);
+    onStart?.();
+    
+    // Build master prompt using the updated state
+    const storeWithUpdatedSubject = {
+      ...store,
+      desativarSujeito: desativarSujeitoAtual
+    };
+    const masterPrompt = buildMasterPrompt(storeWithUpdatedSubject);
+    console.log(`[DEBUG] Generation started for project ${targetProjectId} (${targetProjectName}). Prompt:`, masterPrompt);
+    
+    if (store.setLastGeneratedPrompt && store.activeProjectId === targetProjectId) {
       store.setLastGeneratedPrompt(masterPrompt);
     }
 
+    const currentActiveImg = store.galeriaImages?.[store.activeImageIndex] || "";
+    const previousImageBase64ToSend = options?.previousImageBase64 || (options?.isRefinement ? currentActiveImg : (store.additionalPrompt && store.additionalPrompt.trim() !== "" ? currentActiveImg : ""));
+
     const payload = {
+      previousImageBase64: previousImageBase64ToSend,
       base64DoSujeito: store.sujeitoBase64,
       sujeitosBase64List: store.sujeitosBase64List || [],
       base64DoCenario: store.cenarioBase64,
@@ -68,7 +63,7 @@ export const useGenerateImage = (customApiKey: string, showToast: (msg: string, 
       referenciasEstilo: store.referenciasEstilo,
       negativePrompt: store.negativePrompt || "",
       customApiKey: customApiKey || localStorage.getItem("custom_gemini_api_key") || "",
-      desativarSujeito: store.desativarSujeito,
+      desativarSujeito: desativarSujeitoAtual,
       logoBase64: store.logoBase64,
       logosList: store.logosList || [],
       useLogo: store.useLogo,
@@ -77,14 +72,15 @@ export const useGenerateImage = (customApiKey: string, showToast: (msg: string, 
       logoSizeOverlay: store.logoSizeOverlay || 20,
       dimensao: store.dimensao,
       somentePrompt: store.somentePrompt,
-      cores: store.cores
+      modelId: store.modelId,
+      coresAutomaticas: store.coresAutomaticas
     };
 
     const payloadString = JSON.stringify(payload);
     console.log("[FRONT] Tamanho do Payload enviado (bytes):", payloadString.length);
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 360000); // 360 segundos (6 minutos) de timeout para 4K
+    const timeoutId = setTimeout(() => controller.abort(), 360000); // 6 minutos de timeout
 
     try {
       const response = await fetch("/api/gerar", {
@@ -95,57 +91,66 @@ export const useGenerateImage = (customApiKey: string, showToast: (msg: string, 
       });
       clearTimeout(timeoutId);
 
-      // 7. TRATAMENTO DE ERROS VISUAIS
+      // TRATAMENTO DE ERROS VISUAIS
       if (response.status === 400) {
         const data = await response.json();
-        showToast(data.error || "Por favor, faça o upload da imagem do Sujeito.", "warning");
-        store.setIsGenerating(false);
+        const errMsg = data.error || "Por favor, faça o upload da imagem do Sujeito.";
+        showToast(errMsg, "warning");
+        onError?.(errMsg);
         return;
       }
 
       if (response.status === 403) {
-        showToast("Erro API (403): Permissão do Vertex rejeitada. Verifique as credenciais IAM do GCP.", "error");
-        store.setIsGenerating(false);
+        const errMsg = "Erro API (403): Permissão do Vertex rejeitada. Verifique as credenciais IAM do GCP.";
+        showToast(errMsg, "error");
+        onError?.(errMsg);
         return;
       }
 
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
-        if (data.prompt) store.setLastGeneratedPrompt(data.prompt);
-        if (data.systemInstruction) store.setLastSystemInstruction(data.systemInstruction);
-        throw new Error(data.error || "Erro ao processar a requisição de geração.");
+        if (data.prompt && store.activeProjectId === targetProjectId) store.setLastGeneratedPrompt(data.prompt);
+        if (data.systemInstruction && store.activeProjectId === targetProjectId) store.setLastSystemInstruction(data.systemInstruction);
+        throw new Error(data.error || `Erro de rede ou proxy. Status: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
-      if (data.thought) store.setLastGeneratedPrompt(data.thought);
-      if (data.prompt) store.setLastGeneratedPrompt(data.prompt);
-      if (data.systemInstruction) store.setLastSystemInstruction(data.systemInstruction);
+      if (data.thought && store.activeProjectId === targetProjectId) store.setLastGeneratedPrompt(data.thought);
+      if (data.prompt && store.activeProjectId === targetProjectId) store.setLastGeneratedPrompt(data.prompt);
+      if (data.systemInstruction && store.activeProjectId === targetProjectId) store.setLastSystemInstruction(data.systemInstruction);
       
       if (store.somentePrompt) {
         showToast("Prompt e Instrução gerados com sucesso!", "success");
+        onSuccess?.();
         return;
       }
 
+      const newImages: string[] = [];
       if (data.image) {
-        // Adiciona à lista de imagens geradas
-        store.setGaleriaImages((prev) => [data.image, ...prev]);
-        store.setActiveImageIndex(0);
-        playSuccessChime();
-        showToast("Imagem premium gerada com sucesso!", "success");
+        newImages.push(data.image);
       } else if (data.images && data.images.length > 0) {
-        store.setGaleriaImages((prev) => [...data.images, ...prev]);
-        store.setActiveImageIndex(0);
-        playSuccessChime();
-        showToast("Imagens premium geradas com sucesso!", "success");
+        newImages.push(...data.images);
+      }
+
+      if (newImages.length > 0) {
+        const isActive = store.addImagesToProjectGallery(targetProjectId, newImages);
+        if (isActive) {
+          showToast("Imagem premium gerada com sucesso!", "success");
+        } else {
+          showToast(`Imagem do '${targetProjectName}' foi gerada no plano de fundo!`, "success");
+        }
+        onSuccess?.();
       } else {
         throw new Error("Nenhum dado de imagem retornado pela API.");
       }
     } catch (err: any) {
-      console.error("Geração falhou:", err);
-      console.error("Detalhes do erro:", err);
-      showToast(err.message || "Falha de conexão com a API de geração.", "error");
+      console.error(`Geração falhou para o projeto ${targetProjectName}:`, err);
+      const errMsg = err.message || "Falha de conexão com a API de geração.";
+      showToast(errMsg, "error");
+      onError?.(errMsg);
     } finally {
-      store.setIsGenerating(false);
+      store.setIsProjectGenerating(targetProjectId, false);
+      console.log(`[DEBUG] Generation finished for project ${targetProjectId}`);
     }
   };
 

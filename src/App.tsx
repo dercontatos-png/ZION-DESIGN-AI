@@ -11,7 +11,7 @@ import ReactMarkdown from "react-markdown";
 import {
   LayoutDashboard,
   CheckSquare,
-  Sparkles,
+  Sparkles, Zap,
   Users,
   User,
   Settings,
@@ -27,6 +27,7 @@ import {
   Briefcase,
   X,
   Trash2,
+  Edit2,
   Upload,
   SlidersHorizontal,
   Wand2,
@@ -56,6 +57,7 @@ import {
   WifiOff,
   Filter,
   Layers,
+  Globe,
 } from "lucide-react";
 import { GoogleGenAI, Type } from "@google/genai";
 import SettingsModal from "./components/SettingsModal";
@@ -66,6 +68,7 @@ import { useImageStore } from "./store/useImageStore";
 import { InpaintCanvas } from "./components/InpaintCanvas";
 import DesignBuilder from "./components/DesignBuilder";
 import Agentes from "./components/Agentes";
+import { safeStorageSetItem, getStorageStats, cleanImageStorage } from "./utils/imageStorageManager";
 
 
 
@@ -110,6 +113,14 @@ const ChatAssistant: React.FC<{
   messages: { role: "user" | "assistant"; content: string }[];
   setMessages: React.Dispatch<React.SetStateAction<{ role: "user" | "assistant"; content: string }[]>>;
 }> = ({ onClose, clients, messages, setMessages }) => {
+//  React.useEffect(() => {
+//    fetch("/api/config/active-key").then(r => r.json()).then(data => {
+//      if (data.key && myProfile.geminiApiKey !== data.key) {
+//        setMyProfile(prev => ({ ...prev, geminiApiKey: data.key }));
+//      }
+//    }).catch(e => console.error(e));
+//  }, []);
+
   React.useEffect(() => {
     if (messages.length === 0) {
       if (clients.length === 0) {
@@ -141,6 +152,8 @@ Consigo analisar a saúde financeira dos seus **${clients.length} clientes**, su
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractedPrompt, setExtractedPrompt] = useState("");
   const [extractedTypography, setExtractedTypography] = useState("");
+  const [selectedModel, setSelectedModel] = useState("gemini-3.6-flash");
+  const [showSettings, setShowSettings] = useState(false);
 
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
 
@@ -179,35 +192,17 @@ Consigo analisar a saúde financeira dos seus **${clients.length} clientes**, su
       try {
         const ai = new GoogleGenAI({ apiKey: getActiveApiKey() });
         let response;
-        try {
-          response = await ai.models.generateContent({
-            model: "gemini-3.1-pro-preview",
-            contents: {
-              parts: [
-                { inlineData: { data: base64Data, mimeType: file.type } },
-                {
-                  text: "Analise esta imagem e extraia um prompt detalhado que descreva a composição, estilo, iluminação e elementos presentes, para que eu possa gerar uma imagem similar.",
-                },
-              ],
-            },
-          });
-        } catch (e) {
-          console.warn(
-            "gemini-3.1-pro-preview falhou, tentando gemini-3.5-flash",
-            e,
-          );
-          response = await ai.models.generateContent({
-            model: "gemini-3.5-flash",
-            contents: {
-              parts: [
-                { inlineData: { data: base64Data, mimeType: file.type } },
-                {
-                  text: "Analise esta imagem e extraia um prompt detalhado que descreva a composição, estilo, iluminação e elementos presentes, para que eu possa gerar uma imagem similar.",
-                },
-              ],
-            },
-          });
-        }
+        response = await ai.models.generateContent({
+          model: selectedModel,
+          contents: {
+            parts: [
+              { inlineData: { data: base64Data, mimeType: file.type } },
+              {
+                text: "Analise esta imagem e extraia um prompt detalhado que descreva a composição, estilo, iluminação e elementos presentes, para que eu possa gerar uma imagem similar.",
+              },
+            ],
+          },
+        });
         setExtractedPrompt(
           response.text || "Não foi possível extrair o prompt.",
         );
@@ -234,35 +229,17 @@ Consigo analisar a saúde financeira dos seus **${clients.length} clientes**, su
       try {
         const ai = new GoogleGenAI({ apiKey: getActiveApiKey() });
         let response;
-        try {
-          response = await ai.models.generateContent({
-            model: "gemini-3.1-pro-preview",
-            contents: {
-              parts: [
-                { inlineData: { data: base64Data, mimeType: file.type } },
-                {
-                  text: "Analise esta imagem e extraia o estilo tipográfico, incluindo efeitos, texturas, 3D, fontes sugeridas e quaisquer outros detalhes visuais da tipografia.",
-                },
-              ],
-            },
-          });
-        } catch (e) {
-          console.warn(
-            "gemini-3.1-pro-preview falhou, tentando gemini-3.5-flash",
-            e,
-          );
-          response = await ai.models.generateContent({
-            model: "gemini-3.5-flash",
-            contents: {
-              parts: [
-                { inlineData: { data: base64Data, mimeType: file.type } },
-                {
-                  text: "Analise esta imagem e extraia o estilo tipográfico, incluindo efeitos, texturas, 3D, fontes sugeridas e quaisquer outros detalhes visuais da tipografia.",
-                },
-              ],
-            },
-          });
-        }
+        response = await ai.models.generateContent({
+          model: selectedModel,
+          contents: {
+            parts: [
+              { inlineData: { data: base64Data, mimeType: file.type } },
+              {
+                text: "Analise esta imagem e extraia o estilo tipográfico, incluindo efeitos, texturas, 3D, fontes sugeridas e quaisquer outros detalhes visuais da tipografia.",
+              },
+            ],
+          },
+        });
         setExtractedTypography(
           response.text || "Não foi possível extrair o estilo tipográfico.",
         );
@@ -306,21 +283,10 @@ Consigo analisar a saúde financeira dos seus **${clients.length} clientes**, su
       Pergunta ou comando do usuário:
       "${textToSend}"`;
 
-      try {
-        response = await ai.models.generateContent({
-          model: "gemini-3.1-pro-preview",
-          contents: promptContext,
-        });
-      } catch (e) {
-        console.warn(
-          "gemini-3.1-pro-preview falhou, tentando gemini-3.5-flash",
-          e,
-        );
-        response = await ai.models.generateContent({
-          model: "gemini-3.5-flash",
-          contents: promptContext,
-        });
-      }
+      response = await ai.models.generateContent({
+        model: selectedModel,
+        contents: promptContext,
+      });
       if (response.text) {
         setMessages((prev) => [
           ...prev,
@@ -341,40 +307,79 @@ Consigo analisar a saúde financeira dos seus **${clients.length} clientes**, su
   };
 
   return (
-    <div className="fixed bottom-0 right-0 w-full h-full sm:bottom-6 sm:right-6 sm:w-[460px] sm:h-[680px] glass-heavy sm:rounded-3xl shadow-2xl z-50 flex flex-col overflow-hidden animate-scale-in">
+    <div className="fixed bottom-0 right-0 w-full h-full sm:bottom-6 sm:right-6 sm:w-[460px] sm:h-[680px] bg-[#070708] border border-white/10 sm:rounded-3xl shadow-2xl z-50 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="p-4 border-b border-white/5 flex justify-between items-center bg-black/40">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-[#d4af37] flex items-center justify-center text-zinc-950 font-black text-sm">
-            Z
+      <div className="p-4 border-b border-white/5 flex flex-col gap-3 bg-zinc-950/50">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-[#c5a880] flex items-center justify-center text-zinc-950 font-black text-sm">
+              Z
+            </div>
+            <div>
+              <h3 className="font-bold text-sm text-white flex items-center gap-2">
+                Assistente Zion AI
+                <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-zinc-300">
+                  {selectedModel === "gemini-3.6-flash" ? "Flash" : "Pro"}
+                </span>
+              </h3>
+              <span className="text-[10px] text-emerald-400 flex items-center gap-1 font-semibold">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />{" "}
+                Ativo & Integrado
+              </span>
+            </div>
           </div>
-          <div>
-            <h3 className="font-bold text-sm text-white">Assistente Zion AI</h3>
-            <span className="text-[10px] text-emerald-400 flex items-center gap-1 font-semibold">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />{" "}
-              Ativo & Integrado
-            </span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setShowSettings(!showSettings)}
+              className={`p-1.5 rounded-xl transition-all ${showSettings ? "bg-white/10 text-white" : "text-zinc-400 hover:text-white hover:bg-white/5"}`}
+              title="Configurações de Modelo"
+            >
+              <Settings size={18} />
+            </button>
+            <button
+              onClick={onClose}
+              className="text-zinc-400 hover:text-white p-1.5 hover:bg-white/5 rounded-xl transition-all"
+            >
+              <X size={18} />
+            </button>
           </div>
         </div>
-        <button
-          onClick={onClose}
-          className="text-zinc-400 hover:text-white p-1.5 hover:bg-white/5 rounded-xl transition-all"
-        >
-          <X size={18} />
-        </button>
+        
+        {showSettings && (
+          <div className="bg-zinc-900/80 p-3 rounded-xl border border-white/5 flex flex-col gap-2">
+            <label className="text-xs font-semibold text-zinc-300">Modelo de IA</label>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setSelectedModel("gemini-3.6-flash")}
+                className={`flex-1 py-1.5 flex items-center justify-center gap-1.5 text-xs rounded-lg transition-all ${selectedModel === "gemini-3.6-flash" ? "bg-[#c5a880] text-zinc-950 font-bold" : "bg-zinc-950 text-zinc-400 hover:text-zinc-200 border border-white/5"}`}
+              >
+                <Zap size={14} /> Flash
+              </button>
+              <button
+                onClick={() => setSelectedModel("gemini-3-pro-image")}
+                className={`flex-1 py-1.5 flex items-center justify-center gap-1.5 text-xs rounded-lg transition-all ${selectedModel === "gemini-3-pro-image" ? "bg-[#c5a880] text-zinc-950 font-bold" : "bg-zinc-950 text-zinc-400 hover:text-zinc-200 border border-white/5"}`}
+              >
+                <Sparkles size={14} /> Pro
+              </button>
+            </div>
+            <p className="text-[10px] text-zinc-500">
+              O modelo Flash é ideal para respostas rápidas de texto. O Pro Image possui melhor capacidade de raciocínio.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Modes */}
-      <div className="p-2 border-b border-white/5 flex gap-1 bg-black/20">
+      <div className="p-2 border-b border-white/5 flex gap-1 bg-zinc-950/20">
         <button
           onClick={() => setMode("chat")}
-          className={`flex-1 text-xs py-2 rounded-xl transition-all font-semibold ${mode === "chat" ? "bg-[#d4af37] text-zinc-950" : "text-zinc-400 hover:text-zinc-200"}`}
+          className={`flex-1 text-xs py-2 rounded-xl transition-all font-semibold ${mode === "chat" ? "bg-[#c5a880] text-zinc-950" : "text-zinc-400 hover:text-zinc-200"}`}
         >
           Chat Integrado
         </button>
         <button
           onClick={() => setMode("extract")}
-          className={`flex-1 text-xs py-2 rounded-xl transition-all font-semibold ${mode === "extract" ? "bg-[#d4af37] text-zinc-950" : "text-zinc-400 hover:text-zinc-200"}`}
+          className={`flex-1 text-xs py-2 rounded-xl transition-all font-semibold ${mode === "extract" ? "bg-[#c5a880] text-zinc-950" : "text-zinc-400 hover:text-zinc-200"}`}
         >
           Extrair de Referências
         </button>
@@ -384,7 +389,7 @@ Consigo analisar a saúde financeira dos seus **${clients.length} clientes**, su
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-zinc-950/40">
         {mode === "extract" ? (
           <div className="text-sm text-zinc-300 space-y-6 p-1">
-            <div className="bg-[#0b0b0c] p-4 border border-white/5 rounded-xl">
+            <div className="bg-[#070708] p-4 border border-white/5 rounded-xl">
               <p className="text-xs font-bold text-white mb-2 flex items-center gap-1">
                 ðŸ“¸ Extrair Prompt de Imagem
               </p>
@@ -395,18 +400,18 @@ Consigo analisar a saúde financeira dos seus **${clients.length} clientes**, su
               <input
                 type="file"
                 accept="image/*"
-                className="w-full text-xs text-zinc-400 bg-[#050505] p-2.5 rounded-xl border border-white/10 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-zinc-800 file:text-white"
+                className="w-full text-xs text-zinc-400 bg-zinc-950 p-2.5 rounded-xl border border-white/10 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-zinc-800 file:text-white"
                 onChange={handleImageUpload}
               />
               {isExtracting && (
-                <p className="mt-2 text-[#d4af37] animate-pulse text-xs">
+                <p className="mt-2 text-[#c5a880] animate-pulse text-xs">
                   Analisando imagem e extraindo prompt...
                 </p>
               )}
               {extractedPrompt && (
-                <div className="mt-3 p-3 bg-[#050505] rounded-xl border border-white/5 text-zinc-200 text-xs">
+                <div className="mt-3 p-3 bg-zinc-950 rounded-xl border border-white/5 text-zinc-200 text-xs">
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="font-bold text-[#d4af37]">
+                    <span className="font-bold text-[#c5a880]">
                       Prompt Extraído:
                     </span>
                     <button
@@ -418,14 +423,14 @@ Consigo analisar a saúde financeira dos seus **${clients.length} clientes**, su
                       Copiar
                     </button>
                   </div>
-                  <p className="font-mono leading-relaxed select-all text-zinc-300 bg-[#0b0b0c] p-2 rounded-lg">
+                  <p className="font-mono leading-relaxed select-all text-zinc-300 bg-[#070708] p-2 rounded-lg">
                     {extractedPrompt}
                   </p>
                 </div>
               )}
             </div>
 
-            <div className="bg-[#0b0b0c] p-4 border border-white/5 rounded-xl">
+            <div className="bg-[#070708] p-4 border border-white/5 rounded-xl">
               <p className="text-xs font-bold text-white mb-2 flex items-center gap-1">
                 ðŸŽ¨ Extrair Estilo Tipográfico
               </p>
@@ -436,18 +441,18 @@ Consigo analisar a saúde financeira dos seus **${clients.length} clientes**, su
               <input
                 type="file"
                 accept="image/*"
-                className="w-full text-xs text-zinc-400 bg-[#050505] p-2.5 rounded-xl border border-white/10 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-zinc-800 file:text-white"
+                className="w-full text-xs text-zinc-400 bg-zinc-950 p-2.5 rounded-xl border border-white/10 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-zinc-800 file:text-white"
                 onChange={handleTypographyExtraction}
               />
               {isExtracting && (
-                <p className="mt-2 text-[#d4af37] animate-pulse text-xs">
+                <p className="mt-2 text-[#c5a880] animate-pulse text-xs">
                   Analisando fontes e layout...
                 </p>
               )}
               {extractedTypography && (
-                <div className="mt-3 p-3 bg-[#050505] rounded-xl border border-white/5 text-zinc-200 text-xs">
+                <div className="mt-3 p-3 bg-zinc-950 rounded-xl border border-white/5 text-zinc-200 text-xs">
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="font-bold text-[#d4af37]">
+                    <span className="font-bold text-[#c5a880]">
                       Estilo Tipográfico:
                     </span>
                     <button
@@ -459,7 +464,7 @@ Consigo analisar a saúde financeira dos seus **${clients.length} clientes**, su
                       Copiar
                     </button>
                   </div>
-                  <p className="font-mono leading-relaxed select-all text-zinc-300 bg-[#0b0b0c] p-2 rounded-lg">
+                  <p className="font-mono leading-relaxed select-all text-zinc-300 bg-[#070708] p-2 rounded-lg">
                     {extractedTypography}
                   </p>
                 </div>
@@ -480,8 +485,8 @@ Consigo analisar a saúde financeira dos seus **${clients.length} clientes**, su
                 <div
                   className={`max-w-[90%] p-3.5 rounded-xl text-xs leading-relaxed ${
                     m.role === "user"
-                      ? "bg-[#d4af37] text-zinc-950 rounded-tr-none font-medium"
-                      : "bg-[#0b0b0c] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] text-zinc-200 rounded-tl-none"
+                      ? "bg-[#c5a880] text-zinc-950 rounded-tr-none font-medium"
+                      : "bg-[#070708] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] text-zinc-200 rounded-tl-none"
                   }`}
                 >
                   <div className="markdown-body">
@@ -497,12 +502,12 @@ Consigo analisar a saúde financeira dos seus **${clients.length} clientes**, su
 
       {/* Quick Suggestions Chips (only in Chat mode) */}
       {mode === "chat" && (
-        <div className="px-4 py-2 border-t border-white/5 bg-[#050505] overflow-x-auto whitespace-nowrap scrollbar-none flex gap-2">
+        <div className="px-4 py-2 border-t border-white/5 bg-zinc-950 overflow-x-auto whitespace-nowrap scrollbar-none flex gap-2">
           {quickPrompts.map((p, idx) => (
             <button
               key={idx}
               onClick={() => handleSend(p.text)}
-              className="inline-block text-[10px] font-bold text-zinc-400 bg-[#0b0b0c] hover:bg-zinc-800 border border-white/5 rounded-full px-3 py-1.5 transition-all hover:text-[#d4af37]"
+              className="inline-block text-[10px] font-bold text-zinc-400 bg-[#070708] hover:bg-zinc-800 border border-white/5 rounded-full px-3 py-1.5 transition-all hover:text-[#c5a880]"
             >
               {p.label}
             </button>
@@ -511,7 +516,7 @@ Consigo analisar a saúde financeira dos seus **${clients.length} clientes**, su
       )}
 
       {/* Input controls */}
-      <div className="p-3 border-t border-white/5 bg-[#0b0b0c] flex items-center gap-2">
+      <div className="p-3 border-t border-white/5 bg-[#070708] flex items-center gap-2">
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -522,12 +527,12 @@ Consigo analisar a saúde financeira dos seus **${clients.length} clientes**, su
               : "Selecione um recurso acima..."
           }
           disabled={mode === "extract"}
-          className="flex-1 bg-[#050505] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-[#d4af37]/50 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 bg-zinc-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-[#c5a880]/50 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
         />
         <button
           onClick={() => handleSend()}
           disabled={mode === "extract" || !input.trim()}
-          className="bg-[#d4af37] text-zinc-950 p-2.5 rounded-xl hover:bg-[#d4af37]/80 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="bg-[#c5a880] text-zinc-950 p-2.5 rounded-xl hover:bg-[#c5a880]/80 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <Check size={16} className="stroke-[3]" />
         </button>
@@ -596,7 +601,7 @@ function CustomDatePicker({ value, onChange }: CustomDatePickerProps) {
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white text-left focus:outline-none focus:border-[#d4af37]/50 flex items-center justify-between font-mono hover:bg-[#0b0b0c] transition-colors"
+        className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white text-left focus:outline-none focus:border-[#c5a880]/50 flex items-center justify-between font-mono hover:bg-[#070708] transition-colors"
       >
         <span>{formattedDisplay}</span>
         <Calendar size={16} className="text-zinc-500" />
@@ -608,13 +613,13 @@ function CustomDatePicker({ value, onChange }: CustomDatePickerProps) {
             className="fixed inset-0 z-40"
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute left-0 top-full mt-2 bg-[#0b0b0c] border border-white/10 rounded-xl p-8 shadow-2xl z-50 w-72 text-left">
+          <div className="absolute left-0 top-full mt-2 bg-[#070708] border border-white/10 rounded-xl p-8 shadow-2xl z-50 w-72 text-left">
             {/* Header: Month and Year Selector */}
             <div className="flex gap-2 mb-3">
               <select
                 value={pickerMonth}
                 onChange={(e) => setPickerMonth(Number(e.target.value))}
-                className="flex-1 bg-[#050505] border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-[#d4af37]/50"
+                className="flex-1 bg-zinc-950 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50"
               >
                 {months.map((m, idx) => (
                   <option key={idx} value={idx}>
@@ -626,7 +631,7 @@ function CustomDatePicker({ value, onChange }: CustomDatePickerProps) {
               <select
                 value={pickerYear}
                 onChange={(e) => setPickerYear(Number(e.target.value))}
-                className="bg-[#050505] border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-[#d4af37]/50"
+                className="bg-zinc-950 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50"
               >
                 {years.map((y) => (
                   <option key={y} value={y}>
@@ -669,7 +674,7 @@ function CustomDatePicker({ value, onChange }: CustomDatePickerProps) {
                     onClick={() => handleSelectDay(day)}
                     className={`h-7 w-7 rounded-lg text-xs font-bold transition-all flex items-center justify-center ${
                       isSelected
-                        ? "bg-[#d4af37] text-zinc-950 scale-105"
+                        ? "bg-[#c5a880] text-zinc-950 scale-105"
                         : "text-zinc-300 hover:bg-white/5"
                     }`}
                   >
@@ -697,6 +702,7 @@ const PRESET_AVATARS = [
 export default function App() {
   const [activeTab, setActiveTab] = useState("ai-tools");
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true);
   const [hoveredPointIndex, setHoveredPointIndex] = useState<number | null>(
     null,
   );
@@ -724,7 +730,7 @@ export default function App() {
       const wsKey = localStorage.getItem("zion_workspace_key");
       // If workspace key looks like an API key (starts with AQ.), reset it to ZION-MASTER
       if (wsKey && wsKey.startsWith("AQ.")) {
-        localStorage.setItem("zion_workspace_key", "ZION-MASTER");
+        safeStorageSetItem("zion_workspace_key", "ZION-MASTER");
       }
       
       const customKey = localStorage.getItem("custom_gemini_api_key");
@@ -732,13 +738,13 @@ export default function App() {
       if (customKey && !keyCleared) {
         console.log("Limpando chave de API customizada antiga para usar o Vertex AI oficial do servidor...");
         localStorage.removeItem("custom_gemini_api_key");
-        localStorage.setItem("custom_key_cleared_for_vertex_v2", "true");
+        safeStorageSetItem("custom_key_cleared_for_vertex_v2", "true");
         // Forçar reload rápido para aplicar a limpeza
         setTimeout(() => {
           window.location.reload();
         }, 300);
       } else {
-        localStorage.setItem("custom_key_cleared_for_vertex_v2", "true");
+        safeStorageSetItem("custom_key_cleared_for_vertex_v2", "true");
       }
     } catch (e) {
       console.error("Migration error:", e);
@@ -752,7 +758,7 @@ export default function App() {
 
   React.useEffect(() => {
     if (selectedPortalClientId !== null) {
-      localStorage.setItem("zion_selected_portal_client_id", String(selectedPortalClientId));
+      safeStorageSetItem("zion_selected_portal_client_id", String(selectedPortalClientId));
     } else {
       localStorage.removeItem("zion_selected_portal_client_id");
     }
@@ -767,7 +773,7 @@ export default function App() {
     const wsParam = params.get("ws") || params.get("workspace");
     if (wsParam && wsParam.trim().length >= 4) {
       const cleanKey = wsParam.trim().toUpperCase();
-      localStorage.setItem("zion_workspace_key", cleanKey);
+      safeStorageSetItem("zion_workspace_key", cleanKey);
       return cleanKey;
     }
     const saved = localStorage.getItem("zion_workspace_key");
@@ -779,12 +785,12 @@ export default function App() {
         upperSaved !== "ZION-MASTER" &&
         !wsParam
       ) {
-        localStorage.setItem("zion_workspace_key", "ZION-MASTER");
+        safeStorageSetItem("zion_workspace_key", "ZION-MASTER");
         return "ZION-MASTER";
       }
       return upperSaved;
     }
-    localStorage.setItem("zion_workspace_key", "ZION-MASTER");
+    safeStorageSetItem("zion_workspace_key", "ZION-MASTER");
     return "ZION-MASTER";
   });
 
@@ -937,7 +943,7 @@ export default function App() {
   // Save logo settings to localStorage
   React.useEffect(() => {
     try {
-      localStorage.setItem("logoRefs", JSON.stringify(logoRefs));
+      safeStorageSetItem("logoRefs", JSON.stringify(logoRefs));
     } catch (error) {
       console.error("Error saving logos to localStorage:", error);
     }
@@ -1110,6 +1116,16 @@ export default function App() {
         category: "Contratos",
         status: "pago",
         client: "Dr. Silva (Odonto)",
+      },
+      {
+        id: 9999,
+        description: "Edição de Vídeo (Felipe Maker)",
+        type: "despesa",
+        amount: 250,
+        date: "2026-07-25",
+        category: "Freelancers",
+        status: "pendente",
+        client: "Tech Solutions",
       },
       {
         id: 2,
@@ -1477,11 +1493,11 @@ export default function App() {
     setCalendarEvents(demoEvents);
     setNotifications(demoNotifications);
 
-    localStorage.setItem("zion_clients", JSON.stringify(demoClients));
-    localStorage.setItem("zion_tasks", JSON.stringify(demoTasks));
-    localStorage.setItem("zion_transactions", JSON.stringify(demoTransactions));
-    localStorage.setItem("zion_calendar_events", JSON.stringify(demoEvents));
-    localStorage.setItem(
+    safeStorageSetItem("zion_clients", JSON.stringify(demoClients));
+    safeStorageSetItem("zion_tasks", JSON.stringify(demoTasks));
+    safeStorageSetItem("zion_transactions", JSON.stringify(demoTransactions));
+    safeStorageSetItem("zion_calendar_events", JSON.stringify(demoEvents));
+    safeStorageSetItem(
       "zion_notifications",
       JSON.stringify(demoNotifications),
     );
@@ -1500,7 +1516,7 @@ export default function App() {
 
   // --- SAVE STATES TO LOCAL STORAGE ---
   React.useEffect(() => {
-    localStorage.setItem("zion_clients", JSON.stringify(clients));
+    safeStorageSetItem("zion_clients", JSON.stringify(clients));
   }, [clients]);
 
   // Automatically calculate client payment statuses based on transactions and dueDates
@@ -1514,21 +1530,35 @@ export default function App() {
     const updatedClients = clients.map((client) => {
       if (client.status !== "Ativo") return client;
 
-      // Find paid receita in the current month/year for this client
-      const hasPaidThisMonth = transactions.some((t) => {
-        if (t.client !== client.name) return false;
-        if (t.type !== "receita") return false;
-        if (t.status !== "pago") return false;
-        if (!t.date || typeof t.date !== "string") return false;
-        const parts = t.date.split("-");
-        if (parts.length < 3) return false;
-        const tYear = Number(parts[0]);
-        const tMonth = Number(parts[1]);
-        return tYear === currentYear && tMonth === currentMonth;
-      });
+      // Find paid receita for this client
+      let hasPaid = false;
+      if (client.paymentType === "Projeto" || client.paymentType === "Sob Demanda") {
+        hasPaid = transactions.some((t) => {
+          if (t.client !== client.name) return false;
+          if (t.type !== "receita") return false;
+          if (t.status !== "pago") return false;
+          if (!t.date || typeof t.date !== "string") return false;
+          // Se tiver data de inicio, o pagamento tem que ser no inicio ou depois
+          if (client.startDate && t.date < client.startDate) return false;
+          
+          return true;
+        });
+      } else {
+        hasPaid = transactions.some((t) => {
+          if (t.client !== client.name) return false;
+          if (t.type !== "receita") return false;
+          if (t.status !== "pago") return false;
+          if (!t.date || typeof t.date !== "string") return false;
+          const parts = t.date.split("-");
+          if (parts.length < 3) return false;
+          const tYear = Number(parts[0]);
+          const tMonth = Number(parts[1]);
+          return tYear === currentYear && tMonth === currentMonth;
+        });
+      }
 
       let calculatedStatus: "Em dia" | "Atrasado" | "Pendente" = "Pendente";
-      if (hasPaidThisMonth) {
+      if (hasPaid) {
         calculatedStatus = "Em dia";
       } else if (
         (typeof client.dueDate === "string" &&
@@ -1557,22 +1587,22 @@ export default function App() {
   }, [transactions, clients]);
 
   React.useEffect(() => {
-    localStorage.setItem("zion_tasks", JSON.stringify(tasks));
+    safeStorageSetItem("zion_tasks", JSON.stringify(tasks));
   }, [tasks]);
 
   React.useEffect(() => {
-    localStorage.setItem("zion_transactions", JSON.stringify(transactions));
+    safeStorageSetItem("zion_transactions", JSON.stringify(transactions));
   }, [transactions]);
 
   React.useEffect(() => {
-    localStorage.setItem(
+    safeStorageSetItem(
       "zion_calendar_events",
       JSON.stringify(calendarEvents),
     );
   }, [calendarEvents]);
 
   React.useEffect(() => {
-    localStorage.setItem("zion_notifications", JSON.stringify(notifications));
+    safeStorageSetItem("zion_notifications", JSON.stringify(notifications));
   }, [notifications]);
 
   // Calendar view state
@@ -1622,15 +1652,15 @@ export default function App() {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   React.useEffect(() => {
-    localStorage.setItem("zion_my_profile", JSON.stringify(myProfile));
+    safeStorageSetItem("zion_my_profile", JSON.stringify(myProfile));
   }, [myProfile]);
 
   React.useEffect(() => {
-    localStorage.setItem("chatMessages", JSON.stringify(messages));
+    safeStorageSetItem("chatMessages", JSON.stringify(messages));
   }, [messages]);
 
   React.useEffect(() => {
-    localStorage.setItem(
+    safeStorageSetItem(
       "zion_transaction_categories",
       JSON.stringify(transactionCategories),
     );
@@ -1670,18 +1700,18 @@ export default function App() {
   // Force a synchronized local backup to localStorage when ending/refreshing the session
   React.useEffect(() => {
     const handleBeforeUnload = () => {
-      localStorage.setItem("zion_clients", JSON.stringify(clients));
-      localStorage.setItem("zion_tasks", JSON.stringify(tasks));
-      localStorage.setItem("zion_transactions", JSON.stringify(transactions));
-      localStorage.setItem("zion_calendar_events", JSON.stringify(calendarEvents));
-      localStorage.setItem("zion_notifications", JSON.stringify(notifications));
-      localStorage.setItem("zion_my_profile", JSON.stringify(myProfile));
-      localStorage.setItem("logoRefs", JSON.stringify(logoRefs));
-      localStorage.setItem("savedCards", JSON.stringify(savedCards));
-      localStorage.setItem("zion_saved_notes", JSON.stringify(savedNotes));
-      localStorage.setItem("chatMessages", JSON.stringify(messages));
+      safeStorageSetItem("zion_clients", JSON.stringify(clients));
+      safeStorageSetItem("zion_tasks", JSON.stringify(tasks));
+      safeStorageSetItem("zion_transactions", JSON.stringify(transactions));
+      safeStorageSetItem("zion_calendar_events", JSON.stringify(calendarEvents));
+      safeStorageSetItem("zion_notifications", JSON.stringify(notifications));
+      safeStorageSetItem("zion_my_profile", JSON.stringify(myProfile));
+      safeStorageSetItem("logoRefs", JSON.stringify(logoRefs));
+      safeStorageSetItem("savedCards", JSON.stringify(savedCards));
+      safeStorageSetItem("zion_saved_notes", JSON.stringify(savedNotes));
+      safeStorageSetItem("chatMessages", JSON.stringify(messages));
       if (workspaceKey) {
-        localStorage.setItem("zion_workspace_key_backup", workspaceKey);
+        safeStorageSetItem("zion_workspace_key_backup", workspaceKey);
       }
     };
 
@@ -1925,7 +1955,7 @@ export default function App() {
           updated_at: new Date().toISOString(),
           data: sanitizedData
         });
-        localStorage.setItem("zion_last_local_update", new Date().toISOString());
+        safeStorageSetItem("zion_last_local_update", new Date().toISOString());
         console.log(
           "Sincronizado com o Supabase com sucesso para o workspace:",
           activeSyncKey,
@@ -1965,13 +1995,13 @@ export default function App() {
     if (!activeSyncKey) return;
 
     // Optimistically update localStorage
-    if (updatedFields.tasks) localStorage.setItem("zion_tasks", JSON.stringify(updatedFields.tasks));
-    if (updatedFields.clients) localStorage.setItem("zion_clients", JSON.stringify(updatedFields.clients));
-    if (updatedFields.transactions) localStorage.setItem("zion_transactions", JSON.stringify(updatedFields.transactions));
-    if (updatedFields.calendarEvents) localStorage.setItem("zion_calendar_events", JSON.stringify(updatedFields.calendarEvents));
-    if (updatedFields.notifications) localStorage.setItem("zion_notifications", JSON.stringify(updatedFields.notifications));
-    if (updatedFields.myProfile) localStorage.setItem("zion_my_profile", JSON.stringify(updatedFields.myProfile));
-    if (updatedFields.savedNotes) localStorage.setItem("zion_saved_notes", JSON.stringify(updatedFields.savedNotes));
+    if (updatedFields.tasks) safeStorageSetItem("zion_tasks", JSON.stringify(updatedFields.tasks));
+    if (updatedFields.clients) safeStorageSetItem("zion_clients", JSON.stringify(updatedFields.clients));
+    if (updatedFields.transactions) safeStorageSetItem("zion_transactions", JSON.stringify(updatedFields.transactions));
+    if (updatedFields.calendarEvents) safeStorageSetItem("zion_calendar_events", JSON.stringify(updatedFields.calendarEvents));
+    if (updatedFields.notifications) safeStorageSetItem("zion_notifications", JSON.stringify(updatedFields.notifications));
+    if (updatedFields.myProfile) safeStorageSetItem("zion_my_profile", JSON.stringify(updatedFields.myProfile));
+    if (updatedFields.savedNotes) safeStorageSetItem("zion_saved_notes", JSON.stringify(updatedFields.savedNotes));
 
     try {
       // Temporarily ignore snapshot updates while we are writing to prevent race conditions
@@ -1999,7 +2029,7 @@ export default function App() {
         updated_at: new Date().toISOString(),
         data: sanitizedData
       });
-      localStorage.setItem("zion_last_local_update", new Date().toISOString());
+      safeStorageSetItem("zion_last_local_update", new Date().toISOString());
       console.log("Direct save to Supabase completed successfully!");
     } catch (err) {
       console.error("Error in direct save to Supabase:", err);
@@ -2388,7 +2418,7 @@ ${textContent}`
         });
 
         const response = await aiClient.models.generateContent({
-          model: "gemini-3.5-flash",
+          model: "gemini-3.6-flash",
           config: {
             responseMimeType: "application/json",
           },
@@ -2659,20 +2689,20 @@ ${textContent}`
       }
 
       // 2. Force a local backup to localStorage as a safety measure
-      localStorage.setItem("zion_clients", JSON.stringify(clients));
-      localStorage.setItem("zion_tasks", JSON.stringify(tasks));
-      localStorage.setItem("zion_transactions", JSON.stringify(transactions));
-      localStorage.setItem("zion_calendar_events", JSON.stringify(calendarEvents));
-      localStorage.setItem("zion_notifications", JSON.stringify(notifications));
-      localStorage.setItem("zion_my_profile", JSON.stringify(myProfile));
-      localStorage.setItem("logoRefs", JSON.stringify(logoRefs));
-      localStorage.setItem("savedCards", JSON.stringify(savedCards));
-      localStorage.setItem("zion_saved_notes", JSON.stringify(savedNotes));
-      localStorage.setItem("zion_workspace_key_backup", workspaceKey || "ZION-MASTER");
+      safeStorageSetItem("zion_clients", JSON.stringify(clients));
+      safeStorageSetItem("zion_tasks", JSON.stringify(tasks));
+      safeStorageSetItem("zion_transactions", JSON.stringify(transactions));
+      safeStorageSetItem("zion_calendar_events", JSON.stringify(calendarEvents));
+      safeStorageSetItem("zion_notifications", JSON.stringify(notifications));
+      safeStorageSetItem("zion_my_profile", JSON.stringify(myProfile));
+      safeStorageSetItem("logoRefs", JSON.stringify(logoRefs));
+      safeStorageSetItem("savedCards", JSON.stringify(savedCards));
+      safeStorageSetItem("zion_saved_notes", JSON.stringify(savedNotes));
+      safeStorageSetItem("zion_workspace_key_backup", workspaceKey || "ZION-MASTER");
 
       // Reset workspace to ZION-MASTER as a form of log out
       setWorkspaceKey("ZION-MASTER");
-      localStorage.setItem("zion_workspace_key", "ZION-MASTER");
+      safeStorageSetItem("zion_workspace_key", "ZION-MASTER");
       setGcalToken(null);
       setGcalUser(null);
       localStorage.removeItem("gcal_access_token");
@@ -3033,21 +3063,10 @@ ${textContent}`
       - Mantenha um tom de voz profissional, persuasivo e moderno.`;
 
       let response;
-      try {
-        response = await ai.models.generateContent({
-          model: "gemini-3.1-pro-preview",
-          contents: prompt,
-        });
-      } catch (e) {
-        console.warn(
-          "gemini-3.1-pro-preview falhou, tentando gemini-3.5-flash",
-          e,
-        );
-        response = await ai.models.generateContent({
-          model: "gemini-3.5-flash",
-          contents: prompt,
-        });
-      }
+      response = await ai.models.generateContent({
+        model: "gemini-3.6-flash",
+        contents: prompt,
+      });
 
       if (response.text) {
         setGeneratedCopy(response.text);
@@ -3291,14 +3310,14 @@ ${textContent}`
   const renderCloudSyncStatus = () => {
     if (!gcalUser) return null;
     return (
-      <div className="mt-3 p-3 bg-[#050505] border border-white/5 rounded-xl space-y-2 group">
+      <div className="mt-3 p-3 bg-zinc-950 border border-white/5 rounded-xl space-y-2 group">
         <div className="flex items-center justify-between text-[10px] font-mono">
           <span className="text-zinc-500 font-bold flex items-center gap-1">
             <Cloud size={10} className="text-zinc-400" />
             NUVEM CONECTADA
           </span>
           <div className="flex items-center gap-1.5">
-            <span className={`w-1.5 h-1.5 rounded-full ${isCloudSyncing ? "bg-[#d4af37] animate-ping" : "bg-emerald-500"}`} />
+            <span className={`w-1.5 h-1.5 rounded-full ${isCloudSyncing ? "bg-[#c5a880] animate-ping" : "bg-emerald-500"}`} />
 
           </div>
         </div>
@@ -3313,24 +3332,24 @@ ${textContent}`
 
   if (isAuthLoading) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-[#050505] text-zinc-50 font-sans relative overflow-hidden">
+      <div className="flex flex-col items-center justify-center h-screen bg-zinc-950 text-zinc-50 font-sans relative overflow-hidden">
         {/* Ambient background glow */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-[#d4af37]/10 rounded-full blur-[120px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-[#c5a880]/10 rounded-full blur-[120px]" />
         <div className="z-10 flex flex-col items-center gap-6">
-          <div className="w-16 h-16 bg-[#d4af37] rounded-xl flex items-center justify-center text-zinc-950 text-3xl font-black shadow-lg shadow-amber-500/20 animate-bounce">
+          <div className="w-16 h-16 bg-[#c5a880] rounded-xl flex items-center justify-center text-zinc-950 text-3xl font-black shadow-lg shadow-amber-500/20 animate-bounce">
             Z
           </div>
           <div className="flex flex-col items-center gap-2">
             <h2 className="text-xl font-bold tracking-tight text-white flex items-center gap-1.5">
               Carregando Workspace
-              <span className="text-[#d4af37] animate-pulse">.</span>
+              <span className="text-[#c5a880] animate-pulse">.</span>
             </h2>
             <p className="text-xs text-zinc-400 font-mono">
               Iniciando conexão segura...
             </p>
           </div>
-          <div className="w-48 h-1.5 bg-[#0b0b0c] rounded-full overflow-hidden relative border border-white/5">
-            <div className="h-full bg-[#d4af37] rounded-full animate-slide w-1/3 absolute left-0" />
+          <div className="w-48 h-1.5 bg-[#070708] rounded-full overflow-hidden relative border border-white/5">
+            <div className="h-full bg-[#c5a880] rounded-full animate-slide w-1/3 absolute left-0" />
           </div>
         </div>
       </div>
@@ -3338,7 +3357,7 @@ ${textContent}`
   }
 
   return (
-    <div className="flex flex-col h-screen bg-black text-zinc-100 overflow-hidden relative select-none" style={{ fontFamily: "Montserrat, sans-serif" }}>
+    <div className="flex flex-col h-screen bg-[#000000] text-zinc-100 overflow-hidden relative" style={{ fontFamily: "Montserrat, sans-serif" }}>
       {isOffline && (
         <div className="absolute top-0 left-0 right-0 z-50 bg-red-500 text-white text-center py-2 text-sm font-medium flex items-center justify-center gap-2 animate-in slide-in-from-top-full shadow-lg shadow-red-500/20">
           <WifiOff size={16} />
@@ -3348,80 +3367,92 @@ ${textContent}`
       
       {/* Premium Ambient Light Orbs */}
       <div
-        className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-[#d4af37]/3 rounded-full blur-[160px] pointer-events-none z-0 animate-pulse"
+        className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-[#ad8330]/5 rounded-full blur-[150px] pointer-events-none z-0 animate-pulse"
         style={{ animationDuration: "8s" }}
       />
 
       {/* Header Fixo no Topo */}
-      <header className="h-16 w-full bg-black/45 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-6 fixed top-0 left-0 right-0 z-45 shrink-0 shadow-sm">
+      {/* Header Fixo no Topo com Glassmorphism */}
+      <header className="h-16 w-full bg-[#09090b]/80 backdrop-blur-md border-b border-white/5 flex items-center justify-between px-6 fixed top-0 left-0 right-0 z-40 shrink-0">
         {/* Esquerda: Logo Zion Design */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-3">
           <button
-            onClick={() => setIsMobileSidebarOpen(true)}
-            className="lg:hidden text-zinc-400 hover:text-white p-2 hover:bg-white/5 rounded-xl transition-all mr-1 flex items-center justify-center border border-transparent hover:border-white/5"
+            onClick={() => {
+              if (window.innerWidth >= 1024) {
+                setIsDesktopSidebarOpen(true);
+              } else {
+                setIsMobileSidebarOpen(true);
+              }
+            }}
+            className={`${isDesktopSidebarOpen ? 'lg:hidden' : ''} text-zinc-400 hover:text-white p-2 hover:bg-white/5 rounded-xl transition-all flex items-center justify-center border border-transparent hover:border-white/5`}
             aria-label="Abrir menu"
           >
             <Menu size={20} />
           </button>
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#d4af37] to-[#b8942b] flex items-center justify-center text-zinc-950 shadow-md">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#c5a880] to-[#ad8330] flex items-center justify-center text-zinc-950 shadow-lg shadow-[#c5a880]/10">
             <Layers size={18} />
           </div>
-          <span className="font-montserrat font-black text-sm tracking-wider uppercase bg-gradient-to-r from-white via-zinc-200 to-[#d4af37] bg-clip-text text-transparent">
-            Zion Design
-          </span>
+          <div className="flex flex-col">
+            <span className="font-montserrat font-black text-sm tracking-wider uppercase bg-gradient-to-r from-white via-zinc-200 to-[#c5a880] bg-clip-text text-transparent">
+              Zion Studio
+            </span>
+            <span className="text-[9px] text-zinc-500 font-mono tracking-widest uppercase -mt-0.5">
+              PAINEL DE TRABALHO
+            </span>
+          </div>
         </div>
 
         {/* Centro: Barra de Busca */}
         <div className="hidden sm:flex items-center gap-2 w-72 sm:w-96 min-w-0">
           <div className="relative w-full">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" size={15} />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" size={14} />
             <input
               type="text"
-              placeholder="Buscar no workspace..."
-              className="w-full bg-[#0a0a0c]/60 hover:bg-[#0a0a0c]/90 border border-white/5 rounded-full py-1.5 pl-10 pr-4 text-xs focus:outline-none focus:border-[#d4af37]/40 focus:ring-1 focus:ring-[#d4af37]/15 transition-all duration-300 text-white placeholder:text-zinc-500"
+              placeholder="Pesquisar clientes, tarefas, notas..."
+              className="w-full bg-zinc-950/80 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-xs focus:outline-none focus:border-[#c5a880]/60 transition-all text-white placeholder:text-zinc-600"
             />
           </div>
         </div>
 
-        {/* Direita: Perfil & Notificações */}
-        <div className="flex items-center gap-4">
+        {/* Direita: Perfil & Status */}
+        <div className="flex items-center gap-3">
           
           {/* Status da Chave API no Header */}
           {typeof window !== "undefined" &&
           localStorage.getItem("custom_gemini_api_key") ? (
-            <div className="p-1 bg-[#d4af37]/10 border border-[#d4af37]/20 rounded-lg hidden md:flex items-center gap-1.5 px-3 py-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37] animate-pulse" />
-              <span className="text-[10px] text-[#d4af37] font-black uppercase tracking-wider">API Ativa</span>
+            <div className="bg-[#c5a880]/10 border border-[#c5a880]/20 rounded-xl hidden md:flex items-center gap-2 px-3 py-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#c5a880] animate-pulse" />
+              <span className="text-[10px] text-[#c5a880] font-bold uppercase tracking-wider">Chave Ativa</span>
             </div>
           ) : (
             <div 
               onClick={() => setIsSettingsModalOpen(true)}
-              className="p-1 bg-[#0b0b0c] border border-emerald-500/10 rounded-lg hidden md:flex items-center gap-1.5 px-3 py-1 cursor-pointer hover:border-emerald-500/20"
+              className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl hidden md:flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-emerald-500/15 transition-all"
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-[10px] text-emerald-500/90 font-bold uppercase tracking-wider">API Servidor</span>
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">IA Conectada</span>
             </div>
           )}
 
           {/* Botão de Perfil */}
           <div
             onClick={() => setIsProfileModalOpen(true)}
-            className="flex items-center gap-3 px-3 py-1.5 cursor-pointer hover:bg-white/5 rounded-xl transition-all border border-white/5 bg-[#0b0b0c]/40 group"
+            className="flex items-center gap-2.5 px-3 py-1.5 cursor-pointer hover:bg-white/5 rounded-xl transition-all border border-white/10 bg-zinc-950/60 group"
           >
             {myProfile?.avatarUrl ? (
               <img
                 src={myProfile.avatarUrl}
                 alt={myProfile?.name || "Zion"}
-                className="w-7 h-7 rounded-full object-cover border border-white/10 group-hover:border-[#b8942b] transition-colors"
+                className="w-7 h-7 rounded-full object-cover border border-white/10 group-hover:border-[#c5a880] transition-colors"
                 referrerPolicy="no-referrer"
               />
             ) : (
-              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#d4af37] to-[#b8942b] text-zinc-950 flex items-center justify-center text-[10px] font-bold uppercase">
+              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#c5a880] to-[#ad8330] text-zinc-950 flex items-center justify-center text-[10px] font-bold uppercase">
                 {(myProfile?.name || "Zion").substring(0, 2)}
               </div>
             )}
-            <span className="text-xs font-bold text-white group-hover:text-[#b8942b] transition-colors hidden sm:inline">
-              {myProfile?.name || "Equipe Zion"}
+            <span className="text-xs font-semibold text-zinc-200 group-hover:text-white transition-colors hidden sm:inline">
+              {myProfile?.name || "Minha Conta"}
             </span>
           </div>
         </div>
@@ -3430,23 +3461,104 @@ ${textContent}`
       {/* Conteúdo Principal + Barra Lateral */}
       <div className="flex h-[calc(100vh-64px)] mt-16 overflow-hidden relative w-full">
         
-        {/* Menu Lateral Estreito Vertical (Desktop) */}
-        <aside className="hidden lg:flex w-20 bg-black/45 backdrop-blur-md border-r border-white/5 flex-col items-center py-4 flex-shrink-0 select-none overflow-y-auto scrollbar-none h-full">
-          <nav className="w-full px-2 space-y-3">
-            <SidebarItemMini icon={<LayoutDashboard size={20} />} active={activeTab === "dashboard"} onClick={() => setActiveTab("dashboard")} tooltip="Explorar" />
-            <SidebarItemMini icon={<Layers size={20} />} active={activeTab === "agents"} onClick={() => setActiveTab("agents")} tooltip="Agentes" />
-            <SidebarItemMini icon={<Wand2 size={20} />} active={activeTab === "copiloto"} onClick={() => setActiveTab("copiloto")} tooltip="Copiloto IA" />
-            <SidebarItemMini icon={<Sparkles size={20} />} active={activeTab === "ai-tools"} onClick={() => setActiveTab("ai-tools")} tooltip="Criar" />
-            <SidebarItemMini icon={<ImageIcon size={20} />} active={activeTab === "gallery"} onClick={() => setActiveTab("gallery")} tooltip="Galeria" />
-            <SidebarItemMini icon={<Users size={20} />} active={activeTab === "clients"} onClick={() => setActiveTab("clients")} tooltip="Clientes" />
-            <SidebarItemMini icon={<CheckSquare size={20} />} active={activeTab === "tasks"} onClick={() => setActiveTab("tasks")} tooltip="Tarefas" />
-            <SidebarItemMini icon={<Calendar size={20} />} active={activeTab === "calendar"} onClick={() => setActiveTab("calendar")} tooltip="Agenda" />
-            <SidebarItemMini icon={<MessageSquare size={20} />} active={activeTab === "whatsapp"} onClick={() => setActiveTab("whatsapp")} tooltip="WhatsApp" />
-            <SidebarItemMini icon={<FileText size={20} />} active={activeTab === "notes"} onClick={() => setActiveTab("notes")} tooltip="Notas" />
-          </nav>
-          
-          <div className="w-full px-2 mt-auto pt-4 flex-shrink-0">
-            <SidebarItemMini icon={<Settings size={20} />} active={false} onClick={() => setIsSettingsModalOpen(true)} tooltip="Configurações" />
+        {/* Menu Lateral Expandido Profissional (Desktop) */}
+        <aside className={`hidden ${isDesktopSidebarOpen ? 'lg:flex' : 'lg:hidden'} w-64 bg-[#09090b] border-r border-white/5 flex-col py-5 px-3.5 flex-shrink-0 overflow-y-auto custom-scrollbar h-full justify-between`}>
+          <div className="space-y-6">
+            
+            {/* Seção 1: Criação & IA */}
+            <div className="space-y-1">
+              <p className="px-3 text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-2.5">
+                Criação & Inteligência
+              </p>
+              <SidebarItem
+                icon={<LayoutDashboard size={16} />}
+                label="Início"
+                active={activeTab === "dashboard"}
+                onClick={() => setActiveTab("dashboard")}
+              />
+              <SidebarItem
+                icon={<Layers size={16} />}
+                label="Assistentes Virtuais"
+                active={activeTab === "agents"}
+                onClick={() => setActiveTab("agents")}
+              />
+              <SidebarItem
+                icon={<Wand2 size={16} />}
+                label="Chat com IA"
+                active={activeTab === "copiloto"}
+                onClick={() => setActiveTab("copiloto")}
+              />
+              <SidebarItem
+                icon={<Sparkles size={16} />}
+                label="Gerador de Fotos"
+                active={activeTab === "ai-tools"}
+                onClick={() => setActiveTab("ai-tools")}
+              />
+              <SidebarItem
+                icon={<ImageIcon size={16} />}
+                label="Galeria de Fotos"
+                active={activeTab === "gallery"}
+                onClick={() => setActiveTab("gallery")}
+              />
+            </div>
+
+            {/* Separador sutil */}
+            <div className="h-px bg-white/5 mx-2" />
+
+            {/* Seção 2: Organização & Clientes */}
+            <div className="space-y-1">
+              <p className="px-3 text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-2.5">
+                Organização do Negócio
+              </p>
+              <SidebarItem
+                icon={<Users size={16} />}
+                label="Meus Clientes"
+                active={activeTab === "clients"}
+                onClick={() => setActiveTab("clients")}
+              />
+              <SidebarItem
+                icon={<CheckSquare size={16} />}
+                label="Lista de Tarefas"
+                active={activeTab === "tasks"}
+                onClick={() => setActiveTab("tasks")}
+              />
+              <SidebarItem
+                icon={<Calendar size={16} />}
+                label="Minha Agenda"
+                active={activeTab === "calendar"}
+                onClick={() => setActiveTab("calendar")}
+              />
+              <SidebarItem
+                icon={<MessageSquare size={16} />}
+                label="WhatsApp"
+                active={activeTab === "whatsapp"}
+                onClick={() => setActiveTab("whatsapp")}
+              />
+              <SidebarItem
+                icon={<FileText size={16} />}
+                label="Anotações"
+                active={activeTab === "notes"}
+                onClick={() => setActiveTab("notes")}
+              />
+            </div>
+          </div>
+
+          {/* Rodapé da Sidebar */}
+          <div className="pt-4 border-t border-white/5 space-y-2 shrink-0">
+            {renderCloudSyncStatus()}
+            <SidebarItem
+              icon={<Settings size={16} />}
+              label="Configurações"
+              active={false}
+              onClick={() => setIsSettingsModalOpen(true)}
+            />
+            <button
+              onClick={() => setIsDesktopSidebarOpen(false)}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-500 hover:text-zinc-300 hover:bg-white/5 transition-all w-full mt-2 cursor-pointer"
+            >
+              <div className="w-5 flex justify-center"><ChevronLeft size={16} /></div>
+              <span className="text-xs font-bold tracking-wide">Recolher Menu</span>
+            </button>
           </div>
         </aside>
 
@@ -3468,16 +3580,21 @@ ${textContent}`
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ type: "tween", duration: 0.25 }}
-              className="fixed top-0 left-0 h-full w-72 bg-[#050505] border-r border-white/10 z-50 flex flex-col p-6 lg:hidden"
+              className="fixed top-0 left-0 h-full w-72 bg-zinc-950 border-r border-white/10 z-50 flex flex-col p-6 lg:hidden"
             >
               <div className="flex items-center justify-between mb-6">
                 <div className="text-xl font-bold tracking-tight text-white flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#d4af37] to-[#b8942b] flex items-center justify-center text-zinc-950">
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#c5a880] to-[#ad8330] flex items-center justify-center text-zinc-950 shadow-md">
                     <Layers size={18} />
                   </div>
-                  <span className="font-montserrat font-black text-sm tracking-wider uppercase bg-gradient-to-r from-white to-[#d4af37] bg-clip-text text-transparent">
-                    DESIGNBUILDER
-                  </span>
+                  <div className="flex flex-col">
+                    <span className="font-montserrat font-black text-sm tracking-wider uppercase bg-gradient-to-r from-white via-zinc-200 to-[#c5a880] bg-clip-text text-transparent">
+                      Zion Studio
+                    </span>
+                    <span className="text-[9px] text-zinc-500 font-mono tracking-widest uppercase -mt-0.5">
+                      PAINEL DE TRABALHO
+                    </span>
+                  </div>
                 </div>
                 <button
                   onClick={() => setIsMobileSidebarOpen(false)}
@@ -3490,10 +3607,10 @@ ${textContent}`
               <div className="flex-1 overflow-y-auto space-y-6 custom-scrollbar pr-1">
                 {/* Section: Principal */}
                 <div className="space-y-1.5">
-                  <p className="px-3.5 text-[9px] font-black uppercase tracking-widest text-zinc-600 mb-2">Estúdio Criativo</p>
+                  <p className="px-3.5 text-[9px] font-black uppercase tracking-widest text-zinc-600 mb-2">Criação & Inteligência</p>
                   <SidebarItem
                     icon={<LayoutDashboard size={16} />}
-                    label="Explorar"
+                    label="Início"
                     active={activeTab === "dashboard"}
                     onClick={() => {
                       setActiveTab("dashboard");
@@ -3501,8 +3618,17 @@ ${textContent}`
                     }}
                   />
                   <SidebarItem
+                    icon={<Layers size={16} />}
+                    label="Assistentes Virtuais"
+                    active={activeTab === "agents"}
+                    onClick={() => {
+                      setActiveTab("agents");
+                      setIsMobileSidebarOpen(false);
+                    }}
+                  />
+                  <SidebarItem
                     icon={<Wand2 size={16} />}
-                    label="Copiloto IA"
+                    label="Chat com IA"
                     active={activeTab === "copiloto"}
                     onClick={() => {
                       setActiveTab("copiloto");
@@ -3511,7 +3637,7 @@ ${textContent}`
                   />
                   <SidebarItem
                     icon={<Sparkles size={16} />}
-                    label="Criar com IA"
+                    label="Gerador de Fotos"
                     active={activeTab === "ai-tools"}
                     onClick={() => {
                       setActiveTab("ai-tools");
@@ -3520,7 +3646,7 @@ ${textContent}`
                   />
                   <SidebarItem
                     icon={<ImageIcon size={16} />}
-                    label="Minha Galeria"
+                    label="Galeria de Fotos"
                     active={activeTab === "gallery"}
                     onClick={() => {
                       setActiveTab("gallery");
@@ -3531,10 +3657,10 @@ ${textContent}`
 
                 {/* Section: Workspace */}
                 <div className="space-y-1.5">
-                  <p className="px-3.5 text-[9px] font-black uppercase tracking-widest text-zinc-600 mb-2">Gerenciamento</p>
+                  <p className="px-3.5 text-[9px] font-black uppercase tracking-widest text-zinc-600 mb-2">Organização do Negócio</p>
                   <SidebarItem
                     icon={<Users size={16} />}
-                    label="Clientes"
+                    label="Meus Clientes"
                     active={activeTab === "clients"}
                     onClick={() => {
                       setActiveTab("clients");
@@ -3543,7 +3669,7 @@ ${textContent}`
                   />
                   <SidebarItem
                     icon={<CheckSquare size={16} />}
-                    label="Tarefas (Kanban)"
+                    label="Lista de Tarefas"
                     active={activeTab === "tasks"}
                     onClick={() => {
                       setActiveTab("tasks");
@@ -3552,7 +3678,7 @@ ${textContent}`
                   />
                   <SidebarItem
                     icon={<Calendar size={16} />}
-                    label="Agenda & Pautas"
+                    label="Minha Agenda"
                     active={activeTab === "calendar"}
                     onClick={() => {
                       setActiveTab("calendar");
@@ -3570,7 +3696,7 @@ ${textContent}`
                   />
                   <SidebarItem
                     icon={<FileText size={16} />}
-                    label="Bloco de Notas"
+                    label="Anotações"
                     active={activeTab === "notes"}
                     onClick={() => {
                       setActiveTab("notes");
@@ -3583,10 +3709,10 @@ ${textContent}`
               <div className="border-t border-white/5 pt-4 space-y-3">
                 {typeof window !== "undefined" &&
                 localStorage.getItem("custom_gemini_api_key") ? (
-                  <div className="p-2 bg-[#d4af37]/10 border border-[#d4af37]/20 rounded-xl flex items-center justify-between">
+                  <div className="p-2 bg-[#c5a880]/10 border border-[#c5a880]/20 rounded-xl flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-[#d4af37] animate-pulse" />
-                      <span className="text-xs text-[#d4af37] font-medium">
+                      <span className="w-2 h-2 rounded-full bg-[#c5a880] animate-pulse" />
+                      <span className="text-xs text-[#c5a880] font-medium">
                         Sua API Ativa
                       </span>
                     </div>
@@ -3602,7 +3728,7 @@ ${textContent}`
                   </div>
                 ) : (
                   <div
-                    className="p-2 bg-[#050505] border border-white/5 rounded-xl flex items-center justify-between cursor-pointer"
+                    className="p-2 bg-zinc-950 border border-white/5 rounded-xl flex items-center justify-between cursor-pointer"
                     onClick={() => {
                       setIsSettingsModalOpen(true);
                       setIsMobileSidebarOpen(false);
@@ -3652,7 +3778,7 @@ ${textContent}`
                       referrerPolicy="no-referrer"
                     />
                   ) : (
-                    <div className="w-9 h-9 rounded-full bg-[#d4af37] text-zinc-950 flex items-center justify-center text-xs font-bold uppercase">
+                    <div className="w-9 h-9 rounded-full bg-[#c5a880] text-zinc-950 flex items-center justify-center text-xs font-bold uppercase">
                       {(myProfile?.name || "Zion").substring(0, 2)}
                     </div>
                   )}
@@ -3672,9 +3798,9 @@ ${textContent}`
       </AnimatePresence>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col h-full overflow-hidden bg-[#0b0b0c]">
+      <main className="flex-1 flex flex-col h-full overflow-hidden bg-[#000000]">
         {/* Scrollable Content Area */}
-        <div className={`flex-1 overflow-y-auto flex flex-col ${activeTab === "ai-tools" ? "p-0" : "p-4 sm:p-8"}`}>
+        <div className={`flex-1 overflow-y-auto flex flex-col ${activeTab === "ai-tools" ? "p-0" : "p-4 sm:p-8 pt-6 sm:pt-10"}`}>
               {/* View: Notes & Docs */}
           {activeTab === "notes" && (
             <motion.div
@@ -3684,7 +3810,7 @@ ${textContent}`
             >
               <div className="mb-8">
                 <h1 className="text-xl sm:text-3xl font-bold text-white mb-2 flex items-center gap-2 sm:gap-3">
-                  <FileText className="text-[#d4af37]" size={28} /> Notas & Docs
+                  <FileText className="text-[#c5a880]" size={28} /> Notas & Docs
                 </h1>
                 <p className="text-zinc-400">
                   Armazene e consulte rapidamente briefings, ideias de cópias e
@@ -3693,7 +3819,7 @@ ${textContent}`
               </div>
 
               {savedNotes.length === 0 ? (
-                <div className="text-center py-20 bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 flex flex-col items-center justify-center">
+                <div className="text-center py-20 bg-[#070708] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl flex flex-col items-center justify-center">
                   <FileText className="text-zinc-700 mb-4" size={48} />
                   <p className="text-zinc-400 text-lg font-medium">
                     Nenhuma nota salva ainda.
@@ -3707,10 +3833,10 @@ ${textContent}`
                   {savedNotes.map((note) => (
                     <div
                       key={note.id}
-                      className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 p-8 flex flex-col hover:border-[#d4af37]/20 transition-all shadow-lg hover:shadow-amber-500/5"
+                      className="bg-[#070708] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-4 sm:p-5 lg:p-6 flex flex-col hover:border-[#c5a880]/20 transition-all shadow-lg hover:shadow-amber-500/5"
                     >
                       <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-2 text-[#d4af37] bg-[#d4af37]/10 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider">
+                        <div className="flex items-center gap-2 text-[#c5a880] bg-[#c5a880]/10 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider">
                           <User size={12} />
                           {note.clientName}
                         </div>
@@ -3752,14 +3878,14 @@ ${textContent}`
             >
               <div className="mb-8">
                 <h1 className="text-xl sm:text-3xl font-bold text-white mb-2 flex items-center gap-2 sm:gap-3">
-                  <ImageIcon className="text-[#d4af37]" size={28} /> Galeria de
+                  <ImageIcon className="text-[#c5a880]" size={28} /> Galeria de
                   Cards
                 </h1>
                 <p className="text-zinc-400">Gerencie seus cards gerados.</p>
               </div>
 
               {savedCards.length === 0 ? (
-                <div className="text-center py-20 bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300">
+                <div className="text-center py-20 bg-[#070708] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl">
                   <p className="text-zinc-500">Nenhum card salvo na galeria.</p>
                 </div>
               ) : (
@@ -3767,7 +3893,7 @@ ${textContent}`
                   {savedCards.map((img, idx) => (
                     <div
                       key={idx}
-                      className="relative group bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 overflow-hidden"
+                      className="relative group bg-[#070708] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl overflow-hidden"
                     >
                       <img
                         src={img}
@@ -3775,24 +3901,15 @@ ${textContent}`
                         className="w-full h-auto"
                         referrerPolicy="no-referrer"
                       />
-                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3">
-                        <a
-                          href={img}
-                          download={`zion-card-${idx}.png`}
-                          className="p-2.5 bg-[#d4af37]/15 border border-[#d4af37]/30 text-[#d4af37] rounded-xl hover:bg-[#d4af37]/30 transition-all duration-300 cursor-pointer shadow-lg"
-                          title="Baixar Imagem"
-                        >
-                          <Download size={16} />
-                        </a>
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                         <button
                           onClick={() => {
                             const newCards = savedCards.filter((_, i) => i !== idx);
                             setSavedCards(newCards);
                           }}
-                          className="p-2.5 bg-red-500/15 border border-red-500/30 text-red-400 rounded-xl hover:bg-red-500/30 transition-all duration-300 cursor-pointer shadow-lg"
-                          title="Excluir"
+                          className="p-2 bg-red-500/20 text-red-400 rounded-full hover:bg-red-500/40 transition-colors"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={20} />
                         </button>
                       </div>
                     </div>
@@ -3810,63 +3927,66 @@ ${textContent}`
               className="max-w-6xl mx-auto"
             >
               {/* Header */}
-              <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                  <h1 className="text-xl sm:text-3xl font-bold text-white mb-2 flex items-center gap-2 sm:gap-3">
-                    <Users className="text-[#d4af37] animate-pulse" size={28} />{" "}
-                    Gestão de Clientes
-                  </h1>
-                  <p className="text-zinc-400">
-                    Organize sua carteira de clientes, leads e contratos de
-                    forma centralizada.
-                  </p>
+              <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 border-b border-white/5">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#c5a880]/20 via-[#c5a880]/10 to-transparent border border-[#c5a880]/30 flex items-center justify-center text-[#c5a880] shadow-lg shadow-[#c5a880]/5 shrink-0">
+                    <Users size={22} />
+                  </div>
+                  <div>
+                    <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+                      Gestão de Clientes
+                    </h1>
+                    <p className="text-zinc-400 text-xs mt-0.5">
+                      Organize sua carteira de clientes, leads e contratos de forma centralizada.
+                    </p>
+                  </div>
                 </div>
                 <button
                   onClick={() => openClientModal()}
-                  className="bg-[#d4af37] text-zinc-950 px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-[#d4af37]/80 transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/15"
+                  className="bg-gradient-to-r from-[#c5a880] to-[#b08e58] hover:from-[#d2b68c] hover:to-[#be9b62] text-zinc-950 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all shadow-md shadow-[#c5a880]/10 flex items-center justify-center gap-2 active:scale-95"
                 >
                   <Plus size={16} /> Cadastrar Novo Cliente
                 </button>
               </div>
 
               {/* Client Metrics Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 w-full place-content-center">
-                <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 p-8 min-w-0">
-                  <span className="text-sm font-bold text-white block break-words leading-tight">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 w-full place-content-center">
+                <div className="bg-[#070708] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-4 sm:p-5 min-w-0">
+                  <span className="text-xs sm:text-sm font-bold text-white block break-words leading-tight">
                     Total Carteira
                   </span>
-                  <p className="text-xl sm:text-2xl font-medium text-zinc-400 mt-1 truncate">
+                  <p className="text-xl sm:text-2xl font-bold text-white tracking-tight mt-1 truncate">
                     {clients.length}
                   </p>
                 </div>
-                <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 p-8 min-w-0">
-                  <span className="text-sm font-bold text-white block break-words leading-tight">
+                <div className="bg-[#070708] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-4 sm:p-5 min-w-0">
+                  <span className="text-xs sm:text-sm font-bold text-white block break-words leading-tight">
                     Clientes Ativos
                   </span>
-                  <p className="text-xl sm:text-2xl font-medium text-zinc-400 mt-1 truncate">
+                  <p className="text-xl sm:text-2xl font-bold text-white tracking-tight mt-1 truncate">
                     {clients.filter((c) => c.status === "Ativo").length}
                   </p>
                 </div>
-                <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 p-8 min-w-0">
-                  <span className="text-sm font-bold text-white block break-words leading-tight">
+                <div className="bg-[#070708] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-4 sm:p-5 min-w-0">
+                  <span className="text-xs sm:text-sm font-bold text-white block break-words leading-tight">
                     Em Prospecção
                   </span>
-                  <p className="text-xl sm:text-2xl font-medium text-zinc-400 mt-1 truncate">
+                  <p className="text-xl sm:text-2xl font-bold text-white tracking-tight mt-1 truncate">
                     {clients.filter((c) => c.status === "Prospecção").length}
                   </p>
                 </div>
-                <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 p-8 min-w-0">
-                  <span className="text-sm font-bold text-white block break-words leading-tight">
+                <div className="bg-[#070708] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-4 sm:p-5 min-w-0">
+                  <span className="text-xs sm:text-sm font-bold text-white block break-words leading-tight">
                     Faturamento Previsto (MRR)
                   </span>
-                  <p className="text-xl sm:text-2xl font-medium text-zinc-400 mt-1 truncate">
+                  <p className="text-xl sm:text-2xl font-bold text-white tracking-tight mt-1 truncate">
                     R$ {mrr.toLocaleString("pt-BR")}
                   </p>
                 </div>
               </div>
 
               {/* CRM Filters Bar */}
-              <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 p-4 rounded-2xl shadow-lg shadow-black/30 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="bg-[#070708] border border-white/5 p-4 rounded-xl mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex flex-1 items-center gap-2">
                   <div className="relative w-full max-w-md">
                     <Search
@@ -3878,7 +3998,7 @@ ${textContent}`
                       placeholder="Buscar por nome, nicho ou contato..."
                       value={clientSearch}
                       onChange={(e) => setClientSearch(e.target.value)}
-                      className="w-full bg-[#050505] border border-white/10 rounded-lg py-2 pl-10 pr-4 text-xs focus:outline-none focus:border-[#d4af37]/50 text-white placeholder:text-zinc-600 transition-all"
+                      className="w-full bg-zinc-950 border border-white/10 rounded-lg py-2 pl-10 pr-4 text-xs focus:outline-none focus:border-[#c5a880]/50 text-white placeholder:text-zinc-600 transition-all"
                     />
                   </div>
                   {clientSearch && (
@@ -3891,7 +4011,7 @@ ${textContent}`
                   )}
                 </div>
 
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
+                <div className="flex items-center gap-2 overflow-x-auto py-3 px-1.5 my-1.5 scrollbar-none">
                   {[
                     { label: "Todos", value: "todos" },
                     { label: "Ativos", value: "Ativo" },
@@ -3901,10 +4021,10 @@ ${textContent}`
                     <button
                       key={btn.value}
                       onClick={() => setClientFilterStatus(btn.value)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+                      className={`px-3.5 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all my-0.5 ${
                         clientFilterStatus === btn.value
-                          ? "bg-[#d4af37] text-zinc-950 shadow-md shadow-amber-500/10"
-                          : "bg-[#050505] text-zinc-400 hover:text-white hover:bg-zinc-800"
+                          ? "bg-[#c5a880] text-zinc-950 shadow-md shadow-amber-500/10 font-bold"
+                          : "bg-zinc-950 text-zinc-400 hover:text-white hover:bg-zinc-800"
                       }`}
                     >
                       {btn.label}
@@ -3914,7 +4034,7 @@ ${textContent}`
               </div>
 
               {/* Table wrapper */}
-              <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 overflow-x-auto shadow-xl">
+              <div className="bg-[#070708] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl overflow-x-auto shadow-xl">
                 {filteredClients.length === 0 ? (
                   <div className="p-12 text-center">
                     <div className="w-12 h-12 bg-zinc-800 rounded-full flex items-center justify-center text-zinc-600 mx-auto mb-4">
@@ -3931,7 +4051,7 @@ ${textContent}`
                 ) : (
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="bg-black/35 border-b border-white/5">
+                      <tr className="bg-zinc-950 border-b border-white/5">
                         <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-zinc-400">
                           Cliente
                         </th>
@@ -3942,7 +4062,7 @@ ${textContent}`
                           Contato
                         </th>
                         <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-zinc-400">
-                          Mensalidade
+                          Valor / Mensalidade
                         </th>
                         <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-zinc-400">
                           Vencimento
@@ -3974,7 +4094,7 @@ ${textContent}`
                                   referrerPolicy="no-referrer"
                                 />
                               ) : (
-                                <div className="w-9 h-9 rounded-full bg-zinc-800 border border-white/5 flex items-center justify-center text-[#d4af37] font-bold text-sm">
+                                <div className="w-9 h-9 rounded-full bg-zinc-800 border border-white/5 flex items-center justify-center text-[#c5a880] font-bold text-sm">
                                   {client.name.charAt(0)}
                                 </div>
                               )}
@@ -4011,7 +4131,7 @@ ${textContent}`
                                 client.paymentStatus === "Em dia"
                                   ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/10"
                                   : client.paymentStatus === "Pendente"
-                                    ? "bg-[#d4af37]/15 text-[#d4af37] border border-[#d4af37]/10"
+                                    ? "bg-[#c5a880]/15 text-[#c5a880] border border-[#c5a880]/10"
                                     : "bg-red-500/15 text-red-400 border border-red-500/10"
                               }`}
                             >
@@ -4034,7 +4154,7 @@ ${textContent}`
                           <td className="px-6 py-4 text-right">
                             <button
                               onClick={() => openClientModal(client)}
-                              className="bg-white/[0.02] border border-white/5 text-zinc-300 hover:bg-[#d4af37] hover:text-zinc-950 font-semibold text-xs px-3 py-1.5 rounded-lg transition-all duration-300 cursor-pointer"
+                              className="bg-zinc-800 text-zinc-300 hover:bg-[#c5a880] hover:text-zinc-950 font-bold text-xs px-3 py-1.5 rounded-lg transition-all"
                             >
                               Editar
                             </button>
@@ -4077,7 +4197,7 @@ ${textContent}`
             >
               <div className="mb-8">
                 <h1 className="text-xl sm:text-3xl font-bold text-white mb-2 flex items-center gap-2 sm:gap-3">
-                  <Sparkles className="text-[#d4af37]" size={28} />{" "}
+                  <Sparkles className="text-[#c5a880]" size={28} />{" "}
                   Copiloto Zion (Texto)
                 </h1>
                 <p className="text-zinc-400">
@@ -4088,7 +4208,7 @@ ${textContent}`
 
               <div className="grid lg:grid-cols-2 gap-8">
                 {/* Input Section */}
-                <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 p-8 flex flex-col gap-6">
+                <div className="bg-[#070708] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-8 flex flex-col gap-6">
                   <div>
                     <label className="block text-sm font-medium text-zinc-400 mb-2">
                       O que vamos criar hoje?
@@ -4096,7 +4216,7 @@ ${textContent}`
                     <select
                       value={copyType}
                       onChange={(e) => setCopyType(e.target.value)}
-                      className="w-full bg-[#050505]/45 hover:bg-[#050505]/75 border border-white/5 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#d4af37]/40 focus:ring-1 focus:ring-[#d4af37]/15 transition-all duration-300 appearance-none"
+                      className="w-full bg-zinc-950 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#c5a880]/50 transition-colors appearance-none"
                     >
                       <option>Legenda para Instagram</option>
                       <option>Copy para Facebook/Instagram Ads</option>
@@ -4127,14 +4247,14 @@ ${textContent}`
                       value={copyTopic}
                       onChange={(e) => setCopyTopic(e.target.value)}
                       placeholder="Ex: Lançamento de uma nova clínica de estética em São Paulo focada em harmonização facial. O diferencial é o atendimento premium e tecnologia indolor..."
-                      className="w-full flex-1 min-h-[200px] bg-[#050505]/45 hover:bg-[#050505]/75 border border-white/5 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#d4af37]/40 focus:ring-1 focus:ring-[#d4af37]/15 transition-all duration-300 resize-none placeholder:text-zinc-700"
+                      className="w-full flex-1 min-h-[200px] bg-zinc-950 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#c5a880]/50 transition-colors resize-none placeholder:text-zinc-700"
                     />
                   </div>
 
                   <button
                     onClick={handleGenerateCopy}
                     disabled={isGenerating || !copyTopic.trim()}
-                    className="w-full bg-[#d4af37] text-zinc-950 py-3.5 rounded-xl font-bold text-base hover:bg-[#b8942b] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="w-full bg-[#c5a880] text-zinc-950 py-3.5 rounded-xl font-bold text-base hover:bg-[#b0936b] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     {isGenerating ? (
                       <>
@@ -4150,7 +4270,7 @@ ${textContent}`
                 </div>
 
                 {/* Output Section */}
-                <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 p-8 flex flex-col">
+                <div className="bg-[#070708] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-8 flex flex-col">
                   <div className="flex items-center justify-between mb-4">
                     <label className="block text-sm font-medium text-zinc-400">
                       Resultado
@@ -4169,7 +4289,7 @@ ${textContent}`
                           className="text-zinc-400 hover:text-white transition-colors flex items-center gap-1.5 text-sm bg-zinc-800 px-3 py-1.5 rounded-lg"
                         >
                           {copied ? (
-                            <Check size={14} className="text-[#d4af37]" />
+                            <Check size={14} className="text-[#c5a880]" />
                           ) : (
                             <Copy size={14} />
                           )}
@@ -4179,7 +4299,7 @@ ${textContent}`
                     )}
                   </div>
 
-                  <div className="flex-1 bg-[#050505] border border-white/10 rounded-xl p-5 overflow-auto">
+                  <div className="flex-1 bg-zinc-950 border border-white/10 rounded-xl p-5 overflow-auto">
                     {generatedCopy ? (
                       <div className="whitespace-pre-wrap text-zinc-300 text-sm leading-relaxed">
                         {generatedCopy}
@@ -4196,6 +4316,82 @@ ${textContent}`
                     )}
                   </div>
                 </div>
+
+                {/* Freelancers & Equipe Pendentes */}
+                <div className="bg-[#070708] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-4 sm:p-6 lg:col-span-2">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-white">
+                      Contas a Pagar: Equipe & Freelancers
+                    </h3>
+                    <button
+                      onClick={() => openTransactionModal()}
+                      className="text-[#c5a880] hover:text-[#c5a880] text-xs font-bold"
+                    >
+                      + Registrar Custo
+                    </button>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-white/5 text-[10px] uppercase text-zinc-500 font-bold">
+                          <th className="pb-2 font-semibold">Profissional / Serviço</th>
+                          <th className="pb-2 font-semibold">Cliente Vinculado</th>
+                          <th className="pb-2 font-semibold">Data / Vencimento</th>
+                          <th className="pb-2 font-semibold text-right">Valor</th>
+                          <th className="pb-2 font-semibold text-right">Ação</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5">
+                        {transactions
+                          .filter((t) => t.type === "despesa" && t.category === "Freelancers" && t.status === "pendente")
+                          .length === 0 ? (
+                            <tr>
+                              <td colSpan={5} className="py-8 text-center text-xs text-zinc-500">
+                                Nenhum pagamento pendente para freelancers.
+                              </td>
+                            </tr>
+                          ) : (
+                            transactions
+                              .filter((t) => t.type === "despesa" && t.category === "Freelancers" && t.status === "pendente")
+                              .map((t) => (
+                                <tr key={t.id} className="hover:bg-white/[0.01] transition-colors group">
+                                  <td className="py-3 pr-4 text-xs font-semibold text-zinc-100">{t.description}</td>
+                                  <td className="py-3 pr-4 text-xs text-zinc-400">
+                                    {t.client ? (
+                                      <span className="bg-zinc-900 border border-white/5 px-2 py-0.5 rounded text-[10px]">
+                                        {t.client}
+                                      </span>
+                                    ) : (
+                                      "-"
+                                    )}
+                                  </td>
+                                  <td className="py-3 pr-4 text-xs text-zinc-400 font-mono">{t.date.split("-").reverse().join("/")}</td>
+                                  <td className="py-3 pr-4 text-xs font-bold text-red-400 font-mono text-right">
+                                    R$ {t.amount.toLocaleString("pt-BR")}
+                                  </td>
+                                  <td className="py-3 text-right flex items-center justify-end gap-2">
+                                    <button
+                                      onClick={() => openTransactionModal(t)}
+                                      className="text-zinc-500 hover:text-[#c5a880] p-1 transition-colors opacity-0 group-hover:opacity-100 sm:opacity-100"
+                                      title="Editar"
+                                    >
+                                      <Edit2 size={14} />
+                                    </button>
+                                    <button
+                                      onClick={() => handleToggleTransactionStatus(t.id)}
+                                      className="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-zinc-950 px-2 py-1 rounded text-[10px] font-bold transition-colors opacity-0 group-hover:opacity-100 sm:opacity-100"
+                                    >
+                                      Pagar Agora
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
               </div>
             </motion.div>
           )}
@@ -4215,29 +4411,30 @@ ${textContent}`
               className="max-w-6xl mx-auto space-y-4 lg:space-y-5 flex-1 flex flex-col h-full overflow-hidden w-full"
             >
               {/* Header */}
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div>
-                  <h1 className="text-xl sm:text-3xl font-bold text-white mb-2 flex items-center gap-2 sm:gap-3">
-                    <CheckSquare
-                      className="text-[#d4af37] animate-pulse"
-                      size={28}
-                    />{" "}
-                    Painel de Produção
-                  </h1>
-                  <p className="text-zinc-400 text-sm">
-                    Gerencie entregas, posts, campanhas e criativos da agência em tempo real.
-                  </p>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 border-b border-white/5">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#c5a880]/20 via-[#c5a880]/10 to-transparent border border-[#c5a880]/30 flex items-center justify-center text-[#c5a880] shadow-lg shadow-[#c5a880]/5 shrink-0">
+                    <CheckSquare size={22} />
+                  </div>
+                  <div>
+                    <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+                      Painel de Produção
+                    </h1>
+                    <p className="text-zinc-400 text-xs mt-0.5">
+                      Gerencie entregas, posts, campanhas e criativos da agência em tempo real.
+                    </p>
+                  </div>
                 </div>
                 <button
                   onClick={() => openTaskModal()}
-                  className="bg-[#d4af37] text-zinc-950 px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-[#d4af37]/80 transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/15 active:scale-95 self-start md:self-auto"
+                  className="bg-gradient-to-r from-[#c5a880] to-[#b08e58] hover:from-[#d2b68c] hover:to-[#be9b62] text-zinc-950 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all shadow-md shadow-[#c5a880]/10 flex items-center justify-center gap-2 active:scale-95"
                 >
                   <Plus size={16} /> Criar Nova Tarefa
                 </button>
               </div>
 
               {/* Filtering Controls Card */}
-              <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 rounded-2xl p-4 sm:p-5 shadow-lg shadow-black/40 hover:border-white/10 transition-all duration-300 space-y-3.5">
+              <div className="bg-[#070708] border border-white/5 rounded-xl p-4 sm:p-5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] space-y-3.5">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   {/* Search bar */}
                   <div className="relative flex-1 max-w-md w-full">
@@ -4247,7 +4444,7 @@ ${textContent}`
                       placeholder="Buscar por título ou descrição..."
                       value={taskSearch}
                       onChange={(e) => setTaskSearch(e.target.value)}
-                      className="w-full bg-[#050505]/45 hover:bg-[#050505]/75 border border-white/5 rounded-xl pl-9 pr-9 py-1.5 sm:py-2 text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[#d4af37]/45 focus:ring-1 focus:ring-[#d4af37]/15 transition-all duration-300"
+                      className="w-full bg-zinc-950 border border-white/10 rounded-xl pl-9 pr-9 py-1.5 sm:py-2 text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[#c5a880]/50 transition-colors"
                     />
                     {taskSearch && (
                       <button
@@ -4262,14 +4459,14 @@ ${textContent}`
                   {/* View Switcher Controls */}
                   <div className="flex items-center gap-2 self-stretch sm:self-auto justify-between sm:justify-end">
                     <span className="text-[11px] text-zinc-400 flex items-center gap-1 font-medium whitespace-nowrap">
-                      <Layers size={12} className="text-[#d4af37]" /> Ver por:
+                      <Layers size={12} className="text-[#c5a880]" /> Ver por:
                     </span>
-                    <div className="bg-[#050505] p-0.5 rounded-lg border border-white/5 flex shrink-0">
+                    <div className="bg-zinc-950 p-2 my-1 rounded-xl border border-white/10 flex shrink-0 items-center gap-1.5">
                       <button
                         onClick={() => setTaskViewMode("kanban")}
-                        className={`px-2.5 py-1 rounded-md text-[10px] sm:text-xs font-bold transition-all ${
+                        className={`px-3.5 py-2 rounded-lg text-[10px] sm:text-xs font-bold transition-all ${
                           taskViewMode === "kanban"
-                            ? "bg-[#d4af37] text-zinc-950 shadow-md shadow-amber-500/10"
+                            ? "bg-[#c5a880] text-zinc-950 shadow-md shadow-amber-500/10"
                             : "text-zinc-500 hover:text-white"
                         }`}
                       >
@@ -4277,9 +4474,9 @@ ${textContent}`
                       </button>
                       <button
                         onClick={() => setTaskViewMode("client")}
-                        className={`px-2.5 py-1 rounded-md text-[10px] sm:text-xs font-bold transition-all ${
+                        className={`px-3.5 py-2 rounded-lg text-[10px] sm:text-xs font-bold transition-all ${
                           taskViewMode === "client"
-                            ? "bg-[#d4af37] text-zinc-950 shadow-md shadow-amber-500/10"
+                            ? "bg-[#c5a880] text-zinc-950 shadow-md shadow-amber-500/10"
                             : "text-zinc-500 hover:text-white"
                         }`}
                       >
@@ -4290,18 +4487,18 @@ ${textContent}`
                 </div>
 
                 {/* Horizontal Client Filter Chips */}
-                <div className="space-y-1.5 pt-1.5 border-t border-white/[0.03]">
+                <div className="space-y-2 pt-3 border-t border-white/[0.03]">
                   <div className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-zinc-500 font-bold px-0.5">
-                    <Filter size={10} className="text-[#d4af37]" />
+                    <Filter size={10} className="text-[#c5a880]" />
                     Filtrar por Cliente:
                   </div>
-                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 scrollbar-none max-w-full">
+                  <div className="flex items-center gap-2 overflow-x-auto py-3 px-1.5 my-1 scrollbar-none max-w-full">
                     <button
                       onClick={() => setTaskClientFilter("all")}
                       className={`px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold whitespace-nowrap transition-all border ${
                         taskClientFilter === "all"
-                          ? "bg-[#d4af37]/10 border-[#d4af37] text-[#d4af37] shadow-sm shadow-amber-500/5"
-                          : "bg-[#050505] border-white/5 text-zinc-400 hover:text-white hover:border-white/10"
+                          ? "bg-[#c5a880]/10 border-[#c5a880] text-[#c5a880] shadow-sm shadow-amber-500/5"
+                          : "bg-zinc-950 border-white/5 text-zinc-400 hover:text-white hover:border-white/10"
                       }`}
                     >
                       Todos ({tasks.length})
@@ -4311,8 +4508,8 @@ ${textContent}`
                       onClick={() => setTaskClientFilter("none")}
                       className={`px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold whitespace-nowrap transition-all border ${
                         taskClientFilter === "none"
-                          ? "bg-[#d4af37]/10 border-[#d4af37] text-[#d4af37] shadow-sm shadow-amber-500/5"
-                          : "bg-[#050505] border-white/5 text-zinc-400 hover:text-white hover:border-white/10"
+                          ? "bg-[#c5a880]/10 border-[#c5a880] text-[#c5a880] shadow-sm shadow-amber-500/5"
+                          : "bg-zinc-950 border-white/5 text-zinc-400 hover:text-white hover:border-white/10"
                       }`}
                     >
                       Sem Cliente ({tasks.filter(t => !t.client || t.client.trim() === "").length})
@@ -4326,8 +4523,8 @@ ${textContent}`
                           onClick={() => setTaskClientFilter(clientName)}
                           className={`px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold whitespace-nowrap transition-all border ${
                             taskClientFilter === clientName
-                              ? "bg-[#d4af37]/10 border-[#d4af37] text-[#d4af37] shadow-sm shadow-amber-500/5"
-                              : "bg-[#050505] border-white/5 text-zinc-400 hover:text-white hover:border-white/10"
+                              ? "bg-[#c5a880]/10 border-[#c5a880] text-[#c5a880] shadow-sm shadow-amber-500/5"
+                              : "bg-zinc-950 border-white/5 text-zinc-400 hover:text-white hover:border-white/10"
                           }`}
                         >
                           {clientName} ({totalForThisClient})
@@ -4342,13 +4539,13 @@ ${textContent}`
               {taskViewMode === "kanban" && (
                 <div className="grid md:grid-cols-3 gap-4 lg:gap-6 flex-1 min-h-0 pb-2">
                   {/* To Do Column */}
-                  <div className="bg-[#0a0a0c]/40 backdrop-blur-md border border-white/5 shadow-lg shadow-black/30 rounded-2xl p-4 lg:p-5 flex flex-col min-h-0 h-[450px] md:h-auto md:max-h-[calc(100vh-270px)] hover:border-white/10 transition-all duration-300">
+                  <div className="bg-[#070708] rounded-xl p-4 lg:p-5 border border-white/5 shadow-xl flex flex-col min-h-0 h-[450px] md:h-auto md:max-h-[calc(100vh-270px)]">
                     <div className="flex items-center justify-between px-1 pb-3 shrink-0">
                       <h3 className="font-semibold text-zinc-300 flex items-center gap-2 text-sm">
                         <span className="w-2.5 h-2.5 rounded-full bg-zinc-500"></span>{" "}
                         A Fazer
                       </h3>
-                      <span className="text-xs bg-[#050505] text-zinc-400 px-2.5 py-0.5 rounded-full font-bold">
+                      <span className="text-xs bg-zinc-950 text-zinc-400 px-2.5 py-0.5 rounded-full font-bold">
                         {filteredTasks.filter((t) => t.status === "todo").length}
                       </span>
                     </div>
@@ -4373,13 +4570,13 @@ ${textContent}`
                   </div>
 
                   {/* Doing Column */}
-                  <div className="bg-[#0a0a0c]/40 backdrop-blur-md border border-white/5 shadow-lg shadow-black/30 rounded-2xl p-4 lg:p-5 flex flex-col min-h-0 h-[450px] md:h-auto md:max-h-[calc(100vh-270px)] hover:border-white/10 transition-all duration-300">
+                  <div className="bg-[#070708] rounded-xl p-4 lg:p-5 border border-white/5 shadow-xl flex flex-col min-h-0 h-[450px] md:h-auto md:max-h-[calc(100vh-270px)]">
                     <div className="flex items-center justify-between px-1 pb-3 shrink-0">
                       <h3 className="font-semibold text-zinc-300 flex items-center gap-2 text-sm">
                         <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse"></span>{" "}
                         Em Produção
                       </h3>
-                      <span className="text-xs bg-[#050505] text-zinc-400 px-2.5 py-0.5 rounded-full font-bold">
+                      <span className="text-xs bg-zinc-950 text-zinc-400 px-2.5 py-0.5 rounded-full font-bold">
                         {filteredTasks.filter((t) => t.status === "doing").length}
                       </span>
                     </div>
@@ -4404,13 +4601,13 @@ ${textContent}`
                   </div>
 
                   {/* Done Column */}
-                  <div className="bg-[#0a0a0c]/40 backdrop-blur-md border border-white/5 shadow-lg shadow-black/30 rounded-2xl p-4 lg:p-5 flex flex-col min-h-0 h-[450px] md:h-auto md:max-h-[calc(100vh-270px)] hover:border-white/10 transition-all duration-300">
+                  <div className="bg-[#070708] rounded-xl p-4 lg:p-5 border border-white/5 shadow-xl flex flex-col min-h-0 h-[450px] md:h-auto md:max-h-[calc(100vh-270px)]">
                     <div className="flex items-center justify-between px-1 pb-3 shrink-0">
                       <h3 className="font-semibold text-zinc-300 flex items-center gap-2 text-sm">
                         <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>{" "}
                         Concluído
                       </h3>
-                      <span className="text-xs bg-[#050505] text-zinc-400 px-2.5 py-0.5 rounded-full font-bold">
+                      <span className="text-xs bg-zinc-950 text-zinc-400 px-2.5 py-0.5 rounded-full font-bold">
                         {filteredTasks.filter((t) => t.status === "done").length}
                       </span>
                     </div>
@@ -4440,7 +4637,7 @@ ${textContent}`
               {taskViewMode === "client" && (
                 <div className="space-y-6 flex-1 overflow-y-auto scrollbar-none pb-2 pr-0.5">
                   {Object.keys(tasksByClient).length === 0 ? (
-                    <div className="bg-[#0b0b0c] border border-dashed border-white/5 rounded-xl p-16 text-center text-zinc-500">
+                    <div className="bg-[#070708] border border-dashed border-white/5 rounded-xl p-16 text-center text-zinc-500">
                       Nenhuma tarefa encontrada para os filtros selecionados.
                     </div>
                   ) : (
@@ -4454,25 +4651,25 @@ ${textContent}`
                       return (
                         <div
                           key={clientName}
-                          className="bg-[#0b0b0c] border border-white/5 rounded-xl p-5 shadow-xl hover:border-white/10 transition-colors"
+                          className="bg-[#070708] border border-white/5 rounded-xl p-5 shadow-xl hover:border-white/10 transition-colors"
                         >
                           {/* Client Header Card */}
                           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-white/5 pb-4 mb-5">
                             <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-xl bg-[#d4af37]/10 border border-[#d4af37]/20 flex items-center justify-center text-[#d4af37] font-bold shrink-0">
+                              <div className="w-10 h-10 rounded-xl bg-[#c5a880]/10 border border-[#c5a880]/20 flex items-center justify-center text-[#c5a880] font-bold shrink-0">
                                 {clientName.substring(0, 2).toUpperCase()}
                               </div>
                               <div>
                                 <h3 className="font-bold text-white text-base sm:text-lg flex items-center gap-2">
                                   {clientName}
                                   {clientName === "Sem Cliente" && (
-                                    <span className="text-[10px] bg-[#050505] text-zinc-500 border border-white/5 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                                    <span className="text-[10px] bg-zinc-950 text-zinc-500 border border-white/5 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
                                       Geral
                                     </span>
                                   )}
                                 </h3>
                                 <p className="text-xs text-zinc-400">
-                                  {niche || "Demanda Interna / Geral"} â€¢ {totalClientTasks} {totalClientTasks === 1 ? "tarefa" : "tarefas"}
+                                  {niche || "Demanda Interna / Geral"} • {totalClientTasks} {totalClientTasks === 1 ? "tarefa" : "tarefas"}
                                 </p>
                               </div>
                             </div>
@@ -4481,7 +4678,7 @@ ${textContent}`
                               {/* Progress bar */}
                               <div className="flex flex-col items-end gap-1 shrink-0">
                                 <span className="text-[10px] text-zinc-400 font-bold">{pct}% Concluído</span>
-                                <div className="w-32 h-1.5 bg-[#050505] rounded-full overflow-hidden">
+                                <div className="w-32 h-1.5 bg-zinc-950 rounded-full overflow-hidden">
                                   <div
                                     className="h-full bg-emerald-500 transition-all duration-500"
                                     style={{ width: `${pct}%` }}
@@ -4491,7 +4688,7 @@ ${textContent}`
 
                               {/* Breakdown */}
                               <div className="flex items-center gap-1 text-[9px] font-black tracking-wider uppercase shrink-0">
-                                <span className="bg-[#050505] text-zinc-500 px-2 py-1 rounded-full border border-white/5">
+                                <span className="bg-zinc-950 text-zinc-500 px-2 py-1 rounded-full border border-white/5">
                                   {clientTasks.filter((t) => t.status === "todo").length} TD
                                 </span>
                                 <span className="bg-blue-500/10 text-blue-400 px-2 py-1 rounded-full border border-blue-500/10">
@@ -4589,35 +4786,39 @@ ${textContent}`
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="max-w-6xl mx-auto space-y-8"
+              className="max-w-[1400px] w-full mx-auto space-y-8"
             >
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-white/5">
-                <div>
-                  <h1 className="text-xl sm:text-3xl font-bold text-white flex items-center gap-2 sm:gap-3">
-                    <LayoutDashboard className="text-[#d4af37]" size={28} />{" "}
-                    Dashboard & Finanças
-                  </h1>
-                  <p className="text-zinc-400 text-sm mt-1">
-                    Visão holística da receita recorrente, fluxo de caixa e
-                    faturamento da agência.
-                  </p>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 border-b border-white/5">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#c5a880]/20 via-[#c5a880]/10 to-transparent border border-[#c5a880]/30 flex items-center justify-center text-[#c5a880] shadow-lg shadow-[#c5a880]/5 shrink-0">
+                    <LayoutDashboard size={22} />
+                  </div>
+                  <div>
+                    <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+                      Dashboard & Finanças
+                    </h1>
+                    <p className="text-zinc-400 text-xs mt-0.5">
+                      Visão holística da receita recorrente, fluxo de caixa e faturamento da agência.
+                    </p>
+                  </div>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex items-center gap-3">
                   <button
                     onClick={() => openTransactionModal()}
-                    className="bg-[#d4af37] text-zinc-950 px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#d4af37]/80 transition-colors flex items-center gap-2"
+                    className="bg-gradient-to-r from-[#c5a880] to-[#b08e58] hover:from-[#d2b68c] hover:to-[#be9b62] text-zinc-950 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all shadow-md shadow-[#c5a880]/10 flex items-center justify-center gap-2 active:scale-95"
                   >
-                    <Plus size={16} /> Nova Transação
+                    <Plus size={16} />
+                    <span>Nova Transação</span>
                   </button>
                 </div>
               </div>
 
               {/* Welcome state when empty */}
               {clients.length === 0 && transactions.length === 0 && (
-                <div className="bg-gradient-to-br from-amber-500/10 via-zinc-900 to-zinc-900 border border-[#d4af37]/10 rounded-xl p-6 sm:p-8 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-64 h-64 bg-[#d4af37]/5 rounded-full blur-3xl pointer-events-none" />
+                <div className="bg-gradient-to-br from-amber-500/10 via-zinc-900 to-zinc-900 border border-[#c5a880]/10 rounded-xl p-6 sm:p-8 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-[#c5a880]/5 rounded-full blur-3xl pointer-events-none" />
                   <div className="max-w-2xl relative z-10">
-                    <span className="bg-[#d4af37]/20 text-[#d4af37] text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider inline-block mb-4">
+                    <span className="bg-[#c5a880]/20 text-[#c5a880] text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider inline-block mb-4">
                       Boas-vindas ao Zion!
                     </span>
                     <h2 className="text-xl sm:text-2xl font-bold text-white mb-3">
@@ -4631,7 +4832,7 @@ ${textContent}`
                     <div className="flex flex-wrap gap-3">
                       <button
                         onClick={() => setActiveTab("clients")}
-                        className="bg-[#d4af37] hover:bg-[#d4af37]/80 text-zinc-950 px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-2"
+                        className="bg-[#c5a880] hover:bg-[#c5a880]/80 text-zinc-950 px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-2"
                       >
                         <Users size={16} /> Cadastrar Novo Cliente
                       </button>
@@ -4644,15 +4845,15 @@ ${textContent}`
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="bg-[#d4af37]/10 border border-[#d4af37]/30 rounded-xl p-8 flex items-start gap-4 shadow-lg shadow-amber-500/5"
+                  className="bg-[#c5a880]/10 border border-[#c5a880]/30 rounded-xl p-4 sm:p-6 flex items-start gap-4 shadow-lg shadow-amber-500/5"
                 >
-                  <div className="bg-[#d4af37]/20 p-2 rounded-lg text-[#d4af37] shrink-0 mt-0.5">
+                  <div className="bg-[#c5a880]/20 p-2 rounded-lg text-[#c5a880] shrink-0 mt-0.5">
                     <Bell size={20} />
                   </div>
                   <div>
                     <h3 className="text-white font-bold text-sm sm:text-base flex items-center gap-2">
                       Faturas próximas do vencimento
-                      <span className="bg-[#d4af37] text-zinc-950 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider">
+                      <span className="bg-[#c5a880] text-zinc-950 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider">
                         {pendingInvoicesExpiringSoon.length} Cliente(s)
                       </span>
                     </h3>
@@ -4667,127 +4868,120 @@ ${textContent}`
               )}
 
               {/* KPI Cards Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 md:gap-6 w-full place-content-center">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 w-full">
                 {/* Card 1: MRR */}
-                <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 p-8 sm:p-5 hover:border-white/10 transition-colors relative overflow-hidden group min-w-0">
-                  <div className="absolute top-0 left-0 w-1.5 h-full bg-[#d4af37]" />
-                  <div className="flex justify-between items-start text-zinc-400 mb-2 sm:mb-3">
-                    <span className="text-sm font-bold text-white block break-words leading-tight mb-1 pr-2">
-                      Recorrência (MRR)
-                    </span>
-                    <Wallet size={18} className="text-[#d4af37] shrink-0" />
+                <div className="bg-[#070708] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-5 hover:border-white/10 transition-colors relative overflow-hidden group min-w-0 flex flex-col justify-between">
+                  <div className="absolute top-0 left-0 w-1.5 h-full bg-[#c5a880]" />
+                  <div>
+                    <div className="flex justify-between items-center text-zinc-400 mb-2 gap-2">
+                      <span className="text-xs sm:text-sm font-semibold text-zinc-300 leading-tight">
+                        Recorrência (MRR)
+                      </span>
+                      <Wallet size={18} className="text-[#c5a880] shrink-0" />
+                    </div>
+                    <h3 className="text-lg sm:text-xl xl:text-2xl font-black text-white tracking-tight whitespace-nowrap overflow-hidden">
+                      R$ {mrr.toLocaleString("pt-BR")}
+                    </h3>
                   </div>
-                  <h3 className="text-xl sm:text-2xl font-medium text-zinc-400 truncate">
-                    R$ {mrr.toLocaleString("pt-BR")}
-                  </h3>
-                  <div className="flex items-start sm:items-center gap-1.5 text-[10px] sm:text-xs text-emerald-400 mt-2">
-                    <TrendingUp size={12} className="shrink-0 mt-0.5 sm:mt-0" />
-                    <span className="break-words leading-tight">
-                      Calculado de{" "}
-                      {clients.filter((c) => c.status === "Ativo").length}{" "}
-                      clientes ativos
+                  <div className="flex items-center gap-1.5 text-[11px] text-emerald-400 mt-3 pt-2 border-t border-white/5">
+                    <TrendingUp size={12} className="shrink-0" />
+                    <span className="leading-tight text-zinc-400">
+                      Calculado de <strong className="text-white">{clients.filter((c) => c.status === "Ativo").length}</strong> ativos
                     </span>
                   </div>
                 </div>
 
                 {/* Card 2: Recebimentos */}
-                <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 p-8 sm:p-5 hover:border-white/10 transition-colors relative overflow-hidden min-w-0">
+                <div className="bg-[#070708] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-5 hover:border-white/10 transition-colors relative overflow-hidden min-w-0 flex flex-col justify-between">
                   <div className="absolute top-0 left-0 w-1.5 h-full bg-emerald-500" />
-                  <div className="flex justify-between items-start text-zinc-400 mb-2 sm:mb-3">
-                    <span className="text-sm font-bold text-white block break-words leading-tight mb-1 pr-2">
-                      Receitas do Mês
-                    </span>
-                    <TrendingUp
-                      size={18}
-                      className="text-emerald-500 shrink-0"
-                    />
+                  <div>
+                    <div className="flex justify-between items-center text-zinc-400 mb-2 gap-2">
+                      <span className="text-xs sm:text-sm font-semibold text-zinc-300 leading-tight">
+                        Receitas do Mês
+                      </span>
+                      <TrendingUp size={18} className="text-emerald-500 shrink-0" />
+                    </div>
+                    <h3 className="text-lg sm:text-xl xl:text-2xl font-black text-white tracking-tight whitespace-nowrap overflow-hidden">
+                      R$ {totalReceitas.toLocaleString("pt-BR")}
+                    </h3>
                   </div>
-                  <h3 className="text-xl sm:text-2xl font-medium text-zinc-400 truncate">
-                    R$ {totalReceitas.toLocaleString("pt-BR")}
-                  </h3>
-                  <div className="flex items-start sm:items-center gap-1.5 text-[10px] sm:text-xs text-emerald-400 mt-2">
-                    <ArrowUpRight
-                      size={12}
-                      className="shrink-0 mt-0.5 sm:mt-0"
-                    />
-                    <span className="break-words leading-tight">
+                  <div className="flex items-center gap-1.5 text-[11px] text-emerald-400 mt-3 pt-2 border-t border-white/5">
+                    <ArrowUpRight size={12} className="shrink-0" />
+                    <span className="leading-tight text-zinc-400">
                       Em dia / Quitadas
                     </span>
                   </div>
                 </div>
 
                 {/* Card 3: A Receber */}
-                <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 p-8 sm:p-5 hover:border-white/10 transition-colors relative overflow-hidden min-w-0">
+                <div className="bg-[#070708] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-5 hover:border-white/10 transition-colors relative overflow-hidden min-w-0 flex flex-col justify-between">
                   <div className="absolute top-0 left-0 w-1.5 h-full bg-violet-500" />
-                  <div className="flex justify-between items-start text-zinc-400 mb-2 sm:mb-3">
-                    <span className="text-sm font-bold text-white block break-words leading-tight mb-1 pr-2">
-                      A Receber
-                    </span>
-                    <Clock
-                      size={18}
-                      className="text-violet-500 shrink-0"
-                    />
+                  <div>
+                    <div className="flex justify-between items-center text-zinc-400 mb-2 gap-2">
+                      <span className="text-xs sm:text-sm font-semibold text-zinc-300 leading-tight">
+                        A Receber
+                      </span>
+                      <Clock size={18} className="text-violet-500 shrink-0" />
+                    </div>
+                    <h3 className="text-lg sm:text-xl xl:text-2xl font-black text-white tracking-tight whitespace-nowrap overflow-hidden">
+                      R$ {totalAReceber.toLocaleString("pt-BR")}
+                    </h3>
                   </div>
-                  <h3 className="text-xl sm:text-2xl font-medium text-zinc-400 truncate">
-                    R$ {totalAReceber.toLocaleString("pt-BR")}
-                  </h3>
-                  <div className="flex items-start sm:items-center gap-1.5 text-[10px] sm:text-xs text-violet-400 mt-2">
-                    <Clock
-                      size={12}
-                      className="shrink-0 mt-0.5 sm:mt-0"
-                    />
-                    <span className="break-words leading-tight">
-                      Faturas e serviços pendentes
+                  <div className="flex items-center gap-1.5 text-[11px] text-violet-400 mt-3 pt-2 border-t border-white/5">
+                    <Clock size={12} className="shrink-0" />
+                    <span className="leading-tight text-zinc-400">
+                      Serviços pendentes
                     </span>
                   </div>
                 </div>
 
-                {/* Card 3: Despesas */}
-                <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 p-8 sm:p-5 hover:border-white/10 transition-colors relative overflow-hidden min-w-0">
+                {/* Card 4: Despesas */}
+                <div className="bg-[#070708] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-5 hover:border-white/10 transition-colors relative overflow-hidden min-w-0 flex flex-col justify-between">
                   <div className="absolute top-0 left-0 w-1.5 h-full bg-red-500" />
-                  <div className="flex justify-between items-start text-zinc-400 mb-2 sm:mb-3">
-                    <span className="text-sm font-bold text-white block break-words leading-tight mb-1 pr-2">
-                      Despesas / Custos
-                    </span>
-                    <TrendingDown size={18} className="text-red-500 shrink-0" />
+                  <div>
+                    <div className="flex justify-between items-center text-zinc-400 mb-2 gap-2">
+                      <span className="text-xs sm:text-sm font-semibold text-zinc-300 leading-tight">
+                        Despesas / Custos
+                      </span>
+                      <TrendingDown size={18} className="text-red-500 shrink-0" />
+                    </div>
+                    <h3 className="text-lg sm:text-xl xl:text-2xl font-black text-white tracking-tight whitespace-nowrap overflow-hidden">
+                      R$ {totalDespesas.toLocaleString("pt-BR")}
+                    </h3>
                   </div>
-                  <h3 className="text-xl sm:text-2xl font-medium text-zinc-400 truncate">
-                    R$ {totalDespesas.toLocaleString("pt-BR")}
-                  </h3>
-                  <div className="flex items-start sm:items-center gap-1.5 text-[10px] sm:text-xs text-red-400 mt-2">
-                    <ArrowDownRight
-                      size={12}
-                      className="shrink-0 mt-0.5 sm:mt-0"
-                    />
-                    <span className="break-words leading-tight">
-                      Ferramentas, ads e freelancers
+                  <div className="flex items-center gap-1.5 text-[11px] text-red-400 mt-3 pt-2 border-t border-white/5">
+                    <ArrowDownRight size={12} className="shrink-0" />
+                    <span className="leading-tight text-zinc-400">
+                      Ferramentas & Custos
                     </span>
                   </div>
                 </div>
 
-                {/* Card 4: Saldo */}
-                <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 p-8 sm:p-5 hover:border-white/10 transition-colors relative overflow-hidden min-w-0">
+                {/* Card 5: Saldo */}
+                <div className="bg-[#070708] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-5 hover:border-white/10 transition-colors relative overflow-hidden min-w-0 flex flex-col justify-between">
                   <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-500" />
-                  <div className="flex justify-between items-start text-zinc-400 mb-2 sm:mb-3">
-                    <span className="text-sm font-bold text-white block break-words leading-tight mb-1 pr-2">
-                      Lucro Líquido
-                    </span>
-                    <Clock size={18} className="text-blue-400 shrink-0" />
+                  <div>
+                    <div className="flex justify-between items-center text-zinc-400 mb-2 gap-2">
+                      <span className="text-xs sm:text-sm font-semibold text-zinc-300 leading-tight">
+                        Lucro Líquido
+                      </span>
+                      <Clock size={18} className="text-blue-400 shrink-0" />
+                    </div>
+                    <h3
+                      className={`text-lg sm:text-xl xl:text-2xl font-black tracking-tight whitespace-nowrap overflow-hidden ${liquidIncome >= 0 ? "text-white" : "text-red-400"}`}
+                    >
+                      R$ {liquidIncome.toLocaleString("pt-BR")}
+                    </h3>
                   </div>
-                  <h3
-                    className={`text-xl sm:text-2xl font-medium truncate ${liquidIncome >= 0 ? "text-zinc-400" : "text-red-400"}`}
-                  >
-                    R$ {liquidIncome.toLocaleString("pt-BR")}
-                  </h3>
-                  <div className="flex flex-wrap items-center gap-1.5 text-[10px] sm:text-xs mt-2 text-zinc-500">
+                  <div className="flex items-center gap-1.5 text-[11px] mt-3 pt-2 border-t border-white/5">
                     <span
                       className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${liquidIncome >= 0 ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"}`}
                     >
-                      {liquidIncome >= 0 ? "Rentável" : "Déficit"}
+                      {totalReceitas > 0
+                        ? `${Math.round((liquidIncome / totalReceitas) * 100)}% margem`
+                        : "0% margem"}
                     </span>
-                    <span className="break-words leading-tight">
-                      Margem líquida saudável
-                    </span>
+                    <span className="text-zinc-500">resultado líquido</span>
                   </div>
                 </div>
               </div>
@@ -4795,7 +4989,7 @@ ${textContent}`
               {/* Chart Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* SVG Line Chart */}
-                <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 p-8 lg:col-span-2">
+                <div className="bg-[#070708] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-4 sm:p-6 lg:col-span-2">
                   <div className="flex items-center justify-between mb-6">
                     <div>
                       <h3 className="text-sm font-bold uppercase tracking-wider text-white">
@@ -4808,7 +5002,7 @@ ${textContent}`
                     </div>
                     <div className="flex gap-4 text-xs">
                       <div className="flex items-center gap-1.5">
-                        <span className="w-3 h-3 bg-[#d4af37] rounded-full inline-block" />
+                        <span className="w-3 h-3 bg-[#c5a880] rounded-full inline-block" />
                         <span className="text-zinc-400">Receitas</span>
                       </div>
                       <div className="flex items-center gap-1.5">
@@ -4819,7 +5013,7 @@ ${textContent}`
                   </div>
 
                   {/* Responsive Vector Chart */}
-                  <div className="w-full h-64 sm:h-80 bg-[#050505]/40 rounded-2xl border border-white/5 p-4 relative flex items-center justify-center">
+                  <div className="w-full h-64 sm:h-80 bg-zinc-950 rounded-xl border border-white/5 p-4 relative flex items-center justify-center">
                     <svg
                       className="w-full h-full overflow-visible"
                       viewBox="0 0 500 240"
@@ -5057,7 +5251,7 @@ ${textContent}`
                     </svg>
 
                     {/* Tooltip dynamic overlay */}
-                    <div className="absolute top-2 right-2 bg-[#0b0b0c] border border-white/10 rounded-xl p-3 text-xs text-zinc-300 backdrop-blur-md shadow-xl transition-all w-52">
+                    <div className="absolute top-2 right-2 bg-[#070708] border border-white/10 rounded-xl p-3 text-xs text-zinc-300 backdrop-blur-md shadow-xl transition-all w-52">
                       {hoveredPointIndex !== null ? (
                         <div>
                           <p className="font-bold text-white text-xs tracking-wider uppercase">
@@ -5066,7 +5260,7 @@ ${textContent}`
                           <div className="mt-1.5 space-y-1">
                             <div className="flex justify-between items-center">
                               <span className="flex items-center gap-1.5 text-zinc-400">
-                                <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37]" />
+                                <span className="w-1.5 h-1.5 rounded-full bg-[#c5a880]" />
                                 Receitas
                               </span>
                               <span className="font-bold font-mono text-white">
@@ -5107,7 +5301,7 @@ ${textContent}`
                           <p className="font-bold text-white flex items-center gap-1.5">
                             <Sparkles
                               size={12}
-                              className="text-[#d4af37] animate-pulse"
+                              className="text-[#c5a880] animate-pulse"
                             />
                             Relatório Dinâmico
                           </p>
@@ -5137,7 +5331,7 @@ ${textContent}`
                 </div>
 
                 {/* Distribution of Despesas */}
-                <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 p-8">
+                <div className="bg-[#070708] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-4 sm:p-6">
                   <h3 className="text-sm font-bold uppercase tracking-wider text-white mb-4">
                     Divisão de Custos
                   </h3>
@@ -5146,7 +5340,7 @@ ${textContent}`
                       {
                         name: "Ferramentas de IA & SaaS",
                         key: "Ferramentas",
-                        color: "bg-[#d4af37]",
+                        color: "bg-[#c5a880]",
                       },
                       {
                         name: "Freelancers & Produção",
@@ -5181,7 +5375,7 @@ ${textContent}`
                               R$ {value} ({pct}%)
                             </span>
                           </div>
-                          <div className="w-full h-1.5 bg-[#050505] rounded-full overflow-hidden">
+                          <div className="w-full h-1.5 bg-zinc-950 rounded-full overflow-hidden">
                             <div
                               className={`h-full ${cat.color}`}
                               style={{ width: `${pct}%` }}
@@ -5203,14 +5397,14 @@ ${textContent}`
               {/* Transactions & Billing lists */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Ledger / Transactions List */}
-                <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 p-8">
+                <div className="bg-[#070708] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-4 sm:p-6">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-sm font-bold uppercase tracking-wider text-white">
                       Transações Recentes
                     </h3>
                     <button
                       onClick={() => openTransactionModal()}
-                      className="text-[#d4af37] hover:text-[#d4af37] text-xs font-bold"
+                      className="text-[#c5a880] hover:text-[#c5a880] text-xs font-bold"
                     >
                       + Lançar manual
                     </button>
@@ -5220,7 +5414,7 @@ ${textContent}`
                     {transactions.map((t) => (
                       <div
                         key={t.id}
-                        className="p-3 bg-black/20 border border-white/5 hover:border-white/10 rounded-2xl transition-all duration-300 flex flex-col sm:flex-row sm:items-center justify-between gap-2 transition-colors"
+                        className="p-3 bg-zinc-950 border border-white/5 hover:border-white/10 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 transition-colors"
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           <div
@@ -5234,7 +5428,7 @@ ${textContent}`
                             </p>
                             <div className="flex items-center gap-2 mt-0.5 text-xs text-zinc-500 font-medium flex-wrap">
                               <span>{t.category}</span>
-                              <span>â€¢</span>
+                              <span>•</span>
                               <span className="font-mono">{t.date}</span>
                             </div>
                           </div>
@@ -5261,6 +5455,13 @@ ${textContent}`
                             )}
                           </button>
                           <button
+                            onClick={() => openTransactionModal(t)}
+                            className="text-zinc-600 hover:text-[#c5a880] transition-colors p-1"
+                            title="Editar"
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                          <button
                             onClick={() => handleDeleteTransaction(t.id)}
                             className="text-zinc-600 hover:text-red-400 transition-colors p-1"
                             title="Remover"
@@ -5274,7 +5475,7 @@ ${textContent}`
                 </div>
 
                 {/* Client Billing Health Board */}
-                <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 p-8">
+                <div className="bg-[#070708] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-4 sm:p-6">
                   <h3 className="text-sm font-bold uppercase tracking-wider text-white mb-4">
                     Vencimentos e Cobrança de Clientes
                   </h3>
@@ -5285,7 +5486,7 @@ ${textContent}`
                       .map((c) => (
                         <div
                           key={c.id}
-                          className="p-3 bg-[#050505] border border-white/5 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                          className="p-3 bg-zinc-950 border border-white/5 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                         >
                           <div className="min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
@@ -5297,7 +5498,7 @@ ${textContent}`
                                   c.paymentStatus === "Em dia"
                                     ? "bg-emerald-500/10 text-emerald-400"
                                     : c.paymentStatus === "Pendente"
-                                      ? "bg-[#d4af37]/10 text-[#d4af37]"
+                                      ? "bg-[#c5a880]/10 text-[#c5a880]"
                                       : "bg-red-500/10 text-red-400"
                                 }`}
                               >
@@ -5325,7 +5526,7 @@ ${textContent}`
                                 // Fast link: record transaction from client
                                 const newTx: Transaction = {
                                   id: Date.now(),
-                                  description: `Mensalidade recebida: ${c.name}`,
+                                  description: `${(!c.paymentType || c.paymentType === "Mensal") ? "Mensalidade" : c.paymentType === "Projeto" ? "Pagamento de projeto" : "Pagamento por entrega"} recebido: ${c.name}`,
                                   type: "receita",
                                   amount: c.planValue || 0,
                                   date: new Date().toISOString().split("T")[0],
@@ -5353,7 +5554,7 @@ ${textContent}`
                               }}
                               className="bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-xs font-bold px-2.5 py-1.5 rounded-lg transition-colors"
                             >
-                              Receber Mensalidade
+                              {(!c.paymentType || c.paymentType === "Mensal") ? "Receber Mensalidade" : c.paymentType === "Projeto" ? "Receber Pagamento" : "Receber Pagamento (Entrega)"}
                             </button>
                           ) : (
                             <span className="text-xs text-emerald-500/70 flex items-center gap-1 font-semibold">
@@ -5413,7 +5614,7 @@ ${textContent}`
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-4 border-b border-white/5">
                     <div>
                       <h1 className="text-xl sm:text-3xl font-bold text-white flex items-center gap-2 sm:gap-3">
-                        <Calendar className="text-[#d4af37]" size={28} />{" "}
+                        <Calendar className="text-[#c5a880]" size={28} />{" "}
                         Calendário & Agenda
                       </h1>
                       <p className="text-zinc-400 text-sm mt-1">
@@ -5437,10 +5638,10 @@ ${textContent}`
                             {isGcalSyncing ? (
                               <Loader2
                                 size={14}
-                                className="animate-spin text-[#d4af37]"
+                                className="animate-spin text-[#c5a880]"
                               />
                             ) : (
-                              <RefreshCw size={14} className="text-[#d4af37]" />
+                              <RefreshCw size={14} className="text-[#c5a880]" />
                             )}
                             Sincronizar
                           </button>
@@ -5465,7 +5666,7 @@ ${textContent}`
                             `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-25`,
                           )
                         }
-                        className="bg-[#d4af37] text-zinc-950 px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#d4af37]/80 transition-colors flex items-center gap-2"
+                        className="bg-[#c5a880] text-zinc-950 px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#c5a880]/80 transition-colors flex items-center gap-2"
                       >
                         <Plus size={16} /> Agendar Compromisso
                       </button>
@@ -5474,7 +5675,7 @@ ${textContent}`
 
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Calendar Matrix layout */}
-                    <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 p-8 lg:col-span-2">
+                    <div className="bg-[#070708] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-8 lg:col-span-2">
                       <div className="flex items-center justify-between mb-6">
                         <h2 className="text-lg font-bold text-white flex items-center gap-2 font-mono">
                           {monthNames[currentMonth]} {currentYear}
@@ -5489,7 +5690,7 @@ ${textContent}`
                                 setCurrentMonth(currentMonth - 1);
                               }
                             }}
-                            className="p-1.5 bg-[#050505] border border-white/5 text-zinc-400 hover:text-white rounded-lg hover:border-white/10"
+                            className="p-1.5 bg-zinc-950 border border-white/5 text-zinc-400 hover:text-white rounded-lg hover:border-white/10"
                           >
                             <ChevronLeft size={16} />
                           </button>
@@ -5499,7 +5700,7 @@ ${textContent}`
                               setCurrentMonth(5);
                               setCurrentYear(2026);
                             }}
-                            className="px-2 py-1 text-xs bg-[#050505] border border-white/5 text-zinc-400 hover:text-white rounded-lg"
+                            className="px-2 py-1 text-xs bg-zinc-950 border border-white/5 text-zinc-400 hover:text-white rounded-lg"
                           >
                             Hoje
                           </button>
@@ -5512,7 +5713,7 @@ ${textContent}`
                                 setCurrentMonth(currentMonth + 1);
                               }
                             }}
-                            className="p-1.5 bg-[#050505] border border-white/5 text-zinc-400 hover:text-white rounded-lg hover:border-white/10"
+                            className="p-1.5 bg-zinc-950 border border-white/5 text-zinc-400 hover:text-white rounded-lg hover:border-white/10"
                           >
                             <ChevronRight size={16} />
                           </button>
@@ -5540,7 +5741,7 @@ ${textContent}`
                             return (
                               <div
                                 key={`empty-${idx}`}
-                                className="aspect-square bg-[#050505] rounded-xl"
+                                className="aspect-square bg-zinc-950 rounded-xl"
                               />
                             );
                           }
@@ -5558,14 +5759,14 @@ ${textContent}`
                               onClick={() =>
                                 openEventModal(undefined, dayString)
                               }
-                              className={`aspect-square p-2 bg-[#050505] border rounded-xl flex flex-col justify-between hover:bg-zinc-800/40 cursor-pointer transition-colors relative group ${
+                              className={`aspect-square p-2 bg-zinc-950 border rounded-xl flex flex-col justify-between hover:bg-zinc-800/40 cursor-pointer transition-colors relative group ${
                                 isToday
-                                  ? "border-[#d4af37] bg-[#d4af37]/5"
+                                  ? "border-[#c5a880] bg-[#c5a880]/5"
                                   : "border-white/5"
                               }`}
                             >
                               <span
-                                className={`text-xs font-bold font-mono ${isToday ? "text-[#d4af37]" : "text-zinc-400"}`}
+                                className={`text-xs font-bold font-mono ${isToday ? "text-[#c5a880]" : "text-zinc-400"}`}
                               >
                                 {day}
                               </span>
@@ -5580,7 +5781,7 @@ ${textContent}`
                                     }}
                                     className={`px-1 py-0.5 rounded text-[8px] font-bold truncate ${
                                       e.type === "post"
-                                        ? "bg-[#d4af37]/15 text-[#d4af37]"
+                                        ? "bg-[#c5a880]/15 text-[#c5a880]"
                                         : e.type === "reuniao"
                                           ? "bg-blue-500/15 text-blue-400"
                                           : "bg-purple-500/15 text-purple-400"
@@ -5593,7 +5794,7 @@ ${textContent}`
                               </div>
 
                               {/* Quick add Indicator show on hover */}
-                              <span className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 text-[9px] text-[#d4af37] font-bold transition-opacity">
+                              <span className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 text-[9px] text-[#c5a880] font-bold transition-opacity">
                                 +
                               </span>
                             </div>
@@ -5603,7 +5804,7 @@ ${textContent}`
                     </div>
 
                     {/* Sidebar events logger */}
-                    <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 shadow-lg shadow-black/40 rounded-2xl hover:border-white/10 transition-all duration-300 p-8 flex flex-col justify-between h-full min-h-[400px]">
+                    <div className="bg-[#070708] border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-8 flex flex-col justify-between h-full min-h-[400px]">
                       <div>
                         <div className="flex items-center justify-between mb-4 pb-2 border-b border-white/5">
                           <h3 className="text-sm font-bold uppercase tracking-wider text-white">
@@ -5624,13 +5825,13 @@ ${textContent}`
                               <div
                                 key={e.id}
                                 onClick={() => openEventModal(e)}
-                                className="p-3 bg-[#050505] border border-white/5 rounded-xl hover:border-white/10 transition-colors cursor-pointer group"
+                                className="p-3 bg-zinc-950 border border-white/5 rounded-xl hover:border-white/10 transition-colors cursor-pointer group"
                               >
                                 <div className="flex justify-between items-start">
                                   <span
                                     className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
                                       e.type === "post"
-                                        ? "bg-[#d4af37]/10 text-[#d4af37]"
+                                        ? "bg-[#c5a880]/10 text-[#c5a880]"
                                         : e.type === "reuniao"
                                           ? "bg-blue-500/10 text-blue-400"
                                           : "bg-purple-500/10 text-purple-400"
@@ -5646,14 +5847,14 @@ ${textContent}`
                                     {e.date} às {e.time}
                                   </span>
                                 </div>
-                                <h4 className="text-sm font-bold text-zinc-100 mt-2 group-hover:text-[#d4af37] transition-colors">
+                                <h4 className="text-sm font-bold text-zinc-100 mt-2 group-hover:text-[#c5a880] transition-colors">
                                   {e.title}
                                 </h4>
                                 <p className="text-xs text-zinc-500 mt-1 font-semibold">
                                   {e.clientName}
                                 </p>
                                 {e.description && (
-                                  <p className="text-xs text-zinc-400 mt-1.5 line-clamp-2 leading-relaxed bg-[#050505] p-1.5 rounded">
+                                  <p className="text-xs text-zinc-400 mt-1.5 line-clamp-2 leading-relaxed bg-zinc-950 p-1.5 rounded">
                                     {e.description}
                                   </p>
                                 )}
@@ -5666,7 +5867,7 @@ ${textContent}`
                       <div className="mt-6 pt-4 border-t border-white/5">
                         <div className="flex gap-2 text-[10px] text-zinc-400 justify-center">
                           <span className="flex items-center gap-1">
-                            <span className="w-2 h-2 rounded bg-[#d4af37]" />{" "}
+                            <span className="w-2 h-2 rounded bg-[#c5a880]" />{" "}
                             Postagem
                           </span>
                           <span className="flex items-center gap-1">
@@ -5696,12 +5897,12 @@ ${textContent}`
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-[#0b0b0c] border border-white/10 rounded-xl p-8 sm:p-6 w-full max-w-2xl shadow-2xl max-h-[92vh] overflow-y-auto flex flex-col"
+              className="bg-[#070708] border border-white/10 rounded-xl p-8 sm:p-6 w-full max-w-2xl shadow-2xl max-h-[92vh] overflow-y-auto flex flex-col"
             >
               <div className="flex items-center justify-between mb-6 pb-3 border-b border-white/5">
                 <div>
                   <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                    <Users size={22} className="text-[#d4af37]" />
+                    <Users size={22} className="text-[#c5a880]" />
                     {editingClient
                       ? "Editar Cadastro do Cliente"
                       : "Cadastrar Novo Cliente"}
@@ -5722,7 +5923,7 @@ ${textContent}`
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
                 {/* Coluna 1: Informações Cadastrais */}
                 <div className="space-y-4">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#d4af37] font-mono">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#c5a880] font-mono">
                     1. Dados do Cliente
                   </h3>
 
@@ -5747,7 +5948,7 @@ ${textContent}`
                       onChange={(e) =>
                         setClientForm({ ...clientForm, name: e.target.value })
                       }
-                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#d4af37]/50 focus:ring-1 focus:ring-amber-500/20"
+                      className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 focus:ring-1 focus:ring-amber-500/20"
                       placeholder="Ex: Dr. Silva (Odonto)"
                     />
                   </div>
@@ -5775,7 +5976,7 @@ ${textContent}`
                       onChange={(e) =>
                         setClientForm({ ...clientForm, niche: e.target.value })
                       }
-                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#d4af37]/50 focus:ring-1 focus:ring-amber-500/20"
+                      className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 focus:ring-1 focus:ring-amber-500/20"
                       placeholder="Ex: Odontologia"
                     />
                   </div>
@@ -5793,7 +5994,7 @@ ${textContent}`
                           contact: e.target.value,
                         })
                       }
-                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#d4af37]/50 focus:ring-1 focus:ring-amber-500/20 font-mono"
+                      className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 focus:ring-1 focus:ring-amber-500/20 font-mono"
                       placeholder="Ex: (11) 99999-9999"
                     />
                   </div>
@@ -5803,13 +6004,13 @@ ${textContent}`
                     <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase">
                       Foto de Perfil do Cliente
                     </label>
-                    <div className="bg-[#050505] border border-white/5 rounded-xl p-3 space-y-3">
+                    <div className="bg-zinc-950 border border-white/5 rounded-xl p-3 space-y-3">
                       <div className="flex items-center gap-3">
                         {clientForm.avatarUrl ? (
                           <img
                             src={clientForm.avatarUrl}
                             alt="Visualização"
-                            className="w-12 h-12 rounded-full object-cover border border-[#d4af37]/50"
+                            className="w-12 h-12 rounded-full object-cover border border-[#c5a880]/50"
                             referrerPolicy="no-referrer"
                           />
                         ) : (
@@ -5874,7 +6075,7 @@ ${textContent}`
                               }
                               className={`w-8 h-8 rounded-full overflow-hidden border flex-shrink-0 transition-all ${
                                 clientForm.avatarUrl === url
-                                  ? "border-[#d4af37] scale-110 ring-2 ring-amber-500/20"
+                                  ? "border-[#c5a880] scale-110 ring-2 ring-amber-500/20"
                                   : "border-white/10 hover:border-white/30"
                               }`}
                             >
@@ -5894,14 +6095,39 @@ ${textContent}`
 
                 {/* Coluna 2: Dados Financeiros e Contrato */}
                 <div className="space-y-4">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#d4af37] font-mono">
+                                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#c5a880] font-mono">
                     2. Valores & Faturamento
                   </h3>
-
+                  <div className="mb-4">
+                    <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase">Tipo de Faturamento</label>
+                    <div className="flex bg-zinc-950 p-1 rounded-xl border border-white/10">
+                      <button
+                        type="button"
+                        onClick={() => setClientForm({ ...clientForm, paymentType: "Mensal" })}
+                        className={`flex-1 text-xs py-1.5 rounded-lg transition-colors ${(!clientForm.paymentType || clientForm.paymentType === "Mensal") ? "bg-[#c5a880]/20 text-[#c5a880] font-bold" : "text-zinc-500 hover:text-zinc-300"}`}
+                      >
+                        Recorrente (Mensal)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setClientForm({ ...clientForm, paymentType: "Projeto" })}
+                        className={`flex-1 text-xs py-1.5 rounded-lg transition-colors ${clientForm.paymentType === "Projeto" ? "bg-[#c5a880]/20 text-[#c5a880] font-bold" : "text-zinc-500 hover:text-zinc-300"}`}
+                      >
+                        Projeto Avulso
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setClientForm({ ...clientForm, paymentType: "Sob Demanda" })}
+                        className={`flex-1 text-xs py-1.5 rounded-lg transition-colors ${clientForm.paymentType === "Sob Demanda" ? "bg-[#c5a880]/20 text-[#c5a880] font-bold" : "text-zinc-500 hover:text-zinc-300"}`}
+                      >
+                        Por Entrega
+                      </button>
+                    </div>
+                  </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase">
-                        Mensalidade (R$)
+                        {(!clientForm.paymentType || clientForm.paymentType === "Mensal") ? "Mensalidade (R$)" : clientForm.paymentType === "Projeto" ? "Valor do Projeto (R$)" : "Valor por Entrega (R$)"}
                       </label>
                       <input
                         type="number"
@@ -5912,13 +6138,13 @@ ${textContent}`
                             planValue: Number(e.target.value),
                           })
                         }
-                        className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#d4af37]/50 focus:ring-1 focus:ring-amber-500/20 font-mono"
+                        className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 focus:ring-1 focus:ring-amber-500/20 font-mono"
                         placeholder="Ex: 1500"
                       />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase">
-                        Próximo Vencimento
+                        {(!clientForm.paymentType || clientForm.paymentType === "Mensal") ? "Próximo Vencimento" : clientForm.paymentType === "Projeto" ? "Previsão / Vencimento" : "Próxima Entrega"}
                       </label>
                       <input
                         type="date"
@@ -5929,7 +6155,7 @@ ${textContent}`
                             dueDate: e.target.value,
                           })
                         }
-                        className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#d4af37]/50 focus:ring-1 focus:ring-amber-500/20 font-mono"
+                        className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 focus:ring-1 focus:ring-amber-500/20 font-mono"
                       />
                     </div>
                   </div>
@@ -5948,7 +6174,7 @@ ${textContent}`
                               .value as Client["paymentStatus"],
                           })
                         }
-                        className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#d4af37]/50 focus:ring-1 focus:ring-amber-500/20"
+                        className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 focus:ring-1 focus:ring-amber-500/20"
                       >
                         <option value="Em dia">ðŸŸ¢ Em dia</option>
                         <option value="Pendente">ðŸŸ¡ Pendente</option>
@@ -5968,7 +6194,7 @@ ${textContent}`
                             startDate: e.target.value,
                           })
                         }
-                        className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#d4af37]/50 focus:ring-1 focus:ring-amber-500/20"
+                        className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 focus:ring-1 focus:ring-amber-500/20"
                       />
                     </div>
                   </div>
@@ -5984,7 +6210,7 @@ ${textContent}`
                           status: e.target.value as Client["status"],
                         })
                       }
-                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#d4af37]/50 focus:ring-1 focus:ring-amber-500/20"
+                      className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 focus:ring-1 focus:ring-amber-500/20"
                     >
                       <option value="Ativo">Ativo</option>
                       <option value="Inativo">Inativo</option>
@@ -6001,7 +6227,7 @@ ${textContent}`
                       onChange={(e) =>
                         setClientForm({ ...clientForm, notes: e.target.value })
                       }
-                      className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#d4af37]/50 focus:ring-1 focus:ring-amber-500/20 min-h-[70px]"
+                      className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 focus:ring-1 focus:ring-amber-500/20 min-h-[70px]"
                       placeholder="Notas adicionais, contatos de emergência, senhas compartilhadas..."
                     />
                   </div>
@@ -6042,7 +6268,7 @@ ${textContent}`
                                 plan: e.target.value,
                               })
                             }
-                            className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#d4af37]/50"
+                            className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50"
                             placeholder="Ex: Plano Intermediário"
                           />
                         </div>
@@ -6058,7 +6284,7 @@ ${textContent}`
                                 planDetails: e.target.value,
                               })
                             }
-                            className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#d4af37]/50 min-h-[60px]"
+                            className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 min-h-[60px]"
                             placeholder="Ex: 2 Posts/semana, 1 Reels/semana, R$ 200 tráfego embutido..."
                           />
                         </div>
@@ -6072,7 +6298,7 @@ ${textContent}`
                 savedNotes.filter((n) => n.clientName === editingClient.name)
                   .length > 0 && (
                   <div className="mt-6 pt-6 border-t border-white/5">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#d4af37] font-mono flex items-center gap-2 mb-4">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#c5a880] font-mono flex items-center gap-2 mb-4">
                       <FileText size={14} /> Notas & Documentos do Cliente
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -6081,7 +6307,7 @@ ${textContent}`
                         .map((note) => (
                           <div
                             key={note.id}
-                            className="bg-[#050505] border border-white/5 rounded-xl p-8"
+                            className="bg-zinc-950 border border-white/5 rounded-xl p-8"
                           >
                             <div className="flex justify-between items-start mb-2">
                               <h4 className="text-sm font-bold text-white">
@@ -6121,7 +6347,7 @@ ${textContent}`
                   </button>
                   <button
                     onClick={handleSaveClient}
-                    className="bg-[#d4af37] hover:bg-[#d4af37]/80 text-zinc-950 px-5 py-2.5 rounded-xl font-black text-xs transition-all shadow-md shadow-amber-500/15"
+                    className="bg-[#c5a880] hover:bg-[#c5a880]/80 text-zinc-950 px-5 py-2.5 rounded-xl font-black text-xs transition-all shadow-md shadow-amber-500/15"
                   >
                     Gravar Alterações
                   </button>
@@ -6137,12 +6363,12 @@ ${textContent}`
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-[#0b0b0c] border border-white/10 rounded-xl p-8 sm:p-6 w-full max-w-md shadow-2xl flex flex-col"
+              className="bg-[#070708] border border-white/10 rounded-xl p-8 sm:p-6 w-full max-w-md shadow-2xl flex flex-col"
             >
               <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/5">
                 <div>
                   <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                    <Save size={20} className="text-[#d4af37]" />
+                    <Save size={20} className="text-[#c5a880]" />
                     Salvar Nota / Copy
                   </h2>
                   <p className="text-xs text-zinc-500 mt-0.5">
@@ -6165,7 +6391,7 @@ ${textContent}`
                   <select
                     value={noteClient}
                     onChange={(e) => setNoteClient(e.target.value)}
-                    className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#d4af37]/50"
+                    className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50"
                   >
                     <option value="">Selecione o Cliente</option>
                     <option value="Geral (Sem cliente)">
@@ -6186,7 +6412,7 @@ ${textContent}`
                     type="text"
                     value={noteTitle}
                     onChange={(e) => setNoteTitle(e.target.value)}
-                    className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#d4af37]/50"
+                    className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50"
                     placeholder="Ex: Copy para Campanha de Black Friday"
                   />
                 </div>
@@ -6218,7 +6444,7 @@ ${textContent}`
                       setNoteTitle("");
                       alert("Nota salva com sucesso!");
                     }}
-                    className="bg-[#d4af37] text-zinc-950 px-6 py-2 rounded-xl font-bold text-sm hover:bg-[#d4af37]/80 transition-colors shadow-lg shadow-amber-500/10 active:scale-95"
+                    className="bg-[#c5a880] text-zinc-950 px-6 py-2 rounded-xl font-bold text-sm hover:bg-[#c5a880]/80 transition-colors shadow-lg shadow-amber-500/10 active:scale-95"
                   >
                     Salvar
                   </button>
@@ -6234,12 +6460,12 @@ ${textContent}`
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-[#0b0b0c] border border-white/10 rounded-xl p-8 sm:p-6 w-full max-w-md shadow-2xl max-h-[92vh] overflow-y-auto flex flex-col"
+              className="bg-[#070708] border border-white/10 rounded-xl p-8 sm:p-6 w-full max-w-md shadow-2xl max-h-[92vh] overflow-y-auto flex flex-col"
             >
               <div className="flex items-center justify-between mb-6 pb-3 border-b border-white/5">
                 <div>
                   <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                    <User size={20} className="text-[#d4af37]" />
+                    <User size={20} className="text-[#c5a880]" />
                     Configurações da Minha Conta
                   </h2>
                   <p className="text-xs text-zinc-500 mt-0.5">
@@ -6256,16 +6482,16 @@ ${textContent}`
 
               <div className="space-y-5 text-left">
                 {/* Avatar Display & Input */}
-                <div className="flex flex-col items-center gap-4 bg-[#050505] border border-white/5 rounded-xl p-8">
+                <div className="flex flex-col items-center gap-4 bg-zinc-950 border border-white/5 rounded-xl p-8">
                   {myProfile.avatarUrl ? (
                     <img
                       src={myProfile.avatarUrl}
                       alt={myProfile.name}
-                      className="w-20 h-20 rounded-full object-cover border-2 border-[#d4af37]/50 shadow-lg shadow-amber-500/10"
+                      className="w-20 h-20 rounded-full object-cover border-2 border-[#c5a880]/50 shadow-lg shadow-amber-500/10"
                       referrerPolicy="no-referrer"
                     />
                   ) : (
-                    <div className="w-20 h-20 rounded-full bg-[#d4af37] text-zinc-950 flex items-center justify-center text-2xl font-black uppercase">
+                    <div className="w-20 h-20 rounded-full bg-[#c5a880] text-zinc-950 flex items-center justify-center text-2xl font-black uppercase">
                       {myProfile.name.substring(0, 2)}
                     </div>
                   )}
@@ -6329,7 +6555,7 @@ ${textContent}`
                           }
                           className={`w-8 h-8 rounded-full overflow-hidden border transition-all ${
                             myProfile.avatarUrl === url
-                              ? "border-[#d4af37] scale-110"
+                              ? "border-[#c5a880] scale-110"
                               : "border-white/10"
                           }`}
                         >
@@ -6356,7 +6582,7 @@ ${textContent}`
                     onChange={(e) =>
                       setMyProfile({ ...myProfile, name: e.target.value })
                     }
-                    className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#d4af37]/50"
+                    className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50"
                     placeholder="Ex: Equipe Zion"
                   />
                 </div>
@@ -6371,13 +6597,13 @@ ${textContent}`
                     onChange={(e) =>
                       setMyProfile({ ...myProfile, role: e.target.value })
                     }
-                    className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#d4af37]/50"
+                    className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50"
                     placeholder="Ex: Agência Digital"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-[#d4af37] mb-1.5 uppercase flex items-center gap-1.5">
+                  <label className="block text-xs font-semibold text-[#c5a880] mb-1.5 uppercase flex items-center gap-1.5">
                     <Wand2 size={12} /> Chave API Gemini (Opcional)
                   </label>
                   <input
@@ -6389,7 +6615,7 @@ ${textContent}`
                         geminiApiKey: e.target.value,
                       })
                     }
-                    className="w-full bg-[#050505] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#d4af37]/50"
+                    className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50"
                     placeholder="Cole sua API Key do Google AI Studio aqui"
                   />
                   <p className="text-[10px] text-zinc-500 mt-1.5">
@@ -6403,7 +6629,7 @@ ${textContent}`
               <div className="mt-8 pt-4 border-t border-white/5 flex justify-end">
                 <button
                   onClick={() => setIsProfileModalOpen(false)}
-                  className="bg-[#d4af37] hover:bg-[#d4af37]/80 text-zinc-950 px-5 py-2.5 rounded-xl font-black text-xs transition-all shadow-md shadow-amber-500/15"
+                  className="bg-[#c5a880] hover:bg-[#c5a880]/80 text-zinc-950 px-5 py-2.5 rounded-xl font-black text-xs transition-all shadow-md shadow-amber-500/15"
                 >
                   Confirmar Alterações
                 </button>
@@ -6420,7 +6646,7 @@ ${textContent}`
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-[#0b0b0c] border border-white/10 rounded-xl p-8 sm:p-6 w-full max-w-md shadow-2xl max-h-[92vh] overflow-y-auto flex flex-col"
+              className="bg-[#070708] border border-white/10 rounded-xl p-8 sm:p-6 w-full max-w-md shadow-2xl max-h-[92vh] overflow-y-auto flex flex-col"
             >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-white">
@@ -6434,7 +6660,7 @@ ${textContent}`
                 </button>
               </div>
 
-              <div className="flex bg-[#050505] p-1 rounded-xl mb-6">
+              <div className="flex bg-zinc-950 p-1 rounded-xl mb-6">
                 <button
                   onClick={() => setTaskMode('manual')}
                   className={`flex-1 py-2 text-xs font-bold rounded-lg ${
@@ -6449,7 +6675,7 @@ ${textContent}`
                   onClick={() => setTaskMode('ai')}
                   className={`flex-1 py-2 text-xs font-bold rounded-lg ${
                     taskMode === 'ai'
-                      ? 'bg-[#d4af37] text-zinc-950'
+                      ? 'bg-[#c5a880] text-zinc-950'
                       : 'text-zinc-500 hover:text-white'
                   }`}
                 >
@@ -6459,8 +6685,8 @@ ${textContent}`
 
               <div className="space-y-4">
                 {taskMode === 'ai' && !editingTask && (
-                  <div className="bg-[#d4af37]/10 border border-[#d4af37]/20 rounded-xl p-8 mb-4">
-                    <h3 className="text-[#d4af37] text-sm font-bold flex items-center gap-1.5 mb-2">
+                  <div className="bg-[#c5a880]/10 border border-[#c5a880]/20 rounded-xl p-8 mb-4">
+                    <h3 className="text-[#c5a880] text-sm font-bold flex items-center gap-1.5 mb-2">
                       <Sparkles size={14} /> Criação Inteligente com IA
                     </h3>
                     <p className="text-xs text-zinc-400 mb-3">
@@ -6470,7 +6696,7 @@ ${textContent}`
                       value={parseInputText}
                       onChange={(e) => setParseInputText(e.target.value)}
                       placeholder="Descreva a tarefa ou cole anotações..."
-                      className="w-full bg-[#050505] border border-[#d4af37]/20 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#d4af37]/50 text-sm min-h-[60px] resize-none mb-2"
+                      className="w-full bg-zinc-950 border border-[#c5a880]/20 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#c5a880]/50 text-sm min-h-[60px] resize-none mb-2"
                     />
                     <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center w-full">
                       <div className="flex flex-1 items-center gap-2 w-full">
@@ -6486,7 +6712,7 @@ ${textContent}`
                       <button
                         onClick={handleParseTask}
                         disabled={isParsingTask}
-                        className="bg-[#d4af37] text-zinc-950 px-3 py-2 rounded-lg text-xs font-bold hover:bg-[#d4af37]/80 whitespace-nowrap disabled:opacity-50 w-full sm:w-auto"
+                        className="bg-[#c5a880] text-zinc-950 px-3 py-2 rounded-lg text-xs font-bold hover:bg-[#c5a880]/80 whitespace-nowrap disabled:opacity-50 w-full sm:w-auto"
                       >
                         {isParsingTask ? "Analisando..." : "Organizar"}
                       </button>
@@ -6516,7 +6742,7 @@ ${textContent}`
                         onChange={(e) =>
                           setTaskForm({ ...taskForm, title: e.target.value })
                         }
-                        className="w-full bg-[#050505] border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50"
+                        className="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50"
                         placeholder="Ex: Criar roteiro de Reels"
                       />
                     </div>
@@ -6529,7 +6755,7 @@ ${textContent}`
                         onChange={(e) =>
                           setTaskForm({ ...taskForm, client: e.target.value })
                         }
-                        className="w-full bg-[#050505] border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 appearance-none"
+                        className="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 appearance-none"
                       >
                         <option value="">
                           Nenhum / Sem Cliente
@@ -6553,7 +6779,7 @@ ${textContent}`
                         status: e.target.value as Task["status"],
                       })
                     }
-                    className="w-full bg-[#050505] border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 appearance-none"
+                    className="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 appearance-none"
                   >
                     <option value="todo">A Fazer</option>
                     <option value="doing">Em Produção</option>
@@ -6572,7 +6798,7 @@ ${textContent}`
                           hasDeadline: e.target.checked,
                         })
                       }
-                      className="rounded border-zinc-700 bg-[#050505] text-[#d4af37] focus:ring-amber-500/50 focus:ring-offset-0 w-4 h-4"
+                      className="rounded border-zinc-700 bg-zinc-950 text-[#c5a880] focus:ring-amber-500/50 focus:ring-offset-0 w-4 h-4"
                     />
                     <span className="text-sm font-medium text-zinc-300 group-hover:text-white transition-colors">
                       Possui prazo de entrega?
@@ -6643,11 +6869,11 @@ ${textContent}`
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-[#0b0b0c] border border-white/10 rounded-xl p-8 sm:p-6 w-full max-w-md shadow-2xl max-h-[92vh] overflow-y-auto flex flex-col"
+              className="bg-[#070708] border border-white/10 rounded-xl p-8 sm:p-6 w-full max-w-md shadow-2xl max-h-[92vh] overflow-y-auto flex flex-col"
             >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                  <DollarSign className="text-[#d4af37]" size={20} />
+                  <DollarSign className="text-[#c5a880]" size={20} />
                   {editingTransaction ? "Editar Transação" : "Nova Transação"}
                 </h2>
                 <button
@@ -6685,8 +6911,8 @@ ${textContent}`
                         description: e.target.value,
                       })
                     }
-                    className="w-full bg-[#050505] border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 text-sm"
-                    placeholder="Ex: Mensalidade Dr. Silva"
+                    className="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 text-sm"
+                    placeholder={transactionForm.type === "despesa" ? (transactionForm.category === "Freelancers" ? "Ex: Cachê Fotógrafo João - Vídeo 01" : "Ex: Tráfego Google Ads") : "Ex: Pagamento Dr. Silva"}
                   />
                 </div>
 
@@ -6703,7 +6929,7 @@ ${textContent}`
                           type: e.target.value as "receita" | "despesa",
                         })
                       }
-                      className="w-full bg-[#050505] border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 text-sm"
+                      className="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 text-sm"
                     >
                       <option value="receita">Receita (+)</option>
                       <option value="despesa">Despesa (-)</option>
@@ -6722,7 +6948,7 @@ ${textContent}`
                           amount: Number(e.target.value),
                         })
                       }
-                      className="w-full bg-[#050505] border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 text-sm"
+                      className="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 text-sm"
                     />
                   </div>
                 </div>
@@ -6751,7 +6977,7 @@ ${textContent}`
                           status: e.target.value as "pago" | "pendente",
                         })
                       }
-                      className="w-full bg-[#050505] border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 text-sm"
+                      className="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 text-sm"
                     >
                       <option value="pago">Pago</option>
                       <option value="pendente">Pendente</option>
@@ -6772,7 +6998,7 @@ ${textContent}`
                             placeholder="Nova Categoria"
                             value={newCategoryName}
                             onChange={(e) => setNewCategoryName(e.target.value)}
-                            className="flex-1 bg-[#050505]/45 hover:bg-[#050505]/75 border border-white/5 rounded-lg px-2.5 py-1.5 text-white text-xs focus:outline-none focus:border-[#d4af37]/40 focus:ring-1 focus:ring-[#d4af37]/15 transition-all duration-300"
+                            className="flex-1 bg-zinc-950 border border-white/10 rounded-lg px-2.5 py-1.5 text-white text-xs focus:outline-none focus:border-[#c5a880]/50"
                             autoFocus
                           />
                           <button
@@ -6796,7 +7022,7 @@ ${textContent}`
                               setNewCategoryName("");
                               setIsAddingNewCategory(false);
                             }}
-                            className="bg-[#d4af37] hover:bg-[#d4af37]/80 text-zinc-950 text-[10px] font-black px-2.5 py-1.5 rounded-lg transition-colors"
+                            className="bg-[#c5a880] hover:bg-[#c5a880]/80 text-zinc-950 text-[10px] font-black px-2.5 py-1.5 rounded-lg transition-colors"
                           >
                             Add
                           </button>
@@ -6829,7 +7055,7 @@ ${textContent}`
                             });
                           }
                         }}
-                        className="w-full bg-[#050505]/45 hover:bg-[#050505]/75 border border-white/5 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#d4af37]/40 focus:ring-1 focus:ring-[#d4af37]/15 transition-all duration-300 text-sm"
+                        className="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#c5a880]/50 text-sm"
                       >
                         {transactionCategories.map((cat) => (
                           <option key={cat} value={cat}>
@@ -6852,7 +7078,7 @@ ${textContent}`
                           client: e.target.value,
                         })
                       }
-                      className="w-full bg-[#050505] border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 text-sm"
+                      className="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 text-sm"
                     >
                       <option value="">Nenhum</option>
                       {clients.map((c) => (
@@ -6888,7 +7114,7 @@ ${textContent}`
                   </button>
                   <button
                     onClick={handleSaveTransaction}
-                    className="bg-[#d4af37] text-zinc-950 px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#d4af37]/80 transition-colors"
+                    className="bg-[#c5a880] text-zinc-950 px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#c5a880]/80 transition-colors"
                   >
                     Salvar
                   </button>
@@ -6904,11 +7130,11 @@ ${textContent}`
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-[#0b0b0c] border border-white/10 rounded-xl p-8 sm:p-6 w-full max-w-md shadow-2xl max-h-[92vh] overflow-y-auto flex flex-col"
+              className="bg-[#070708] border border-white/10 rounded-xl p-8 sm:p-6 w-full max-w-md shadow-2xl max-h-[92vh] overflow-y-auto flex flex-col"
             >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                  <Calendar className="text-[#d4af37]" size={20} />
+                  <Calendar className="text-[#c5a880]" size={20} />
                   {editingEvent ? "Editar Evento" : "Novo Compromisso"}
                 </h2>
                 <button
@@ -6941,7 +7167,7 @@ ${textContent}`
                     onChange={(e) =>
                       setEventForm({ ...eventForm, title: e.target.value })
                     }
-                    className="w-full bg-[#050505] border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 text-sm"
+                    className="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 text-sm"
                     placeholder="Ex: Reunião Mensal Sispumumc"
                   />
                 </div>
@@ -6968,7 +7194,7 @@ ${textContent}`
                       onChange={(e) =>
                         setEventForm({ ...eventForm, time: e.target.value })
                       }
-                      className="w-full bg-[#050505] border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 text-sm font-mono"
+                      className="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 text-sm font-mono"
                     />
                   </div>
                 </div>
@@ -6989,7 +7215,7 @@ ${textContent}`
                             | "entrega",
                         })
                       }
-                      className="w-full bg-[#050505] border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 text-sm"
+                      className="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 text-sm"
                     >
                       <option value="post">Post ðŸ“</option>
                       <option value="reuniao">Reunião ðŸ¤</option>
@@ -7008,7 +7234,7 @@ ${textContent}`
                           clientName: e.target.value,
                         })
                       }
-                      className="w-full bg-[#050505] border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 text-sm"
+                      className="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 text-sm"
                     >
                       <option value="" disabled>
                         Selecione um cliente
@@ -7034,7 +7260,7 @@ ${textContent}`
                         description: e.target.value,
                       })
                     }
-                    className="w-full bg-[#050505] border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 min-h-[80px] text-sm"
+                    className="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 min-h-[80px] text-sm"
                     placeholder="Ex: Pauta da reunião ou detalhes do post..."
                   />
                 </div>
@@ -7061,7 +7287,7 @@ ${textContent}`
                   </button>
                   <button
                     onClick={handleSaveEvent}
-                    className="bg-[#d4af37] text-zinc-950 px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#d4af37]/80 transition-colors"
+                    className="bg-[#c5a880] text-zinc-950 px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#c5a880]/80 transition-colors"
                   >
                     Salvar
                   </button>
@@ -7132,7 +7358,7 @@ function Select({
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full bg-[#050505] border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/50 appearance-none"
+      className="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/50 appearance-none"
     >
       {options.map((o) => (
         <option key={o} value={o}>
@@ -7158,7 +7384,7 @@ function Toggle({
       onClick={() => onChange(!checked)}
     >
       <div
-        className={`w-10 h-5 rounded-full transition-colors relative ${checked ? "bg-[#d4af37]" : "bg-zinc-800"}`}
+        className={`w-10 h-5 rounded-full transition-colors relative ${checked ? "bg-[#c5a880]" : "bg-zinc-800"}`}
       >
         <div
           className={`absolute top-1 left-1 w-3 h-3 rounded-full bg-white transition-transform ${checked ? "translate-x-5" : "translate-x-0"}`}
@@ -7184,19 +7410,16 @@ function SidebarItemMini({
     <div className="relative group flex justify-center w-full">
       <button
         onClick={onClick}
-        className={`p-3 rounded-xl transition-all duration-300 relative cursor-pointer ${
+        className={`p-3 rounded-xl transition-all ${
           active
-            ? "bg-[#d4af37]/10 text-[#d4af37] border border-[#d4af37]/20 shadow-md shadow-[#d4af37]/5 font-bold scale-105"
-            : "text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.02] border border-transparent"
+            ? "bg-[#c5a880]/15 text-[#c5a880] border border-[#c5a880]/20 font-bold"
+            : "text-zinc-500 hover:text-white hover:bg-white/[0.03] border border-transparent"
         }`}
       >
-        {active && (
-          <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-[#d4af37] rounded-r-full" />
-        )}
         {icon}
       </button>
-      {/* Tooltip on Hover with micro-animation */}
-      <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-[#0a0a0c]/95 backdrop-blur-md border border-white/10 text-white text-[10px] font-bold py-1.5 px-3 rounded-lg opacity-0 pointer-events-none group-hover:opacity-100 group-hover:translate-x-2 transition-all duration-300 z-50 whitespace-nowrap shadow-2xl">
+      {/* Tooltip on Hover */}
+      <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-[#0a0a0a] border border-white/10 text-white text-[10px] font-bold py-1.5 px-3 rounded-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap shadow-xl">
         {tooltip}
       </div>
     </div>
@@ -7217,17 +7440,19 @@ function SidebarItem({
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-300 text-xs font-semibold uppercase tracking-wider cursor-pointer relative ${
+      className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-200 text-xs font-medium tracking-wide group ${
         active
-          ? "bg-[#d4af37]/10 text-[#d4af37] border border-[#d4af37]/20 font-bold scale-[1.02] shadow-md shadow-[#d4af37]/5"
-          : "text-zinc-400 hover:bg-white/[0.02] hover:text-zinc-200 border border-transparent"
+          ? "bg-gradient-to-r from-[#c5a880]/20 to-[#c5a880]/5 text-[#c5a880] border border-[#c5a880]/30 font-semibold shadow-sm"
+          : "text-zinc-400 hover:bg-white/5 hover:text-white border border-transparent"
       }`}
     >
+      <span className={`transition-colors duration-200 ${active ? "text-[#c5a880]" : "text-zinc-500 group-hover:text-zinc-300"}`}>
+        {icon}
+      </span>
+      <span className="truncate">{label}</span>
       {active && (
-        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-[#d4af37] rounded-r-full" />
+        <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#c5a880] shadow-[0_0_8px_#c5a880]" />
       )}
-      <span className={active ? "text-[#d4af37]" : "text-zinc-500 group-hover:text-zinc-350 transition-colors"}>{icon}</span>
-      <span>{label}</span>
     </button>
   );
 }
@@ -7247,14 +7472,14 @@ const TaskCard: React.FC<{
   return (
     <div
       onClick={onClick}
-      className={`bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 p-4 rounded-2xl hover:border-white/10 transition-all duration-300 transition-all cursor-pointer group hover:bg-zinc-800/50 relative overflow-hidden ${
+      className={`bg-[#070708] border p-4 rounded-xl transition-all cursor-pointer group hover:bg-zinc-800/50 relative overflow-hidden ${
         isOverdue
           ? "border-red-500/30 hover:border-red-500/50 shadow-md shadow-red-500/5"
           : "border-white/5 hover:border-white/10"
       }`}
     >
       <div className="flex items-center justify-between gap-2 mb-2">
-        <span className="text-[10px] uppercase font-bold tracking-wider text-[#d4af37] bg-[#d4af37]/10 px-2 py-0.5 rounded">
+        <span className="text-[10px] uppercase font-bold tracking-wider text-[#c5a880] bg-[#c5a880]/10 px-2 py-0.5 rounded">
           {task.client}
         </span>
         <span className="text-[9px] text-zinc-500 font-mono font-medium">
@@ -7277,8 +7502,8 @@ const TaskCard: React.FC<{
               )
             </span>
           ) : (
-            <span className="text-[10px] bg-[#050505] text-zinc-400 border border-white/5 px-2 py-0.5 rounded flex items-center gap-1 font-medium">
-              <Clock size={10} className="text-[#d4af37]/70" /> Prazo:{" "}
+            <span className="text-[10px] bg-zinc-950 text-zinc-400 border border-white/5 px-2 py-0.5 rounded flex items-center gap-1 font-medium">
+              <Clock size={10} className="text-[#c5a880]/70" /> Prazo:{" "}
               {typeof task.dueDate === "string" && task.dueDate.includes("-")
                 ? task.dueDate.split("-").reverse().slice(0, 2).join("/")
                 : task.dueDate}

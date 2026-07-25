@@ -1,179 +1,77 @@
 /**
- * Downloads the original image directly from its base64 representation,
- * preventing any browser canvas compression or pixel loss.
+ * Downloads the original image directly, preventing any browser canvas compression or pixel loss
+ * by fetching the original bytes from the server or utilizing the raw base64 data directly.
  */
 export const downloadImage = (
   base64Data: string,
   formatoSelecionado: string,
   logoConfig?: any,
   typographyConfig?: any,
-  resolution?: string,
-  aspectRatio?: string
+  backgroundColor?: string
 ): Promise<void> => {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     try {
+      const hasBgColor = backgroundColor && backgroundColor !== "transparent";
+
+      // If we don't have a background color to paint, download the original file directly
+      // to ensure 100% identical byte size, quality, and resolution.
+      if (!hasBgColor) {
+        const extension = formatoSelecionado.toLowerCase();
+        const isUrl = base64Data.startsWith("http") || base64Data.startsWith("/");
+        
+        if (isUrl) {
+          try {
+            const res = await fetch(base64Data);
+            const blob = await res.blob();
+            const blobUrl = URL.createObjectURL(blob);
+            
+            const link = document.createElement("a");
+            link.href = blobUrl;
+            link.download = `Zion_Premium_Card_${Date.now()}.${extension}`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(blobUrl);
+            resolve();
+            return;
+          } catch (fetchErr) {
+            console.warn("Direct file fetch failed, falling back to canvas download:", fetchErr);
+          }
+        } else if (base64Data.startsWith("data:")) {
+          const link = document.createElement("a");
+          link.href = base64Data;
+          link.download = `Zion_Premium_Card_${Date.now()}.${extension}`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          resolve();
+          return;
+        }
+      }
+
+      // Fallback or background painting via canvas with maximum 100% quality
       const bgImg = new Image();
       bgImg.crossOrigin = "anonymous";
       bgImg.onload = async () => {
         const canvas = document.createElement("canvas");
-        
-        let targetMax = 1024;
-        const rInput = resolution || "1K";
-        if (rInput === "2K") targetMax = 2048;
-        else if (rInput === "4K") targetMax = 4096;
-        else if (rInput === "8K") targetMax = 7680;
-
-        let w = targetMax;
-        let h = targetMax;
-        const aspect = aspectRatio || "1:1";
-
-        if (aspect === "4:5") {
-          w = Math.round(targetMax * 0.8);
-          h = targetMax;
-        } else if (aspect === "3:4") {
-          w = Math.round(targetMax * 0.75);
-          h = targetMax;
-        } else if (aspect === "9:16") {
-          w = Math.round(targetMax * 0.5625);
-          h = targetMax;
-        } else if (aspect === "16:9") {
-          w = targetMax;
-          h = Math.round(targetMax * 0.5625);
-        } else {
-          const imgRatio = bgImg.naturalWidth / bgImg.naturalHeight;
-          if (imgRatio >= 1) {
-            w = targetMax;
-            h = Math.round(targetMax / imgRatio);
-          } else {
-            h = targetMax;
-            w = Math.round(targetMax * imgRatio);
-          }
-        }
-
-        canvas.width = w;
-        canvas.height = h;
-
+        canvas.width = bgImg.naturalWidth || 1024;
+        canvas.height = bgImg.naturalHeight || 1024;
         const ctx = canvas.getContext("2d");
         if (!ctx) {
           reject(new Error("Could not get canvas context"));
           return;
         }
         
-        // 1. Draw background image
-        ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
-
-
-        
-        if (logoConfig?.useLogo && logoConfig?.logosList && logoConfig?.logosList.length > 0) {
-          const logoImg = new Image();
-          logoImg.crossOrigin = "anonymous";
-          await new Promise<void>((res) => {
-            logoImg.onload = () => {
-              const procCanvas = document.createElement("canvas");
-              procCanvas.width = logoImg.naturalWidth;
-              procCanvas.height = logoImg.naturalHeight;
-              const procCtx = procCanvas.getContext("2d");
-              if (procCtx) {
-                procCtx.drawImage(logoImg, 0, 0);
-                try {
-                  const imgData = procCtx.getImageData(0, 0, procCanvas.width, procCanvas.height);
-                  const data = imgData.data;
-
-                  const hex = logoConfig?.ambienteColor || "#000000";
-                  const c = hex.replace("#", "");
-                  const rBg = parseInt(c.substring(0, 2), 16) || 0;
-                  const gBg = parseInt(c.substring(2, 4), 16) || 0;
-                  const bBg = parseInt(c.substring(4, 6), 16) || 0;
-                  const lum = (0.299 * rBg + 0.587 * gBg + 0.114 * bBg) / 255;
-                  const isDarkBg = lum < 0.45;
-                  const styleMode = logoConfig?.logoStyleOverlay || "original";
-
-                  for (let i = 0; i < data.length; i += 4) {
-                    const r = data[i];
-                    const g = data[i+1];
-                    const b = data[i+2];
-                    const a = data[i+3];
-
-                    // Remove white background with clean feathered alpha keying
-                    const minWhite = 200;
-                    const maxWhite = 255;
-                    const brightness = (r + g + b) / 3;
-                    if (brightness > minWhite) {
-                      const factor = (maxWhite - brightness) / (maxWhite - minWhite);
-                      data[i+3] = Math.round(a * Math.pow(factor, 2));
-                      continue;
-                    }
-
-                    if (data[i+3] > 10) {
-                      if (styleMode === "white") {
-                        data[i] = 255;
-                        data[i+1] = 255;
-                        data[i+2] = 255;
-                      } else if (styleMode === "black") {
-                        data[i] = 0;
-                        data[i+1] = 0;
-                        data[i+2] = 0;
-                      } else if (styleMode === "original" && isDarkBg) {
-                        // Convert dark/black text to white, leaving colorful pixels untouched
-                        const maxVal = Math.max(r, g, b);
-                        const minVal = Math.min(r, g, b);
-                        const saturation = maxVal - minVal;
-                        const brightnessVal = (r + g + b) / 3;
-
-                        if (saturation < 30 && brightnessVal < 140) {
-                          data[i] = 255;
-                          data[i+1] = 255;
-                          data[i+2] = 255;
-                        }
-                      }
-                    }
-                  }
-                  procCtx.putImageData(imgData, 0, 0);
-
-                  const sizePercent = (logoConfig.logoSizeOverlay || 15) / 100;
-                  const maxLogoHeight = canvas.height * sizePercent;
-                  const scale = maxLogoHeight / logoImg.naturalHeight;
-                  const logoWidth = logoImg.naturalWidth * scale;
-                  const logoHeight = logoImg.naturalHeight * scale;
-
-                  const marginX = canvas.width * 0.05;
-                  const marginY = canvas.height * 0.05;
-
-                  let posX = (canvas.width - logoWidth) / 2;
-                  let posY = marginY;
-
-                  const pos = logoConfig.logoPosOverlay || "top_center";
-                  if (pos === "top_left") {
-                    posX = marginX;
-                    posY = marginY;
-                  } else if (pos === "top_right") {
-                    posX = canvas.width - logoWidth - marginX;
-                    posY = marginY;
-                  } else if (pos === "bottom_left") {
-                    posX = marginX;
-                    posY = canvas.height - logoHeight - marginY;
-                  } else if (pos === "bottom_right") {
-                    posX = canvas.width - logoWidth - marginX;
-                    posY = canvas.height - logoHeight - marginY;
-                  }
-
-                  ctx.save();
-                  ctx.drawImage(procCanvas, posX, posY, logoWidth, logoHeight);
-                  ctx.restore();
-                } catch (e) {
-                  console.error("Canvas draw processing failed:", e);
-                }
-              }
-              res();
-            };
-            logoImg.onerror = () => res();
-            logoImg.src = logoConfig.logosList[0].startsWith("data:image/") 
-              ? logoConfig.logosList[0] 
-              : `data:image/png;base64,${logoConfig.logosList[0]}`;
-          });
+        // 1. Draw solid background color if provided
+        if (backgroundColor && backgroundColor !== "transparent") {
+          ctx.fillStyle = backgroundColor;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
 
-        // 2. Output canvas to download trigger
+        // 2. Draw background image (already contains backend-baked logo)
+        ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);        
+        
+        // 3. Output canvas to download trigger
         let extension = formatoSelecionado.toLowerCase();
         let mimeType = "image/png";
         if (extension === "jpeg" || extension === "jpg") {
@@ -182,7 +80,8 @@ export const downloadImage = (
           mimeType = "image/webp";
         }
         
-        const dataUrl = canvas.toDataURL(mimeType, 0.95);
+        // Use 1.0 (maximum quality) to prevent quality degradation during canvas export
+        const dataUrl = canvas.toDataURL(mimeType, 1.0);
         const link = document.createElement("a");
         link.href = dataUrl;
         link.download = `Zion_Premium_Card_${Date.now()}.${extension}`;

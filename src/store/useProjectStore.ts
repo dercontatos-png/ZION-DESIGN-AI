@@ -1,10 +1,13 @@
 import { create } from "zustand";
 import { ProjectConfig, CamadaTexto, EstiloReferencia } from "../types/designBuilder";
+import { useClientStore } from "./useClientStore";
+import { set as idbSet, get as idbGet } from "idb-keyval";
 
 interface ProjectStoreState extends ProjectConfig {
   galeriaImages: string[];
   activeImageIndex: number;
   isGenerating: boolean;
+  generatingProjectIds: Record<string, boolean>;
   apiStatus: "Online" | "Offline";
   projectsList: { id: string; name: string; config: ProjectConfig; galeria: string[] }[];
   activeProjectId: string | null;
@@ -25,8 +28,10 @@ interface ProjectStoreState extends ProjectConfig {
   removeEstiloVisual: (style: string) => void;
   setEstilosVisuais: (styles: string[]) => void;
   setGaleriaImages: (images: string[] | ((prev: string[]) => string[])) => void;
+  addImagesToProjectGallery: (projectId: string, images: string[]) => boolean;
   setActiveImageIndex: (index: number) => void;
   setIsGenerating: (val: boolean) => void;
+  setIsProjectGenerating: (projectId: string, isGenerating: boolean) => void;
   setApiStatus: (status: "Online" | "Offline") => void;
 
   // Typography Layers Actions
@@ -60,6 +65,7 @@ interface ProjectStoreState extends ProjectConfig {
 }
 
 const defaultConfig: ProjectConfig = {
+  clientId: null,
   tipoPainel: "DESIGNER",
   sujeitoBase64: "",
   desativarSujeito: false,
@@ -102,7 +108,6 @@ const defaultConfig: ProjectConfig = {
   logoPosOverlay: "top_center",
   logoSizeOverlay: 20,
   logoInclusionType: "overlay",
-  logoStyleOverlay: "original",
   sujeitosBase64List: [],
   cenariosBase64List: [],
   tipografiaRefsList: [],
@@ -120,9 +125,11 @@ const defaultConfig: ProjectConfig = {
   estiloVisualCustom: ""
 };
 
+const getFreshDefaultConfig = (): ProjectConfig => JSON.parse(JSON.stringify(defaultConfig));
+
 const saveProjectsToLocalStorage = (list: any[]) => {
   try {
-    localStorage.setItem("zion_project_list_v5", JSON.stringify(list));
+    idbSet("zion_project_list_v5", list).catch(e => console.error("IDB write failed:", e));
   } catch (e) {
     console.error("Local storage write failed:", e);
   }
@@ -133,6 +140,7 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
   galeriaImages: [],
   activeImageIndex: 0,
   isGenerating: false,
+  generatingProjectIds: {},
   apiStatus: "Online",
   projectsList: [],
   activeProjectId: null,
@@ -315,19 +323,71 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
     return { galeriaImages: nextImages, projectsList: updatedProjects };
   }),
 
+  addImagesToProjectGallery: (projectId, images) => {
+    let isActive = false;
+    set((state) => {
+      isActive = state.activeProjectId === projectId;
+      const updatedProjects = state.projectsList.map((proj) => {
+        if (proj.id === projectId) {
+          const nextGaleria = [...images, ...(proj.galeria || [])];
+          return { ...proj, galeria: nextGaleria };
+        }
+        return proj;
+      });
+      saveProjectsToLocalStorage(updatedProjects);
+
+      if (isActive) {
+        const nextGaleria = [...images, ...state.galeriaImages];
+        return {
+          projectsList: updatedProjects,
+          galeriaImages: nextGaleria,
+          activeImageIndex: 0
+        };
+      }
+      return { projectsList: updatedProjects };
+    });
+    return isActive;
+  },
+
   setActiveImageIndex: (index) => set({ activeImageIndex: index }),
-  setIsGenerating: (val) => set({ isGenerating: val }),
+
+  setIsGenerating: (val) => set((state) => {
+    const currentId = state.activeProjectId;
+    if (!currentId) return { isGenerating: val };
+    const updatedMap = { ...state.generatingProjectIds, [currentId]: val };
+    if (!val) delete updatedMap[currentId];
+    return {
+      isGenerating: val,
+      generatingProjectIds: updatedMap
+    };
+  }),
+
+  setIsProjectGenerating: (projectId, isGenerating) => set((state) => {
+    const updatedMap = { ...state.generatingProjectIds, [projectId]: isGenerating };
+    if (!isGenerating) delete updatedMap[projectId];
+
+    const isCurrentGenerating = state.activeProjectId ? !!updatedMap[state.activeProjectId] : false;
+
+    return {
+      generatingProjectIds: updatedMap,
+      isGenerating: isCurrentGenerating
+    };
+  }),
+
   setApiStatus: (status) => set({ apiStatus: status }),
 
   createProject: () => {
     const id = `proj_${Date.now()}`;
     const name = `Projeto ${new Date().toLocaleDateString("pt-BR")}`;
+    const freshConfig = getFreshDefaultConfig();
     const newProj = {
       id,
       name,
-      config: { ...defaultConfig },
+      config: freshConfig,
       galeria: []
     };
+
+    useClientStore.getState().setActiveClient(null);
 
     set((state) => {
       const newList = [newProj, ...state.projectsList];
@@ -335,7 +395,7 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
       return {
         projectsList: newList,
         activeProjectId: id,
-        ...defaultConfig,
+        ...freshConfig,
         galeriaImages: [],
         activeImageIndex: 0,
         lastGeneratedPrompt: "",
@@ -349,31 +409,41 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
       const newList = state.projectsList.filter((p) => p.id !== id);
       saveProjectsToLocalStorage(newList);
 
+      const updatedMap = { ...state.generatingProjectIds };
+      delete updatedMap[id];
+
       let nextActiveId = state.activeProjectId;
       let nextStateUpdates = {};
 
       if (state.activeProjectId === id) {
         if (newList.length > 0) {
           nextActiveId = newList[0].id;
+          const targetProj = newList[0];
+          useClientStore.getState().setActiveClient(targetProj.config.clientId || null);
           nextStateUpdates = {
             activeProjectId: nextActiveId,
-            ...newList[0].config,
-            galeriaImages: newList[0].galeria,
-            activeImageIndex: 0
+            ...targetProj.config,
+            galeriaImages: targetProj.galeria || [],
+            activeImageIndex: 0,
+            isGenerating: !!updatedMap[nextActiveId]
           };
         } else {
           nextActiveId = null;
+          const freshConfig = getFreshDefaultConfig();
+          useClientStore.getState().setActiveClient(null);
           nextStateUpdates = {
             activeProjectId: null,
-            ...defaultConfig,
+            ...freshConfig,
             galeriaImages: [],
-            activeImageIndex: 0
+            activeImageIndex: 0,
+            isGenerating: false
           };
         }
       }
 
       return {
         projectsList: newList,
+        generatingProjectIds: updatedMap,
         ...nextStateUpdates
       };
     });
@@ -393,33 +463,40 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
   },
 
   loadProjectById: (id) => {
-    const { projectsList } = get();
+    const { projectsList, generatingProjectIds } = get();
     const proj = projectsList.find((p) => p.id === id);
     if (proj) {
+      useClientStore.getState().setActiveClient(proj.config.clientId || null);
       set({
         activeProjectId: id,
         ...proj.config,
-        galeriaImages: proj.galeria,
-        activeImageIndex: 0
+        galeriaImages: proj.galeria || [],
+        activeImageIndex: 0,
+        isGenerating: !!generatingProjectIds[id]
       });
     }
   },
 
-  initProjectsList: () => {
+  initProjectsList: async () => {
     try {
-      const saved = localStorage.getItem("zion_project_list_v5");
-      if (saved) {
-        const list = JSON.parse(saved);
-        if (list && list.length > 0) {
-          set({
-            projectsList: list,
-            activeProjectId: list[0].id,
-            ...list[0].config,
-            galeriaImages: list[0].galeria,
-            activeImageIndex: 0
-          });
-          return;
+      let list = await idbGet("zion_project_list_v5");
+      if (!list) {
+        const saved = localStorage.getItem("zion_project_list_v5");
+        if (saved) {
+          list = JSON.parse(saved);
         }
+      }
+      
+      if (list && list.length > 0) {
+        useClientStore.getState().setActiveClient(list[0].config?.clientId || null);
+        set({
+          projectsList: list,
+          activeProjectId: list[0].id,
+          ...list[0].config,
+          galeriaImages: list[0].galeria || [],
+          activeImageIndex: 0
+        });
+        return;
       }
     } catch (e) {
       console.error("Error loading project list:", e);

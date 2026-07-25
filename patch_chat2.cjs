@@ -1,29 +1,8 @@
 const fs = require('fs');
 let code = fs.readFileSync('src/components/ChatAssistente.tsx', 'utf8');
 
-const regex = /\[ATENÇÃO DIRETOR CRIATIVO \/ ASSISTENTE\]: O usuário quer que você automatize as configurações de design\.[\s\S]*?Mapeie todas as intenções do usuário \(como "sem sujeito", "foco apenas no fundo", "mude a cor", etc\.\) para esse JSON!`/;
-
-// Because it's within a template literal, we must escape the backticks or just use \`\`\`
-const replacement = `[ATENÇÃO DIRETOR CRIATIVO / ASSISTENTE]: O usuário quer que você automatize as configurações de design. SEMPRE que você responder sugerindo um estilo, cores, ativando ou desativando opções (ex: sujeito, logo, texto, etc.), você DEVE OBRIGATORIAMENTE gerar um bloco JSON no final da sua resposta contendo TODAS as configurações atualizadas. 
-
-Exemplo de formato obrigatório no final da resposta:
-\\\`\\\`\\\`json
-{
-  "desativarSujeito": true,
-  "noPeople": true,
-  "enableTypography": false,
-  "estiloVisualCustom": "Estilo cyberpunk agressivo com neon",
-  "cores": {
-    "ambiente": "#000000",
-    "recorte": "#FF0055",
-    "complementar": "#00FFFF"
-  },
-  "promptCenario": "Fundo noturno escuro com luzes de neon",
-  "promptTipografia": "Fonte sem serifa pesada em branco",
-  "promptDesign": "Alinhamento lateral esquerdo, grandes margens"
-}
-\\\`\\\`\\\`
-Mapeie todas as intenções do usuário (como "sem sujeito", "foco apenas no fundo", "mude a cor", etc.) para esse JSON!\`;`;
-
+const regex = /6\. Se a arte precisa de um fundo\/cenário de referência, mude "useEnvRef": true\./;
+const replacement = `6. Se a arte precisa de um fundo/cenário de referência, mude "useEnvRef": true.
+7. ATENÇÃO (EDições PARCIAIS): Se o usuário estiver fazendo APENAS um AJUSTE em algo que já gerou (ex: "mude a cor para azul" ou "mude o título para Festa"), você DEVE retornar no JSON APENAS as chaves que ele pediu para alterar. NÃO inclua as outras chaves para não sobrescrever a configuração existente. (Ex: não reenvie "camadasTexto" se ele pediu apenas para mudar a cor; apenas retorne a chave de cor).`;
 code = code.replace(regex, replacement);
 fs.writeFileSync('src/components/ChatAssistente.tsx', code);

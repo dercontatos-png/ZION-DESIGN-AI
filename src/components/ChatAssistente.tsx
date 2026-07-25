@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { set as idbSet, get as idbGet } from "idb-keyval";
 import { useProjectStore } from "../store/useProjectStore";
 import { useClientStore } from "../store/useClientStore";
 import {
@@ -23,7 +24,10 @@ import {
   File,
   Check,
   Plus,
-  FolderOpen
+  FolderOpen,
+  Maximize2, Settings,
+  Minimize2,
+  Loader2
 } from "lucide-react";
 
 interface ChatFile {
@@ -56,41 +60,80 @@ interface ChatAssistenteProps {
 
 const assistants: AssistantConfig[] = [
   // Designers / Creators
-  { id: "prompt-extrator", label: "Prompt Extractor", sublabel: "Technical Analyst", desc: "Extrai prompts técnicos de referências visuais.", icon: <Code size={14} />, color: "#b8942b" },
-  { id: "creative-assistant", label: "Assistente Criativo", sublabel: "Creative Assistant", desc: "Ideias para cenários, iluminação e composições.", icon: <Sparkles size={14} />, color: "#d4af37" },
-  { id: "diretor-criativo", label: "Diretor Cr[IA]tivo", sublabel: "Creative Director", desc: "Saia da tela em branco com maestria e torne seu design ainda mais incrível.", icon: <Eye size={14} />, color: "#b8942b" },
-  { id: "analisador-paginas", label: "Analisador de Páginas", sublabel: "Critical Design Analyzer", desc: "Receba opiniões profissionais de uma IA treinada pra extrair seu melhor.", icon: <Search size={14} />, color: "#ffffff" },
+  { id: "gc-tv-specialist", label: "Gerador de Tarjas & GCs (TV)", sublabel: "Especialista em Transmissão", desc: "Crie tarjas, lower-thirds e elementos visuais profissionais para programas, matérias e transmissões ao vivo.", icon: <Zap size={14} />, color: "#38bdf8" },
+  { id: "prompt-extrator", label: "Extrator de Prompts", sublabel: "Analista de Engenharia Visual", desc: "Decodifique a estrutura e os parâmetros técnicos de referências visuais para reprodução exata.", icon: <Code size={14} />, color: "#ad8330" },
+  { id: "creative-assistant", label: "Assistente de Composição", sublabel: "Consultor de Estilo & Iluminação", desc: "Receba direcionamentos conceituais de iluminação, paletas de cores, enquadramento e cenografia.", icon: <Sparkles size={14} />, color: "#d4af37" },
+  { id: "diretor-criativo", label: "Diretor Criativo IA", sublabel: "Direção de Arte & Branding", desc: "Avançe além do bloqueio criativo com orientações estratégicas de design de alto impacto.", icon: <Eye size={14} />, color: "#ad8330" },
+  { id: "analisador-paginas", label: "Analisador de Design", sublabel: "Auditoria Visual & UX", desc: "Submeta artes e layouts para diagnósticos profissionais de hierarquia, contraste e legibilidade.", icon: <Search size={14} />, color: "#ffffff" },
   
   // Copywriters & Marketers
-  { id: "copy-ads", label: "Copy Builder [Ads]", sublabel: "Copywriter", desc: "Crie anúncios estáticos que param o scroll, ativam dor e puxam o clique.", icon: <Megaphone size={14} />, color: "#b8942b" },
-  { id: "copy-carroseis", label: "Copy Builder [Carrossel]", sublabel: "Copywriter", desc: "Crie carrosséis N3 que prendem, aprofundam a consciência e transformam atenção em ação.", icon: <Layers size={14} />, color: "#d4af37" },
-  { id: "easy-copy", label: "Easy Copy", sublabel: "Copywriter", desc: "Crie copys de alta conversão para sites/lps de qualquer nicho com alta qualidade.", icon: <FileText size={14} />, color: "#b8942b" },
+  { id: "copy-ads", label: "Redator de Anúncios (Ads)", sublabel: "Especialista em Performance", desc: "Desenvolva textos de alta conversão estruturados com ganchos, quebra de objeções e chamadas para ação.", icon: <Megaphone size={14} />, color: "#ad8330" },
+  { id: "copy-carroseis", label: "Redator de Carrosséis", sublabel: "Engajamento & Conteúdo", desc: "Crie narrativas envolventes em carrosséis que retêm a atenção e conduzem o público até a conversão.", icon: <Layers size={14} />, color: "#d4af37" },
+  { id: "easy-copy", label: "Redator de Copywriting", sublabel: "Textos de Venda & LPs", desc: "Produza copys completas para landing pages, e-mails e páginas de vendas em qualquer segmento.", icon: <FileText size={14} />, color: "#ad8330" },
   
   // Strategists
-  { id: "analise-estrategica", label: "Análise Estratégica", sublabel: "Estrategista", desc: "Investigue seu lead a fundo, descubra dores reais e entre com vantagem estratégica.", icon: <Check size={14} />, color: "#4f46e5" },
-  { id: "icp", label: "ICP e Posicionamento", sublabel: "Estrategista", desc: "Fortaleça seu posicionamento, transmita autoridade e atraia clientes prontos para comprar.", icon: <Check size={14} />, color: "#4f46e5" },
+  { id: "analise-estrategica", label: "Análise Estratégica", sublabel: "Inteligência de Mercado", desc: "Mapeie dores reais do cliente, analise concorrentes e estruture propostas de valor irresistíveis.", icon: <Check size={14} />, color: "#4f46e5" },
+  { id: "icp", label: "ICP & Posicionamento", sublabel: "Estratégia de Marca", desc: "Defina o perfil de cliente ideal e consolide uma presença de marca com alta autoridade no mercado.", icon: <Check size={14} />, color: "#4f46e5" },
   
   // Sales
-  { id: "atendimento", label: "Atendimento e Negociação", sublabel: "Vendas", desc: "Feche mais projetos com conversas estratégicas que geram confiança e conduzem ao sim.", icon: <Check size={14} />, color: "#10b981" },
-  { id: "webson-vendedor", label: "Webson Vendedor", sublabel: "Vendas", desc: "Envie sua mensagem ou histórico da conversa que eu vou te ajudar a fechar a venda.", icon: <Check size={14} />, color: "#10b981" },
+  { id: "atendimento", label: "Atendimento & Negociação", sublabel: "Gestão de Objeções", desc: "Conduza reuniões e diálogos comerciais com técnicas que aceleram a decisão do cliente.", icon: <Check size={14} />, color: "#10b981" },
+  { id: "webson-vendedor", label: "Consultor de Vendas IA", sublabel: "Fechamento Comercial", desc: "Analise conversas com leads e receba respostas prontas para superar travas de negociação.", icon: <Check size={14} />, color: "#10b981" },
   
   // Dev & Sites
-  { id: "estrutura-sites", label: "Estrutura Sites [IA]", sublabel: "UX/Web", desc: "Esse agente entende o seu briefing e cria a estrutura do site como um mestre.", icon: <Code size={14} />, color: "#3b82f6" },
-  { id: "easy-coder", label: "Easy Coder", sublabel: "Developer", desc: "Crie e faça alteração nos códigos dos seus projetos de maneira fácil e otimizada.", icon: <Code size={14} />, color: "#3b82f6" },
-  { id: "easy-image", label: "Easy Image", sublabel: "Image Gen", desc: "Gere imagens e extraia prompts com uma maior nível de detalhes e assertividade.", icon: <ImageIcon size={14} />, color: "#ec4899" },
-  
+  { id: "estrutura-sites", label: "Arquiteto de Landing Pages", sublabel: "Arquitetura de Informação", desc: "Estruture wireframes e seções estratégicas otimizadas para taxa de conversão e navegabilidade.", icon: <Code size={14} />, color: "#3b82f6" },
+  { id: "easy-coder", label: "Assistente de Código Web", sublabel: "Desenvolvimento Front-end", desc: "Receba trechos de código limpo em HTML, CSS, JavaScript e React prontos para implementação.", icon: <Code size={14} />, color: "#3b82f6" },
+  { id: "easy-image", label: "Gerador Visual de Imagens", sublabel: "Sintetizador Gráfico", desc: "Gere imagens realistas e ilustrações técnicas com alto nível de detalhamento descritivo.", icon: <ImageIcon size={14} />, color: "#ec4899" },
 ];
 
 
 const formatMessage = (text: string) => {
-  const lines = text.split("\n");
+  // Strip out JSON code blocks containing configurations or general JSON objects completely from visual output
+  let cleanText = text;
+  
+  // 1. Strip marked json code blocks
+  cleanText = cleanText.replace(/```json\n[\s\S]*?\n```/g, '').replace(/```json[\s\S]*?```/g, '');
+  
+  // 2. Strip generic code blocks that look like JSON configurations (with curly braces)
+  cleanText = cleanText.replace(/```\n?\{[\s\S]*?\}\n?```/g, '');
+  
+  // 3. Strip raw JSON objects that might not be wrapped in code blocks but have configuration keys
+  cleanText = cleanText.replace(/\{[^{}]*"desativarSujeito"[^{}]*\}/g, '');
+  cleanText = cleanText.replace(/\{[^{}]*"cores"[^{}]*\}/g, '');
+  cleanText = cleanText.replace(/\{[^{}]*"additionalPrompt"[^{}]*\}/g, '');
+  
+  cleanText = cleanText.trim();
+
+  // If there's nothing left after stripping (e.g. it only returned JSON), say "Configurações preparadas."
+  const textToRender = cleanText || "*Diretor Criativo: Configurações do painel prontas para você! Clique em 'Gerar Background' para ver o resultado.*";
+
+  const lines = textToRender.split("\n");
+  
+  // Sections to highlight
+  const sections = ["Diretor:", "Extrator:", "Prompt:", "Passo:", "Análise:", "Plano:", "Diretor Criativo:"];
+  
   return lines.map((line, i) => {
+    let isHeader = false;
+    for (const section of sections) {
+        if (line.startsWith(section)) {
+            isHeader = true;
+            break;
+        }
+    }
+    
+    if (isHeader) {
+      return (
+        <div key={i} className="my-2 p-3 bg-zinc-950 border border-zinc-800 rounded-lg text-[12px] text-zinc-300 font-semibold">
+           {line}
+        </div>
+      );
+    }
+    
     const parts = line.split(/(\*\*.*?\*\*)/g);
     return (
       <span key={i}>
         {parts.map((part, j) =>
           part.startsWith("**") && part.endsWith("**") ? (
-            <strong key={j} className="font-black text-white">{part.slice(2, -2)}</strong>
+            <strong key={j} className="font-black text-[#c5a880]">{part.slice(2, -2)}</strong>
           ) : (
             <span key={j}>{part}</span>
           )
@@ -106,82 +149,11 @@ const compressImage = (base64Str: string, maxWidth = 1024, maxHeight = 1024, qua
 };
 
 
-const ClientForm = () => {
-  const [colors, setColors] = useState(["#000000", "#ff0000", "#ffffff"]);
-  const [newColor, setNewColor] = useState("#000000");
 
-  const handleAddColor = () => {
-    setColors([...colors, newColor]);
-  };
-
-  const handleRemoveColor = (idx) => {
-    setColors(colors.filter((_, i) => i !== idx));
-  };
-
-  return (
-    <form onSubmit={async (e) => {
-      e.preventDefault();
-      const form = e.target;
-      
-      let logoBase64 = undefined;
-      const fileInput = form.logoFile;
-      if (fileInput.files && fileInput.files.length > 0) {
-         const file = fileInput.files[0];
-         logoBase64 = await new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onload = (ev) => resolve(ev.target?.result);
-            reader.readAsDataURL(file);
-         });
-      }
-
-      useClientStore.getState().addClient({
-        name: (form.elements.namedItem("name") as HTMLInputElement).value,
-        niche: (form.elements.namedItem("niche") as HTMLInputElement).value,
-        infoExtra: (form.elements.namedItem("infoExtra") as HTMLTextAreaElement).value,
-        logoBase64: logoBase64,
-        bancoDeDadosIA: "",
-        paletaCores: colors
-      });
-      form.reset();
-      setColors(["#000000", "#ff0000", "#ffffff"]);
-    }} className="space-y-3">
-      <input name="name" placeholder="Nome" className="w-full bg-zinc-900 border border-zinc-800 rounded p-2 text-xs text-white" required />
-      <input name="niche" placeholder="Nicho" className="w-full bg-zinc-900 border border-zinc-800 rounded p-2 text-xs text-white" required />
-      <input name="infoExtra" placeholder="Info Adicional (ex: Estilo favorito)" className="w-full bg-zinc-900 border border-zinc-800 rounded p-2 text-xs text-white" />
-      
-      <div>
-        <label className="text-[8px] text-zinc-500 uppercase">Logo do Cliente (Opcional)</label>
-        <input name="logoFile" type="file" accept="image/*" className="w-full bg-zinc-900 border border-zinc-800 rounded p-1 text-xs text-zinc-400 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-zinc-800 file:text-zinc-300" />
-      </div>
-
-      <div>
-        <label className="text-[8px] text-zinc-500 uppercase">Paleta de Cores (Quantas quiser)</label>
-        <div className="flex gap-2 items-center mt-1 mb-2">
-          <input type="color" value={newColor} onChange={(e) => setNewColor(e.target.value)} className="w-8 h-8 rounded border border-zinc-800 p-0 cursor-pointer" />
-          <input type="text" value={newColor} onChange={(e) => setNewColor(e.target.value)} className="bg-zinc-900 border border-zinc-800 rounded p-1 text-xs text-white w-20" placeholder="#HEX" />
-          <button type="button" onClick={handleAddColor} className="bg-zinc-800 hover:bg-zinc-700 text-white px-2 py-1 rounded text-xs font-bold">+</button>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {colors.map((c, idx) => (
-            <div key={idx} className="flex items-center gap-1 bg-zinc-900 border border-zinc-800 rounded pl-1 pr-1 py-1">
-              <div className="w-4 h-4 rounded-full border border-zinc-700" style={{backgroundColor: c}} />
-              <span className="text-[10px] text-zinc-400 uppercase">{c}</span>
-              <button type="button" onClick={() => handleRemoveColor(idx)} className="text-zinc-600 hover:text-red-500 ml-1">
-                <X size={10} />
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
-      <button type="submit" className="w-full bg-[#b8942b]/20 text-[#b8942b] border border-[#b8942b]/40 p-2 text-xs font-bold uppercase rounded-lg hover:bg-[#b8942b]/30 transition-colors">Cadastrar Cliente</button>
-    </form>
-  );
-};
 
 export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, showToast }) => {
   const store = useProjectStore();
   const { clients, activeClientId, setActiveClient, appendAiLearnings } = useClientStore();
-  const [isOpen, setIsOpen] = useState(false);
   const { chatDrawerOpen, setChatDrawerOpen, chatActiveAssistantId, setChatActiveAssistantId } = useProjectStore();
   const [activeAssistant, setActiveAssistant] = useState<AssistantConfig>(assistants[0]);
 
@@ -190,30 +162,16 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
       const found = assistants.find(a => a.id === chatActiveAssistantId);
       if (found) {
         setActiveAssistant(found);
-        if (!isOpen) setIsOpen(true);
+        if (!chatDrawerOpen) setChatDrawerOpen(true);
       }
     }
   }, [chatActiveAssistantId]);
 
-  useEffect(() => {
-    if (chatDrawerOpen && !isOpen) {
-      setIsOpen(true);
-    }
-    if (!chatDrawerOpen && isOpen) {
-      setIsOpen(false);
-    }
-  }, [chatDrawerOpen]);
-
-  useEffect(() => {
-    if (isOpen) {
-      setChatDrawerOpen(true);
-    } else {
-      setChatDrawerOpen(false);
-    }
-  }, [isOpen]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<string>("gemini-3.6-flash");
+  const [showModelSettings, setShowModelSettings] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [isClientModalOpen, setIsClientModalOpen] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [chats, setChats] = useState<Record<string, ChatMessage[]>>(() => {
@@ -221,23 +179,36 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
   });
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(`zion_assistant_chats_${store.activeProjectId}`);
-      if (saved) {
-        setChats(JSON.parse(saved));
-      } else {
-        setChats(Object.fromEntries(assistants.map((a) => [a.id, []])));
+    let isMounted = true;
+    const loadChats = async () => {
+      try {
+        if (!store.activeProjectId) return;
+        let savedObj = await idbGet(`zion_assistant_chats_${store.activeProjectId}`);
+        if (!savedObj) {
+          const savedStr = localStorage.getItem(`zion_assistant_chats_${store.activeProjectId}`);
+          if (savedStr) savedObj = JSON.parse(savedStr);
+        }
+        
+        if (isMounted) {
+          if (savedObj) {
+            setChats(savedObj);
+          } else {
+            setChats(Object.fromEntries(assistants.map((a) => [a.id, []])));
+          }
+        }
+      } catch (e) {
+        console.error("Error loading chat history:", e);
+        if (isMounted) setChats(Object.fromEntries(assistants.map((a) => [a.id, []])));
       }
-    } catch (e) {
-      console.error("Error loading chat history:", e);
-      setChats(Object.fromEntries(assistants.map((a) => [a.id, []])));
-    }
+    };
+    loadChats();
+    return () => { isMounted = false; };
   }, [store.activeProjectId]);
 
   useEffect(() => {
     try {
       if (store.activeProjectId) {
-        localStorage.setItem(`zion_assistant_chats_${store.activeProjectId}`, JSON.stringify(chats));
+        idbSet(`zion_assistant_chats_${store.activeProjectId}`, chats).catch(e => console.error("Error saving chat history IDB:", e));
       }
     } catch (e) {
       console.error("Error saving chat history:", e);
@@ -279,7 +250,7 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
         // Se for imagem, aplica compressão local para reduzir de MBs para KBs
         if (file.type.startsWith("image/")) {
           try {
-            b64 = await compressImage(b64, 1024, 1024, 0.8);
+            b64 = await compressImage(b64, 512, 512, 0.6);
           } catch (compressErr) {
             console.error("Erro na compressão automática do chat:", compressErr);
           }
@@ -304,82 +275,30 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
 
         if (triggerFlow && activeAssistant.id === "prompt-extrator" && file.type.startsWith("image/")) {
           setTimeout(() => {
-            setChats((prev) => ({
-              ...prev,
-              "prompt-extrator": [
-                ...(prev["prompt-extrator"] || []),
-                {
-                  role: "model",
-                  content: "Recebi sua imagem de referência! Para extrair o prompt perfeito, me diga o que deseja priorizar:\n\n**Textura** — materiais e superfícies\n**Iluminação** — setup de luz e sombras\n**Paleta de Cores** — tons e contraste\n**Composição** — enquadramento e regra dos terços\n**Sujeito** — pose, expressão e vestimenta\n**Estilo Geral** — vibe estética completa"
-                }
-              ]
-            }));
-          }, 500);
+            handleSendMessage("Por favor, analise a imagem e extraia o prompt.", [newFile]);
+          }, 100);
         }
-      };
-      reader.onerror = () => {
-        setIsUploading(false);
-        showToast(`Erro ao carregar o arquivo: ${file.name}`, "error");
       };
       reader.readAsDataURL(file);
     });
-  }, [activeAssistant, showToast]);
+  }, [activeAssistant.id]);
 
-  useEffect(() => {
-    const handlePaste = (e: ClipboardEvent) => {
-      if (!isOpen) return;
-      const items = e.clipboardData?.items;
-      if (!items) return;
-      const files: File[] = [];
-      for (let i = 0; i < items.length; i++) {
-        const file = items[i].getAsFile();
-        if (file) {
-          files.push(file);
-        }
-      }
-      if (files.length > 0) {
-        e.preventDefault();
-        handleAttachFiles(files, true);
-      }
-    };
-    window.addEventListener("paste", handlePaste);
-    return () => window.removeEventListener("paste", handlePaste);
-  }, [isOpen, activeAssistant, handleAttachFiles]);
+  const handleSendMessage = async (overrideText?: string, overrideFiles?: ChatFile[]) => {
+    const textToSend = overrideText || inputText;
+    const filesToSend = overrideFiles || attachedFiles;
+    
+    if (!textToSend.trim() && filesToSend.length === 0) return;
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDraggingOver(true);
-  };
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDraggingOver(false);
-  };
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDraggingOver(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleAttachFiles(e.dataTransfer.files, true);
-    }
-  };
-
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      handleAttachFiles(e.target.files, true);
-    }
-    e.target.value = "";
-  };
-
-  const handleSend = async () => {
-    if (inputText.trim() === "" && attachedFiles.length === 0) return;
     const userMsg: ChatMessage = { 
       role: "user", 
-      content: inputText.trim(), 
-      files: attachedFiles.length > 0 ? attachedFiles : undefined 
+      content: textToSend.trim(), 
+      files: filesToSend.length > 0 ? filesToSend : undefined 
     };
+
     const currentMessages = chats[activeAssistant.id] || [];
     setChats((prev) => ({ ...prev, [activeAssistant.id]: [...currentMessages, userMsg] }));
-    setInputText("");
-    setAttachedFiles([]);
+    if (!overrideText) setInputText("");
+    if (!overrideFiles) setAttachedFiles([]);
     if (textareaRef.current) textareaRef.current.style.height = "auto";
     setIsTyping(true);
 
@@ -388,7 +307,6 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
        const lowerText = (userMsg.content || "").toLowerCase();
        const matchedClient = clients.find(c => {
          const clientName = c.name.toLowerCase();
-         // Use regex for word boundary to avoid partial matches (e.g. "do" matching "dor")
          const regex = new RegExp(`\\b${clientName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
          return regex.test(lowerText);
        });
@@ -400,12 +318,19 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
     const activeClient = clients.find(c => c.id === currentActiveClientId);
     const clientContext = activeClient ? `\n\n[CONTEXTO DO CLIENTE ATUAL]:\nCliente: ${activeClient.name}\nNicho: ${activeClient.niche}\nPaleta de Cores: ${activeClient.paletaCores?.join(', ') || 'Nenhuma'}\nInfo Adicional: ${activeClient.infoExtra}\nHistórico IA: ${activeClient.bancoDeDadosIA}\n[IMPORTANTE]: Use essa paleta de cores e informações para guiar o design. Se aprender algo novo sobre o cliente, retorne no JSON no campo "aprendizado_cliente".` : "";
 
-    const configContext = `\n\n[CONFIGURAÇÃO ATUAL DO EDITOR]:
+    const configContext = `
+[ATENÇÃO DIRETOR CRIATIVO / ASSISTENTE]: Aja como um Diretor de Criação interagindo no bate-papo. Converse naturalmente com o usuário, tire dúvidas e dê opiniões como um humano. NÃO apenas vomite código.
+Quando o usuário pedir para alterar o design, ou enviar arquivos de referência, você deve conversar com ele E incluir um bloco JSON OCULTO no final da sua mensagem para automatizar a interface.
+IMPORTANTE: Você é um assistente. Você NÃO gera a imagem diretamente. Você apenas configura a interface. Sempre instrua o usuário a clicar no botão "GERAR IMAGEM" no painel principal após você preparar as configurações.
+
+[CONFIGURAÇÃO ATUAL DO EDITOR]:
 - Desativar Sujeito Principal: ${store.desativarSujeito ? "ATIVADO (O sujeito principal está DESATIVADO)" : "DESATIVADO (O sujeito principal está ATIVADO/HABILITADO)"}
 - Sem Pessoas (noPeople): ${store.noPeople ? "ATIVADO (Não há pessoas)" : "DESATIVADO (Pode conter pessoas)"}
 - Usar Referência de Cenário (useEnvRef): ${store.useEnvRef ? "ATIVADO" : "DESATIVADO"}
 - Usar Logotipo (useLogo): ${store.useLogo ? "ATIVADO" : "DESATIVADO"}
 - Habilitar Textos (enableTypography): ${store.enableTypography ? "ATIVADO" : "DESATIVADO"}
+- Camadas de Texto Atuais no Editor (${store.camadasTexto?.length || 0} camadas):
+${(store.camadasTexto || []).map((t, idx) => `  ${idx + 1}. [Função: "${t.funcao}"] [ID: "${t.id}"] Conteúdo: "${t.conteudo}" (Fonte: ${t.fonte || 'Outfit'}, Cor: ${t.cor || '#ffffff'})`).join("\n") || "  (Nenhuma camada de texto definida)"}
 - Degradê de Leitura (degradeLeitura): ${store.degradeLeitura ? "ATIVADO" : "DESATIVADO"}
 - Desfoque no Cenário (enableBlur): ${store.enableBlur ? "ATIVADO" : "DESATIVADO"}
 - Degradê Lateral (lateralGradient): ${store.lateralGradient ? "ATIVADO" : "DESATIVADO"}
@@ -426,37 +351,91 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
 - Sujeitos Carregados: ${store.sujeitosBase64List?.length || 0} fotos
 - Cenários Carregados: ${store.cenariosBase64List?.length || 0} fotos
 - Logos Carregados: ${store.logosList?.length || 0} logos
+- Qualidade / Modelo Ativo: ${store.resolucao} (usando o modelo: gemini-3-pro-image)
 
-[ATENÇÃO DIRETOR CRIATIVO / ASSISTENTE]: O usuário EXIGE automação total da interface.
-VOCÊ DEVE tomar decisões ativas e ativar/desativar booleanos e preencher os textos conforme a necessidade para a arte perfeita ser gerada.
+Regras de Automação do JSON (SEMPRE adicione no final se houver mudança de contexto):
+- Se uma das imagens for CLARAMENTE um Logotipo de uma marca (fundo transparente, símbolo, escrita): ative "useLogo": true. NÃO descreva estilo visual para a logo, NÃO adicione como referência de cenário ou estilo. O gerador irá estampar a logo como ela é.
 1. Se a arte NÃO deve ter pessoas ou sujeito, mude "desativarSujeito": true e "noPeople": true.
 2. Se a arte TEM que ter sujeito ou pessoa, mude "desativarSujeito": false e "noPeople": false.
-3. Se a arte precisa de logo, mude "useLogo": true.
-4. Se a arte precisa de textos, mude "enableTypography": true e preencha "promptTipografia".
-5. Se a arte exige uma cor específica, atualize o objeto "cores" com os códigos HEX exatos.
-6. Se a arte precisa de um fundo/cenário de referência, mude "useEnvRef": true.
+3. Se a arte precisa de logo, mude "useLogo": true. NÃO descreva o estilo visual da logo.
+4. Se a arte precisa de textos, mude "enableTypography": true e preencha "camadasTexto" e "promptTipografia".
+5. Se a arte exige uma cor específica, atualize "cores" e defina "coresAutomaticas": false. Se a arte NÃO exige uma cor específica, você DEVE definir "coresAutomaticas": true e omitir o objeto "cores".
+6. REGRA CRÍTICA DE CENÁRIO: "useEnvRef" DEVE ser true APENAS se houver foto de cenário/imagem de fundo enviada ou anexada. Se NÃO houver imagem de referência de cenário enviada, defina OBRIGATORIAMENTE "useEnvRef": false.
+7. O sistema suporta o preenchimento completo de TODAS as seções do editor:
+   - Sujeito Principal: "desativarSujeito", "noPeople", "gender" ("Masculino"|"Feminino"|"Outros"), "multiplesPersons" (boolean), "gendersDescription", "poseDescription", "positioning" ("Esquerda"|"Centro"|"Direita").
+   - Dimensões: "dimensao" ("1:1" | "3:4" | "9:16" | "16:9").
+   - Tipografia: "enableTypography" (true), "camadasTexto" (array de { conteudo, funcao, fonte, cor }), "promptTipografia", "typographyPosition" ("ESQUERDA"|"CENTRO"|"DIREITA").
+   - Cenário: "useEnvRef", "promptCenario".
+   - Design Obrigatório: "promptDesign".
+   - Logotipo: "useLogo".
+   - Cores & Iluminação: "coresAutomaticas" (false), "cores" ({ ambiente, recorte, complementar }), "corDominante", "useCorDominante", "degradeLeitura".
+   - Composição: "composicao" ("Close-up (Rosto)"|"Plano Médio (Busto)"|"Plano Americano"), "composicaoCustom".
+   - Elementos Flutuantes: "floatingElementsMode" ("off"|"auto"|"custom"), "floatingElementsCustom".
+   - Atributos Visuais & Estilo: "sobriedade" (0-100), "enableEstiloVisual" (true), "estilosVisuais" (array), "estiloVisualCustom", "enableBlur", "lateralGradient".
+   - Entradas Manuais: "additionalPrompt", "negativePrompt".
+   - Opções Avançadas: "resolucao" ("1K"|"2K"|"4K"), "formatoExportacao" ("AVIF"|"PNG"|"JPEG"|"WEBP"), "variations" (1-5), "somentePrompt" (boolean).
+8. MANTENHA SIMPLES: Não gere descrições gigantes em "promptCenario", "estiloVisualCustom", "additionalPrompt" ou outros campos de texto. Seja extremamente DIRETO e CONCISO. Textos muito longos confundem o gerador de imagens e geram alucinações. Foque no que importa.
+9. DADOS DA REFERÊNCIA: Se na imagem de referência houver logos de outras marcas, textos antigos, ou perfis de instagram, NÃO inclua isso na geração! Remova essas informações e use APENAS as informações enviadas pelo cliente.
+10. POSICIONAMENTO EXATO: Instrua claramente na descrição o lugar EXATO onde deve ficar a logo, ícones, textos e efeitos (ex: "logo posicionada no topo ao centro", "texto centralizado na parte inferior"). Isso ajuda a IA a não espalhar as coisas aleatoriamente.
+11. MODELOS PREMIUM DE ULTRA PRECISÃO: O sistema agora utiliza o modelo "gemini-3-pro-image" (suportando qualidades 1K, 2K e 4K) no GoogleGenAI. Para alterar o modelo/resolução ativo, passe a chave "resolucao": "1K" | "2K" | "4K" correspondente no JSON. Explique essa novidade ao usuário se ele pedir ajustes de qualidade!
+12. REGRA ABSOLUTA DE FUNDO SÓLIDO / COR ÚNICA (PURE SOLID COLOR BACKGROUND):
+    Se o usuário pedir apenas um fundo sólido, cor de fundo, canvas limpo ou cor única (ex: "CRIE UM FUNDO SOLIDO NA COR #0b1c32 4:5", "fundo liso azul", "cor sólida"):
+    - "desativarSujeito": true, "noPeople": true, "enableTypography": false, "camadasTexto": [], "promptTipografia": "", "useLogo": false, "useEnvRef": false
+    - "promptDesign": "Pure flat solid color canvas."
+    - "promptCenario": "Pure solid dark blue background (#0b1c32), flat matte finish, no people, no text, no shapes, no gradients."
+    - "additionalPrompt": "A completely blank pure solid color background canvas in exact hex color #0b1c32, zero models, zero subjects, zero text, zero graphics."
+    - "negativePrompt": "people, human, model, male, female, person, text, typography, headline, flyer, poster, neon, glow, smartphone, 3d, gradient, shapes, objects"
+    - "dimensao": "3:4" (se 4:5) ou "1:1"
+    - "corDominante": "#0b1c32", "useCorDominante": true, "coresAutomaticas": false
+    - JAMAIS adicione mockups de celular, frases de sindicato, modelos ou neon que o usuário NÃO solicitou!
+13. REGRA ABSOLUTA DE EDIÇÃO, ALTERAÇÃO E REMOÇÃO DE ELEMENTOS:
+    - Se o usuário pedir para ALTERAR ou MUDAR um texto ou valor (ex: "mude o valor para R$ 600", "troque locução por apresentadora", "corrija X"):
+      * MANTENHA TODOS OS OUTROS TEXTOS do editor que já estavam certos e não foram mencionados pelo usuário.
+      * Consulte a lista "[Camadas de Texto Atuais no Editor]" enviada no contexto acima e retorne em "camadasTexto" a lista COMPLETA das camadas com as alterações solicitadas.
+    - Se o usuário pedir para REMOVER, EXCLUIR ou TIRAR um texto ou informação (ex: "remova a locução", "tire o valor", "apague a frase X"):
+      * Envie a chave "removerCamadasTexto": ["Locução"] ou ["Função/Trecho do texto a remover"].
+      * Ou envie "substituirCamadasTexto": true e em "camadasTexto" coloque apenas a lista das camadas que DEVEM PERMANECER.
+    - Se o usuário pedir para REMOVER PESSOAS/MODELO: defina "desativarSujeito": true, "noPeople": true.
+    - Se o usuário pedir para REMOVER CENÁRIO/FUNDO: defina "useEnvRef": false e "promptCenario": "".
+    - Se o usuário pedir para REMOVER LOGO: defina "useLogo": false.
+    - Se o usuário pedir para LIMPAR um prompt/observação/estilo: envie o campo correspondente como string vazia (ex: "additionalPrompt": "", "negativePrompt": "", "promptCenario": "").
 
-SEMPRE gere um bloco JSON no final da sua resposta contendo TODAS as configurações atualizadas que a interface precisa aplicar. 
-
-Exemplo OBRIGATÓRIO de JSON no final da sua resposta:
+Exemplo OBRIGATÓRIO de JSON no final da sua resposta (use o bloco \`\`\`json):
 \`\`\`json
 {
   "desativarSujeito": true,
   "noPeople": true,
-  "enableTypography": true,
-  "useLogo": true,
-  "useEnvRef": true,
-  "estiloVisualCustom": "Estilo cyberpunk...",
-  "promptCenario": "Cenário...",
-  "promptTipografia": "Texto...",
+  "dimensao": "3:4",
+  "enableTypography": false,
+  "camadasTexto": [],
+  "typographyPosition": "CENTRO",
+  "promptTipografia": "",
+  "promptDesign": "Pure flat solid color canvas.",
+  "promptCenario": "Pure solid dark blue background (#0b1c32), matte finish, clean solid color, no gradients, no text, no people.",
+  "useLogo": false,
+  "useEnvRef": false,
   "cores": {
-    "ambiente": "#000000",
-    "recorte": "#FF0055",
-    "complementar": "#00FFFF"
-  }
+    "ambiente": "#0b1c32",
+    "recorte": "#0b1c32",
+    "complementar": "#0b1c32"
+  },
+  "coresAutomaticas": false,
+  "corDominante": "#0b1c32",
+  "useCorDominante": true,
+  "degradeLeitura": false,
+  "sobriedade": 100,
+  "enableEstiloVisual": false,
+  "estilosVisuais": ["Clean"],
+  "estiloVisualCustom": "Clean e minimalista com fundo de cor sólida.",
+  "additionalPrompt": "A completely blank pure solid color background canvas in exact color #0b1c32 with zero models, zero text, zero graphics.",
+  "negativePrompt": "people, human, person, model, text, typography, headline, flyer, poster, neon, glow, smartphone, 3d, gradient, shapes, objects",
+  "resolucao": "1K",
+  "formatoExportacao": "PNG",
+  "variations": 1,
+  "somentePrompt": false
 }
 \`\`\`
-VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com a ativação/desativação refletida na sua decisão!`;;;;
+Lembre-se: converse como humano primeiro e só anexe o JSON no final se for necessário alterar a interface!`;
 
     try {
       const res = await fetch("/api/chat-agentes", {
@@ -471,7 +450,8 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
             content: m.content,
             files: m.files 
           })),
-          customApiKey: customApiKey || localStorage.getItem("custom_gemini_api_key") || ""
+          customApiKey: customApiKey || localStorage.getItem("custom_gemini_api_key") || "",
+          modelId: selectedModel
         })
       });
       if (!res.ok) {
@@ -486,6 +466,33 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
           { role: "model", content: data.response || "Sem resposta." }
         ]
       }));
+
+      const hasJsonBlock = (text: string) => {
+        if (!text) return false;
+        if (text.includes('```json')) return true;
+        if (text.includes('```')) {
+          const match = text.match(/```[\s\S]*?\{[\s\S]*?\}[\s\S]*?```/);
+          if (match) return true;
+        }
+        const startIdx = text.indexOf('{');
+        const endIdx = text.lastIndexOf('}');
+        if (startIdx !== -1 && endIdx > startIdx) {
+          const inner = text.slice(startIdx, endIdx + 1);
+          return inner.includes('"cores"') || 
+                 inner.includes('"desativarSujeito"') || 
+                 inner.includes('"noPeople"') || 
+                 inner.includes('"enableTypography"') || 
+                 inner.includes('"additionalPrompt"') || 
+                 inner.includes('"promptCenario"') ||
+                 inner.includes('"coresAutomaticas"') ||
+                 inner.includes('"estilosVisuais"');
+        }
+        return false;
+      };
+
+      if (data.response && (hasJsonBlock(data.response) || (userMsg.files && userMsg.files.length > 0))) {
+        setTimeout(() => applyModelMessageToEditor(-1, data.response, userMsg.files), 100);
+      }
     } catch (err: any) {
       showToast(err.message || "Falha na comunicação com a IA.", "error");
     } finally {
@@ -493,7 +500,237 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
     }
   };
 
-  const applyModelMessageToEditor = (msgIndex: number, content: string) => {
+  const handleAutoFillWithAi = async () => {
+    const textPrompt = inputText.trim();
+    if (attachedFiles.length === 0 && !textPrompt && !store.designRefBase64 && !store.tipografiaRefBase64 && !store.sujeitoBase64) {
+      showToast("Por favor, digite instruções ou anexe imagens para o preenchimento automático.", "warning");
+      return;
+    }
+
+    setIsTyping(true);
+    const filesToSend = [...attachedFiles];
+    setAttachedFiles([]);
+    if (textPrompt) setInputText("");
+
+    // 1. Adicionar mensagem do usuário no chat para feedback visual
+    const autoFillUserMsg: ChatMessage = {
+      role: "user",
+      content: textPrompt 
+        ? `[PREENCHER AUTOMÁTICO] Instruções do usuário: "${textPrompt}". Analise todos os textos e ${filesToSend.length} imagens anexadas e configure 100% de todas as seções do projeto automaticamente no editor.`
+        : `[PREENCHER AUTOMÁTICO] Por favor, analise as ${filesToSend.length} imagens de referência anexadas e configure 100% de todas as seções do projeto automaticamente no editor.`,
+      files: filesToSend
+    };
+
+    setChats((prev) => ({
+      ...prev,
+      [activeAssistant.id]: [
+        ...(prev[activeAssistant.id] || []),
+        autoFillUserMsg
+      ]
+    }));
+
+    const activeClient = clients.find(c => c.id === activeClientId);
+    const clientContext = activeClient ? `\n\n[CONTEXTO DO CLIENTE ATUAL]:\nCliente: ${activeClient.name}\nNicho: ${activeClient.niche}\nPaleta de Cores: ${activeClient.paletaCores?.join(', ') || 'Nenhuma'}\nInfo Adicional: ${activeClient.infoExtra}\nHistórico IA: ${activeClient.bancoDeDadosIA}` : "";
+
+    const autoFillPrompt = `
+Você é o Diretor Criativo e de Inteligência de Design da Zion. O usuário acabou de clicar no botão PREENCHER AUTOMÁTICO.
+Sua missão absoluta é analisar detalhadamente todas as instruções em texto e/ou imagens anexadas (${filesToSend.length} imagens) e configurar 100% de TODAS as opções do editor de forma profissional, completa e estética.
+
+Siga rigorosamente estas orientações de preenchimento para CADA SEÇÃO do editor:
+
+1. TIPO DE PAINEL (tipoPainel):
+   - Se a solicitação for de GC (Gerador de Caracteres), Tarja de TV, Lower Third, informações para programa de TV, notícias, esportes ou podcast, defina OBRIGATORIAMENTE "tipoPainel": "GC_TV".
+   - Caso contrário, defina "tipoPainel": "DESIGNER" (ou "PRODUCT" para produtos, "LOGO" para logos).
+
+2. MAPEAMENTO DE IMAGENS (mapeamentoImagens):
+   - "logo": Logotipos. Ative "useLogo": true.
+   - "subject": Sujeitos principais/modelos/produtos. Ative o sujeito ("desativarSujeito": false, "noPeople": false).
+   - "scene": Cenários/fundo. Ative "useEnvRef": true.
+   - "design": Imagem de Referência do Layout/Design.
+   - "typography": Print/referência de texto/tipografia. Ative "enableTypography": true.
+   - "style": Referências estéticas/visuais de estilo.
+
+2. SUJEITO PRINCIPAL:
+   - REGRA CRÍTICA DE DESATIVAÇÃO: Se a arte for de comunicado, aviso de sindicato, banner informativo, layout institucional, vetor ou se NÃO houver foto de pessoa/modelo/sujeito anexada, você DEVE definir OBRIGATORIAMENTE "desativarSujeito": true e "noPeople": true.
+   - Apenas defina "desativarSujeito": false se houver uma foto clara de pessoa/modelo enviada para o sujeito ou se o usuário pediu explicitamente um modelo humano.
+   - "gender": "Masculino" | "Feminino" | "Outros"
+   - "multiplesPersons": true se houver mais de uma pessoa.
+   - "gendersDescription": descrição dos gêneros.
+   - "poseDescription": descrição da pose ou roupa.
+   - "positioning": "Esquerda" | "Centro" | "Direita"
+
+3. DIMENSÕES:
+   - "dimensao": "1:1" (Feed) | "3:4" (Retrato) | "9:16" (Story) | "16:9" (Desktop)
+
+4. TIPOGRAFIA (CAMADAS DE TEXTO):
+   - "enableTypography": true
+   - "camadasTexto": Crie todas as camadas necessárias com:
+     - "funcao": "Headline Principal" | "Subheadline Secundário" | "CTA Botão" | "Corpo Descrição" | "Legenda / Detalhe" | "Badge / Selo" | "Preço / Valor" | "Data / Horário"
+     - "conteudo": O texto exato da frase.
+     - "fonte": Fonte identificada (ex: "Montserrat")
+     - "cor": HEX da cor
+   - "promptTipografia": Instruções completas de onde posicionar e extrair cada camada de texto, logo, botão e elemento.
+   - "typographyPosition": "ESQUERDA" | "CENTRO" | "DIREITA"
+
+5. CENÁRIO:
+   - "useEnvRef": true se houver foto de fundo.
+   - "promptCenario": Descrição técnica em inglês do fundo/cenário.
+
+6. DESIGN OBRIGATÓRIO:
+   - "promptDesign": Instruções sobre o layout, grid e enquadramento do design de referência.
+
+7. LOGOTIPO DA MARCA:
+   - "useLogo": true se houver logo.
+
+8. CORES & ILUMINAÇÃO:
+   - "cores": { "ambiente": "#HEX", "recorte": "#HEX", "complementar": "#HEX" }
+   - "coresAutomaticas": false
+   - "corDominante": "#HEX"
+   - "useCorDominante": true
+   - "degradeLeitura": true
+
+9. COMPOSIÇÃO:
+   - "composicao": "Close-up (Rosto)" | "Plano Médio (Busto)" | "Plano Americano" | customizada
+   - "composicaoCustom": texto livre de composição se necessário
+
+10. ELEMENTOS FLUTUANTES:
+    - "floatingElementsMode": "off" | "auto" | "custom"
+    - "floatingElementsCustom": texto livre
+
+11. ATRIBUTOS VISUAIS E ESTILO:
+    - "sobriedade": número de 0 a 100 (ex: 80)
+    - "enableEstiloVisual": true
+    - "estilosVisuais": array com os estilos (ex: ["Corporativo", "Clean", "Institucional"])
+    - "estiloVisualCustom": descrição técnica do estilo
+    - "enableBlur": true/false
+    - "lateralGradient": true/false
+
+12. ENTRADAS MANUAIS & AVANÇADAS:
+    - "additionalPrompt": prompt mestre detalhado em inglês.
+    - "negativePrompt": prompt negativo para evitar ruídos.
+    - "resolucao": "1K" | "2K" | "4K"
+    - "formatoExportacao": "AVIF" | "PNG" | "JPEG" | "WEBP"
+    - "variations": 1 a 5
+    - "somentePrompt": false
+    - "substituirImagens": true
+    - "substituirConfig": true
+
+IMPORTANTE: Responda em português resumindo os pontos que você identificou e configurou. No FINAL da sua mensagem, inclua obrigatoriamente o bloco de código JSON completo em \`\`\`json.
+
+Exemplo de JSON de saída:
+\`\`\`json
+{
+  "desativarSujeito": true,
+  "noPeople": true,
+  "dimensao": "3:4",
+  "enableTypography": false,
+  "camadasTexto": [],
+  "typographyPosition": "CENTRO",
+  "promptTipografia": "",
+  "promptDesign": "Pure flat solid color canvas.",
+  "promptCenario": "Solid dark blue background (#0b1c32), matte finish, clean solid color canvas, no people, no text, no shapes.",
+  "useLogo": false,
+  "useEnvRef": false,
+  "cores": { "ambiente": "#0b1c32", "recorte": "#0b1c32", "complementar": "#0b1c32" },
+  "coresAutomaticas": false,
+  "corDominante": "#0b1c32",
+  "useCorDominante": true,
+  "degradeLeitura": false,
+  "sobriedade": 100,
+  "enableEstiloVisual": false,
+  "estilosVisuais": ["Clean"],
+  "estiloVisualCustom": "Clean e minimalista com fundo de cor sólida.",
+  "additionalPrompt": "A completely blank pure solid color background canvas in exact color #0b1c32, zero models, zero text, zero graphics.",
+  "negativePrompt": "people, human, person, model, text, typography, headline, flyer, poster, neon, glow, smartphone, 3d, gradient, shapes, objects",
+  "resolucao": "1K",
+  "formatoExportacao": "PNG",
+  "variations": 1,
+  "somentePrompt": false,
+  "substituirImagens": true,
+  "substituirConfig": true
+}
+\`\`\`
+`;
+
+    try {
+      const res = await fetch("/api/chat-agentes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          assistantId: activeAssistant.id,
+          message: autoFillPrompt + clientContext,
+          attachedFiles: filesToSend,
+          history: activeMessages.map((m) => ({ 
+            role: m.role, 
+            content: m.content,
+            files: m.files 
+          })),
+          customApiKey: localStorage.getItem("custom_gemini_api_key") || "",
+          modelId: selectedModel
+        })
+      });
+
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.error || "Erro no servidor.");
+      }
+
+      const data = await res.json();
+      
+      setChats((prev) => ({
+        ...prev,
+        [activeAssistant.id]: [
+          ...(prev[activeAssistant.id] || []),
+          { role: "model", content: data.response || "Preenchimento concluído com sucesso!" }
+        ]
+      }));
+
+      if (data.response) {
+        setTimeout(() => applyModelMessageToEditor(-1, data.response, filesToSend), 100);
+        showToast("✨ Projeto preenchido e configurado pela IA com sucesso!", "success");
+      }
+    } catch (err: any) {
+      console.error(err);
+      showToast(err.message || "Erro ao conectar com a IA.", "error");
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleAttachFiles(e.dataTransfer.files);
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    if (e.clipboardData.files && e.clipboardData.files.length > 0) {
+      e.preventDefault();
+      handleAttachFiles(e.clipboardData.files);
+    }
+  };
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      handleAttachFiles(e.target.files);
+    }
+  };
+
+  const handleSend = () => {
+    handleSendMessage();
+  };
+
+  const applyModelMessageToEditor = (msgIndex: number, content: string, attachedFilesOverride?: any[]) => {
     let filledItems: string[] = [];
     let logCount = 0;
     let newLogos: string[] = [];
@@ -511,34 +748,39 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
 
       const getBool = (keys: string[]) => {
         for (const key of keys) {
+          if (configJson[key] === undefined || configJson[key] === null) continue;
           if (typeof configJson[key] === "boolean") return configJson[key];
-          if (configJson[key] === "true" || configJson[key] === 1) return true;
-          if (configJson[key] === "false" || configJson[key] === 0) return false;
+          const valStr = String(configJson[key]).trim().toLowerCase();
+          if (["true", "1", "on", "sim", "yes", "ativado", "ativo", "ativar", "habilitado", "habilita", "habilitar"].includes(valStr)) return true;
+          if (["false", "0", "off", "não", "nao", "no", "desativado", "inativo", "desativar", "desabilitado", "desabilita", "desabilitar"].includes(valStr)) return false;
         }
         return undefined;
       };
 
       const getString = (keys: string[]) => {
         for (const key of keys) {
-          if (typeof configJson[key] === "string" && configJson[key].trim() !== "") return configJson[key].trim();
+          if (configJson[key] !== undefined && configJson[key] !== null) {
+            return String(configJson[key]).trim();
+          }
         }
         return undefined;
       };
 
       // desativarSujeito
       const desativar = getBool(["desativarSujeito", "desativar_sujeito", "disableSubject", "disable_subject"]);
+      const noPeep = getBool(["noPeople", "no_people", "semPessoas", "sem_pessoas"]);
+      const ativar = getBool(["ativarSujeito", "ativar_sujeito", "enableSubject", "enable_subject", "useSubject", "use_subject"]);
+
       if (desativar !== undefined) {
         result.desativarSujeito = desativar;
-      } else {
-        const ativar = getBool(["ativarSujeito", "ativar_sujeito", "enableSubject", "enable_subject", "useSubject", "use_subject"]);
-        if (ativar !== undefined) {
-          result.desativarSujeito = !ativar;
-        }
+        result.noPeople = desativar;
+      } else if (noPeep !== undefined) {
+        result.desativarSujeito = noPeep;
+        result.noPeople = noPeep;
+      } else if (ativar !== undefined) {
+        result.desativarSujeito = !ativar;
+        result.noPeople = !ativar;
       }
-
-      // noPeople
-      const noPeep = getBool(["noPeople", "no_people", "semPessoas", "sem_pessoas"]);
-      if (noPeep !== undefined) result.noPeople = noPeep;
 
       // useEnvRef
       const envRef = getBool(["useEnvRef", "use_env_ref", "usarCenario", "usar_cenario", "usarFotosCenario", "usar_fotos_cenario", "useSceneRef", "use_scene_ref"]);
@@ -675,11 +917,102 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
         result.composicaoCustom = compCustom;
       }
 
+      // dimensao
+      const dim = getString(["dimensao", "dimensão", "dimension", "dimensions", "aspectRatio", "aspect_ratio", "formato", "tamanho", "size", "proporcao", "proporção"]);
+      if (dim !== undefined) {
+        const dLower = dim.toLowerCase();
+        if (dLower.includes("1080x1080") || dLower.includes("feed") || dLower.includes("quadrado") || dLower.includes("square") || dLower === "1:1") result.dimensao = "1:1";
+        else if (dLower.includes("1080x1440") || dLower.includes("retrato") || dLower.includes("portrait") || dLower === "3:4" || dLower === "4:5") result.dimensao = "3:4";
+        else if (dLower.includes("1080x1920") || dLower.includes("story") || dLower.includes("stories") || dLower.includes("vertical") || dLower === "9:16") result.dimensao = "9:16";
+        else if (dLower.includes("1920x1080") || dLower.includes("desktop") || dLower.includes("landscape") || dLower.includes("horizontal") || dLower === "16:9") result.dimensao = "16:9";
+        else result.dimensao = dim;
+      }
+
+      // tipoPainel
+      const tp = getString(["tipoPainel", "tipo_painel", "panelType", "panel_type"]);
+      if (tp !== undefined) {
+        const tpUpper = tp.toUpperCase();
+        if (["DESIGNER", "PRODUCT", "LOGO", "GC_TV"].includes(tpUpper)) {
+          result.tipoPainel = tpUpper;
+        } else if (tpUpper.includes("GC") || tpUpper.includes("TV")) {
+          result.tipoPainel = "GC_TV";
+        }
+      }
+
+      // promptCenario
+      const prCen = getString(["promptCenario", "prompt_cenario", "descricaoCenario", "descricao_cenario", "descCenario", "promptFundo", "prompt_fundo"]);
+      if (prCen !== undefined) result.promptCenario = prCen;
+
+      // additionalPrompt
+      const addPr = getString(["additionalPrompt", "additional_prompt", "promptAdicional", "prompt_adicional", "masterPrompt", "master_prompt"]);
+      if (addPr !== undefined) result.additionalPrompt = addPr;
+
+      // negativePrompt
+      const negPr = getString(["negativePrompt", "negative_prompt", "promptNegativo", "prompt_negativo"]);
+      if (negPr !== undefined) result.negativePrompt = negPr;
+
+      // resolucao
+      const resVal = getString(["resolucao", "resolução", "resolution", "quality", "qualidade", "tamanho", "size"]);
+      if (resVal !== undefined) {
+        const u = resVal.toUpperCase();
+        if (u.includes("4K") || u.includes("4096")) result.resolucao = "4K";
+        else if (u.includes("2K") || u.includes("2048")) result.resolucao = "2K";
+        else if (u.includes("1K") || u.includes("1024") || u.includes("SD")) result.resolucao = "1K";
+        else result.resolucao = "1K";
+      }
+
+      // formatoExportacao
+      const formExp = getString(["formatoExportacao", "formato_exportacao", "exportFormat", "export_format", "formato", "format", "bitDepth", "bit_depth", "profundidadeCor", "profundidade_cor"]);
+      if (formExp !== undefined) {
+        const u = formExp.toUpperCase();
+        if (u.includes("PNG") || u.includes("32BIT") || u.includes("32 BIT") || u.includes("32-BIT") || u.includes("32 BITS") || u.includes("32BITS")) result.formatoExportacao = "PNG";
+        else if (u.includes("WEBP")) result.formatoExportacao = "WEBP";
+        else if (u.includes("AVIF")) result.formatoExportacao = "AVIF";
+        else if (u.includes("JPG") || u.includes("JPEG")) result.formatoExportacao = "JPEG";
+      }
+
+      // sobriedade / nivelCriativo
+      if (configJson.sobriedade !== undefined && typeof configJson.sobriedade === "number") {
+        result.sobriedade = configJson.sobriedade;
+      } else if (configJson.nivelCriativo !== undefined && typeof configJson.nivelCriativo === "number") {
+        result.sobriedade = configJson.nivelCriativo;
+      }
+
+      // variations
+      if (configJson.variations !== undefined && typeof configJson.variations === "number") {
+        result.variations = configJson.variations;
+      }
+
+      // somentePrompt
+      const somPr = getBool(["somentePrompt", "somente_prompt", "onlyPrompt", "only_prompt"]);
+      if (somPr !== undefined) result.somentePrompt = somPr;
+
+      // corDominante
+      const corDomStr = getString(["corDominante", "cor_dominante", "dominantColor", "dominant_color"]);
+      if (corDomStr !== undefined) result.corDominante = corDomStr;
+
       return result;
     };
 
     // Tenta extrair JSON do texto gerado pela IA (incluindo bloco ou simples chaves)
-    const jsonMatch = content.match(/```json\s*(\{[\s\S]*?\})\s*```/) || content.match(/(\{[\s\S]*?"cores"[\s\S]*?\})/);
+    let jsonMatch = content.match(/```json\s*(\{[\s\S]*?\})\s*```/) || content.match(/```\s*(\{[\s\S]*?\})\s*```/);
+    if (!jsonMatch) {
+      const startIdx = content.indexOf('{');
+      const endIdx = content.lastIndexOf('}');
+      if (startIdx !== -1 && endIdx > startIdx) {
+        const potentialJson = content.slice(startIdx, endIdx + 1);
+        if (potentialJson.includes('"cores"') || 
+            potentialJson.includes('"desativarSujeito"') || 
+            potentialJson.includes('"noPeople"') || 
+            potentialJson.includes('"enableTypography"') || 
+            potentialJson.includes('"additionalPrompt"') || 
+            potentialJson.includes('"promptCenario"') ||
+            potentialJson.includes('"coresAutomaticas"') ||
+            potentialJson.includes('"estilosVisuais"')) {
+          jsonMatch = [null, potentialJson] as any;
+        }
+      }
+    }
     if (jsonMatch) {
       try {
         const configJson = JSON.parse(jsonMatch[1]);
@@ -726,9 +1059,47 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
           filledItems.push("Cor Dominante");
         }
 
-        if (configJson.dimensao) {
-          updates.dimensao = configJson.dimensao;
-          filledItems.push(`Proporção (${configJson.dimensao})`);
+        if (updates.dimensao) {
+          const dLower = String(updates.dimensao).toLowerCase();
+          if (dLower.includes("1080x1080") || dLower.includes("feed") || dLower.includes("quadrado") || dLower === "1:1") updates.dimensao = "1:1";
+          else if (dLower.includes("1080x1440") || dLower.includes("retrato") || dLower.includes("portrait") || dLower === "3:4" || dLower === "4:5") updates.dimensao = "3:4";
+          else if (dLower.includes("1080x1920") || dLower.includes("story") || dLower.includes("stories") || dLower === "9:16") updates.dimensao = "9:16";
+          else if (dLower.includes("1920x1080") || dLower.includes("desktop") || dLower.includes("landscape") || dLower === "16:9") updates.dimensao = "16:9";
+          
+          filledItems.push(`Proporção (${updates.dimensao})`);
+        }
+
+        const rawRes = configJson.resolucao || configJson.resolution || configJson.qualidade || configJson.quality;
+        if (rawRes) {
+          const resStr = String(rawRes).toUpperCase();
+          if (resStr.includes("4K") || resStr.includes("4")) {
+            updates.resolucao = "4K";
+            filledItems.push("Qualidade (4K / Gemini 3 Pro Image)");
+          } else if (resStr.includes("2K") || resStr.includes("2")) {
+            updates.resolucao = "2K";
+            filledItems.push("Qualidade (2K / Gemini 3 Pro Image)");
+          } else if (resStr.includes("1K") || resStr.includes("1")) {
+            updates.resolucao = "1K";
+            filledItems.push("Qualidade (1K / Gemini 3 Pro Image)");
+          }
+        }
+
+        const rawFmt = configJson.formatoExportacao || configJson.formato_exportacao || configJson.exportFormat || configJson.formato || configJson.format || configJson.bitDepth;
+        if (rawFmt || updates.formatoExportacao) {
+          const fmtStr = String(rawFmt || updates.formatoExportacao).toUpperCase();
+          if (fmtStr.includes("PNG") || fmtStr.includes("32BIT") || fmtStr.includes("32 BIT") || fmtStr.includes("32BITS") || fmtStr.includes("32 BITS")) {
+            updates.formatoExportacao = "PNG";
+            filledItems.push("Formato (PNG 32-Bit)");
+          } else if (fmtStr.includes("WEBP")) {
+            updates.formatoExportacao = "WEBP";
+            filledItems.push("Formato (WEBP)");
+          } else if (fmtStr.includes("AVIF")) {
+            updates.formatoExportacao = "AVIF";
+            filledItems.push("Formato (AVIF)");
+          } else if (fmtStr.includes("JPG") || fmtStr.includes("JPEG")) {
+            updates.formatoExportacao = "JPEG";
+            filledItems.push("Formato (JPEG)");
+          }
         }
         
         if (typeof configJson.sobriedade === "number") {
@@ -739,47 +1110,129 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
           filledItems.push(`Nível Criativo (${configJson.nivelCriativo}%)`);
         }
 
-        if (configJson.camadasTexto && Array.isArray(configJson.camadasTexto)) {
-          updates.enableTypography = true;
-          const currentLayers = isReplaceMode ? [] : (store.camadasTexto || []);
-          const newLayers = configJson.camadasTexto.map((item: any, idx: number) => {
-             const existingLayer = currentLayers.find(l => l.funcao === item.funcao);
-             return {
-               id: existingLayer ? existingLayer.id : `text_${Date.now()}_${idx}`,
-               conteudo: item.conteudo,
-               funcao: item.funcao || "Corpo Descrição",
-               fonte: item.fonte || (existingLayer ? existingLayer.fonte : "Outfit"),
-               cor: item.cor || (existingLayer ? existingLayer.cor : "#ffffff")
-             };
+        // Suporte a remoção direcionada de camadas de texto por ID, função ou conteúdo
+        let toRemove = configJson.removerCamadasTexto || configJson.removerTexto || configJson.removerCamadas || configJson.removerTextos || configJson.removerTextoIds || configJson.excluirTexto;
+        if (typeof toRemove === "string") toRemove = [toRemove];
+        if (Array.isArray(toRemove) && toRemove.length > 0) {
+          const searchTerms = toRemove.map((s: any) => String(s).toLowerCase().trim()).filter(Boolean);
+          const currentLayers = updates.camadasTexto || store.camadasTexto || [];
+          updates.camadasTexto = currentLayers.filter(layer => {
+            const lId = String(layer.id || "").toLowerCase();
+            const lFunc = String(layer.funcao || "").toLowerCase();
+            const lCont = String(layer.conteudo || "").toLowerCase();
+            return !searchTerms.some(term => 
+              lId.includes(term) || lFunc.includes(term) || lCont.includes(term) || term.includes(lFunc) || term.includes(lCont)
+            );
           });
-          updates.camadasTexto = newLayers;
-          filledItems.push(`${newLayers.length} Textos`);
-        } else if (isReplaceMode) {
-          // Se for modo de substituição e não mandou nenhuma camada de texto no JSON, limpa todas as camadas de texto
-          updates.camadasTexto = [];
-        }
-        
-        if (configJson.promptCenario) {
-          updates.promptCenario = configJson.promptCenario;
-          filledItems.push("Cenário");
+          filledItems.push(`${toRemove.length} Texto(s) Removido(s)`);
         }
 
-        if (updates.promptDesign) {
+        if (configJson.camadasTexto && Array.isArray(configJson.camadasTexto)) {
+          if (configJson.camadasTexto.length > 0) {
+            updates.enableTypography = true;
+            const mappedNewLayers = configJson.camadasTexto.map((item, idx) => ({
+                id: item.id || `text_${Date.now()}_${idx}`,
+                conteudo: item.conteudo || "",
+                funcao: item.funcao || "Corpo Descrição",
+                fonte: item.fonte || "Outfit",
+                cor: item.cor || "#ffffff"
+            }));
+
+            if (configJson.substituirCamadasTexto === true || configJson.substituirTextos === true || isReplaceMode) {
+               updates.camadasTexto = mappedNewLayers;
+               filledItems.push(`${updates.camadasTexto.length} Textos (Substituídos)`);
+            } else {
+               const updatedLayers = [...(updates.camadasTexto || store.camadasTexto || [])];
+               configJson.camadasTexto.forEach((item, itemIdx) => {
+                   let existingIdx = item.id ? updatedLayers.findIndex(l => l.id === item.id) : -1;
+                   if (existingIdx === -1 && item.funcao) {
+                     const matchingByFuncao = updatedLayers.filter(l => l.funcao === item.funcao);
+                     if (matchingByFuncao.length === 1) {
+                       existingIdx = updatedLayers.findIndex(l => l.funcao === item.funcao);
+                     }
+                   }
+                   if (existingIdx === -1 && configJson.camadasTexto.length === updatedLayers.length) {
+                     existingIdx = itemIdx;
+                   }
+
+                   if (existingIdx !== -1) {
+                       updatedLayers[existingIdx] = {
+                           ...updatedLayers[existingIdx],
+                           conteudo: item.conteudo !== undefined ? item.conteudo : updatedLayers[existingIdx].conteudo,
+                           funcao: item.funcao || updatedLayers[existingIdx].funcao,
+                           fonte: item.fonte || updatedLayers[existingIdx].fonte,
+                           cor: item.cor || updatedLayers[existingIdx].cor,
+                       };
+                   } else {
+                       updatedLayers.push({
+                           id: item.id || `text_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+                           conteudo: item.conteudo || "",
+                           funcao: item.funcao || "Corpo Descrição",
+                           fonte: item.fonte || "Outfit",
+                           cor: item.cor || "#ffffff"
+                       });
+                   }
+               });
+               updates.camadasTexto = updatedLayers;
+               filledItems.push(`${configJson.camadasTexto.length} Textos (Atualizados/Adicionados)`);
+            }
+          } else if (isReplaceMode || configJson.substituirCamadasTexto === true || configJson.enableTypography === false) {
+            updates.camadasTexto = [];
+            if (configJson.enableTypography === false) updates.enableTypography = false;
+          }
+        }
+
+        // Suporte a limpeza explícita de referências e mídias
+        if (configJson.limparSujeitoRef || configJson.removerSujeitoRef || configJson.removerPessoaRef) {
+          store.setSujeitoBase64List([]);
+          store.setSujeitoBase64("");
+          updates.desativarSujeito = true;
+          updates.noPeople = true;
+          filledItems.push("Sujeito Removido");
+        }
+
+        if (configJson.limparCenarioRef || configJson.removerCenarioRef) {
+          store.setCenarioBase64List([]);
+          store.setCenarioBase64("");
+          updates.useEnvRef = false;
+          updates.promptCenario = "";
+          filledItems.push("Cenário Removido");
+        }
+
+        if (configJson.limparLogoRef || configJson.removerLogoRef) {
+          store.setLogosList([]);
+          updates.logoBase64 = "";
+          updates.useLogo = false;
+          filledItems.push("Logo Removido");
+        }
+        
+        if (configJson.promptCenario !== undefined && typeof configJson.promptCenario === "string") {
+          updates.promptCenario = configJson.promptCenario;
+          if (configJson.promptCenario) filledItems.push("Cenário");
+        }
+
+        if (configJson.promptDesign !== undefined && typeof configJson.promptDesign === "string") {
+          updates.promptDesign = configJson.promptDesign;
+          if (configJson.promptDesign) filledItems.push("Ref. Design");
+        } else if (updates.promptDesign) {
           filledItems.push("Ref. Design");
         }
 
-        if (updates.promptTipografia) {
+        if (configJson.promptTipografia !== undefined && typeof configJson.promptTipografia === "string") {
+          updates.promptTipografia = configJson.promptTipografia;
+          if (configJson.promptTipografia) filledItems.push("Ref. Texto/Tipografia");
+        } else if (updates.promptTipografia) {
           filledItems.push("Ref. Texto/Tipografia");
         }
         
-        if (configJson.additionalPrompt) {
+        if (configJson.additionalPrompt !== undefined && typeof configJson.additionalPrompt === "string") {
           updates.additionalPrompt = configJson.additionalPrompt;
-          filledItems.push("Prompt Principal");
+          if (configJson.additionalPrompt) filledItems.push("Prompt Principal");
         }
         
-        if (configJson.negativePrompt) {
+        if (configJson.negativePrompt !== undefined && typeof configJson.negativePrompt === "string") {
           updates.negativePrompt = configJson.negativePrompt;
-          filledItems.push("Prompt Negativo");
+          if (configJson.negativePrompt) filledItems.push("Prompt Negativo");
         }
         
         if (configJson.estilosVisuais && Array.isArray(configJson.estilosVisuais)) {
@@ -815,6 +1268,12 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
         }
         if (updates.composicao !== undefined) {
           filledItems.push(`Composição (${updates.composicao})`);
+        }
+
+        const vars = configJson.variations || configJson.variacoes || configJson.variações;
+        if (typeof vars === "number") {
+          updates.variations = Math.min(Math.max(vars, 1), 4);
+          filledItems.push(`Variações (${updates.variations})`);
         }
 
         store.updateConfig(updates);
@@ -921,7 +1380,9 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
 
     // 4. Extrair e preencher imagens de referência do histórico (apenas do input imediatamente anterior do usuário)
     let precedingUserMsg = null;
-    if (msgIndex > 0) {
+    if (attachedFilesOverride && attachedFilesOverride.length > 0) {
+       precedingUserMsg = { files: attachedFilesOverride, content: "" };
+    } else if (msgIndex > 0) {
       const prevMsg = activeMessages[msgIndex - 1];
       if (prevMsg && prevMsg.role === 'user' && prevMsg.files && prevMsg.files.length > 0) {
         precedingUserMsg = prevMsg;
@@ -952,7 +1413,7 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
           let styleDescription = "Referência de estilo gerada pelo assistente.";
           
           let matchedKey = null;
-          if (activeAssistant.id !== "diretor-criativo") {
+          
             if (img.name && jsonImageMap[img.name]) {
               matchedKey = img.name;
             } else if (img.name) {
@@ -978,8 +1439,8 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
             } else if (textLower.includes("layout") || textLower.includes("design") || textLower.includes("referência principal") || textLower.includes("flyer") || textLower.includes("card")) {
               targetType = "design";
             }
-          }
-
+          
+          
           if (targetType === "style") {
              let descMatchedKey = null;
              if (img.name && jsonStyleDescMap[img.name]) {
@@ -1035,123 +1496,79 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
         
         if (subCount > 0) {
           const currentList = isReplaceMode ? [] : (store.sujeitosBase64List || []);
-          store.setSujeitoBase64List([...currentList, ...newSubjects]);
+          const uniqueList = Array.from(new Set([...currentList, ...newSubjects]));
+          store.setSujeitoBase64List(uniqueList);
           if (updates && updates.desativarSujeito !== undefined) {
              store.updateConfig({ desativarSujeito: updates.desativarSujeito, noPeople: updates.noPeople !== undefined ? updates.noPeople : updates.desativarSujeito });
           } else {
              store.updateConfig({ noPeople: false, desativarSujeito: false });
           }
           filledItems.push(`${subCount} Sujeito(s)`);
+        } else {
+          if (isReplaceMode) store.setSujeitoBase64List([]);
+          if (updates && updates.desativarSujeito !== undefined) {
+             store.updateConfig({ desativarSujeito: updates.desativarSujeito, noPeople: updates.noPeople !== undefined ? updates.noPeople : updates.desativarSujeito });
+          } else if ((store.sujeitosBase64List || []).length === 0) {
+             store.updateConfig({ desativarSujeito: true, noPeople: true });
+          }
         }
         if (sceCount > 0) {
           const currentList = isReplaceMode ? [] : (store.cenariosBase64List || []);
-          store.setCenarioBase64List([...currentList, ...newScenes]);
+          const uniqueList = Array.from(new Set([...currentList, ...newScenes]));
+          store.setCenarioBase64List(uniqueList);
           if (updates && updates.useEnvRef === false) {
              // respect AI
           } else {
              if (updates && updates.useEnvRef !== undefined) { store.updateConfig({ useEnvRef: updates.useEnvRef }); } else { store.updateConfig({ useEnvRef: true }); }
           }
           filledItems.push(`${sceCount} Cenário(s)`);
+        } else {
+          if (isReplaceMode) store.setCenarioBase64List([]);
+          if (updates && updates.useEnvRef !== undefined) {
+             store.updateConfig({ useEnvRef: updates.useEnvRef });
+          } else if ((store.cenariosBase64List || []).length === 0) {
+             store.updateConfig({ useEnvRef: false });
+          }
         }
         
         if (logCount > 0) {
           const currentList = isReplaceMode ? [] : (store.logosList || []);
-          store.setLogosList([...currentList, ...newLogos]);
+          let uniqueList = Array.from(new Set([...currentList, ...newLogos]));
+          if (uniqueList.length > 1) uniqueList = [uniqueList[uniqueList.length - 1]]; // Keep only one logo
+          store.setLogosList(uniqueList);
           if (updates && updates.useLogo !== undefined) {
             store.updateConfig({ useLogo: updates.useLogo });
           } else {
             store.updateConfig({ useLogo: true });
           }
           filledItems.push(`${logCount} Logo(s)`);
+        } else if (isReplaceMode) {
+          store.setLogosList([]);
         }
 
         if (typoCount > 0) {
           const currentList = isReplaceMode ? [] : (store.tipografiaRefsList || []);
-          store.setTipografiaRefsList([...currentList, ...newTypographies]);
+          const uniqueList = Array.from(new Set([...currentList, ...newTypographies]));
+          store.setTipografiaRefsList(uniqueList);
           filledItems.push(`${typoCount} Ref. Texto`);
+        } else if (isReplaceMode) {
+          store.setTipografiaRefsList([]);
         }
         
         if (desCount > 0) {
           const currentList = isReplaceMode ? [] : (store.designRefsList || []);
-          store.setDesignRefsList([...currentList, ...newDesigns]);
+          const uniqueList = Array.from(new Set([...currentList, ...newDesigns]));
+          store.setDesignRefsList(uniqueList);
           filledItems.push(`${desCount} Design(s)`);
+        } else if (isReplaceMode) {
+          store.setDesignRefsList([]);
+        }
+
+        if (desCount > 0) {
   
-          // 1. Cenário
-          const currentSceneList = isReplaceMode ? [] : (store.cenariosBase64List || []);
-          const sceneListWithCard = [...currentSceneList];
-          newDesigns.forEach(d => {
-            if (!sceneListWithCard.includes(d)) {
-              sceneListWithCard.push(d);
-            }
-          });
-          store.setCenarioBase64List(sceneListWithCard);
-          if (updates && updates.useEnvRef !== undefined) { store.updateConfig({ useEnvRef: updates.useEnvRef }); } else { store.updateConfig({ useEnvRef: true }); }
-          const defaultCen = parsedConfigJson?.promptCenario || updates.promptCenario || "Extrair o cenário/fundo desfocado com light glows e atmosfera premium deste card de referência.";
-          store.updateConfig({ promptCenario: defaultCen });
-          filledItems.push("Cenário (do Card)");
-
-          // 2. Estilo
-          const cardStyleDesc = parsedConfigJson?.estiloVisualCustom || updates.estiloVisualCustom || "Copiar as texturas de fundo, a iluminação cinematográfica, a vibe estética e atmosfera elegante do card de referência.";
-          newDesigns.forEach(d => {
-            const existingRef = store.referenciasEstilo?.find(r => r.url === d);
-            if (!existingRef) {
-              store.addReferenciaEstilo(d, cardStyleDesc);
-            }
-          });
-          if (updates && updates.enableEstiloVisual !== undefined) { store.updateConfig({ enableEstiloVisual: updates.enableEstiloVisual, estiloVisualCustom: cardStyleDesc }); } else { store.updateConfig({ enableEstiloVisual: true, estiloVisualCustom: cardStyleDesc }); }
-          filledItems.push("Estilo (do Card)");
- 
-          // 3. Texto/Tipografia
-          const currentTypoList = isReplaceMode ? [] : (store.tipografiaRefsList || []);
-          const typoListWithCard = [...currentTypoList];
-          newDesigns.forEach(d => {
-            if (!typoListWithCard.includes(d)) {
-              typoListWithCard.push(d);
-            }
-          });
-          store.setTipografiaRefsList(typoListWithCard);
-          if (updates && updates.enableTypography !== undefined) { store.updateConfig({ enableTypography: updates.enableTypography }); } else { store.updateConfig({ enableTypography: true }); }
-          const defaultTypoPrompt = parsedConfigJson?.promptTipografia || updates.promptTipografia || "Copiar a estrutura do bloco de textos, estilo da fonte sans-serif moderna e a disposição hierárquica do card de referência.";
-          store.updateConfig({ promptTipografia: defaultTypoPrompt });
-          filledItems.push("Texto (do Card)");
-
-          // 4. Design/Layout
+          // A referência de design agora atua APENAS como design/layout. Não duplicamos a imagem para logo, sujeito, etc.
           const defaultDesignPrompt = parsedConfigJson?.promptDesign || updates.promptDesign || "Copiar a proporção dos espaços vazios, o grid estrutural, e o posicionamento de composição de elementos deste card de referência.";
           store.updateConfig({ promptDesign: defaultDesignPrompt });
-
-          // 5. Sujeito
-          const currentSubjectList = isReplaceMode ? [] : (store.sujeitosBase64List || []);
-          const subjectListWithCard = [...currentSubjectList];
-          newDesigns.forEach(d => {
-            if (!subjectListWithCard.includes(d)) {
-              subjectListWithCard.push(d);
-            }
-          });
-          store.setSujeitoBase64List(subjectListWithCard);
-          if (updates && updates.desativarSujeito !== undefined) {
-            store.updateConfig({ desativarSujeito: updates.desativarSujeito });
-          } else {
-            store.updateConfig({ desativarSujeito: false });
-          }
-          const defaultPose = parsedConfigJson?.poseDescription || updates.poseDescription || "Recortar e focar no sujeito ou produto principal presente no card de referência, mantendo a iluminação, sombras e integração com o fundo original.";
-          store.updateConfig({ poseDescription: defaultPose });
-          filledItems.push("Sujeito (do Card)");
-
-          // 6. Logotipo
-          const currentLogoList = isReplaceMode ? [] : (store.logosList || []);
-          const logoListWithCard = [...currentLogoList];
-          newDesigns.forEach(d => {
-            if (!logoListWithCard.includes(d)) {
-              logoListWithCard.push(d);
-            }
-          });
-          store.setLogosList(logoListWithCard);
-          if (updates && updates.useLogo !== undefined) {
-            store.updateConfig({ useLogo: updates.useLogo });
-          } else {
-            store.updateConfig({ useLogo: true });
-          }
-          filledItems.push("Logo (do Card)");
         }
   
         if (parsedConfigJson && parsedConfigJson.aprendizado_cliente && activeClientId) {
@@ -1170,18 +1587,13 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
       if (client) {
         // Aplica a Logo do cliente se existir
         if (client.logoBase64 && client.logoBase64.length > 50 && client.logoBase64 !== "undefined") {
-          // Precisamos pegar a lista atual do store OU os newLogos que acabaram de ser processados
-          let currentList = isReplaceMode ? [] : (store.logosList || []);
-          if (logCount > 0) {
-             currentList = [...currentList, ...newLogos];
-          }
-          if (!currentList.includes(client.logoBase64)) {
-             store.setLogosList([...currentList, client.logoBase64]);
+          if (logCount === 0 && (!store.logosList || store.logosList.length === 0 || isReplaceMode)) {
+             store.setLogosList([client.logoBase64]);
              if (updates && updates.useLogo !== undefined) {
-            store.updateConfig({ useLogo: updates.useLogo });
-          } else {
-            store.updateConfig({ useLogo: true });
-          }
+               store.updateConfig({ useLogo: updates.useLogo });
+             } else {
+               store.updateConfig({ useLogo: true });
+             }
              if (!filledItems.includes("Logo do Cliente")) filledItems.push("Logo do Cliente");
           }
         }
@@ -1191,7 +1603,7 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
           const newColors = { ...store.cores };
           newColors.ambiente = client.paletaCores[0] || "#000000";
           newColors.recorte = client.paletaCores[1] || "#ffffff";
-          newColors.complementar = client.paletaCores[2] || "#d4af37";
+          newColors.complementar = client.paletaCores[2] || "#c5a880";
           delete newColors.paleta;
           
           store.updateConfig({ cores: newColors, coresAutomaticas: false });
@@ -1245,51 +1657,59 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
   };
 
   return (
-    <div ref={chatPanelRef} className="fixed bottom-6 right-6 z-50">
+    <div ref={chatPanelRef} className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50">
       <button
         onClick={() => {
-          setIsOpen(!isOpen);
+          setChatDrawerOpen(!chatDrawerOpen);
           setIsDropdownOpen(false);
         }}
-        className="relative w-14 h-14 rounded-full shadow-[0_4px_24px_rgba(197,168,128,0.25)] flex items-center justify-center cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 bg-[#121214]/90 border border-[#d4af37]/30 hover:border-[#d4af37]/60 text-[#d4af37]"
+        className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-[0_4px_24px_rgba(197,168,128,0.25)] flex items-center justify-center cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 bg-[#0a0a0a]/90 border border-[#c5a880]/30 hover:border-[#c5a880]/60 text-[#c5a880]"
         title="Assistente ZION AI"
       >
-        {isOpen ? <X size={22} className="text-[#d4af37]" /> : <MessageSquare size={22} className="text-[#d4af37]" />}
-        {!isOpen && <span className="absolute inset-0 rounded-full animate-ping opacity-20 bg-[#d4af37]" />}
+        {chatDrawerOpen ? <X size={20} className="text-[#c5a880]" /> : <MessageSquare size={20} className="text-[#c5a880]" />}
+        {!chatDrawerOpen && <span className="absolute inset-0 rounded-full animate-ping opacity-20 bg-[#c5a880]" />}
       </button>
 
-      {isOpen && (
-        <div className="absolute bottom-[72px] right-0 w-[440px] h-[600px] rounded-2xl border border-zinc-800 bg-[#070708] shadow-[0_25px_80px_rgba(0,0,0,0.95)] flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
+      {chatDrawerOpen && (
+        <div className={`border border-zinc-800 bg-[#070708] shadow-[0_25px_80px_rgba(0,0,0,0.95)] flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-300 transition-all ${isExpanded ? 'fixed inset-0 z-[100] rounded-none w-full h-full' : 'fixed sm:absolute bottom-20 right-4 left-4 sm:left-auto sm:right-0 sm:bottom-[68px] rounded-2xl w-[calc(100vw-32px)] sm:w-[440px] h-[560px] max-h-[82vh]'}`}>
           
           {/* Header */}
-          <div className="shrink-0 p-4 border-b border-zinc-900 bg-black/80 backdrop-blur-md relative z-20">
-            <div className="flex items-center justify-between gap-3">
+          <div className="shrink-0 p-3 sm:p-4 border-b border-zinc-900 bg-black/90 backdrop-blur-md relative z-20">
+            <div className="flex items-center justify-between gap-2">
               <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="flex items-center gap-3 flex-1 group cursor-pointer rounded-xl p-1.5 -ml-1.5 hover:bg-zinc-900/60 transition-colors"
+                className="flex items-center gap-2.5 flex-1 min-w-0 group cursor-pointer rounded-xl p-1 -ml-1 hover:bg-zinc-900/80 transition-colors"
               >
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-lg text-black bg-[#b8942b]">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 shadow-lg text-black bg-[#ad8330]">
                   {activeAssistant.icon}
                 </div>
-                <div className="flex-1 text-left">
+                <div className="flex-1 min-w-0 text-left">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[13px] font-black text-white uppercase tracking-wide">{activeAssistant.label}</span>
-                    <ChevronDown size={12} className="text-[#b8942b] group-hover:text-zinc-200 transition-all duration-200" style={{ transform: isDropdownOpen ? "rotate(180deg)" : "rotate(0)" }} />
+                    <span className="text-xs sm:text-[13px] font-black text-white uppercase tracking-wide truncate">{activeAssistant.label}</span>
+                    <ChevronDown size={12} className="text-[#ad8330] group-hover:text-zinc-200 transition-all duration-200 shrink-0" style={{ transform: isDropdownOpen ? "rotate(180deg)" : "rotate(0)" }} />
                   </div>
-                  <span className="text-[9px] font-bold tracking-widest uppercase mt-0.5 block text-[#b8942b]">{activeAssistant.sublabel}</span>
+                  <span className="text-[9px] font-bold tracking-widest uppercase block text-[#ad8330] truncate">{activeAssistant.sublabel}</span>
                 </div>
               </button>
-              <div className="flex items-center gap-1.5 shrink-0">
+              <div className="flex items-center gap-1 shrink-0">
                 <button
-                  onClick={() => setIsClientModalOpen(true)}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-400 hover:text-[#b8942b] hover:bg-zinc-900 rounded-lg transition-all cursor-pointer border border-transparent hover:border-[#b8942b]/30"
-                  title="Gerenciar Clientes"
+                  onClick={() => setShowModelSettings(!showModelSettings)}
+                  className={`p-1.5 sm:p-2 rounded-lg transition-all cursor-pointer ${showModelSettings ? "text-[#ad8330] bg-zinc-900" : "text-zinc-400 hover:text-[#ad8330] hover:bg-zinc-900"}`}
+                  title="Modelo de IA"
                 >
-                  {activeClientId ? clients.find(c => c.id === activeClientId)?.name : "Clientes"}
+                  <Settings size={14} />
                 </button>
                 <button
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  className="p-1.5 sm:p-2 rounded-lg transition-all cursor-pointer text-zinc-400 hover:text-[#ad8330] hover:bg-zinc-900 hidden sm:flex"
+                  title={isExpanded ? "Restaurar tamanho" : "Expandir painel"}
+                >
+                  {isExpanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                </button>
+
+                <button
                   onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-                  className={`p-2 rounded-lg transition-all cursor-pointer ${isHistoryOpen ? "text-[#b8942b] bg-zinc-900" : "text-zinc-500 hover:text-[#b8942b] hover:bg-zinc-900"}`}
+                  className={`p-1.5 sm:p-2 rounded-lg transition-all cursor-pointer ${isHistoryOpen ? "text-[#ad8330] bg-zinc-900" : "text-zinc-400 hover:text-[#ad8330] hover:bg-zinc-900"}`}
                   title="Histórico de Conversas"
                 >
                   <FolderOpen size={14} />
@@ -1297,70 +1717,102 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
                 <button
                   onClick={() => {
                     store.createProject();
+                    setChats({});
+                    setAttachedFiles([]);
                     setActiveClient(null);
                     showToast("Nova conversa iniciada. Configurações zeradas.", "success");
                   }}
-                  className="p-2 text-zinc-500 hover:text-[#b8942b] hover:bg-zinc-900 rounded-lg transition-all cursor-pointer"
-                  title="Nova Conversa (Zerar tudo)"
+                  className="p-1.5 sm:p-2 text-zinc-400 hover:text-[#ad8330] hover:bg-zinc-900 rounded-lg transition-all cursor-pointer"
+                  title="Nova Conversa"
                 >
                   <Plus size={14} />
                 </button>
                 <button
                   onClick={clearChat}
-                  className="p-2 text-zinc-500 hover:text-[#b8942b] hover:bg-zinc-900 rounded-lg transition-all cursor-pointer"
-                  title="Limpar chat do agente atual"
+                  className="p-1.5 sm:p-2 text-zinc-400 hover:text-[#ad8330] hover:bg-zinc-900 rounded-lg transition-all cursor-pointer"
+                  title="Limpar mensagens"
                 >
                   <Trash2 size={14} />
                 </button>
                 <button
-                  onClick={() => setIsOpen(false)}
-                  className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-900 rounded-lg transition-all cursor-pointer"
+                  onClick={() => setChatDrawerOpen(false)}
+                  className="p-1.5 sm:p-2 text-zinc-400 hover:text-white hover:bg-zinc-900 rounded-lg transition-all cursor-pointer"
+                  title="Fechar"
                 >
                   <X size={14} />
                 </button>
               </div>
             </div>
 
+            {/* Model Settings Dropdown */}
+            {showModelSettings && (
+              <div className="absolute top-14 left-3 right-3 z-50 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl p-3">
+                <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400 mb-2 block">Selecione o Modelo</label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setSelectedModel("gemini-3.6-flash")}
+                    className={`flex-1 flex flex-col items-center justify-center py-2.5 text-xs rounded-lg transition-all ${selectedModel === "gemini-3.6-flash" ? "bg-[#ad8330]/20 text-[#d4af37] border border-[#ad8330]/50 font-bold" : "bg-zinc-950 text-zinc-400 hover:text-zinc-200 border border-white/5"}`}
+                  >
+                    <Zap size={16} className="mb-1" />
+                    Gemini Flash
+                  </button>
+                  <button
+                    onClick={() => setSelectedModel("gemini-3-pro-image")}
+                    className={`flex-1 flex flex-col items-center justify-center py-2.5 text-xs rounded-lg transition-all ${selectedModel === "gemini-3-pro-image" ? "bg-[#ad8330]/20 text-[#d4af37] border border-[#ad8330]/50 font-bold" : "bg-zinc-950 text-zinc-400 hover:text-zinc-200 border border-white/5"}`}
+                  >
+                    <Sparkles size={16} className="mb-1" />
+                    Gemini Pro
+                  </button>
+                </div>
+              </div>
+            )}
+            
             {/* History Dropdown */}
             {isHistoryOpen && (
-              <div className="absolute top-16 right-4 left-4 z-50 bg-[#121214] border border-zinc-800 rounded-xl shadow-2xl p-3 max-h-60 overflow-y-auto custom-scrollbar">
-                <div className="flex justify-between items-center mb-3 pb-2 border-b border-zinc-800">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">Suas Conversas</span>
+              <div className="absolute top-14 right-3 left-3 z-50 bg-[#0a0a0a] border border-zinc-800 rounded-xl shadow-2xl p-3 max-h-60 overflow-y-auto custom-scrollbar">
+                <div className="flex justify-between items-center mb-2.5 pb-2 border-b border-zinc-800">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">Suas Conversas Salvas</span>
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  {store.projectsList.map(p => (
-                    <div 
-                      key={p.id} 
-                      className={`flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition-colors ${p.id === store.activeProjectId ? "bg-[#b8942b]/10 border border-[#b8942b]/30" : "hover:bg-zinc-900 border border-transparent"}`}
-                      onClick={() => {
-                        store.loadProjectById(p.id);
-                        setIsHistoryOpen(false);
-                        showToast(`Conversa "${p.name}" carregada.`, "success");
-                      }}
-                    >
-                      <span className={`text-[11px] font-bold truncate pr-2 ${p.id === store.activeProjectId ? "text-[#b8942b]" : "text-zinc-300"}`}>{p.name}</span>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          store.deleteProject(p.id);
-                          showToast("Conversa deletada.", "success");
-                          if (store.projectsList.length <= 1) {
-                            setIsHistoryOpen(false);
-                          }
+                  {store.projectsList.map(p => {
+                    const isProjGenerating = !!store.generatingProjectIds?.[p.id];
+                    return (
+                      <div 
+                        key={p.id} 
+                        className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors ${p.id === store.activeProjectId ? "bg-[#ad8330]/10 border border-[#ad8330]/30" : "hover:bg-zinc-900 border border-transparent"}`}
+                        onClick={() => {
+                          store.loadProjectById(p.id);
+                          setIsHistoryOpen(false);
+                          showToast(`Conversa carregada.`, "success");
                         }}
-                        className="text-zinc-600 hover:text-red-500 transition-colors p-1"
-                        title="Deletar"
                       >
-                        <Trash2 size={12} />
-                      </button>
-                    </div>
-                  ))}
+                        <div className="flex items-center gap-2 truncate pr-2">
+                          {isProjGenerating && <Loader2 size={12} className="animate-spin text-[#ad8330] shrink-0" />}
+                          <span className={`text-[11px] font-bold truncate ${p.id === store.activeProjectId ? "text-[#ad8330]" : "text-zinc-300"}`}>{p.name}</span>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            store.deleteProject(p.id);
+                            showToast("Conversa deletada.", "success");
+                            if (store.projectsList.length <= 1) {
+                              setIsHistoryOpen(false);
+                            }
+                          }}
+                          className="text-zinc-600 hover:text-red-500 transition-colors p-1 shrink-0"
+                          title="Deletar"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
 
             {/* Quick agent bar */}
-            <div className="flex items-center gap-2 mt-3 overflow-x-auto pb-0.5" style={{ scrollbarWidth: "none" }}>
+            <div className="flex items-center gap-1.5 mt-2.5 overflow-x-auto pb-0.5 custom-scrollbar">
               {assistants.map((a) => {
                 const isActive = activeAssistant.id === a.id;
                 return (
@@ -1368,95 +1820,48 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
                     key={a.id}
                     onClick={() => switchAgent(a)}
                     title={a.label}
-                    className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-white transition-all duration-200 cursor-pointer relative group ${
+                    className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center shrink-0 text-white transition-all duration-200 cursor-pointer relative group ${
                       isActive 
-                        ? "ring-1 ring-[#b8942b] scale-110 shadow-md bg-zinc-900" 
-                        : "opacity-45 hover:opacity-100 hover:scale-105 bg-zinc-950"
+                        ? "ring-1 ring-[#ad8330] scale-105 shadow-md bg-zinc-900" 
+                        : "opacity-50 hover:opacity-100 hover:scale-105 bg-zinc-950"
                     }`}
                   >
-                    <span className={isActive ? "text-[#b8942b]" : "text-zinc-400"}>{a.icon}</span>
-                    <span className="absolute bottom-10 left-1/2 -translate-x-1/2 bg-zinc-950 border border-zinc-800 text-[8px] font-black uppercase tracking-widest text-white px-2 py-1.5 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
-                      {a.label}
-                    </span>
+                    <span className={isActive ? "text-[#ad8330]" : "text-zinc-400"}>{a.icon}</span>
                   </button>
                 );
               })}
             </div>
           </div>
 
-
-          {/* Client Modal */}
-          {isClientModalOpen && (
-            <div className="absolute inset-0 z-50 bg-[#09090b]/90 backdrop-blur-sm p-4 overflow-y-auto">
-              <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-4 shadow-2xl relative mb-4">
-                <button
-                  onClick={() => setIsClientModalOpen(false)}
-                  className="absolute top-4 right-4 text-zinc-500 hover:text-white"
-                >
-                  <X size={16} />
-                </button>
-                <h3 className="text-sm font-black text-white uppercase tracking-wider mb-4 border-b border-zinc-800 pb-2">Banco de Clientes</h3>
-                
-                <div className="space-y-4 max-h-[200px] overflow-y-auto mb-4">
-                  {clients.length === 0 ? (
-                    <p className="text-xs text-zinc-500 text-center py-4">Nenhum cliente cadastrado.</p>
-                  ) : (
-                    clients.map(c => (
-                      <div key={c.id} className={`p-3 rounded-xl border ${activeClientId === c.id ? 'border-[#b8942b] bg-[#b8942b]/5' : 'border-zinc-800 bg-zinc-900/50'} flex justify-between items-start`}>
-                        <div className="flex-1 cursor-pointer" onClick={() => setActiveClient(activeClientId === c.id ? null : c.id)}>
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs font-black text-white uppercase tracking-wider">{c.name}</span>
-                            {activeClientId === c.id && <span className="text-[8px] bg-[#b8942b]/20 text-[#b8942b] px-2 py-0.5 rounded-full uppercase tracking-widest border border-[#b8942b]/30">Ativo</span>}
-                          </div>
-                          <p className="text-[10px] text-zinc-400">Nicho: {c.niche}</p>
-                          <div className="flex flex-wrap gap-1 mt-2">
-                             {c.paletaCores?.map((color, idx) => (
-                               <div key={idx} className="w-4 h-4 rounded-full border border-zinc-700" style={{backgroundColor: color}} title={color} />
-                             ))}
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                <div className="border-t border-zinc-800 pt-4 mt-2">
-                  <h4 className="text-[10px] font-black text-[#b8942b] uppercase tracking-widest mb-2">Novo Cliente</h4>
-                  <ClientForm />
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Dropdown */}
           {isDropdownOpen && (
-            <div className="absolute top-[130px] left-3 right-3 z-50 bg-[#09090b] border border-zinc-800 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.9)] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-              <div className="p-2.5 border-b border-zinc-900">
-                <p className="text-[9px] font-black text-[#b8942b] uppercase tracking-widest">Selecionar Especialista</p>
+            <div className="absolute top-[115px] left-3 right-3 z-50 bg-[#09090b] border border-zinc-800 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.95)] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="p-2.5 border-b border-zinc-900 bg-zinc-950">
+                <p className="text-[9px] font-black text-[#ad8330] uppercase tracking-widest">Escolha o Assistente Ideal</p>
               </div>
-              <div className="overflow-y-auto max-h-[320px] divide-y divide-zinc-900/60" style={{ scrollbarWidth: "none" }}>
+              <div className="overflow-y-auto max-h-[260px] sm:max-h-[320px] divide-y divide-zinc-900/60 custom-scrollbar">
                 {assistants.map((a) => (
                   <button
                     key={a.id}
                     onClick={() => switchAgent(a)}
-                    className={`w-full px-4 py-3 flex items-center gap-3.5 hover:bg-zinc-900/30 transition-colors cursor-pointer text-left ${
-                      activeAssistant.id === a.id ? "bg-white/[0.02]" : ""
+                    className={`w-full px-3.5 py-2.5 flex items-center gap-3 hover:bg-zinc-900/60 transition-colors cursor-pointer text-left ${
+                      activeAssistant.id === a.id ? "bg-[#c5a880]/10" : ""
                     }`}
                   >
-                    <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-black bg-[#b8942b] shadow-md">
+                    <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-black bg-[#ad8330] shadow-md">
                       {a.icon}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-[12px] font-black text-white uppercase tracking-wider truncate">{a.label}</span>
+                        <span className="text-xs font-bold text-white tracking-wide truncate">{a.label}</span>
                         {activeAssistant.id === a.id && (
-                          <span className="text-[7.5px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-full shrink-0 bg-[#b8942b]/10 text-[#b8942b] border border-[#b8942b]/20">
+                          <span className="text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-full shrink-0 bg-[#ad8330]/20 text-[#ad8330]">
                             Ativo
                           </span>
                         )}
                       </div>
-                      <span className="text-[9px] font-bold uppercase tracking-widest block mt-0.5 text-zinc-500">{a.sublabel}</span>
-                      <p className="text-[9px] text-zinc-450 mt-0.5 leading-snug">{a.desc}</p>
+                      <span className="text-[9px] font-bold uppercase tracking-widest block text-zinc-400">{a.sublabel}</span>
+                      <p className="text-[9px] text-zinc-400 line-clamp-1 mt-0.5">{a.desc}</p>
                     </div>
                   </button>
                 ))}
@@ -1466,32 +1871,32 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
 
           {/* Messages Area */}
           <div
-            className="flex-1 overflow-y-auto p-4 space-y-3.5 relative bg-zinc-950/20"
+            className="flex-1 overflow-y-auto p-3.5 sm:p-4 space-y-3.5 relative bg-zinc-950/30 custom-scrollbar"
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
-            style={{ scrollbarWidth: "none" }}
+            onPaste={handlePaste}
           >
             {isDraggingOver && (
-              <div className="absolute inset-3 bg-black/95 border-2 border-dashed border-[#b8942b] rounded-2xl flex flex-col items-center justify-center gap-3 z-30 animate-in fade-in duration-150">
-                <div className="w-14 h-14 rounded-full flex items-center justify-center animate-bounce bg-[#b8942b]/10 border border-[#b8942b]/20">
-                  <UploadCloud size={28} className="text-[#b8942b]" />
+              <div className="absolute inset-3 bg-black/95 border-2 border-dashed border-[#ad8330] rounded-2xl flex flex-col items-center justify-center gap-3 z-30 animate-in fade-in duration-150">
+                <div className="w-12 h-12 rounded-full flex items-center justify-center animate-bounce bg-[#ad8330]/10 border border-[#ad8330]/20">
+                  <UploadCloud size={24} className="text-[#ad8330]" />
                 </div>
-                <p className="text-xs font-black text-white uppercase tracking-wider">Solte para Anexar Qualquer Arquivo</p>
-                <p className="text-[9px] text-zinc-500 uppercase tracking-widest">Imagens, PDFs, Documentos de Texto</p>
+                <p className="text-xs font-bold text-white uppercase tracking-wider">Solte o arquivo aqui</p>
+                <p className="text-[9px] text-zinc-400">Fotos, documentos, textos</p>
               </div>
             )}
 
             {activeMessages.length === 0 && !isTyping && (
-              <div className="h-full flex flex-col items-center justify-center text-center gap-4 py-8">
-                <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-[#b8942b] shadow-xl bg-[#b8942b]/5 border border-[#b8942b]/15">
-                  <Bot size={28} />
+              <div className="h-full flex flex-col items-center justify-center text-center gap-3 py-6 px-2">
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-[#ad8330] shadow-xl bg-[#ad8330]/10 border border-[#ad8330]/20">
+                  <Bot size={26} />
                 </div>
                 <div>
-                  <p className="text-xs font-black text-white uppercase tracking-widest">{activeAssistant.label}</p>
-                  <p className="text-[9px] text-zinc-450 max-w-[260px] leading-relaxed mt-2">{activeAssistant.desc}</p>
-                  <p className="text-[8.5px] text-zinc-550 mt-4 leading-relaxed uppercase tracking-wider">
-                    Suporta imagens, PDFs e textos • Cole com Ctrl+V • Arraste
+                  <p className="text-xs font-bold text-white tracking-wide">{activeAssistant.label}</p>
+                  <p className="text-[11px] text-zinc-400 max-w-[260px] leading-relaxed mt-1">{activeAssistant.desc}</p>
+                  <p className="text-[9px] text-zinc-500 mt-3 leading-relaxed">
+                    Envie mensagens, textos ou fotos para começar
                   </p>
                 </div>
               </div>
@@ -1509,17 +1914,17 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
                         const isImg = file.type.startsWith("image/");
                         if (isImg) {
                           return (
-                            <div key={fIdx} className="rounded-xl overflow-hidden border border-zinc-800 w-36 shadow-md bg-zinc-900/60">
-                              <img src={`data:${file.type};base64,${file.data}`} className="w-full object-cover" alt={file.name} />
+                            <div key={fIdx} className="rounded-xl overflow-hidden border border-zinc-800 w-40 shadow-md bg-zinc-900/60 p-1">
+                              <img src={`data:${file.type};base64,${file.data}`} className="w-full h-24 object-cover rounded-lg" alt={file.name} />
                             </div>
                           );
                         }
                         return (
                           <div 
                             key={fIdx} 
-                            className="flex items-center gap-2.5 px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-xl w-48 shadow-sm text-left"
+                            className="flex items-center gap-2 px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-xl w-44 shadow-sm text-left"
                           >
-                            <File size={16} className="text-[#b8942b] shrink-0" />
+                            <File size={15} className="text-[#ad8330] shrink-0" />
                             <div className="flex-1 min-w-0">
                               <p className="text-[10px] font-bold text-white truncate">{file.name}</p>
                               <p className="text-[8px] text-zinc-500 uppercase mt-0.5">{formatFileSize(file.size)}</p>
@@ -1531,10 +1936,10 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
                   )}
 
                   <div
-                    className={`max-w-[88%] px-4 py-3 rounded-2xl text-[12px] leading-relaxed font-medium ${
+                    className={`max-w-[92%] sm:max-w-[88%] px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl text-xs sm:text-[13px] leading-relaxed font-medium shadow-sm transition-all duration-200 break-words overflow-hidden ${
                       isModel 
-                        ? "bg-zinc-900/80 border border-zinc-800 text-zinc-200 rounded-tl-sm shadow-sm" 
-                        : "rounded-tr-sm text-white bg-[#b8942b]/10 border border-[#b8942b]/25 shadow-sm"
+                        ? "bg-zinc-900/60 border border-zinc-800/80 text-zinc-200 rounded-bl-sm" 
+                        : "bg-[#ad8330]/20 border border-[#ad8330]/30 text-white rounded-br-sm"
                     }`}
                   >
                     {isModel ? formatMessage(msg.content) : <p className="whitespace-pre-wrap">{msg.content}</p>}
@@ -1543,10 +1948,10 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
                   {isModel && (
                     <button
                       onClick={() => applyModelMessageToEditor(index, msg.content)}
-                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider cursor-pointer transition-all active:scale-95 hover:scale-[1.02] shadow-md bg-[#b8942b]/10 border border-[#b8942b]/35 text-[#b8942b]"
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider cursor-pointer transition-all hover:bg-zinc-800 border border-zinc-800 text-zinc-400 hover:text-[#ad8330]"
                     >
-                      <Zap size={11} />
-                      <span>Preencher Projeto ⚡</span>
+                      <Zap size={10} />
+                      <span>Aplicar no Editor</span>
                     </button>
                   )}
                 </div>
@@ -1555,13 +1960,13 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
 
             {isTyping && (
               <div className="flex items-start gap-2 animate-pulse">
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-black bg-[#b8942b]">
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-black bg-[#ad8330]">
                   {activeAssistant.icon}
                 </div>
                 <div className="px-4 py-3 bg-zinc-900/70 border border-zinc-800 rounded-2xl rounded-tl-sm flex items-center gap-1.5 shadow-sm">
-                  <span className="w-1.5 h-1.5 rounded-full animate-bounce bg-[#b8942b]" style={{ animationDelay: "0ms" }} />
-                  <span className="w-1.5 h-1.5 rounded-full animate-bounce bg-[#b8942b]" style={{ animationDelay: "150ms" }} />
-                  <span className="w-1.5 h-1.5 rounded-full animate-bounce bg-[#b8942b]" style={{ animationDelay: "300ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full animate-bounce bg-[#ad8330]" style={{ animationDelay: "0ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full animate-bounce bg-[#ad8330]" style={{ animationDelay: "150ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full animate-bounce bg-[#ad8330]" style={{ animationDelay: "300ms" }} />
                 </div>
               </div>
             )}
@@ -1569,34 +1974,34 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
           </div>
 
           {/* Footer Area */}
-          <div className="shrink-0 p-3.5 border-t border-zinc-900 bg-black/80 backdrop-blur-md space-y-2.5">
+          <div className="shrink-0 p-3 border-t border-zinc-900 bg-black/90 backdrop-blur-md space-y-2">
             
             {/* Multiple files preview before send */}
             {attachedFiles.length > 0 && (
-              <div className="flex flex-col gap-1.5 px-1 py-0.5 max-h-[100px] overflow-y-auto custom-scrollbar">
+              <div className="flex flex-col gap-1.5 px-1 py-0.5 max-h-[90px] overflow-y-auto custom-scrollbar">
                 {attachedFiles.map((file, idx) => {
                   const isImg = file.type.startsWith("image/");
                   return (
                     <div 
                       key={idx} 
-                      className="flex items-center gap-2.5 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-xl animate-in slide-in-from-bottom-2 duration-150"
+                      className="flex items-center gap-2 px-2.5 py-1.5 bg-zinc-900 border border-zinc-800 rounded-xl animate-in slide-in-from-bottom-2 duration-150"
                     >
                       {isImg ? (
-                        <div className="w-7 h-7 rounded-lg overflow-hidden border border-zinc-750 shrink-0">
+                        <div className="w-6 h-6 rounded-md overflow-hidden border border-zinc-700 shrink-0">
                           <img src={`data:${file.type};base64,${file.data}`} className="w-full h-full object-cover" alt="Preview" />
                         </div>
                       ) : (
-                        <File size={14} className="text-[#b8942b] shrink-0" />
+                        <File size={13} className="text-[#ad8330] shrink-0" />
                       )}
                       
                       <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-bold text-zinc-350 truncate">{file.name}</p>
-                        <p className="text-[8px] text-zinc-650 mt-0.5">{formatFileSize(file.size)}</p>
+                        <p className="text-[10px] font-bold text-zinc-300 truncate">{file.name}</p>
+                        <p className="text-[8px] text-zinc-500">{formatFileSize(file.size)}</p>
                       </div>
                       
                       <button 
                         onClick={() => removeAttachedFile(idx)} 
-                        className="p-1.5 hover:bg-zinc-800 rounded-lg text-zinc-550 hover:text-red-500 transition-colors cursor-pointer shrink-0"
+                        className="p-1 hover:bg-zinc-800 rounded-lg text-zinc-500 hover:text-red-500 transition-colors cursor-pointer shrink-0"
                       >
                         <X size={11} />
                       </button>
@@ -1618,10 +2023,10 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isUploading}
-                className="p-2.5 rounded-xl border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800 text-zinc-500 hover:text-white transition-all cursor-pointer shrink-0 mb-0.5 disabled:opacity-40"
-                title="Anexar qualquer tipo de arquivo"
+                className="p-2.5 rounded-xl border border-zinc-800 bg-zinc-900/80 hover:bg-zinc-800 text-zinc-400 hover:text-white transition-all cursor-pointer shrink-0 mb-0.5 disabled:opacity-40"
+                title="Anexar arquivos ou fotos"
               >
-                {isUploading ? <RefreshCw size={15} className="animate-spin text-[#b8942b]" /> : <Paperclip size={15} />}
+                {isUploading ? <RefreshCw size={15} className="animate-spin text-[#ad8330]" /> : <Paperclip size={15} />}
               </button>
               <textarea
                 ref={textareaRef}
@@ -1637,22 +2042,20 @@ VOCÊ É O CÉREBRO. Nunca pergunte "quer que eu ative?", apenas GERE o JSON com
                     handleSend();
                   }
                 }}
-                placeholder={`Fale com ${activeAssistant.label}...`}
+                onPaste={handlePaste}
+                placeholder={`Digite sua mensagem...`}
                 rows={1}
-                className="flex-1 bg-zinc-900/60 border border-zinc-800 rounded-xl px-4 py-2.5 text-[12px] text-white placeholder:text-zinc-650 focus:outline-none focus:border-[#b8942b]/50 resize-none font-medium leading-relaxed transition-colors focus:ring-1 focus:ring-[#b8942b]/20"
-                style={{ minHeight: "40px", maxHeight: "100px", scrollbarWidth: "none" }}
+                className="flex-1 bg-zinc-900/80 border border-zinc-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-[#ad8330]/60 resize-none font-medium leading-relaxed transition-colors"
+                style={{ minHeight: "38px", maxHeight: "90px", scrollbarWidth: "none" }}
               />
               <button
                 onClick={handleSend}
                 disabled={isTyping || isUploading || (inputText.trim() === "" && attachedFiles.length === 0)}
-                className="w-10 h-10 rounded-xl flex items-center justify-center text-black bg-[#b8942b] cursor-pointer transition-all active:scale-90 disabled:opacity-30 disabled:cursor-not-allowed hover:brightness-110 shrink-0 shadow-md mb-0.5"
+                className="w-9 h-9 rounded-xl flex items-center justify-center text-black bg-[#ad8330] cursor-pointer transition-all active:scale-90 disabled:opacity-30 disabled:cursor-not-allowed hover:brightness-110 shrink-0 shadow-md mb-0.5"
               >
                 {isTyping ? <RefreshCw size={14} className="animate-spin" /> : <Send size={14} />}
               </button>
             </div>
-            <p className="text-[8.5px] text-zinc-700 text-center font-bold tracking-wide uppercase">
-              Shift+Enter nova linha • Ctrl+V colar arquivo • Envie qualquer tipo de arquivo
-            </p>
           </div>
 
         </div>

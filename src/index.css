@@ -4,69 +4,64 @@
   --font-sans: "Poppins", sans-serif;
   --font-montserrat: "Montserrat", sans-serif;
   --font-poppins: "Poppins", sans-serif;
-  
-  /* Gold custom colors for Tailwind v4 */
-  --color-gold-50: #fbf7e6;
-  --color-gold-100: #f5ebbf;
-  --color-gold-200: #ead680;
-  --color-gold-300: #ddbf43;
-  --color-gold-400: #d4af37; /* Premium Gold Ouro */
-  --color-gold-500: #b8942b;
-  --color-gold-600: #947320;
-  --color-gold-700: #70551a;
-  --color-gold-800: #4c3913;
-  --color-gold-900: #2c200b;
 }
 
 @layer utilities {
-  /* Scrollbar Customization */
+  /* Scrollbar Aesthetics */
   .custom-scrollbar::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
   }
   .custom-scrollbar::-webkit-scrollbar-track {
     background: transparent;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.08);
-    border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.03);
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 9999px;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: rgba(212, 175, 55, 0.2);
+    background: rgba(197, 168, 128, 0.4);
   }
 
   .scrollbar-none::-webkit-scrollbar {
     display: none;
   }
   .scrollbar-none {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
   }
 
-  /* Glassmorphism Presets */
-  .glass {
-    background: rgba(10, 10, 12, 0.7) !important;
-    backdrop-filter: blur(16px) saturate(180%) !important;
-    -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
-    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  /* Glassmorphism & Surface Cards */
+  .glass-card {
+    background: rgba(18, 18, 20, 0.75);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
   }
 
-  .glass-heavy {
-    background: rgba(5, 5, 5, 0.85) !important;
-    backdrop-filter: blur(24px) saturate(160%) !important;
-    -webkit-backdrop-filter: blur(24px) saturate(160%) !important;
-    border: 1px solid rgba(255, 255, 255, 0.09) !important;
+  .glass-card-gold {
+    background: rgba(24, 22, 18, 0.85);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(197, 168, 128, 0.25);
   }
 
-  .glass-gold {
-    background: rgba(212, 175, 55, 0.03) !important;
-    backdrop-filter: blur(12px) !important;
-    -webkit-backdrop-filter: blur(12px) !important;
-    border: 1px solid rgba(212, 175, 55, 0.15) !important;
+  .glow-gold-sm {
+    box-shadow: 0 0 15px -3px rgba(197, 168, 128, 0.15);
   }
 
-  /* Micro-animations */
+  .glow-gold-lg {
+    box-shadow: 0 0 30px -5px rgba(197, 168, 128, 0.25);
+  }
+
+  /* Card Hover Effects */
+  .card-hover-effect {
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .card-hover-effect:hover {
+    transform: translateY(-2px);
+    border-color: rgba(197, 168, 128, 0.35);
+  }
+
+  /* Animations */
   @keyframes slide {
     0% { transform: translateX(-100%); }
     100% { transform: translateX(300%); }
@@ -76,55 +71,34 @@
   }
 
   @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-  .animate-fade-in {
-    animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  }
-
-  @keyframes slideUp {
-    from { opacity: 0; transform: translateY(12px); }
+    from { opacity: 0; transform: translateY(4px); }
     to { opacity: 1; transform: translateY(0); }
   }
-  .animate-slide-up {
-    animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  }
-
-  @keyframes scaleIn {
-    from { opacity: 0; transform: scale(0.96); }
-    to { opacity: 1; transform: scale(1); }
-  }
-  .animate-scale-in {
-    animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  }
-
-  @keyframes shimmer {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
-  }
-  .animate-shimmer {
-    background: linear-gradient(90deg, #101012 25%, #1c1c20 50%, #101012 75%);
-    background-size: 200% 100%;
-    animation: shimmer 1.8s infinite;
-  }
-
-  /* Glow effects */
-  .glow-gold {
-    box-shadow: 0 0 20px rgba(212, 175, 55, 0.15);
-  }
-  .glow-gold-hover:hover {
-    box-shadow: 0 0 25px rgba(212, 175, 55, 0.25);
-    border-color: rgba(212, 175, 55, 0.3) !important;
+  .animate-fade-in {
+    animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
 
   /* Markdown Styles */
-  .markdown-body h1 { @apply text-xl font-bold text-white mb-2 mt-4 first:mt-0; }
-  .markdown-body h2 { @apply text-lg font-bold text-zinc-100 mb-2 mt-3; }
-  .markdown-body p { @apply mb-2.5 text-zinc-300 leading-relaxed; }
-  .markdown-body ul { @apply list-disc list-inside mb-3 text-zinc-300 space-y-1; }
-  .markdown-body ol { @apply list-decimal list-inside mb-3 text-zinc-300 space-y-1; }
-  .markdown-body code { @apply bg-[#050505] text-gold-400 font-mono text-[11px] px-1.5 py-0.5 rounded border border-white/5; }
-  .markdown-body strong { @apply text-white font-semibold; }
-  .markdown-body blockquote { @apply border-l-2 border-gold-400 pl-3 my-3 italic text-zinc-400; }
+  .markdown-body h1 { @apply text-xl font-bold mb-2 text-white border-b border-zinc-800/80 pb-1; }
+  .markdown-body h2 { @apply text-lg font-bold mb-2 text-zinc-100; }
+  .markdown-body h3 { @apply text-base font-semibold mb-1.5 text-zinc-200; }
+  .markdown-body p { @apply mb-2 leading-relaxed text-zinc-300 text-xs sm:text-sm; }
+  .markdown-body ul { @apply list-disc list-inside mb-2 text-zinc-300 text-xs sm:text-sm space-y-1; }
+  .markdown-body ol { @apply list-decimal list-inside mb-2 text-zinc-300 text-xs sm:text-sm space-y-1; }
+  .markdown-body code { @apply bg-zinc-950 text-[#c5a880] px-1.5 py-0.5 rounded border border-zinc-800 font-mono text-xs; }
+  .markdown-body blockquote { @apply border-l-2 border-[#c5a880] pl-3 italic text-zinc-400 my-2 bg-zinc-950/40 py-1 rounded-r; }
+}
+
+/* Global Selection & Smooth Transitions */
+::selection {
+  background: rgba(197, 168, 128, 0.3);
+  color: #ffffff;
+}
+
+body {
+  background-color: #000000;
+  color: #f4f4f5;
+  font-family: var(--font-poppins), sans-serif;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
 }

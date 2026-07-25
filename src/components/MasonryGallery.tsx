@@ -51,11 +51,14 @@ const MasonryGalleryComponent: React.FC<MasonryGalleryProps> = ({
               className={`relative rounded-lg overflow-hidden border cursor-pointer aspect-square transition-all group ${
                 isActive ? "border-[#c99b3b] scale-[1.02] shadow shadow-[#c99b3b]/5" : "border-white/5"
               }`}
+              style={{
+                backgroundColor: store.corDominante && store.corDominante !== "transparent" ? store.corDominante : undefined,
+              }}
             >
-              <img src={img} className="w-full h-full object-cover" alt={`Thumb ${index}`} />
+              <img src={img} className="w-full h-full object-contain" alt={`Thumb ${index}`} />
               
               {/* Overlay Glassmorphism */}
-              <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center p-1.5">
+              <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-2 p-1.5">
                 <a
                   href={img}
                   download={`zion-local-${index}-${store.resolucao}.${exportFormat.toLowerCase()}`}
@@ -65,6 +68,25 @@ const MasonryGalleryComponent: React.FC<MasonryGalleryProps> = ({
                 >
                   <Download size={12} />
                 </a>
+
+                {/* Botão de Excluir Imagem Individual */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    store.setGaleriaImages((prev: string[]) => {
+                      const next = prev.filter((_, idx) => idx !== index);
+                      if (store.activeImageIndex >= next.length) {
+                        store.setActiveImageIndex(Math.max(0, next.length - 1));
+                      }
+                      return next;
+                    });
+                    showToast("Imagem excluída da galeria!", "success");
+                  }}
+                  className="p-2 bg-black/85 hover:bg-red-950 hover:text-red-500 border border-white/5 hover:border-red-500/30 rounded-lg text-zinc-400 transition-all shadow-xl"
+                  title="Excluir imagem"
+                >
+                  <Trash2 size={12} />
+                </button>
               </div>
             </div>
           );

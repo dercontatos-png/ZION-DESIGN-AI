@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { safeStorageSetItem } from '../utils/imageStorageManager';
 
 export interface ImgConfig {
   imageSize: string;
@@ -154,6 +155,7 @@ export interface ImageStoreState {
   
   generateImage: (customApiKey: string, backgroundSettings: any, aspectRatioOverride?: string) => Promise<void>;
   applyInpainting: (customApiKey: string) => Promise<void>;
+  removeBackground: () => Promise<void>;
 
   // Project Actions
   setProjects: (projects: DesignProject[]) => void;
@@ -188,7 +190,7 @@ export const useImageStore = create<ImageStoreState>((set, get) => ({
     environment: "",
     useEnvRef: false,
     envColor: "Neutro",
-    colorCode: "#b8942b",
+    colorCode: "#ad8330",
     enableAmbientColor: false,
     rimLight: "Nenhuma",
     enableRimLight: false,
@@ -360,8 +362,8 @@ export const useImageStore = create<ImageStoreState>((set, get) => ({
   
   applyInpainting: async (customApiKey) => {
     const { canvasImage, maskImage, inpaintPrompt } = get();
-    if (!canvasImage || !maskImage || !inpaintPrompt) {
-      alert("Parâmetros do Canvas em branco (imagem, máscara ou descrição).");
+    if (!canvasImage || !inpaintPrompt) {
+      alert("Por favor, digite a descrição do ajuste e selecione a imagem no canvas.");
       return;
     }
     set({ isInpainting: true });
@@ -373,7 +375,7 @@ export const useImageStore = create<ImageStoreState>((set, get) => ({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           image: canvasImage,
-          mask: maskImage,
+          mask: maskImage || null,
           prompt: inpaintPrompt,
           customApiKey: effectiveApiKey
         })
@@ -398,6 +400,38 @@ export const useImageStore = create<ImageStoreState>((set, get) => ({
       alert("Erro no Inpainting: " + e.message);
     } finally {
       set({ isInpainting: false });
+    }
+  },
+
+  removeBackground: async () => {
+    const { canvasImage } = get();
+    if (!canvasImage) return;
+
+    set({ isGeneratingImage: true });
+    try {
+      const response = await fetch("/api/remove-bg", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageBase64: canvasImage })
+      });
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || "Erro ao remover fundo.");
+      }
+
+      const data = await response.json();
+      if (data.image) {
+        set((state) => ({
+          generatedImages: [...state.generatedImages, data.image],
+          canvasImage: data.image
+        }));
+        alert("Fundo removido com sucesso!");
+      }
+    } catch (e: any) {
+      alert("Erro ao remover fundo: " + e.message);
+    } finally {
+      set({ isGeneratingImage: false });
     }
   },
 
@@ -434,7 +468,7 @@ export const useImageStore = create<ImageStoreState>((set, get) => ({
     // Save locally
     const stored = JSON.parse(localStorage.getItem('design_projects') || '[]');
     stored.unshift(newProject);
-    localStorage.setItem('design_projects', JSON.stringify(stored.slice(0, 50)));
+    safeStorageSetItem('design_projects', JSON.stringify(stored.slice(0, 15)));
 
     return newProject;
   },
@@ -479,7 +513,7 @@ export const useImageStore = create<ImageStoreState>((set, get) => ({
         stored.unshift(projectData);
       }
       
-      localStorage.setItem('design_projects', JSON.stringify(stored.slice(0, 50)));
+      safeStorageSetItem('design_projects', JSON.stringify(stored.slice(0, 15)));
       
       set((state) => {
         const updatedProjects = [...state.projects];

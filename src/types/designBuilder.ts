@@ -29,7 +29,8 @@ export interface EstiloReferencia {
 }
 
 export interface ProjectConfig {
-  tipoPainel: "DESIGNER" | "PRODUCT"; // Designer Zion vs Product Zion
+  clientId?: string | null;
+  tipoPainel: "DESIGNER" | "PRODUCT" | "LOGO" | "GC_TV"; // Designer Zion vs Product Zion vs Logo Creator vs GC TV Broadcast
   sujeitoBase64: string; // Fotos do Sujeito ou Produto
   desativarSujeito: boolean; // Flag para ignorar/desativar sujeito principal no prompt e UI
   cenarioBase64: string;
@@ -69,7 +70,6 @@ export interface ProjectConfig {
   logoPosOverlay?: "top_center" | "top_left" | "top_right" | "bottom_left" | "bottom_right";
   logoSizeOverlay?: number;
   logoInclusionType?: "overlay" | "embedded";
-  logoStyleOverlay?: "original" | "white" | "black";
 
   // Suporte a múltiplos arquivos
   sujeitosBase64List?: string[];
@@ -90,6 +90,7 @@ export interface ProjectConfig {
   floatingElementsMode: "off" | "auto" | "custom";
   floatingElementsCustom: string;
   somentePrompt?: boolean;
+  modelId?: string;
   enableEstiloVisual?: boolean;
   estiloVisualCustom?: string;
 }

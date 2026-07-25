@@ -1,6 +1,6 @@
 {
-  "name": "Zion Workspace",
-  "description": "Plataforma interna de produção e gestão para a agência Zion Company.",
-  "requestFramePermissions": ["microphone"],
+  "name": "Zion Design Studio",
+  "description": "Plataforma profissional para criação visual de alta performance, copiloto IA, gerenciador de clientes e ferramentas de design.",
+  "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

@@ -16,6 +16,7 @@ export type Client = {
   contact: string;
   plan?: string;
   planDetails?: string;
+  paymentType?: "Mensal" | "Projeto" | "Sob Demanda";
   planValue: number;
   dueDate: string;
   paymentStatus: "Em dia" | "Atrasado" | "Pendente";

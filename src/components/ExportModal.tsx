@@ -14,7 +14,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   onClose, exportFormat, setExportFormat, zoomPercent, setZoomPercent, resolution 
 }) => {
   return (
-    <div className="absolute top-16 right-6 w-72 bg-[#0a0a0a] border border-zinc-800 rounded-2xl shadow-2xl z-50 flex flex-col overflow-hidden font-sans select-none animate-in fade-in zoom-in-95 duration-200">
+    <div className="absolute top-16 right-6 w-72 bg-[#0a0a0a] border border-zinc-800 rounded-2xl shadow-2xl z-50 flex flex-col overflow-hidden font-sans animate-in fade-in zoom-in-95 duration-200">
       <div className="flex items-center justify-between p-4 border-b border-zinc-800">
         <span className="font-bold text-sm text-zinc-100">Exportar</span>
         <button onClick={onClose} className="text-zinc-500 hover:text-white transition-colors">
@@ -37,14 +37,14 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               onClick={() => setExportFormat(fmt.id as any)}
               className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all ${
                 exportFormat === fmt.id 
-                ? 'bg-[#b8942b]/10 border-[#b8942b] text-[#b8942b]' 
+                ? 'bg-[#ad8330]/10 border-[#ad8330] text-[#ad8330]' 
                 : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-700 hover:bg-zinc-800'
               }`}
             >
-              <Download size={14} className={exportFormat === fmt.id ? 'text-[#b8942b]' : 'text-zinc-500'} />
+              <Download size={14} className={exportFormat === fmt.id ? 'text-[#ad8330]' : 'text-zinc-500'} />
               <div className="flex flex-col items-start">
                 <span className="text-xs font-bold">{fmt.id}</span>
-                <span className={`text-[10px] ${exportFormat === fmt.id ? 'text-[#b8942b]/70' : 'text-zinc-500'}`}>{fmt.label}</span>
+                <span className={`text-[10px] ${exportFormat === fmt.id ? 'text-[#ad8330]/70' : 'text-zinc-500'}`}>{fmt.label}</span>
               </div>
             </button>
           ))}
@@ -70,7 +70,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
         </div>
 
         <button className="w-full flex items-center justify-center gap-2 p-3 mt-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-xs font-bold transition-all group">
-          <RefreshCw size={14} className="text-zinc-500 group-hover:text-[#b8942b]" />
+          <RefreshCw size={14} className="text-zinc-500 group-hover:text-[#ad8330]" />
           Recortar rosto
         </button>
       </div>
