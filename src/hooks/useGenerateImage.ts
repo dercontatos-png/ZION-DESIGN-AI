@@ -67,7 +67,7 @@ export const useGenerateImage = (
       logoBase64: store.logoBase64,
       logosList: store.logosList || [],
       useLogo: store.useLogo,
-      logoInclusionType: store.logoInclusionType || "overlay",
+      logoInclusionType: store.logoInclusionType || "embedded",
       logoPosOverlay: store.logoPosOverlay || "top_center",
       logoSizeOverlay: store.logoSizeOverlay || 20,
       dimensao: store.dimensao,

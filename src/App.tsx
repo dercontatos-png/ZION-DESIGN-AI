@@ -58,6 +58,7 @@ import {
   Filter,
   Layers,
   Globe,
+  Bot,
 } from "lucide-react";
 import { GoogleGenAI, Type } from "@google/genai";
 import SettingsModal from "./components/SettingsModal";
@@ -68,6 +69,7 @@ import { useImageStore } from "./store/useImageStore";
 import { InpaintCanvas } from "./components/InpaintCanvas";
 import DesignBuilder from "./components/DesignBuilder";
 import Agentes from "./components/Agentes";
+import { CopilotoAgencia } from "./components/CopilotoAgencia";
 import { safeStorageSetItem, getStorageStats, cleanImageStorage } from "./utils/imageStorageManager";
 
 
@@ -3371,110 +3373,58 @@ ${textContent}`
         style={{ animationDuration: "8s" }}
       />
 
-      {/* Header Fixo no Topo */}
-      {/* Header Fixo no Topo com Glassmorphism */}
-      <header className="h-16 w-full bg-[#09090b]/80 backdrop-blur-md border-b border-white/5 flex items-center justify-between px-6 fixed top-0 left-0 right-0 z-40 shrink-0">
-        {/* Esquerda: Logo Zion Design */}
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => {
-              if (window.innerWidth >= 1024) {
-                setIsDesktopSidebarOpen(true);
-              } else {
-                setIsMobileSidebarOpen(true);
-              }
-            }}
-            className={`${isDesktopSidebarOpen ? 'lg:hidden' : ''} text-zinc-400 hover:text-white p-2 hover:bg-white/5 rounded-xl transition-all flex items-center justify-center border border-transparent hover:border-white/5`}
-            aria-label="Abrir menu"
-          >
-            <Menu size={20} />
-          </button>
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#c5a880] to-[#ad8330] flex items-center justify-center text-zinc-950 shadow-lg shadow-[#c5a880]/10">
-            <Layers size={18} />
-          </div>
-          <div className="flex flex-col">
-            <span className="font-montserrat font-black text-sm tracking-wider uppercase bg-gradient-to-r from-white via-zinc-200 to-[#c5a880] bg-clip-text text-transparent">
-              Zion Studio
-            </span>
-            <span className="text-[9px] text-zinc-500 font-mono tracking-widest uppercase -mt-0.5">
-              PAINEL DE TRABALHO
-            </span>
-          </div>
-        </div>
-
-        {/* Centro: Barra de Busca */}
-        <div className="hidden sm:flex items-center gap-2 w-72 sm:w-96 min-w-0">
-          <div className="relative w-full">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" size={14} />
-            <input
-              type="text"
-              placeholder="Pesquisar clientes, tarefas, notas..."
-              className="w-full bg-zinc-950/80 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-xs focus:outline-none focus:border-[#c5a880]/60 transition-all text-white placeholder:text-zinc-600"
-            />
-          </div>
-        </div>
-
-        {/* Direita: Perfil & Status */}
-        <div className="flex items-center gap-3">
-          
-          {/* Status da Chave API no Header */}
-          {typeof window !== "undefined" &&
-          localStorage.getItem("custom_gemini_api_key") ? (
-            <div className="bg-[#c5a880]/10 border border-[#c5a880]/20 rounded-xl hidden md:flex items-center gap-2 px-3 py-1.5">
-              <span className="w-2 h-2 rounded-full bg-[#c5a880] animate-pulse" />
-              <span className="text-[10px] text-[#c5a880] font-bold uppercase tracking-wider">Chave Ativa</span>
-            </div>
-          ) : (
-            <div 
-              onClick={() => setIsSettingsModalOpen(true)}
-              className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl hidden md:flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-emerald-500/15 transition-all"
-            >
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">IA Conectada</span>
-            </div>
-          )}
-
-          {/* Botão de Perfil */}
-          <div
-            onClick={() => setIsProfileModalOpen(true)}
-            className="flex items-center gap-2.5 px-3 py-1.5 cursor-pointer hover:bg-white/5 rounded-xl transition-all border border-white/10 bg-zinc-950/60 group"
-          >
-            {myProfile?.avatarUrl ? (
-              <img
-                src={myProfile.avatarUrl}
-                alt={myProfile?.name || "Zion"}
-                className="w-7 h-7 rounded-full object-cover border border-white/10 group-hover:border-[#c5a880] transition-colors"
-                referrerPolicy="no-referrer"
-              />
-            ) : (
-              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#c5a880] to-[#ad8330] text-zinc-950 flex items-center justify-center text-[10px] font-bold uppercase">
-                {(myProfile?.name || "Zion").substring(0, 2)}
-              </div>
-            )}
-            <span className="text-xs font-semibold text-zinc-200 group-hover:text-white transition-colors hidden sm:inline">
-              {myProfile?.name || "Minha Conta"}
-            </span>
-          </div>
-        </div>
-      </header>
+      {/* Botão de Menu Flutuante para 100% de aproveitamento de espaço vertical */}
+      <button
+        onClick={() => {
+          if (window.innerWidth >= 1024) {
+            setIsDesktopSidebarOpen(!isDesktopSidebarOpen);
+          } else {
+            setIsMobileSidebarOpen(true);
+          }
+        }}
+        className={`fixed top-3 left-3 z-40 text-zinc-400 hover:text-white p-2.5 bg-[#09090b]/90 backdrop-blur-md border border-white/10 hover:border-[#c5a880]/30 rounded-xl transition-all flex items-center justify-center shadow-lg cursor-pointer ${
+          isDesktopSidebarOpen ? "lg:hidden" : "flex"
+        }`}
+        aria-label="Abrir menu"
+      >
+        <Menu size={18} />
+      </button>
 
       {/* Conteúdo Principal + Barra Lateral */}
-      <div className="flex h-[calc(100vh-64px)] mt-16 overflow-hidden relative w-full">
+      <div className="flex h-screen mt-0 overflow-hidden relative w-full">
         
         {/* Menu Lateral Expandido Profissional (Desktop) */}
         <aside className={`hidden ${isDesktopSidebarOpen ? 'lg:flex' : 'lg:hidden'} w-64 bg-[#09090b] border-r border-white/5 flex-col py-5 px-3.5 flex-shrink-0 overflow-y-auto custom-scrollbar h-full justify-between`}>
           <div className="space-y-6">
             
+            {/* Logo Zion Design na lateral */}
+            <div className="flex items-center gap-3 px-2.5 py-1.5 border-b border-white/5 pb-4">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#c5a880] to-[#ad8330] flex items-center justify-center text-zinc-950 shadow-lg shadow-[#c5a880]/10 shrink-0">
+                <Layers size={18} />
+              </div>
+              <div className="flex flex-col">
+                <span className="font-montserrat font-black text-sm tracking-wider uppercase bg-gradient-to-r from-white via-zinc-200 to-[#c5a880] bg-clip-text text-transparent">
+                  Zion Studio
+                </span>
+                <span className="text-[9px] text-zinc-500 font-mono tracking-widest uppercase -mt-0.5">
+                  PAINEL DE TRABALHO
+                </span>
+              </div>
+            </div>
+
             {/* Seção 1: Criação & IA */}
             <div className="space-y-1">
-              <p className="px-3 text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-2.5">
-                Criação & Inteligência
-              </p>
               <SidebarItem
                 icon={<LayoutDashboard size={16} />}
                 label="Início"
                 active={activeTab === "dashboard"}
                 onClick={() => setActiveTab("dashboard")}
+              />
+              <SidebarItem
+                icon={<Bot size={16} />}
+                label="Copiloto da Agência"
+                active={activeTab === "copiloto-agencia"}
+                onClick={() => setActiveTab("copiloto-agencia")}
               />
               <SidebarItem
                 icon={<Layers size={16} />}
@@ -3544,17 +3494,87 @@ ${textContent}`
           </div>
 
           {/* Rodapé da Sidebar */}
-          <div className="pt-4 border-t border-white/5 space-y-2 shrink-0">
-            {renderCloudSyncStatus()}
+          <div className="pt-4 border-t border-white/5 space-y-3 shrink-0">
+            {typeof window !== "undefined" &&
+            localStorage.getItem("custom_gemini_api_key") ? (
+              <div className="p-2 bg-[#c5a880]/10 border border-[#c5a880]/20 rounded-xl flex items-center justify-between mx-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-[#c5a880] animate-pulse" />
+                  <span className="text-xs text-[#c5a880] font-medium">
+                    Sua API Ativa
+                  </span>
+                </div>
+                <button
+                  onClick={() => {
+                    localStorage.removeItem("custom_gemini_api_key");
+                    window.location.reload();
+                  }}
+                  className="text-[10px] text-zinc-500 hover:text-red-400 font-bold"
+                >
+                  Remover
+                </button>
+              </div>
+            ) : (
+              <div
+                className="p-2 bg-zinc-950 border border-white/5 rounded-xl flex items-center justify-between cursor-pointer mx-1.5"
+                onClick={() => {
+                  setIsSettingsModalOpen(true);
+                }}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-xs text-zinc-400 font-medium">
+                    Usando API Padrão
+                  </span>
+                </div>
+              </div>
+            )}
+
             <SidebarItem
               icon={<Settings size={16} />}
               label="Configurações"
               active={false}
               onClick={() => setIsSettingsModalOpen(true)}
             />
+
+            <SidebarItem
+              icon={<LogOut size={16} />}
+              label="Sair da Conta"
+              active={false}
+              onClick={handleGoogleSignOut}
+            />
+
+            {renderCloudSyncStatus()}
+
+            <div
+              onClick={() => setIsProfileModalOpen(true)}
+              className="flex items-center gap-3 py-2.5 px-2.5 cursor-pointer hover:bg-white/5 rounded-xl transition-all border border-white/5 bg-zinc-950/40 mx-1.5"
+            >
+              {myProfile?.avatarUrl ? (
+                <img
+                  src={myProfile.avatarUrl}
+                  alt={myProfile?.name || "Zion"}
+                  className="w-9 h-9 rounded-full object-cover border border-white/10"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div className="w-9 h-9 rounded-full bg-[#c5a880] text-zinc-950 flex items-center justify-center text-xs font-bold uppercase shrink-0">
+                  {(myProfile?.name || "Zion").substring(0, 2)}
+                </div>
+              )}
+              <div className="flex flex-col min-w-0">
+                <span className="text-sm font-bold truncate text-white">
+                  {myProfile?.name || "Equipe Zion"}
+                </span>
+                <span className="text-[11px] text-zinc-400 truncate">
+                  {myProfile?.role || "Agência Digital"}
+                </span>
+              </div>
+            </div>
+
             <button
               onClick={() => setIsDesktopSidebarOpen(false)}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-500 hover:text-zinc-300 hover:bg-white/5 transition-all w-full mt-2 cursor-pointer"
+              className="flex items-center gap-3 px-3 py-2 rounded-xl text-zinc-500 hover:text-zinc-300 hover:bg-white/5 transition-all w-full mt-1 cursor-pointer"
             >
               <div className="w-5 flex justify-center"><ChevronLeft size={16} /></div>
               <span className="text-xs font-bold tracking-wide">Recolher Menu</span>
@@ -3607,13 +3627,21 @@ ${textContent}`
               <div className="flex-1 overflow-y-auto space-y-6 custom-scrollbar pr-1">
                 {/* Section: Principal */}
                 <div className="space-y-1.5">
-                  <p className="px-3.5 text-[9px] font-black uppercase tracking-widest text-zinc-600 mb-2">Criação & Inteligência</p>
                   <SidebarItem
                     icon={<LayoutDashboard size={16} />}
                     label="Início"
                     active={activeTab === "dashboard"}
                     onClick={() => {
                       setActiveTab("dashboard");
+                      setIsMobileSidebarOpen(false);
+                    }}
+                  />
+                  <SidebarItem
+                    icon={<Bot size={16} />}
+                    label="Copiloto da Agência"
+                    active={activeTab === "copiloto-agencia"}
+                    onClick={() => {
+                      setActiveTab("copiloto-agencia");
                       setIsMobileSidebarOpen(false);
                     }}
                   />
@@ -4182,6 +4210,13 @@ ${textContent}`
                 setMyProfile={setMyProfile} 
               />
             </motion.div>
+          )}
+
+          {activeTab === "copiloto-agencia" && (
+            <CopilotoAgencia
+              customApiKey={getActiveApiKey()}
+              myProfile={myProfile}
+            />
           )}
 
           {/* View: AI Tools */}

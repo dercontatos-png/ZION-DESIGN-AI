@@ -154,7 +154,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 h-[calc(100vh-64px)] overflow-hidden z-10 relative">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 h-full overflow-hidden z-10 relative">
       
       {/* COLUMN 1: SIDEBAR CONFIGURATIONS PANEL (lg:col-span-4) */}
       <div className="lg:col-span-4 bg-zinc-900 border border-white/5 rounded-2xl flex flex-col min-h-0 overflow-hidden shadow-2xl relative">

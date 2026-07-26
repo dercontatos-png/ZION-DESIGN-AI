@@ -174,7 +174,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto custom-scrollbar">
         {[
           { name: "Designer Zion", active: activeMenuTab === "Design Builder" || activeMenuTab === "Designer Zion" },
-          
+          { name: "Copiloto da Agência", active: activeMenuTab === "Copiloto da Agência" },
           { name: "Inspiração", active: activeMenuTab === "Inspiração" },
           { name: "Comunidade", active: activeMenuTab === "Comunidade" },
           { name: "Minha Galeria", active: activeMenuTab === "Minha Galeria" }

@@ -35,6 +35,7 @@ interface ChatFile {
   type: string;
   data: string; // base64 string
   size?: number;
+  category?: "logo" | "design" | "subject" | "scene" | "style" | "info";
 }
 
 interface ChatMessage {
@@ -220,7 +221,11 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatPanelRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputInfoRef = useRef<HTMLInputElement>(null);
+  const fileInputLogoRef = useRef<HTMLInputElement>(null);
+  const fileInputDesignRef = useRef<HTMLInputElement>(null);
+  const fileInputSubjectRef = useRef<HTMLInputElement>(null);
+  const fileInputSceneRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const activeMessages = chats[activeAssistant.id] || [];
@@ -237,7 +242,11 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleAttachFiles = useCallback((files: FileList | File[], triggerFlow = false) => {
+  const handleAttachFiles = useCallback((
+    files: FileList | File[], 
+    forcedCategory?: "logo" | "design" | "subject" | "scene" | "style" | "info",
+    triggerFlow = false
+  ) => {
     setIsUploading(true);
     const fileList = Array.from(files);
     let count = 0;
@@ -258,11 +267,31 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
 
         const cleanBytes = b64.replace(/^data:[^;]+;base64,/, "");
 
+        let fileCat: "logo" | "design" | "subject" | "scene" | "style" | "info" = forcedCategory || "info";
+
+        if (!forcedCategory) {
+          const lowerName = file.name.toLowerCase();
+          if (lowerName.includes("logo") || lowerName.includes("marca") || lowerName.includes("logomarca") || lowerName.includes("logotipo") || lowerName.includes("10anos") || lowerName.includes("icon") || lowerName.includes("symbol")) {
+            fileCat = "logo";
+          } else if (lowerName.includes("pessoa") || lowerName.includes("modelo") || lowerName.includes("sujeito") || lowerName.includes("homem") || lowerName.includes("mulher") || lowerName.includes("foto") || lowerName.includes("face") || lowerName.includes("portrait")) {
+            fileCat = "subject";
+          } else if (lowerName.includes("cenario") || lowerName.includes("background") || lowerName.includes("fundo") || lowerName.includes("scene") || lowerName.includes("ambiente")) {
+            fileCat = "scene";
+          } else if (lowerName.includes("estilo") || lowerName.includes("style")) {
+            fileCat = "style";
+          } else if (lowerName.includes("layout") || lowerName.includes("design") || lowerName.includes("flyer") || lowerName.includes("card") || lowerName.includes("ref")) {
+            fileCat = "design";
+          } else {
+            fileCat = "info";
+          }
+        }
+
         const newFile: ChatFile = {
           name: file.name,
           type: file.type || "application/octet-stream",
           data: cleanBytes,
-          size: file.size
+          size: file.size,
+          category: fileCat
         };
 
         setAttachedFiles((prev) => [...prev, newFile]);
@@ -282,6 +311,16 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
       reader.readAsDataURL(file);
     });
   }, [activeAssistant.id]);
+
+  const updateFileCategory = (idx: number, cat: "logo" | "design" | "subject" | "scene" | "style" | "info") => {
+    setAttachedFiles((prev) => {
+      const next = [...prev];
+      if (next[idx]) {
+        next[idx] = { ...next[idx], category: cat };
+      }
+      return next;
+    });
+  };
 
   const handleSendMessage = async (overrideText?: string, overrideFiles?: ChatFile[]) => {
     const textToSend = overrideText || inputText;
@@ -354,13 +393,24 @@ ${(store.camadasTexto || []).map((t, idx) => `  ${idx + 1}. [Função: "${t.func
 - Qualidade / Modelo Ativo: ${store.resolucao} (usando o modelo: gemini-3-pro-image)
 
 Regras de Automação do JSON (SEMPRE adicione no final se houver mudança de contexto):
-- Se uma das imagens for CLARAMENTE um Logotipo de uma marca (fundo transparente, símbolo, escrita): ative "useLogo": true. NÃO descreva estilo visual para a logo, NÃO adicione como referência de cenário ou estilo. O gerador irá estampar a logo como ela é.
-1. Se a arte NÃO deve ter pessoas ou sujeito, mude "desativarSujeito": true e "noPeople": true.
-2. Se a arte TEM que ter sujeito ou pessoa, mude "desativarSujeito": false e "noPeople": false.
-3. Se a arte precisa de logo, mude "useLogo": true. NÃO descreva o estilo visual da logo.
-4. Se a arte precisa de textos, mude "enableTypography": true e preencha "camadasTexto" e "promptTipografia".
-5. Se a arte exige uma cor específica, atualize "cores" e defina "coresAutomaticas": false. Se a arte NÃO exige uma cor específica, você DEVE definir "coresAutomaticas": true e omitir o objeto "cores".
-6. REGRA CRÍTICA DE CENÁRIO: "useEnvRef" DEVE ser true APENAS se houver foto de cenário/imagem de fundo enviada ou anexada. Se NÃO houver imagem de referência de cenário enviada, defina OBRIGATORIAMENTE "useEnvRef": false.
+- Se uma das imagens for CLARAMENTE um Logotipo de uma marca ou se o usuário disser "coloque a logo X" / "use a logo 10 anos": ative "useLogo": true e mapeie como "logo". NÃO crie camada de texto em "camadasTexto" para o nome da logo! O nome da logo refere-se ao ARQUIVO DE IMAGEM enviado pelo cliente.
+1. REGRA ABSOLUTA DE LOGOTIPO vs CAMADA DE TEXTO:
+   - Se o usuário enviar uma imagem de logo ou disser "coloque a logo 10 anos" / "use a logo X":
+     * Defina "useLogo": true e mapeie o arquivo como "logo" em "mapeamentoImagens".
+     * É TERMINANTEMENTE PROIBIDO CRIAR UMA CAMADA DE TEXTO em "camadasTexto" com o nome da logo (JAMAIS crie { conteudo: "10 anos" } ou { conteudo: "logo 10 anos" }).
+     * O nome "10 anos" é o nome do arquivo/imagem do logotipo, NÃO um texto tipográfico para ser escrito!
+2. POSICIONAMENTO DA LOGO E ZONA DE PROTEÇÃO DE CABELO E ROSTO:
+   - A logo NUNCA PODE SER GERADA EM CIMA DO CABELO, ROSTO OU CORPO DO SUJEITO!
+   - Se o sujeito tiver cabelo/cabeça alta no centro superior, instrua em "promptTipografia": "Posicionar o logotipo da marca estritamente em espaço negativo limpo no canto superior esquerdo ou superior direito, JAMAIS em cima do cabelo, rosto ou cabeça do sujeito."
+3. IDIOMA DOS CAMPOS DE TEXTO DO EDITOR (PORTUGUÊS DO BRASIL):
+   - É OBRIGATÓRIO preencher TODOS os campos de texto do JSON (promptCenario, promptDesign, promptTipografia, additionalPrompt, negativePrompt, poseDescription, floatingElementsCustom, composicaoCustom, estiloVisualCustom) EM PORTUGUÊS DO BRASIL.
+   - O usuário precisa visualizar e ler todos esses textos no formulário do editor em Português.
+   - O processamento e tradução técnica para o inglês do gerador de imagem ocorre automaticamente no servidor backend!
+3. Se a arte NÃO deve ter pessoas ou sujeito, mude "desativarSujeito": true e "noPeople": true.
+4. Se a arte TEM que ter sujeito ou pessoa, mude "desativarSujeito": false e "noPeople": false.
+5. Se a arte precisa de textos verdadeiros, mude "enableTypography": true e preencha "camadasTexto" e "promptTipografia".
+6. Se a arte exige uma cor específica, atualize "cores" e defina "coresAutomaticas": false. Se a arte NÃO exige uma cor específica, você DEVE definir "coresAutomaticas": true e omitir o objeto "cores".
+7. REGRA CRÍTICA DE CENÁRIO: "useEnvRef" DEVE ser true APENAS se houver foto de cenário/imagem de fundo enviada ou anexada. Se NÃO houver imagem de referência de cenário enviada, defina OBRIGATORIAMENTE "useEnvRef": false.
 7. O sistema suporta o preenchimento completo de TODAS as seções do editor:
    - Sujeito Principal: "desativarSujeito", "noPeople", "gender" ("Masculino"|"Feminino"|"Outros"), "multiplesPersons" (boolean), "gendersDescription", "poseDescription", "positioning" ("Esquerda"|"Centro"|"Direita").
    - Dimensões: "dimensao" ("1:1" | "3:4" | "9:16" | "16:9").
@@ -381,20 +431,25 @@ Regras de Automação do JSON (SEMPRE adicione no final se houver mudança de co
 12. REGRA ABSOLUTA DE FUNDO SÓLIDO / COR ÚNICA (PURE SOLID COLOR BACKGROUND):
     Se o usuário pedir apenas um fundo sólido, cor de fundo, canvas limpo ou cor única (ex: "CRIE UM FUNDO SOLIDO NA COR #0b1c32 4:5", "fundo liso azul", "cor sólida"):
     - "desativarSujeito": true, "noPeople": true, "enableTypography": false, "camadasTexto": [], "promptTipografia": "", "useLogo": false, "useEnvRef": false
-    - "promptDesign": "Pure flat solid color canvas."
-    - "promptCenario": "Pure solid dark blue background (#0b1c32), flat matte finish, no people, no text, no shapes, no gradients."
-    - "additionalPrompt": "A completely blank pure solid color background canvas in exact hex color #0b1c32, zero models, zero subjects, zero text, zero graphics."
-    - "negativePrompt": "people, human, model, male, female, person, text, typography, headline, flyer, poster, neon, glow, smartphone, 3d, gradient, shapes, objects"
+    - "promptDesign": "Tela plana e limpa de cor sólida."
+    - "promptCenario": "Fundo azul escuro sólido (#0b1c32), acabamento fosco, cor limpa e uniforme, sem pessoas, sem texto, sem formas, sem gradientes."
+    - "additionalPrompt": "Fundo totalmente limpo de cor sólida na cor exata #0b1c32, sem modelos, sem sujeitos, sem textos ou gráficos."
+    - "negativePrompt": "pessoas, modelos, pessoas humanas, rosto, corpo, texto, frases, título, flyer, cartaz, neon, brilho, celular, gradientes, formas"
     - "dimensao": "3:4" (se 4:5) ou "1:1"
     - "corDominante": "#0b1c32", "useCorDominante": true, "coresAutomaticas": false
     - JAMAIS adicione mockups de celular, frases de sindicato, modelos ou neon que o usuário NÃO solicitou!
 13. REGRA ABSOLUTA DE EDIÇÃO, ALTERAÇÃO E REMOÇÃO DE ELEMENTOS:
+    - Se o usuário pedir para REMOVER, EXCLUIR, TIRAR ou APAGAR elementos específicos da imagem (ex: "tire rua", "remova o instagram", "tire a logo designer premium", "remova o endereço"):
+      * Preencha OBRIGATORIAMENTE no campo "negativePrompt" a lista exata dos itens a remover em português: "endereço, rua, instagram, @, logo designer premium, texto do rodapé, logos de referência".
+      * Preencha em "additionalPrompt" e "promptDesign": "MANDATO DE REMOÇÃO: Remover e apagar completamente qualquer endereço, perfil do instagram (@) ou logo do rodapé do design. Manter a área inferior do rodapé totalmente limpa."
+    - Se o usuário pedir para POSICIONAR OU COLOCAR A LOGO EM LUGAR MELHOR (ex: "coloque essa logo", "lugar melhor para a logo", "não coloque em cima do cabelo"):
+      * Defina "useLogo": true, "logoInclusionType": "embedded".
+      * Preencha em "promptTipografia": "Posicionar o logotipo da marca no canto superior esquerdo ou superior direito em espaço limpo. REGRA CRÍTICA: O logotipo JAMAIS deve ficar em cima do cabelo, cabeça, rosto ou corpo do sujeito!"
+    - Se o usuário pedir formato para Instagram retrato / post retrato / 4:5:
+      * Defina "dimensao": "3:4".
     - Se o usuário pedir para ALTERAR ou MUDAR um texto ou valor (ex: "mude o valor para R$ 600", "troque locução por apresentadora", "corrija X"):
       * MANTENHA TODOS OS OUTROS TEXTOS do editor que já estavam certos e não foram mencionados pelo usuário.
       * Consulte a lista "[Camadas de Texto Atuais no Editor]" enviada no contexto acima e retorne em "camadasTexto" a lista COMPLETA das camadas com as alterações solicitadas.
-    - Se o usuário pedir para REMOVER, EXCLUIR ou TIRAR um texto ou informação (ex: "remova a locução", "tire o valor", "apague a frase X"):
-      * Envie a chave "removerCamadasTexto": ["Locução"] ou ["Função/Trecho do texto a remover"].
-      * Ou envie "substituirCamadasTexto": true e em "camadasTexto" coloque apenas a lista das camadas que DEVEM PERMANECER.
     - Se o usuário pedir para REMOVER PESSOAS/MODELO: defina "desativarSujeito": true, "noPeople": true.
     - Se o usuário pedir para REMOVER CENÁRIO/FUNDO: defina "useEnvRef": false e "promptCenario": "".
     - Se o usuário pedir para REMOVER LOGO: defina "useLogo": false.
@@ -574,10 +629,10 @@ Siga rigorosamente estas orientações de preenchimento para CADA SEÇÃO do edi
 
 5. CENÁRIO:
    - "useEnvRef": true se houver foto de fundo.
-   - "promptCenario": Descrição técnica em inglês do fundo/cenário.
+   - "promptCenario": Descrição técnica em PORTUGUÊS DO BRASIL do fundo/cenário.
 
 6. DESIGN OBRIGATÓRIO:
-   - "promptDesign": Instruções sobre o layout, grid e enquadramento do design de referência.
+   - "promptDesign": Instruções em PORTUGUÊS DO BRASIL sobre o layout, grid e enquadramento do design de referência.
 
 7. LOGOTIPO DA MARCA:
    - "useLogo": true se houver logo.
@@ -591,29 +646,32 @@ Siga rigorosamente estas orientações de preenchimento para CADA SEÇÃO do edi
 
 9. COMPOSIÇÃO:
    - "composicao": "Close-up (Rosto)" | "Plano Médio (Busto)" | "Plano Americano" | customizada
-   - "composicaoCustom": texto livre de composição se necessário
+   - "composicaoCustom": texto livre de composição em PORTUGUÊS DO BRASIL se necessário
 
 10. ELEMENTOS FLUTUANTES:
     - "floatingElementsMode": "off" | "auto" | "custom"
-    - "floatingElementsCustom": texto livre
+    - "floatingElementsCustom": texto livre em PORTUGUÊS DO BRASIL
 
 11. ATRIBUTOS VISUAIS E ESTILO:
     - "sobriedade": número de 0 a 100 (ex: 80)
     - "enableEstiloVisual": true
     - "estilosVisuais": array com os estilos (ex: ["Corporativo", "Clean", "Institucional"])
-    - "estiloVisualCustom": descrição técnica do estilo
+    - "estiloVisualCustom": descrição técnica do estilo em PORTUGUÊS DO BRASIL
     - "enableBlur": true/false
     - "lateralGradient": true/false
 
 12. ENTRADAS MANUAIS & AVANÇADAS:
-    - "additionalPrompt": prompt mestre detalhado em inglês.
-    - "negativePrompt": prompt negativo para evitar ruídos.
+    - "additionalPrompt": detalhes adicionais, texturas e atmosfera em PORTUGUÊS DO BRASIL.
+    - "negativePrompt": prompt negativo em PORTUGUÊS DO BRASIL para evitar ruídos.
     - "resolucao": "1K" | "2K" | "4K"
     - "formatoExportacao": "AVIF" | "PNG" | "JPEG" | "WEBP"
     - "variations": 1 a 5
     - "somentePrompt": false
     - "substituirImagens": true
     - "substituirConfig": true
+
+REGRA DE IDIOMA MANDATÓRIA (PORTUGUÊS DO BRASIL):
+Todos os campos de texto do JSON de resposta (promptCenario, promptDesign, promptTipografia, additionalPrompt, negativePrompt, poseDescription, etc.) DEVEM SER PREENCHIDOS EM PORTUGUÊS DO BRASIL para exibição direta no formulário do editor do usuário.
 
 IMPORTANTE: Responda em português resumindo os pontos que você identificou e configurou. No FINAL da sua mensagem, inclua obrigatoriamente o bloco de código JSON completo em \`\`\`json.
 
@@ -626,9 +684,11 @@ Exemplo de JSON de saída:
   "enableTypography": false,
   "camadasTexto": [],
   "typographyPosition": "CENTRO",
-  "promptTipografia": "",
-  "promptDesign": "Pure flat solid color canvas.",
-  "promptCenario": "Solid dark blue background (#0b1c32), matte finish, clean solid color canvas, no people, no text, no shapes.",
+  "promptTipografia": "Instruções de posicionamento em português",
+  "promptDesign": "Tela plana e limpa de cor sólida.",
+  "promptCenario": "Fundo azul escuro sólido (#0b1c32), acabamento fosco, cor limpa e uniforme, sem pessoas, sem texto.",
+  "additionalPrompt": "Fundo totalmente limpo de cor sólida na cor #0b1c32",
+  "negativePrompt": "pessoas, modelos, texto, marcas, ruído",
   "useLogo": false,
   "useEnvRef": false,
   "cores": { "ambiente": "#0b1c32", "recorte": "#0b1c32", "complementar": "#0b1c32" },
@@ -640,8 +700,6 @@ Exemplo de JSON de saída:
   "enableEstiloVisual": false,
   "estilosVisuais": ["Clean"],
   "estiloVisualCustom": "Clean e minimalista com fundo de cor sólida.",
-  "additionalPrompt": "A completely blank pure solid color background canvas in exact color #0b1c32, zero models, zero text, zero graphics.",
-  "negativePrompt": "people, human, person, model, text, typography, headline, flyer, poster, neon, glow, smartphone, 3d, gradient, shapes, objects",
   "resolucao": "1K",
   "formatoExportacao": "PNG",
   "variations": 1,
@@ -720,9 +778,10 @@ Exemplo de JSON de saída:
     }
   };
 
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>, forcedCat?: "logo" | "design" | "subject" | "scene" | "style" | "info") => {
     if (e.target.files && e.target.files.length > 0) {
-      handleAttachFiles(e.target.files);
+      handleAttachFiles(e.target.files, forcedCat);
+      e.target.value = "";
     }
   };
 
@@ -1409,16 +1468,31 @@ Exemplo de JSON de saída:
         const singleStyleDescVal = jsonStyleDescKeys.length === 1 ? jsonStyleDescMap[jsonStyleDescKeys[0]] : null;
 
         imagesOnly.forEach(img => {
-          let targetType = activeAssistant.id === "diretor-criativo" ? "design" : "style";
           let styleDescription = "Referência de estilo gerada pelo assistente.";
-          
-          let matchedKey = null;
-          
+          let targetType = "style";
+
+          const nameLower = (img.name || "").toLowerCase();
+
+          // 1. Prioridade Máxima: Categoria selecionada explicitamente pelo usuário no anexador
+          if (img.category) {
+            targetType = img.category;
+          } 
+          // 2. Detecção direta por nome do arquivo
+          else if (nameLower.includes("logo") || nameLower.includes("marca") || nameLower.includes("logomarca") || nameLower.includes("logotipo") || nameLower.includes("10anos") || nameLower.includes("icon") || nameLower.includes("symbol")) {
+            targetType = "logo";
+          } else if (nameLower.includes("pessoa") || nameLower.includes("modelo") || nameLower.includes("sujeito") || nameLower.includes("homem") || nameLower.includes("mulher") || nameLower.includes("foto") || nameLower.includes("face") || nameLower.includes("portrait")) {
+            targetType = "subject";
+          } else if (nameLower.includes("cenario") || nameLower.includes("background") || nameLower.includes("fundo") || nameLower.includes("scene") || nameLower.includes("ambiente")) {
+            targetType = "scene";
+          } else if (nameLower.includes("layout") || nameLower.includes("design") || nameLower.includes("flyer") || nameLower.includes("card") || nameLower.includes("ref")) {
+            targetType = "design";
+          } 
+          // 3. Mapeamento retornado pela IA no JSON
+          else {
+            let matchedKey = null;
             if (img.name && jsonImageMap[img.name]) {
               matchedKey = img.name;
             } else if (img.name) {
-              // fuzzy match
-              const nameLower = img.name.toLowerCase();
               matchedKey = jsonMapKeys.find(k => k.toLowerCase() === nameLower || nameLower.includes(k.toLowerCase()) || k.toLowerCase().includes(nameLower.split('.')[0]));
             }
 
@@ -1438,7 +1512,10 @@ Exemplo de JSON de saída:
               targetType = "typography";
             } else if (textLower.includes("layout") || textLower.includes("design") || textLower.includes("referência principal") || textLower.includes("flyer") || textLower.includes("card")) {
               targetType = "design";
+            } else {
+              targetType = activeAssistant.id === "diretor-criativo" ? "design" : "style";
             }
+          }
           
           
           if (targetType === "style") {
@@ -1461,7 +1538,9 @@ Exemplo de JSON de saída:
 
           const rawBase64 = `data:${img.type};base64,${img.data}`;
 
-          if (targetType === "subject") {
+          if (targetType === "info") {
+            // Arquivo de informação do chat - Não aplica a nenhum campo do editor
+          } else if (targetType === "subject") {
             newSubjects.push(rawBase64);
             subCount++;
           } else if (targetType === "scene") {
@@ -1476,7 +1555,7 @@ Exemplo de JSON de saída:
           } else if (targetType === "typography") {
             newTypographies.push(rawBase64);
             typoCount++;
-          } else {
+          } else if (targetType === "style") {
             // style reference
             if (isReplaceMode && styCount === 0 && store.referenciasEstilo) {
               // Limpa as atuais se for a primeira do replace
@@ -1984,50 +2063,198 @@ Exemplo de JSON de saída:
                   return (
                     <div 
                       key={idx} 
-                      className="flex items-center gap-2 px-2.5 py-1.5 bg-zinc-900 border border-zinc-800 rounded-xl animate-in slide-in-from-bottom-2 duration-150"
+                      className="flex flex-col gap-1 p-2 bg-zinc-900 border border-zinc-800 rounded-xl animate-in slide-in-from-bottom-2 duration-150"
                     >
-                      {isImg ? (
-                        <div className="w-6 h-6 rounded-md overflow-hidden border border-zinc-700 shrink-0">
-                          <img src={`data:${file.type};base64,${file.data}`} className="w-full h-full object-cover" alt="Preview" />
+                      <div className="flex items-center gap-2">
+                        {isImg ? (
+                          <div className="w-7 h-7 rounded-md overflow-hidden border border-zinc-700 shrink-0">
+                            <img src={`data:${file.type};base64,${file.data}`} className="w-full h-full object-cover" alt="Preview" />
+                          </div>
+                        ) : (
+                          <File size={13} className="text-[#ad8330] shrink-0" />
+                        )}
+                        
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[10px] font-bold text-zinc-300 truncate">{file.name}</p>
+                          <p className="text-[8px] text-zinc-500">{formatFileSize(file.size)}</p>
                         </div>
-                      ) : (
-                        <File size={13} className="text-[#ad8330] shrink-0" />
-                      )}
-                      
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-bold text-zinc-300 truncate">{file.name}</p>
-                        <p className="text-[8px] text-zinc-500">{formatFileSize(file.size)}</p>
+                        
+                        <button 
+                          onClick={() => removeAttachedFile(idx)} 
+                          className="p-1 hover:bg-zinc-800 rounded-lg text-zinc-500 hover:text-red-500 transition-colors cursor-pointer shrink-0"
+                        >
+                          <X size={11} />
+                        </button>
                       </div>
-                      
-                      <button 
-                        onClick={() => removeAttachedFile(idx)} 
-                        className="p-1 hover:bg-zinc-800 rounded-lg text-zinc-500 hover:text-red-500 transition-colors cursor-pointer shrink-0"
-                      >
-                        <X size={11} />
-                      </button>
+
+                      {/* Explicit Category Tagging Pills */}
+                      <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar pt-0.5">
+                        <span className="text-[8px] font-semibold text-zinc-500 shrink-0 uppercase tracking-wider pr-0.5">Destino:</span>
+                        <button
+                          type="button"
+                          onClick={() => updateFileCategory(idx, "info")}
+                          className={`px-1.5 py-0.5 text-[9px] font-bold rounded-md transition-all shrink-0 cursor-pointer ${
+                            file.category === "info" || !file.category
+                              ? "bg-zinc-700 text-white shadow-sm border border-zinc-600"
+                              : "bg-zinc-800 text-zinc-400 hover:text-white"
+                          }`}
+                          title="Arquivo/Informação para leitura da IA (NÃO altera o editor)"
+                        >
+                          📄 Info/Geral
+                        </button>
+                        {isImg && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => updateFileCategory(idx, "logo")}
+                              className={`px-1.5 py-0.5 text-[9px] font-bold rounded-md transition-all shrink-0 cursor-pointer ${
+                                file.category === "logo"
+                                  ? "bg-[#ad8330] text-black shadow-sm font-extrabold"
+                                  : "bg-zinc-800 text-zinc-400 hover:text-white"
+                              }`}
+                              title="Usar esta imagem como Logotipo da Marca no Editor"
+                            >
+                              🏷️ Logo
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => updateFileCategory(idx, "design")}
+                              className={`px-1.5 py-0.5 text-[9px] font-bold rounded-md transition-all shrink-0 cursor-pointer ${
+                                file.category === "design"
+                                  ? "bg-[#ad8330] text-black shadow-sm font-extrabold"
+                                  : "bg-zinc-800 text-zinc-400 hover:text-white"
+                              }`}
+                              title="Usar esta imagem como Referência de Layout/Design no Editor"
+                            >
+                              📐 Ref. Design
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => updateFileCategory(idx, "subject")}
+                              className={`px-1.5 py-0.5 text-[9px] font-bold rounded-md transition-all shrink-0 cursor-pointer ${
+                                file.category === "subject"
+                                  ? "bg-emerald-600 text-white shadow-sm font-bold"
+                                  : "bg-zinc-800 text-zinc-400 hover:text-white"
+                              }`}
+                              title="Usar esta imagem como Sujeito/Pessoa Principal no Editor"
+                            >
+                              👤 Sujeito
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => updateFileCategory(idx, "scene")}
+                              className={`px-1.5 py-0.5 text-[9px] font-bold rounded-md transition-all shrink-0 cursor-pointer ${
+                                file.category === "scene"
+                                  ? "bg-purple-600 text-white shadow-sm font-bold"
+                                  : "bg-zinc-800 text-zinc-400 hover:text-white"
+                              }`}
+                              title="Usar esta imagem como Cenário/Fundo no Editor"
+                            >
+                              🏞️ Cenário
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
               </div>
             )}
 
-            <div className="flex items-end gap-2">
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleFileInput} 
-                className="hidden" 
-                multiple 
-                accept="*" 
-              />
+            {/* Hidden file inputs */}
+            <input 
+              type="file" 
+              ref={fileInputInfoRef} 
+              onChange={(e) => handleFileInput(e, "info")} 
+              className="hidden" 
+              multiple 
+              accept="*" 
+            />
+            <input 
+              type="file" 
+              ref={fileInputSubjectRef} 
+              onChange={(e) => handleFileInput(e, "subject")} 
+              className="hidden" 
+              multiple 
+              accept="image/*" 
+            />
+            <input 
+              type="file" 
+              ref={fileInputLogoRef} 
+              onChange={(e) => handleFileInput(e, "logo")} 
+              className="hidden" 
+              multiple 
+              accept="image/*" 
+            />
+            <input 
+              type="file" 
+              ref={fileInputDesignRef} 
+              onChange={(e) => handleFileInput(e, "design")} 
+              className="hidden" 
+              multiple 
+              accept="image/*" 
+            />
+            <input 
+              type="file" 
+              ref={fileInputSceneRef} 
+              onChange={(e) => handleFileInput(e, "scene")} 
+              className="hidden" 
+              multiple 
+              accept="image/*" 
+            />
+
+            {/* Quick Attachment Category Selector Toolbar */}
+            <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1 pt-0.5">
+              <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider shrink-0 mr-0.5 whitespace-nowrap">Anexar:</span>
               <button
-                onClick={() => fileInputRef.current?.click()}
+                type="button"
+                onClick={() => fileInputInfoRef.current?.click()}
                 disabled={isUploading}
-                className="p-2.5 rounded-xl border border-zinc-800 bg-zinc-900/80 hover:bg-zinc-800 text-zinc-400 hover:text-white transition-all cursor-pointer shrink-0 mb-0.5 disabled:opacity-40"
-                title="Anexar arquivos ou fotos"
+                className="flex items-center gap-1 px-2 py-1 rounded-lg border border-zinc-800 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 text-[10px] font-semibold transition-all cursor-pointer shrink-0 whitespace-nowrap disabled:opacity-40"
+                title="Anexar arquivos de texto, PDFs ou imagens informativas para a IA ler"
               >
-                {isUploading ? <RefreshCw size={15} className="animate-spin text-[#ad8330]" /> : <Paperclip size={15} />}
+                <Paperclip size={11} className="text-zinc-400 shrink-0" />
+                <span className="whitespace-nowrap">Arquivo</span>
               </button>
+              <button
+                type="button"
+                onClick={() => fileInputSubjectRef.current?.click()}
+                disabled={isUploading}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg border border-emerald-500/40 bg-emerald-950/30 hover:bg-emerald-900/50 text-emerald-300 text-[10px] font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap disabled:opacity-40"
+                title="Anexar Foto da Pessoa / Sujeito Principal para o Editor"
+              >
+                <span className="whitespace-nowrap">👤 Sujeito</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => fileInputLogoRef.current?.click()}
+                disabled={isUploading}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg border border-[#ad8330]/40 bg-[#ad8330]/10 hover:bg-[#ad8330]/20 text-[#c5a880] text-[10px] font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap disabled:opacity-40"
+                title="Anexar Logotipo da Marca especificamente para o Editor"
+              >
+                <span className="whitespace-nowrap">🏷️ Logo</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => fileInputDesignRef.current?.click()}
+                disabled={isUploading}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg border border-[#ad8330]/40 bg-[#ad8330]/10 hover:bg-[#ad8330]/20 text-[#c5a880] text-[10px] font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap disabled:opacity-40"
+                title="Anexar Referência de Design/Layout para o Editor"
+              >
+                <span className="whitespace-nowrap">📐 Referência</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => fileInputSceneRef.current?.click()}
+                disabled={isUploading}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg border border-purple-500/40 bg-purple-950/30 hover:bg-purple-900/50 text-purple-300 text-[10px] font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap disabled:opacity-40"
+                title="Anexar Foto de Cenário/Fundo para o Editor"
+              >
+                <span className="whitespace-nowrap">🏞️ Cenário</span>
+              </button>
+            </div>
+
+            <div className="flex items-end gap-2">
               <textarea
                 ref={textareaRef}
                 value={inputText}

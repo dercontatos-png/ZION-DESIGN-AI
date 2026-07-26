@@ -100,5 +100,6 @@ body {
   color: #f4f4f5;
   font-family: var(--font-poppins), sans-serif;
   overflow-x: hidden;
+  overscroll-behavior-y: none;
   -webkit-font-smoothing: antialiased;
 }

@@ -3,7 +3,6 @@ import { useProjectStore } from "../store/useProjectStore";
 import { useGenerateImage } from "../hooks/useGenerateImage";
 import { buildMasterPrompt } from "../utils/buildMasterPrompt";
 import { downloadImage } from "../utils/downloadImage";
-import { Sidebar } from "./Sidebar";
 import { ImageUploader } from "./ImageUploader";
 import { StyleSelector } from "./StyleSelector";
 import { MasonryGallery } from "./MasonryGallery";
@@ -15,7 +14,7 @@ import { CompareSlider } from "./CompareSlider";
 import MotorGenerativoMagnific from "./MotorGenerativoMagnific";
 import { VmixXamlModal } from "./VmixXamlModal";
 import {
-  Sparkles, Zap,
+  Sparkles, Zap, Bot,
   Terminal,
   User,
   Image as ImageIcon,
@@ -27,6 +26,7 @@ import {
   Plus,
   X,
   AlertTriangle,
+  AlertCircle,
   CheckCircle,
   XCircle,
   FolderOpen,
@@ -933,10 +933,12 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
     }
   );
 
-  const handleDownloadActiveImage = async () => {
+  const handleDownloadActiveImage = async (targetRes?: "16MP" | "4K" | "2K" | "1K" | "ORIGINAL" | number) => {
     if (!activeImage) return;
     try {
-      showToast(`Iniciando conversão para ${exportFormat}...`, "success");
+      const resToUse = targetRes || "ORIGINAL";
+      const labelMsg = resToUse === "ORIGINAL" ? "Resolução Nativa da API" : resToUse;
+      showToast(`Iniciando download (${labelMsg})...`, "success");
       await downloadImage(
         activeImage,
         exportFormat,
@@ -951,7 +953,8 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
           enableTypography: store.enableTypography,
           camadasTexto: store.camadasTexto
         },
-        store.corDominante
+        store.corDominante,
+        resToUse
       );
       showToast("Download concluído com sucesso!", "success");
     } catch (e) {
@@ -961,18 +964,28 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
 
   const handleApplyRefinements = async () => {
     if (!activeImage) return;
+    const originalImg = activeImage;
     setIsRefining(true);
-    showToast("Analisando imagem & aplicando correções (Cravando 16MB)...", "info");
+    showToast("Analisando imagem & aplicando correções de cor e ruído...", "info");
     try {
       const effectiveApiKey = localStorage.getItem('custom_gemini_api_key') || "";
+
+      const configuredPalette = new Set<string>();
+      if (store.corDominante) configuredPalette.add(store.corDominante);
+      if (store.cores?.ambiente) configuredPalette.add(store.cores.ambiente);
+      if (store.cores?.recorte) configuredPalette.add(store.cores.recorte);
+      if (store.cores?.complementar) configuredPalette.add(store.cores.complementar);
+      if (Array.isArray(store.cores?.paleta)) store.cores.paleta.forEach(c => c && configuredPalette.add(c));
+      if (Array.isArray(store.camadasTexto)) store.camadasTexto.forEach(l => l.cor && configuredPalette.add(l.cor));
+
       const response = await fetch("/api/apply-refinements", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          imageBase64: activeImage,
+          imageBase64: originalImg,
           size: store.resolucao || "1K",
-          corDominante: store.corDominante,
-          paletteColors: store.cores?.paleta || [],
+          corDominante: store.useCorDominante ? store.corDominante : (store.corDominante || store.cores?.ambiente || ""),
+          paletteColors: Array.from(configuredPalette),
           customApiKey: effectiveApiKey
         })
       });
@@ -985,12 +998,12 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
       const data = await response.json();
       if (data.image) {
         store.setGaleriaImages((prev: string[]) => {
-          const next = [...prev, data.image];
-          store.setActiveImageIndex(next.length - 1);
-          return next;
+          const filtered = prev.filter((img) => img !== data.image);
+          return [data.image, ...filtered];
         });
-        showToast("Melhorias aplicadas! Imagem com 16MB cravados criada.", "success");
-        setComparingImages({ before: activeImage, after: data.image });
+        store.setActiveImageIndex(0);
+        showToast("Melhorias aplicadas! Imagem refinada adicionada à galeria.", "success");
+        setComparingImages({ before: originalImg, after: data.image });
       } else {
         throw new Error("Nenhuma imagem retornada.");
       }
@@ -1006,19 +1019,36 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
     const factor = e.deltaY < 0 ? 1.1 : 0.9;
     const newZoom = Math.min(Math.max(zoomPercent * factor, 30), 500);
     setZoomPercent(Math.round(newZoom));
+    if (newZoom <= 100) {
+      setPanOffset({ x: 0, y: 0 });
+    }
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button !== 0) return;
+    if (e.button !== 0 || zoomPercent <= 100) return;
     setIsDragging(true);
     setDragStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging) return;
+    if (!isDragging || zoomPercent <= 100) return;
     setPanOffset({
       x: e.clientX - dragStart.x,
       y: e.clientY - dragStart.y
+    });
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (zoomPercent <= 100) return;
+    setIsDragging(true);
+    setDragStart({ x: e.touches[0].clientX - panOffset.x, y: e.touches[0].clientY - panOffset.y });
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging || zoomPercent <= 100) return;
+    setPanOffset({
+      x: e.touches[0].clientX - dragStart.x,
+      y: e.touches[0].clientY - dragStart.y
     });
   };
 
@@ -1101,7 +1131,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
   const isGcTv = store.tipoPainel === "GC_TV";
 
   return (
-    <div className="flex h-full w-full bg-[#000000] text-zinc-100 font-sans overflow-hidden" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <div className="flex h-full w-full bg-zinc-950 text-zinc-100 font-sans overflow-hidden" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
       
       <style dangerouslySetInnerHTML={{__html: `
         .custom-scrollbar::-webkit-scrollbar {
@@ -1128,13 +1158,12 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
       `}} />
       
       {/* CONTEÚDO PRINCIPAL HEADER + ESPAÇO CORE WORKSPACE */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#000000]">
-        
-        {/* CORE WORKSPACE COM TAB-BAR E COLUNAS */}
-        <div className="flex-1 flex flex-col overflow-hidden relative">
+      <div className="flex-1 flex flex-col h-full overflow-hidden bg-zinc-950">
+          {/* CORE WORKSPACE COM TAB-BAR E COLUNAS */}
+          <div className="flex-1 flex flex-col overflow-hidden relative">
           
           {/* horizontal browser tabs for active projects */}
-          <div className="h-11 bg-[#070708] border-b border-white/5 flex items-center px-4 shrink-0 overflow-x-auto no-scrollbar">
+          <div className="h-11 bg-zinc-900 border-b border-white/5 flex items-center px-4 shrink-0 overflow-x-auto no-scrollbar">
             <div className="flex items-center gap-1">
               {store.projectsList.map((proj) => {
                 const isActive = proj.id === store.activeProjectId;
@@ -1143,9 +1172,9 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                   <div
                     key={proj.id}
                     onClick={() => store.loadProjectById(proj.id)}
-                    className={`group flex items-center gap-2 px-3 py-1.5 rounded-t-lg text-[10px] font-black uppercase tracking-wider cursor-pointer border-t border-x transition-all duration-150 ${
+                    className={`group flex items-center gap-2 px-3 py-1.5 rounded-t-lg text-xs font-black uppercase tracking-wider cursor-pointer border-t border-x transition-all duration-150 ${
                       isActive
-                        ? "bg-[#070708] border-white/5 text-white"
+                        ? "bg-zinc-900 border-white/5 text-white"
                         : "bg-transparent border-transparent text-zinc-500 hover:text-zinc-300"
                     }`}
                   >
@@ -1181,144 +1210,115 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
           <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
             
             {/* COLUNA ESQUERDA: CONFIGURAÇÕES */}
-            <div className="w-full md:w-[360px] lg:w-[420px] 2xl:w-[480px] bg-[#070708] border-b md:border-b-0 md:border-r border-white/5 flex flex-col h-[45vh] md:h-full shrink-0 overflow-hidden">
+            <div className="w-full md:w-[360px] lg:w-[420px] 2xl:w-[480px] bg-zinc-900 border-b md:border-b-0 md:border-r border-white/5 flex flex-col h-[45vh] md:h-full shrink-0 overflow-hidden">
               
               {/* TOPBAR MENU MOVED TO LEFT COLUMN */}
-              <div className="flex flex-col border-b border-white/5 bg-[#070708] shrink-0">
-                <div className="flex items-center gap-1 p-2 overflow-x-auto no-scrollbar">
-                  <button
-                    onClick={() => setActiveMenuTab("Design Builder")}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-semibold transition-all cursor-pointer whitespace-nowrap ${
-                      activeMenuTab === "Design Builder"
-                        ? "bg-[#c5a880] text-black font-extrabold shadow-sm"
-                        : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50 border border-transparent"
-                    }`}
-                  >
-                    <Sparkles size={11} />
-                    <span>Criar</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveMenuTab("Inspiração")}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-semibold transition-all cursor-pointer whitespace-nowrap ${
-                      activeMenuTab === "Inspiração"
-                        ? "bg-[#c5a880] text-black font-extrabold shadow-sm"
-                        : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50 border border-transparent"
-                    }`}
-                  >
-                    <Compass size={11} />
-                    <span>Explorar</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveMenuTab("Minha Galeria")}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-semibold transition-all cursor-pointer whitespace-nowrap ${
-                      activeMenuTab === "Minha Galeria"
-                        ? "bg-[#c5a880] text-black font-extrabold shadow-sm"
-                        : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50 border border-transparent"
-                    }`}
-                  >
-                    <ImageIcon size={11} />
-                    <span>Minha Galeria</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveMenuTab("Ref Builder")}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-semibold transition-all cursor-pointer whitespace-nowrap ${
-                      activeMenuTab === "Ref Builder"
-                        ? "bg-[#c5a880] text-black font-extrabold shadow-sm"
-                        : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50 border border-transparent"
-                    }`}
-                  >
-                    <SlidersHorizontal size={11} />
-                    <span>Ref Builder PRO</span>
-                  </button>
-                </div>
+              <div className="flex flex-col border-b border-white/10 bg-zinc-900/90 shrink-0">
                 
-                {/* Ações Rápidas & REFINAR */}
-                <div className="flex items-center justify-between px-3 pb-2 gap-2">
-                  <div className="flex-1 flex gap-2">
+                {/* 1. NAVEGAÇÃO PRINCIPAL (TABS) */}
+                <div className="p-2 border-b border-white/5 bg-zinc-950/40">
+                  <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pb-0.5">
+                    <button
+                      onClick={() => setActiveMenuTab("Design Builder")}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                        activeMenuTab === "Design Builder"
+                          ? "bg-[#c5a880] text-black font-extrabold shadow-sm"
+                          : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60"
+                      }`}
+                    >
+                      <Sparkles size={12} className="shrink-0" />
+                      <span>Criar</span>
+                    </button>
+                    <button
+                      onClick={() => setActiveMenuTab("Inspiração")}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                        activeMenuTab === "Inspiração"
+                          ? "bg-[#c5a880] text-black font-extrabold shadow-sm"
+                          : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60"
+                      }`}
+                    >
+                      <Compass size={12} className="shrink-0" />
+                      <span>Explorar</span>
+                    </button>
+                    <button
+                      onClick={() => setActiveMenuTab("Minha Galeria")}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                        activeMenuTab === "Minha Galeria"
+                          ? "bg-[#c5a880] text-black font-extrabold shadow-sm"
+                          : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60"
+                      }`}
+                    >
+                      <ImageIcon size={12} className="shrink-0" />
+                      <span>Galeria</span>
+                    </button>
+                    <button
+                      onClick={() => setActiveMenuTab("Ref Builder")}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                        activeMenuTab === "Ref Builder"
+                          ? "bg-[#c5a880] text-black font-extrabold shadow-sm"
+                          : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60"
+                      }`}
+                    >
+                      <SlidersHorizontal size={12} className="shrink-0" />
+                      <span>Ref Builder</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 2. SELETOR DE MÓDULO (DESIGNER | PRODUCT | LOGO | GC TV) */}
+                <div className="p-2.5 border-b border-white/5 bg-zinc-900/60 space-y-1.5">
+                  <div className="flex items-center justify-between px-1">
+                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#c5a880] animate-pulse" />
+                      Módulo: <span className="text-[#c5a880] font-black">{store.tipoPainel === "GC_TV" ? "GC TV" : store.tipoPainel}</span>
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-4 gap-1 p-1 bg-zinc-950 rounded-xl border border-white/10">
+                    {[
+                      { label: "DESIGNER", value: "DESIGNER" },
+                      { label: "PRODUCT", value: "PRODUCT" },
+                      { label: "LOGO", value: "LOGO" },
+                      { label: "GC TV", value: "GC_TV" }
+                    ].map((pnl) => {
+                      const isSel = store.tipoPainel === pnl.value;
+                      return (
+                        <button
+                          key={pnl.value}
+                          onClick={() => store.updateConfig({ tipoPainel: pnl.value as any })}
+                          className={`py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer text-center truncate ${
+                            isSel
+                              ? "bg-[#c5a880] text-black font-extrabold shadow-sm"
+                              : "text-zinc-400 hover:text-white hover:bg-zinc-800/50"
+                          }`}
+                        >
+                          {pnl.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 3. BARRA DE REFINAMENTO */}
+                <div className="p-2.5 bg-zinc-950/30">
+                  <div className="flex items-center gap-1.5 bg-zinc-950 border border-white/10 rounded-xl px-2.5 py-1 focus-within:border-[#c5a880]/50 transition-colors">
+                    <Wand2 size={12} className="text-[#c5a880] shrink-0" />
                     <input
                       type="text"
-                      placeholder="Refinar..."
+                      placeholder="Refinar prompt..."
                       value={refineQuery}
                       onChange={(e) => setRefineQuery(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && handleRefine()}
-                      className="flex-1 min-w-[80px] bg-zinc-950 border border-white/5 hover:border-zinc-700 text-[10px] rounded px-2 py-1 text-zinc-200 placeholder:text-zinc-600 focus:outline-none transition-colors"
+                      className="w-full bg-transparent text-xs text-zinc-100 placeholder:text-zinc-500 focus:outline-none"
                     />
                     <button
                       onClick={handleRefine}
-                      className="px-2 py-1 bg-[#c5a880] hover:bg-[#b39873] text-black text-[9px] font-bold uppercase tracking-widest rounded transition-all cursor-pointer shadow-md"
+                      className="px-2 py-0.5 bg-[#c5a880] hover:bg-[#b39873] text-black text-[10px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer shrink-0 shadow-sm"
                     >
                       Refinar
                     </button>
                   </div>
-                  <div className="flex gap-1 shrink-0">
-                    <button
-                      onClick={() => {
-                        if (window.confirm("Deseja realmente limpar todas as configurações, textos e referências do projeto atual? Isso não apagará as imagens da galeria.")) {
-                          store.updateConfig({
-                            sujeitoBase64: "",
-                            cenarioBase64: "",
-                            sujeitosBase64List: [],
-                            cenariosBase64List: [],
-                            tipografiaRefsList: [],
-                            designRefsList: [],
-                            logosList: [],
-                            referenciasEstilo: [],
-                            camadasTexto: [],
-                            additionalPrompt: "",
-                            promptCenario: "",
-                            promptDesign: "",
-                            promptTipografia: "",
-                            useLogo: false,
-                            enableTypography: false,
-                            useEnvRef: false,
-                            enableEstiloVisual: false,
-                            estiloVisualCustom: "",
-                            poseDescription: ""
-                          });
-                          showToast("Configurações do projeto atual redefinidas!", "success");
-                        }
-                      }}
-                      className="px-2 py-1 bg-zinc-950 hover:bg-zinc-900 border border-white/5 text-zinc-400 hover:text-white text-[9px] font-black uppercase rounded transition-all cursor-pointer flex items-center shadow-sm"
-                      title="Limpar Editor"
-                    >
-                      <RefreshCw size={10} />
-                    </button>
-                    <button
-                      onClick={() => { store.createProject(); showToast("Novo projeto criado com sucesso!", "success"); }}
-                      className="px-2 py-1 bg-[#c5a880] hover:bg-[#b39873] text-black text-[9px] font-black uppercase rounded transition-colors cursor-pointer shadow-md"
-                      title="Novo Projeto"
-                    >
-                      <Plus size={10} />
-                    </button>
-                  </div>
                 </div>
-              </div>
-              {/* Seletor de Módulo */}
-              <div className="py-2.5 border-b border-white/5 flex items-center justify-between px-6 shrink-0 bg-[#070708] gap-2 flex-wrap">
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400">
-                  MÓDULO ATIVO: <span className="text-[#c5a880]">{store.tipoPainel}</span>
-                </span>
-                <div className="flex bg-zinc-950 p-1.5 rounded-xl border border-white/10 shrink-0 gap-1 items-center">
-                  {[
-                    { label: "DESIGNER", value: "DESIGNER" },
-                    { label: "PRODUCT", value: "PRODUCT" },
-                    { label: "LOGO", value: "LOGO" },
-                    { label: "GC TV", value: "GC_TV" }
-                  ].map((pnl) => {
-                    const isSel = store.tipoPainel === pnl.value;
-                    return (
-                      <button
-                        key={pnl.value}
-                        onClick={() => store.updateConfig({ tipoPainel: pnl.value as any })}
-                        className={`px-3 py-1.5 rounded-lg text-[9.5px] font-black uppercase tracking-wider transition-all cursor-pointer ${
-                          isSel ? "bg-[#c5a880] text-black font-bold shadow-sm shadow-amber-500/10" : "text-zinc-500 hover:text-zinc-300"
-                        }`}
-                      >
-                        {pnl.label}
-                      </button>
-                    );
-                  })}
-                </div>
+
               </div>
 
               {/* Scrollable Form */}
@@ -1327,7 +1327,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
           {activeMenuTab === "Design Builder" && (
             <>
               {/* Sujeito / Produto */}
-          <div className="bg-[#0a0a0a] border border-white/5 p-5 rounded-xl space-y-5 shadow-sm hover:border-white/5 transition-colors">
+          <div className="bg-zinc-900/50 border border-white/5 p-5 rounded-xl space-y-5 shadow-sm hover:border-white/5 transition-colors">
             <div className="flex items-center gap-2.5 border-l-2 border-[#c5a880] pl-3">
               <span className="text-sm font-semibold text-white tracking-tight">
                 {isLogo ? "Marca / Logo" : (isProduct ? "Produto Principal" : "Sujeito Principal")}
@@ -1338,7 +1338,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
             <div className="flex items-center justify-between p-3 bg-zinc-950/40 rounded-xl border border-white/5">
               <div className="flex flex-col">
                 <span className="text-xs font-bold text-zinc-300 uppercase tracking-wider">Desativar Sujeito Principal?</span>
-                <span className="text-[10px] text-zinc-500 tracking-wide mt-0.5">Ignore pessoas ou produtos no criativo, focando apenas no cenário e texto</span>
+                <span className="text-xs text-zinc-500 tracking-wide mt-0.5">Ignore pessoas ou produtos no criativo, focando apenas no cenário e texto</span>
               </div>
               <button
                 onClick={() => store.updateConfig({ desativarSujeito: !store.desativarSujeito })}
@@ -1370,7 +1370,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
                         <label className="block text-xs font-medium text-zinc-400">Gênero</label>
-                        <label className="flex items-center gap-1.5 text-[10px] text-zinc-500 cursor-pointer">
+                        <label className="flex items-center gap-1.5 text-xs text-zinc-500 cursor-pointer">
                           <input
                             type="checkbox"
                             checked={store.multiplesPersons || false}
@@ -1407,7 +1407,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                             rows={2}
                             className="w-full bg-zinc-950/60 border border-white/5 rounded-lg p-2.5 text-xs text-zinc-200 placeholder-zinc-700 focus:outline-none focus:border-[#c5a880]/40 tracking-wide resize-none"
                           />
-                          <span className="text-[9px] text-zinc-500 uppercase tracking-wider block">O Diretor Criativo descreve automaticamente ao analisar múltiplas pessoas na imagem.</span>
+                          <span className="text-xs text-zinc-500 uppercase tracking-wider block">O Diretor Criativo descreve automaticamente ao analisar múltiplas pessoas na imagem.</span>
                         </div>
                       )}
                     </div>
@@ -1444,7 +1444,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                     value={store.poseDescription || ""}
                     onChange={(e) => store.updateConfig({ poseDescription: e.target.value })}
                     placeholder={isProduct ? "Ex: Frasco de vidro fosco, tampa dourada, reflexo metálico..." : "Ex: Em pé de braços cruzados, vestindo blazer preto..."}
-                    className="w-full bg-[#0F0F11] border border-white/10 rounded-lg px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-700 focus:outline-none focus:border-[#c5a880]/50 font-medium"
+                    className="w-full bg-zinc-900 border border-white/10 rounded-lg px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-700 focus:outline-none focus:border-[#c5a880]/50 font-medium"
                   />
                 </div>
 
@@ -1475,10 +1475,10 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
           </div>
 
           {/* Dimensões com ícones visuais representativos */}
-          <div className="bg-[#0a0a0a] border border-white/5 p-5 rounded-xl space-y-4 shadow-sm hover:border-white/5 transition-colors">
+          <div className="bg-zinc-900/50 border border-white/5 p-5 rounded-xl space-y-4 shadow-sm hover:border-white/5 transition-colors">
             <div className="flex flex-col gap-1.5 border-l-2 border-[#c5a880] pl-3">
               <span className="text-sm font-semibold text-white tracking-tight">Dimensões</span>
-              <span className="text-[10px] text-zinc-400 tracking-wide">Selecione o formato ideal para as redes sociais ou desktop</span>
+              <span className="text-xs text-zinc-400 tracking-wide">Selecione o formato ideal para as redes sociais ou desktop</span>
             </div>
             <div className="grid grid-cols-4 gap-2 py-1">
               {[
@@ -1508,7 +1508,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                   <button
                     key={dim.value}
                     onClick={() => store.updateConfig({ dimensao: dim.value })}
-                    className={`py-3 rounded-lg border text-[8.5px] font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer flex flex-col items-center justify-center text-center px-1 min-h-[64px] ${
+                    className={`py-3 rounded-lg border text-[11px] font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer flex flex-col items-center justify-center text-center px-1 min-h-[64px] ${
                       isSelected
                         ? "bg-[#c5a880] border-[#c5a880] text-zinc-950 shadow-md shadow-amber-500/10"
                         : "bg-zinc-900/40 border-white/5 text-zinc-400 hover:text-white hover:border-[#c5a880]/40"
@@ -1523,14 +1523,14 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
           </div>
 
           {/* Tipografia (Camadas de textos configuráveis) */}
-          <div className="bg-[#0a0a0a] border border-white/5 p-5 rounded-xl space-y-5 shadow-sm hover:border-white/5 transition-colors">
+          <div className="bg-zinc-900/50 border border-white/5 p-5 rounded-xl space-y-5 shadow-sm hover:border-white/5 transition-colors">
             <div className="flex flex-col gap-1.5 border-l-2 border-[#c5a880] pl-3">
               <span className="text-sm font-semibold text-white tracking-tight">Tipografia (Camadas)</span>
-              <span className="text-[10px] text-zinc-400 tracking-wide">Crie e configure camadas dinâmicas de textos com fontes premium</span>
+              <span className="text-xs text-zinc-400 tracking-wide">Crie e configure camadas dinâmicas de textos com fontes premium</span>
             </div>
 
             <div className="flex items-center justify-between">
-              <span className="text-[10.5px] font-bold text-zinc-455 uppercase tracking-wider">Adicionar Texto</span>
+              <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Adicionar Texto</span>
                 <button
                   onClick={() => store.updateConfig({ enableTypography: !store.enableTypography })}
                   className="w-11 h-6 rounded-full p-0.5 relative transition-colors duration-200 cursor-pointer"
@@ -1548,7 +1548,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                   
                   {/* Referência de Tipografia por Imagem */}
                   <div className="p-3 bg-zinc-950 rounded-lg border border-white/5 space-y-2.5">
-                    <span className="text-[9.5px] font-bold text-zinc-400 uppercase tracking-wider block">Copiar Tipografia por Referência (Imagem)</span>
+                    <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider block">Copiar Tipografia por Referência (Imagem)</span>
                     <ImageUploader
                       type="env"
                       label="Enviar Print da Tipografia"
@@ -1559,7 +1559,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                     />
 
                     <div className="space-y-1">
-                      <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider block">O que deseja extrair/copiar desta tipografia/texto?</span>
+                      <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block">O que deseja extrair/copiar desta tipografia/texto?</span>
                       <textarea
                         value={store.promptTipografia || ""}
                         onChange={(e) => store.updateConfig({ promptTipografia: e.target.value })}
@@ -1600,7 +1600,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                         </div>
 
                         <div className="pr-16">
-                          <span className="text-[9px] font-black text-[#c5a880] uppercase tracking-widest block mb-1">CAMADA #{index + 1}</span>
+                          <span className="text-xs font-black text-[#c5a880] uppercase tracking-widest block mb-1">CAMADA #{index + 1}</span>
                         </div>
 
                         {/* Conteúdo frase */}
@@ -1611,7 +1611,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                             value={layer.conteudo}
                             onChange={(e) => store.updateCamadaTexto(layer.id, { conteudo: e.target.value })}
                             placeholder="Frase ou texto..."
-                            className="w-full bg-[#1A1A1C] border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-zinc-650 focus:outline-none focus:border-[#c5a880]/50 font-medium"
+                            className="w-full bg-zinc-800 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#c5a880]/50 font-medium"
                           />
                         </div>
 
@@ -1621,7 +1621,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                           <select
                             value={layer.funcao}
                             onChange={(e) => store.updateCamadaTexto(layer.id, { funcao: e.target.value as any })}
-                            className="w-full bg-[#1A1A1C] border border-white/10 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 font-bold uppercase tracking-wide cursor-pointer"
+                            className="w-full bg-zinc-800 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 font-bold uppercase tracking-wide cursor-pointer"
                           >
                             <option value="Headline Principal">Headline Principal</option>
                             <option value="Subheadline Secundário">Subheadline Secundário</option>
@@ -1641,7 +1641,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                             <select
                               value={layer.fonte}
                               onChange={(e) => store.updateCamadaTexto(layer.id, { fonte: e.target.value })}
-                              className="w-full bg-[#1A1A1C] border border-white/10 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 font-bold uppercase tracking-wide cursor-pointer"
+                              className="w-full bg-zinc-800 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 font-bold uppercase tracking-wide cursor-pointer"
                             >
                               <option value="Montserrat">Montserrat</option>
                               <option value="Poppins">Poppins</option>
@@ -1667,7 +1667,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                                 value={layer.cor}
                                 onChange={(e) => store.updateCamadaTexto(layer.id, { cor: e.target.value })}
                                 placeholder="#ffffff"
-                                className="w-full bg-[#1A1A1C] border border-white/10 rounded px-1.5 py-1 text-[10px] text-white focus:outline-none focus:border-[#c5a880]/50 font-bold uppercase"
+                                className="w-full bg-zinc-800 border border-white/10 rounded px-1.5 py-1 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 font-bold uppercase"
                               />
                             </div>
                           </div>
@@ -1695,7 +1695,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                           <button
                             key={pos}
                             onClick={() => store.updateConfig({ typographyPosition: pos })}
-                            className={`flex-1 py-1.5 rounded text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                            className={`flex-1 py-1.5 rounded text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
                               isSel ? "bg-[#c5a880] text-black font-semibold" : "text-zinc-400 hover:text-white"
                             }`}
                           >
@@ -1710,14 +1710,14 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
             </div>
 
           {/* Cenário Customizado & Prompt Adicional Cenário */}
-          <div className="bg-[#0a0a0a] border border-white/5 p-5 rounded-xl space-y-5 shadow-sm hover:border-white/5 transition-colors">
+          <div className="bg-zinc-900/50 border border-white/5 p-5 rounded-xl space-y-5 shadow-sm hover:border-white/5 transition-colors">
             <div className="flex flex-col gap-1 border-l-2 border-[#c5a880] pl-3">
               <span className="text-sm font-semibold text-white tracking-tight">Cenário</span>
-              <span className="text-[8px] text-zinc-500 tracking-wide">Descreva ou envie imagens do plano de fundo/ambiente do criativo</span>
+              <span className="text-[10px] text-zinc-500 tracking-wide">Descreva ou envie imagens do plano de fundo/ambiente do criativo</span>
             </div>
             
             <div className="flex items-center justify-between">
-                <span className="text-[10.5px] font-bold text-zinc-400 uppercase tracking-wider">Usar fotos de cenário?</span>
+                <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Usar fotos de cenário?</span>
                 <button
                   onClick={() => store.updateConfig({ useEnvRef: !store.useEnvRef })}
                   className="w-11 h-6 rounded-full p-0.5 relative transition-colors duration-200 cursor-pointer"
@@ -1749,23 +1749,26 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                   value={store.promptCenario}
                   onChange={(e) => store.updateConfig({ promptCenario: e.target.value })}
                   placeholder="Ex: Sala executiva com luz solar, janelas de vidro amplas..."
-                  className="w-full bg-[#0F0F11] border border-white/10 rounded-lg px-4 py-3 text-xs text-zinc-200 placeholder:text-zinc-700 focus:outline-none focus:border-[#c5a880]/50 font-medium"
+                  className="w-full bg-zinc-900 border border-white/10 rounded-lg px-4 py-3 text-xs text-zinc-200 placeholder:text-zinc-700 focus:outline-none focus:border-[#c5a880]/50 font-medium"
                 />
               </div>
             </div>
 
           {/* Referência de Design Obrigatório */}
-          <div className="bg-[#0a0a0a] border border-white/5 p-5 rounded-xl space-y-5 shadow-sm hover:border-white/5 transition-colors">
+          <div className="bg-zinc-900/50 border border-white/5 p-5 rounded-xl space-y-5 shadow-sm hover:border-white/5 transition-colors">
             <div className="flex flex-col gap-1 border-l-2 border-[#c5a880] pl-3">
               <span className="text-sm font-semibold text-white tracking-tight">Design Obrigatório</span>
-              <span className="text-[8px] text-zinc-500 tracking-wide">Importe uma imagem com o layout ou posicionamento estrutural desejado</span>
+              <span className="text-[10px] text-zinc-500 tracking-wide">Importe uma imagem com o layout ou posicionamento estrutural desejado</span>
             </div>
 
-            <div className="flex items-start gap-3 text-[#c5a880] bg-[#c5a880]/5 border border-[#c5a880]/10 p-3 rounded-xl animate-in fade-in">
-              <Info size={14} className="shrink-0 mt-0.5" />
-              <span className="text-[9px] font-medium leading-relaxed uppercase tracking-wider text-zinc-400">
-                Suba uma imagem de referência de design. A IA vai analisar a estrutura, tipografia e grid para aplicar no card gerado.
-              </span>
+            <div className="flex items-start gap-3 text-[#c5a880] bg-[#c5a880]/5 border border-[#c5a880]/10 p-3.5 rounded-xl animate-in fade-in">
+              <Info size={16} className="shrink-0 mt-0.5 text-[#c5a880]" />
+              <div className="text-xs font-medium leading-relaxed text-zinc-300 space-y-1">
+                <p className="font-bold text-[#c5a880]">COMO A IA USA A REFERÊNCIA DE DESIGN:</p>
+                <p>
+                  A IA analisa a estrutura visual, o grid de composição e a iluminação. <strong className="text-white font-bold">TODOS os textos, números, telefones, redes sociais, datas e logos antigos da foto de referência serão 100% APAGADOS e IGNORADOS.</strong> Apenas os seus novos textos preenchidos serão impressos na arte.
+                </p>
+              </div>
             </div>
 
             <ImageUploader
@@ -1778,7 +1781,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
             />
 
             <div className="space-y-1.5 pt-1">
-              <span className="text-[9.5px] font-bold text-zinc-400 uppercase tracking-wider block">O que deseja extrair/copiar deste layout/design?</span>
+              <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider block">O que deseja extrair/copiar deste layout/design?</span>
               <textarea
                 value={store.promptDesign || ""}
                 onChange={(e) => store.updateConfig({ promptDesign: e.target.value })}
@@ -1790,10 +1793,10 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
           </div>
 
           {/* Logotipo da Marca */}
-          <div className="bg-[#0a0a0a] border border-white/5 p-5 rounded-xl space-y-5 shadow-sm hover:border-white/5 transition-colors">
+          <div className="bg-zinc-900/50 border border-white/5 p-5 rounded-xl space-y-5 shadow-sm hover:border-white/5 transition-colors">
             <div className="flex flex-col gap-1 border-l-2 border-[#c5a880] pl-3">
               <span className="text-sm font-semibold text-white tracking-tight">Logotipo da Marca</span>
-              <span className="text-[10px] text-zinc-400 tracking-wide">Importe o logotipo da sua marca para estampar no criativo</span>
+              <span className="text-xs text-zinc-400 tracking-wide">Importe o logotipo da sua marca para estampar no criativo</span>
             </div>
 
             <div className="flex items-center justify-between">
@@ -1821,23 +1824,24 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                   showToast={showToast}
                   maxUploads={1}
                 />
-                {store.logoBase64 && (
-                  <div className="space-y-4 p-4 bg-zinc-950/60 rounded-xl border border-white/5">
-                    <div className="p-3 bg-[#c5a880]/5 border border-[#c5a880]/10 rounded-lg text-[9px] font-medium leading-normal text-zinc-400 uppercase tracking-wider">
-                      A IA irá extrair e incorporar a logo original enviada diretamente na arte final. A estrutura, fonte e formato serão preservados exatamente como na imagem fornecida (apenas a cor poderá ser adaptada pela IA para garantir contraste, como mudar para branco ou preto).
-                    </div>
-                  </div>
-                )}
+                <div className="p-3.5 bg-[#c5a880]/5 border border-[#c5a880]/10 rounded-xl text-xs font-medium leading-relaxed text-zinc-300 space-y-1">
+                  <p className="font-bold text-[#c5a880] uppercase tracking-wider">REGRAS DE REFUGO E POSICIONAMENTO DA LOGO:</p>
+                  <p>
+                    • A logo será estampada nativamente no canto superior, <strong className="text-white font-bold">JAMAIS por cima do cabelo, rosto ou corpo do sujeito</strong>.<br/>
+                    • O nome do arquivo (ex: "10 anos") <strong className="text-white font-bold">NÃO será escrito como título ou texto</strong> na imagem.<br/>
+                    • O símbolo e formato originais serão preservados com 100% de fidelidade.
+                  </p>
+                </div>
               </div>
             )}
           </div>
 
           {/* Referências de Estilos Individuais com Descrição */}
-          <div className="bg-[#0a0a0a] border border-white/5 p-5 rounded-xl space-y-5 shadow-sm hover:border-white/5 transition-colors">
+          <div className="bg-zinc-900/50 border border-white/5 p-5 rounded-xl space-y-5 shadow-sm hover:border-white/5 transition-colors">
             <div className="flex justify-between items-start border-l-2 border-[#c5a880] pl-3">
               <div className="flex flex-col gap-1">
                 <span className="text-sm font-semibold text-white tracking-tight">Referências de Estilo</span>
-                <span className="text-[8px] text-zinc-500 tracking-wide">Importe referências estéticas e descreva o estilo a ser absorvido</span>
+                <span className="text-[10px] text-zinc-500 tracking-wide">Importe referências estéticas e descreva o estilo a ser absorvido</span>
               </div>
               <div className="relative overflow-hidden shrink-0 mt-1">
                 <input
@@ -1847,7 +1851,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                   onChange={handleStyleImageUpload}
                   className="absolute inset-0 opacity-0 cursor-pointer w-24"
                 />
-                <button className="px-3.5 py-1.5 bg-[#1A1A1C] border border-white/10 hover:border-[#c5a880]/30 rounded-lg text-[9px] font-black uppercase tracking-widest text-[#c5a880] cursor-pointer">
+                <button className="px-3.5 py-1.5 bg-zinc-800 border border-white/10 hover:border-[#c5a880]/30 rounded-lg text-xs font-black uppercase tracking-widest text-[#c5a880] cursor-pointer">
                   + Adicionar
                 </button>
               </div>
@@ -1877,13 +1881,13 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                     </div>
 
                     <div className="flex-1 flex flex-col justify-between">
-                      <span className="text-[8px] font-black text-zinc-555 uppercase tracking-widest block">Descrição do Estilo Visual</span>
+                      <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block">Descrição do Estilo Visual</span>
                       <input
                         type="text"
                         value={ref.descricao}
                         onChange={(e) => store.updateReferenciaEstilo(ref.id, e.target.value)}
                         placeholder="Ex: Copiar tons de dourado..."
-                        className="w-[90%] bg-[#1A1A1C] border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-zinc-650 focus:outline-none focus:border-[#c5a880]/50 font-medium"
+                        className="w-[90%] bg-zinc-800 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#c5a880]/50 font-medium"
                       />
                     </div>
 
@@ -1892,20 +1896,20 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
               </div>
             ) : (
               <div className="py-5 text-center border border-dashed border-white/5 rounded-xl bg-zinc-950/20">
-                <span className="text-[8.5px] font-bold text-zinc-600 uppercase tracking-wider">Suba imagens de estilo para imitar</span>
+                <span className="text-[11px] font-bold text-zinc-600 uppercase tracking-wider">Suba imagens de estilo para imitar</span>
               </div>
             )}
           </div>
 
           {/* Cores & Iluminação */}
-          <div className="bg-[#0a0a0a] border border-white/5 p-5 rounded-xl space-y-5 shadow-sm hover:border-white/5 transition-colors">
+          <div className="bg-zinc-900/50 border border-white/5 p-5 rounded-xl space-y-5 shadow-sm hover:border-white/5 transition-colors">
             <div className="flex flex-col gap-1 border-l-2 border-[#c5a880] pl-3">
               <span className="text-sm font-semibold text-white tracking-tight">Cores & Iluminação</span>
-              <span className="text-[8px] text-zinc-500 tracking-wide">Configure as cores de iluminação de estúdio do seu criativo</span>
+              <span className="text-[10px] text-zinc-500 tracking-wide">Configure as cores de iluminação de estúdio do seu criativo</span>
             </div>
 
             <div className="flex items-center justify-between">
-              <span className="text-[10.5px] font-bold text-zinc-400 uppercase tracking-wider">Automático (Harmônico)?</span>
+              <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Automático (Harmônico)?</span>
               <button
                 onClick={() => store.updateConfig({ coresAutomaticas: !store.coresAutomaticas })}
                 className="w-11 h-6 rounded-full p-0.5 relative transition-colors duration-200 cursor-pointer"
@@ -1922,7 +1926,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
               <div className="space-y-3 pt-1 animate-in fade-in duration-300">
                 <div className="grid grid-cols-3 gap-3.5">
                   <div className="p-3 bg-black/40 border border-white/5 flex flex-col gap-2 hover:border-[#c5a880]/30 transition-all rounded-lg">
-                    <span className="text-[9px] font-bold text-zinc-550 uppercase tracking-widest">Ambiente</span>
+                    <span className="text-xs font-bold text-zinc-550 uppercase tracking-widest">Ambiente</span>
                     <div className="flex items-center gap-1.5">
                       <input
                         type="color"
@@ -1938,12 +1942,12 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                         onChange={(e) => store.updateConfig({
                           cores: { ...store.cores, ambiente: e.target.value }
                         })}
-                        className="w-full bg-[#1A1A1C] border border-white/10 rounded px-1.5 py-0.5 text-[10px] text-white focus:outline-none focus:border-[#c5a880]/50 font-bold uppercase"
+                        className="w-full bg-zinc-800 border border-white/10 rounded px-1.5 py-0.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 font-bold uppercase"
                       />
                     </div>
                   </div>
                   <div className="p-3 bg-black/40 border border-white/5 flex flex-col gap-2 hover:border-[#c5a880]/30 transition-all rounded-lg">
-                    <span className="text-[9px] font-bold text-zinc-550 uppercase tracking-widest">Recorte</span>
+                    <span className="text-xs font-bold text-zinc-550 uppercase tracking-widest">Recorte</span>
                     <div className="flex items-center gap-1.5">
                       <input
                         type="color"
@@ -1959,12 +1963,12 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                         onChange={(e) => store.updateConfig({
                           cores: { ...store.cores, recorte: e.target.value }
                         })}
-                        className="w-full bg-[#1A1A1C] border border-white/10 rounded px-1.5 py-0.5 text-[10px] text-white focus:outline-none focus:border-[#c5a880]/50 font-bold uppercase"
+                        className="w-full bg-zinc-800 border border-white/10 rounded px-1.5 py-0.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 font-bold uppercase"
                       />
                     </div>
                   </div>
                   <div className="p-3 bg-black/40 border border-white/5 flex flex-col gap-2 hover:border-[#c5a880]/30 transition-all rounded-lg">
-                    <span className="text-[9px] font-bold text-zinc-555 uppercase tracking-widest">Complementar</span>
+                    <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Complementar</span>
                     <div className="flex items-center gap-1.5">
                       <input
                         type="color"
@@ -1980,7 +1984,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                         onChange={(e) => store.updateConfig({
                           cores: { ...store.cores, complementar: e.target.value }
                         })}
-                        className="w-full bg-[#1A1A1C] border border-white/10 rounded px-1.5 py-0.5 text-[10px] text-white focus:outline-none focus:border-[#c5a880]/50 font-bold uppercase"
+                        className="w-full bg-zinc-800 border border-white/10 rounded px-1.5 py-0.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 font-bold uppercase"
                       />
                     </div>
                   </div>
@@ -1991,8 +1995,8 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
             <div className="space-y-3.5 pt-3.5 border-t border-white/5">
               <div className="flex items-center justify-between">
                 <div className="flex flex-col">
-                  <span className="text-[10px] font-bold text-zinc-455 uppercase tracking-widest">Usar Cor Dominante?</span>
-                  <span className="text-[8px] text-zinc-500 tracking-wide mt-0.5">Ativa cor da marca no criativo</span>
+                  <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Usar Cor Dominante?</span>
+                  <span className="text-[10px] text-zinc-500 tracking-wide mt-0.5">Ativa cor da marca no criativo</span>
                 </div>
                 <button
                   onClick={() => store.updateConfig({ useCorDominante: !store.useCorDominante })}
@@ -2008,7 +2012,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
 
               {store.useCorDominante && (
                 <div className="flex items-center justify-between p-2.5 bg-zinc-950/60 rounded-xl border border-white/5 animate-in slide-in-from-top-2 duration-200">
-                  <span className="text-[10px] font-bold text-zinc-455 uppercase tracking-widest">Cor Dominante</span>
+                  <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Cor Dominante</span>
                   <div className="flex items-center gap-2">
                     <input
                       type="color"
@@ -2020,14 +2024,14 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                       type="text"
                       value={store.corDominante}
                       onChange={(e) => store.updateConfig({ corDominante: e.target.value })}
-                      className="w-16 bg-[#1A1A1C] border border-white/10 rounded px-2 py-1 text-[10px] text-white focus:outline-none focus:border-[#c5a880]/50 font-bold uppercase"
+                      className="w-16 bg-zinc-800 border border-white/10 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 font-bold uppercase"
                     />
                   </div>
                 </div>
               )}
 
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold text-zinc-450 uppercase tracking-widest">Degradê Leitura?</span>
+                <span className="text-xs font-bold text-zinc-450 uppercase tracking-widest">Degradê Leitura?</span>
                 <button
                   onClick={() => store.updateConfig({ degradeLeitura: !store.degradeLeitura })}
                   className="w-11 h-6 rounded-full p-0.5 relative transition-colors duration-200 cursor-pointer"
@@ -2043,7 +2047,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
           </div>
 
           {/* Composição */}
-          <div className="bg-[#0a0a0a] border border-white/5 p-5 rounded-xl space-y-4 shadow-sm hover:border-white/5 transition-colors">
+          <div className="bg-zinc-900/50 border border-white/5 p-5 rounded-xl space-y-4 shadow-sm hover:border-white/5 transition-colors">
             <div className="flex items-center gap-2.5 border-l-2 border-[#c5a880] pl-3">
               <span className="text-sm font-semibold text-white tracking-tight">Composição</span>
             </div>
@@ -2069,8 +2073,8 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                       <User size={12} />
                     </div>
                     <div className="flex flex-col">
-                      <span className={`text-[10.5px] font-bold uppercase tracking-wider ${isSelected ? 'text-[#c5a880]' : 'text-zinc-300'}`}>{framingItem.name}</span>
-                      <span className="text-[8.5px] text-zinc-500 lowercase tracking-wider mt-0.5">{framingItem.desc}</span>
+                      <span className={`text-[11px] font-bold uppercase tracking-wider ${isSelected ? 'text-[#c5a880]' : 'text-zinc-300'}`}>{framingItem.name}</span>
+                      <span className="text-[11px] text-zinc-500 lowercase tracking-wider mt-0.5">{framingItem.desc}</span>
                     </div>
                   </div>
                 );
@@ -2084,7 +2088,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                   value={store.composicaoCustom || ""}
                   onChange={(e) => store.updateConfig({ composicaoCustom: e.target.value })}
                   placeholder="Ex: Sujeito desfocado fundo centralizado..."
-                  className="w-full bg-[#0F0F11] border border-white/10 rounded-lg px-4 py-3 text-xs text-zinc-200 placeholder:text-zinc-700 focus:outline-none focus:border-[#c5a880]/50 font-medium"
+                  className="w-full bg-zinc-900 border border-white/10 rounded-lg px-4 py-3 text-xs text-zinc-200 placeholder:text-zinc-700 focus:outline-none focus:border-[#c5a880]/50 font-medium"
                 />
               </div>
 
@@ -2092,7 +2096,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
               <div className="space-y-3 pt-3.5 border-t border-white/5 mt-3">
                 <div className="flex flex-col gap-1">
                   <span className="text-xs font-bold text-zinc-350 uppercase tracking-wider">Elementos Flutuantes</span>
-                  <span className="text-[10px] text-zinc-500 tracking-wide">Configure partículas ou objetos suspensos para dar profundidade</span>
+                  <span className="text-xs text-zinc-500 tracking-wide">Configure partículas ou objetos suspensos para dar profundidade</span>
                 </div>
                 
                 <div className="grid grid-cols-3 gap-1.5 bg-zinc-950 p-1 rounded-xl border border-white/5">
@@ -2106,7 +2110,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                       <button
                         key={opt.value}
                         onClick={() => store.updateConfig({ floatingElementsMode: opt.value as any })}
-                        className={`py-2.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                        className={`py-2.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
                           isSelected 
                             ? "bg-[#c5a880] text-black font-semibold" 
                             : "text-zinc-550 hover:text-zinc-200"
@@ -2125,7 +2129,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                       value={store.floatingElementsCustom || ""}
                       onChange={(e) => store.updateConfig({ floatingElementsCustom: e.target.value })}
                       placeholder="Ex: Folhas douradas de outono caindo desfocadas..."
-                      className="w-full bg-[#0F0F11] border border-white/10 rounded-lg px-4 py-3 text-xs text-zinc-200 placeholder:text-zinc-700 focus:outline-none focus:border-[#c5a880]/50 font-medium"
+                      className="w-full bg-zinc-900 border border-white/10 rounded-lg px-4 py-3 text-xs text-zinc-200 placeholder:text-zinc-700 focus:outline-none focus:border-[#c5a880]/50 font-medium"
                     />
                   </div>
                 )}
@@ -2141,7 +2145,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
 
             {/* Slider de Sobriedade com Porcentagem Dinâmica */}
             <div className="bg-[#121216] border border-white/5 p-5 rounded-xl space-y-3 shadow-md">
-              <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-wider text-zinc-400">
+              <div className="flex justify-between items-center text-xs font-black uppercase tracking-wider text-zinc-400">
                 <span>Sobriedade</span>
                 <span className="text-[#c5a880] font-black">
                   {store.nivelCriativo}% — {getCreativeSliderLabel(store.nivelCriativo)}
@@ -2157,7 +2161,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                   className="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-[#c5a880] focus:outline-none"
                 />
               </div>
-              <div className="flex justify-between text-[8px] font-extrabold text-zinc-600 uppercase tracking-widest pt-1">
+              <div className="flex justify-between text-[10px] font-extrabold text-zinc-600 uppercase tracking-widest pt-1">
                 <span>Criativo</span>
                 <span>Profissional</span>
               </div>
@@ -2173,8 +2177,8 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
             <div className="space-y-3 border-t border-white/5 pt-5">
               <div className="flex items-center justify-between py-1">
                 <div className="flex flex-col">
-                  <span className="text-[10.5px] font-bold text-zinc-400 uppercase tracking-wider">Usar Desfoque (Blur)?</span>
-                  <span className="text-[8.5px] text-zinc-600">Aplica profundidade de campo suave</span>
+                  <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Usar Desfoque (Blur)?</span>
+                  <span className="text-[11px] text-zinc-600">Aplica profundidade de campo suave</span>
                 </div>
                 <button
                   onClick={() => store.updateConfig({ enableBlur: !store.enableBlur })}
@@ -2190,8 +2194,8 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
 
               <div className="flex items-center justify-between py-1">
                 <div className="flex flex-col">
-                  <span className="text-[10.5px] font-bold text-zinc-400 uppercase tracking-wider">Usar Degradê Lateral?</span>
-                  <span className="text-[8.5px] text-zinc-600">Insere sombras laterais sutis para contraste</span>
+                  <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Usar Degradê Lateral?</span>
+                  <span className="text-[11px] text-zinc-600">Insere sombras laterais sutis para contraste</span>
                 </div>
                 <button
                   onClick={() => store.updateConfig({ lateralGradient: !store.lateralGradient })}
@@ -2208,36 +2212,36 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
           </div>
 
           {/* Entradas Manuais */}
-          <div className="bg-[#0a0a0a] border border-white/5 p-5 rounded-xl space-y-5 shadow-sm hover:border-white/5 transition-colors">
+          <div className="bg-zinc-900/50 border border-white/5 p-5 rounded-xl space-y-5 shadow-sm hover:border-white/5 transition-colors">
             <div className="flex items-center gap-2.5 border-l-2 border-[#c5a880] pl-3">
               <span className="text-sm font-semibold text-white tracking-tight">Entradas Manuais</span>
             </div>
 
             <div>
-              <label className="block text-[9.5px] uppercase tracking-widest font-black text-zinc-550 mb-1.5">Prompt Adicional</label>
+              <label className="block text-xs uppercase tracking-widest font-black text-zinc-550 mb-1.5">Prompt Adicional</label>
               <textarea
                 value={store.additionalPrompt}
                 onChange={(e) => store.updateConfig({ additionalPrompt: e.target.value })}
                 placeholder="Escreva detalhes estéticos adicionais..."
                 rows={3}
-                className="w-full bg-[#0F0F11] border border-white/10 rounded-lg px-4 py-3 text-xs text-zinc-300 placeholder:text-zinc-700 focus:outline-none focus:border-[#c5a880]/50 resize-none font-medium"
+                className="w-full bg-zinc-900 border border-white/10 rounded-lg px-4 py-3 text-xs text-zinc-300 placeholder:text-zinc-700 focus:outline-none focus:border-[#c5a880]/50 resize-none font-medium"
               />
             </div>
 
             <div>
-              <label className="block text-[9.5px] uppercase tracking-widest font-black text-zinc-550 mb-1.5">Prompt Negativo</label>
+              <label className="block text-xs uppercase tracking-widest font-black text-zinc-550 mb-1.5">Prompt Negativo</label>
               <textarea
                 value={store.negativePrompt}
                 onChange={(e) => store.updateConfig({ negativePrompt: e.target.value })}
                 placeholder="Ex: óculos, água no avião, elements distorcidos, deformações, texto borrado..."
                 rows={3}
-                className="w-full bg-[#0F0F11] border border-white/10 rounded-lg px-4 py-3 text-xs text-zinc-300 placeholder:text-zinc-700 focus:outline-none focus:border-[#c5a880]/50 resize-none font-medium"
+                className="w-full bg-zinc-900 border border-white/10 rounded-lg px-4 py-3 text-xs text-zinc-300 placeholder:text-zinc-700 focus:outline-none focus:border-[#c5a880]/50 resize-none font-medium"
               />
             </div>
           </div>
 
           {/* Seleção de Modelo */}
-          <div className="bg-[#0a0a0a] border border-white/5 p-5 rounded-xl space-y-4 shadow-sm hover:border-white/5 transition-colors">
+          <div className="bg-zinc-900/50 border border-white/5 p-5 rounded-xl space-y-4 shadow-sm hover:border-white/5 transition-colors">
             <div className="flex items-center gap-2.5 border-l-2 border-[#c5a880] pl-3">
               <span className="text-sm font-semibold text-white tracking-tight">Modelo Base de Geração</span>
             </div>
@@ -2248,7 +2252,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
               >
                 <Sparkles size={24} className="mb-2" />
                 <span className="font-bold text-sm">NanoBanana Pro</span>
-                <span className="text-[10px] opacity-70">Alta Qualidade & Raciocínio</span>
+                <span className="text-xs opacity-70">Alta Qualidade & Raciocínio</span>
               </button>
               
               <button
@@ -2257,13 +2261,13 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
               >
                 <Zap size={24} className="mb-2" />
                 <span className="font-bold text-sm">NanoBanana 2</span>
-                <span className="text-[10px] opacity-70">Velocidade & Criatividade</span>
+                <span className="text-xs opacity-70">Velocidade & Criatividade</span>
               </button>
             </div>
           </div>
 
           {/* Opções Avançadas */}
-          <div className="bg-[#0a0a0a] border border-white/5 p-5 rounded-xl space-y-5 shadow-sm hover:border-white/5 transition-colors">
+          <div className="bg-zinc-900/50 border border-white/5 p-5 rounded-xl space-y-5 shadow-sm hover:border-white/5 transition-colors">
             <div className="flex items-center gap-2.5 border-l-2 border-[#c5a880] pl-3">
               <span className="text-sm font-semibold text-white tracking-tight">Opções Avançadas</span>
             </div>
@@ -2271,7 +2275,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
             <div className="grid grid-cols-2 gap-4">
               {/* Qualidade */}
               <div>
-                <label className="block text-[9.5px] uppercase tracking-widest font-black text-zinc-500 mb-1.5">Qualidade de Renderização</label>
+                <label className="block text-xs uppercase tracking-widest font-black text-zinc-500 mb-1.5">Qualidade de Renderização</label>
                 <div className="flex gap-1 bg-zinc-950 p-1.5 rounded-lg border border-white/5">
                   {[
                     { q: "1K", model: "gemini-3-pro-image" },
@@ -2284,7 +2288,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                         key={q}
                         onClick={() => store.updateConfig({ resolucao: q })}
                         title={`Modelo: ${model}`}
-                        className={`flex-1 py-1 rounded text-[10px] font-black transition-all cursor-pointer flex flex-col items-center leading-tight ${
+                        className={`flex-1 py-1 rounded text-xs font-black transition-all cursor-pointer flex flex-col items-center leading-tight ${
                           isSelected ? "bg-[#c5a880] text-black font-semibold" : "text-zinc-400 hover:text-white"
                         }`}
                       >
@@ -2296,34 +2300,12 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                 </div>
               </div>
 
-              {/* Formato */}
-              <div>
-                <label className="block text-[9.5px] uppercase tracking-widest font-black text-zinc-500 mb-1.5">Formato de Exportação</label>
-                <div className="flex gap-1 bg-zinc-950 p-1.5 rounded-lg border border-white/5">
-                  {["AVIF", "PNG", "JPEG", "WEBP"].map((fmt) => {
-                    const isSelected = exportFormat === fmt;
-                    return (
-                      <button
-                        key={fmt}
-                        onClick={() => {
-                          setExportFormat(fmt as any);
-                          store.updateConfig({ formatoExportacao: fmt as any });
-                        }}
-                        className={`flex-1 py-1.5 rounded text-[9.5px] font-black transition-all cursor-pointer ${
-                          isSelected ? "bg-[#c5a880] text-black font-semibold" : "text-zinc-400 hover:text-white"
-                        }`}
-                      >
-                        {fmt}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+              {/* Formato removed */}
             </div>
 
             {/* Quantidade de Cards a Gerar */}
             <div>
-              <label className="block text-[9.5px] uppercase tracking-widest font-black text-zinc-500 mb-1.5">Quantidade de Cards a Gerar</label>
+              <label className="block text-xs uppercase tracking-widest font-black text-zinc-500 mb-1.5">Quantidade de Cards a Gerar</label>
               <div className="flex gap-1 bg-zinc-950 p-1.5 rounded-lg border border-white/5">
                 {[1, 2, 3, 4, 5].map((num) => {
                   const isSelected = store.variations === num;
@@ -2346,7 +2328,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
             <div className="flex items-center justify-between p-3.5 bg-zinc-950/40 rounded-xl border border-white/5 mt-3">
               <div className="flex flex-col pr-4">
                 <span className="text-xs font-bold text-zinc-300 uppercase tracking-wider">Desativar Geração de Imagem?</span>
-                <span className="text-[9px] text-zinc-500 tracking-wide mt-1 uppercase">Gera apenas o Prompt Mestre e a Instrução de Sistema, sem criar a imagem física no servidor.</span>
+                <span className="text-xs text-zinc-500 tracking-wide mt-1 uppercase">Gera apenas o Prompt Mestre e a Instrução de Sistema, sem criar a imagem física no servidor.</span>
               </div>
               <button
                 type="button"
@@ -2388,7 +2370,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
 
             <button
               onClick={handleCopyPrompt}
-              className={`w-full flex items-center justify-center gap-2 p-3 bg-zinc-950 hover:bg-[#0a0a0a] border border-white/5 hover:border-zinc-850 text-zinc-400 hover:text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer active:scale-[0.98] ${
+              className={`w-full flex items-center justify-center gap-2 p-3 bg-zinc-950 hover:bg-zinc-900/50 border border-white/5 hover:border-zinc-850 text-zinc-400 hover:text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer active:scale-[0.98] ${
                 isCopied ? "bg-[#c5a880]/10 border-[#c5a880]/20 text-[#c5a880]" : ""
               }`}
             >
@@ -2403,24 +2385,24 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
             <div className="space-y-6 animate-in fade-in duration-300">
               {/* Ref Builder Header */}
               <div className="flex flex-col gap-1 pb-4 border-b border-white/5">
-                <span className="text-[10px] font-black text-[#c5a880] tracking-widest uppercase">Estúdio de Referências</span>
+                <span className="text-xs font-black text-[#c5a880] tracking-widest uppercase">Estúdio de Referências</span>
                 <h3 className="text-sm font-extrabold text-white uppercase tracking-wider">Ref Builder PRO</h3>
-                <p className="text-[9px] text-zinc-500 leading-relaxed uppercase tracking-wider">Ajuste os pesos das referências visuais para obter consistência máxima em seus criativos.</p>
+                <p className="text-xs text-zinc-500 leading-relaxed uppercase tracking-wider">Ajuste os pesos das referências visuais para obter consistência máxima em seus criativos.</p>
               </div>
 
               {/* Referência de Personagem */}
-              <div className="bg-[#0a0a0a] border border-white/5 p-5 rounded-xl space-y-4 shadow-sm hover:border-white/5 transition-all">
+              <div className="bg-zinc-900/50 border border-white/5 p-5 rounded-xl space-y-4 shadow-sm hover:border-white/5 transition-all">
                 <div className="flex items-center gap-2 border-l-2 border-[#c5a880] pl-3">
                   <User size={14} className="text-[#c5a880]" />
                   <span className="text-sm font-semibold text-white tracking-tight">Referência de Personagem (IP-Adapter)</span>
                 </div>
-                <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Garanta rostos e identidades idênticas em múltiplos criativos.</p>
+                <p className="text-xs text-zinc-500 uppercase tracking-wider">Garanta rostos e identidades idênticas em múltiplos criativos.</p>
                 <div className="border border-dashed border-white/5 bg-zinc-950/40 rounded-xl p-4 flex flex-col items-center justify-center text-center gap-2">
                   <User size={24} className="text-zinc-700" />
-                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wide">Arraste ou clique para subir face de referência</span>
+                  <span className="text-xs font-bold text-zinc-400 uppercase tracking-wide">Arraste ou clique para subir face de referência</span>
                 </div>
                 <div className="space-y-2">
-                  <div className="flex justify-between text-[9px] font-black text-zinc-500 uppercase tracking-widest">
+                  <div className="flex justify-between text-xs font-black text-zinc-500 uppercase tracking-widest">
                     <span>Peso do Personagem (Força)</span>
                     <span className="text-[#c5a880]">0.85</span>
                   </div>
@@ -2429,18 +2411,18 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
               </div>
 
               {/* Referência de Estilo */}
-              <div className="bg-[#0a0a0a] border border-white/5 p-5 rounded-xl space-y-4 shadow-sm hover:border-white/5 transition-all">
+              <div className="bg-zinc-900/50 border border-white/5 p-5 rounded-xl space-y-4 shadow-sm hover:border-white/5 transition-all">
                 <div className="flex items-center gap-2 border-l-2 border-[#c5a880] pl-3">
                   <Palette size={14} className="text-[#c5a880]" />
                   <span className="text-sm font-semibold text-white tracking-tight">Referência de Estilo (Style Transfer)</span>
                 </div>
-                <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Copie cores, pinceladas, iluminação de estúdio e texturas de uma imagem base.</p>
+                <p className="text-xs text-zinc-500 uppercase tracking-wider">Copie cores, pinceladas, iluminação de estúdio e texturas de uma imagem base.</p>
                 <div className="border border-dashed border-white/5 bg-zinc-950/40 rounded-xl p-4 flex flex-col items-center justify-center text-center gap-2">
                   <Palette size={24} className="text-zinc-700" />
-                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wide">Arraste ou clique para subir estilo de referência</span>
+                  <span className="text-xs font-bold text-zinc-400 uppercase tracking-wide">Arraste ou clique para subir estilo de referência</span>
                 </div>
                 <div className="space-y-2">
-                  <div className="flex justify-between text-[9px] font-black text-zinc-500 uppercase tracking-widest">
+                  <div className="flex justify-between text-xs font-black text-zinc-500 uppercase tracking-widest">
                     <span>Peso do Estilo</span>
                     <span className="text-[#c5a880]">0.70</span>
                   </div>
@@ -2449,18 +2431,18 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
               </div>
 
               {/* Referência de Estrutura */}
-              <div className="bg-[#0a0a0a] border border-white/5 p-5 rounded-xl space-y-4 shadow-sm hover:border-white/5 transition-all">
+              <div className="bg-zinc-900/50 border border-white/5 p-5 rounded-xl space-y-4 shadow-sm hover:border-white/5 transition-all">
                 <div className="flex items-center gap-2 border-l-2 border-[#c5a880] pl-3">
                   <Layout size={14} className="text-[#c5a880]" />
                   <span className="text-sm font-semibold text-white tracking-tight">Estrutura & Grid (ControlNet)</span>
                 </div>
-                <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Preserve o layout original do flyer, posição dos elementos e profundidade.</p>
+                <p className="text-xs text-zinc-500 uppercase tracking-wider">Preserve o layout original do flyer, posição dos elementos e profundidade.</p>
                 <div className="border border-dashed border-white/5 bg-zinc-950/40 rounded-xl p-4 flex flex-col items-center justify-center text-center gap-2">
                   <Layout size={24} className="text-zinc-700" />
-                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wide">Arraste ou clique para subir grid estrutural</span>
+                  <span className="text-xs font-bold text-zinc-400 uppercase tracking-wide">Arraste ou clique para subir grid estrutural</span>
                 </div>
                 <div className="space-y-2">
-                  <div className="flex justify-between text-[9px] font-black text-zinc-500 uppercase tracking-widest">
+                  <div className="flex justify-between text-xs font-black text-zinc-500 uppercase tracking-widest">
                     <span>Fidelidade do Grid</span>
                     <span className="text-[#c5a880]">0.90</span>
                   </div>
@@ -2474,9 +2456,9 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
             <div className="space-y-6 animate-in fade-in duration-300">
               {/* Inspiração Header */}
               <div className="flex flex-col gap-1 pb-4 border-b border-white/5">
-                <span className="text-[10px] font-black text-[#c5a880] tracking-widest uppercase">Presets Premium</span>
+                <span className="text-xs font-black text-[#c5a880] tracking-widest uppercase">Presets Premium</span>
                 <h3 className="text-sm font-extrabold text-white uppercase tracking-wider">Inspiradores Zion</h3>
-                <p className="text-[9px] text-zinc-500 leading-relaxed uppercase tracking-wider">Clique em um preset inspirado nos panfletos premium da Zion Company para configurar instantaneamente o designer.</p>
+                <p className="text-xs text-zinc-500 leading-relaxed uppercase tracking-wider">Clique em um preset inspirado nos panfletos premium da Zion Company para configurar instantaneamente o designer.</p>
               </div>
 
               {/* Grid de Presets */}
@@ -2495,28 +2477,28 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                     >
                       <div className="flex justify-between items-start">
                         <div className="flex flex-col gap-0.5">
-                          <span className="text-[8px] font-black text-[#c5a880] uppercase tracking-widest">
+                          <span className="text-[10px] font-black text-[#c5a880] uppercase tracking-widest">
                             {template.category}
                           </span>
                           <span className="text-xs font-extrabold text-zinc-100 uppercase tracking-wider group-hover:text-white transition-colors">
                             {template.name}
                           </span>
                         </div>
-                        <span className="bg-[#0F0F11] border border-white/10 text-[8px] font-black px-2 py-0.5 rounded text-zinc-400">
+                        <span className="bg-zinc-900 border border-white/10 text-[10px] font-black px-2 py-0.5 rounded text-zinc-400">
                           PROPORÇÃO {template.dimensao}
                         </span>
                       </div>
 
                       <div className="flex flex-wrap gap-1.5">
                         {template.estilosVisuais.map((st) => (
-                          <span key={st} className="bg-[#1A1A1C] border border-white/10 text-[7.5px] font-black uppercase px-1.5 py-0.5 rounded text-zinc-500">
+                          <span key={st} className="bg-zinc-800 border border-white/10 text-[7.5px] font-black uppercase px-1.5 py-0.5 rounded text-zinc-500">
                             {st}
                           </span>
                         ))}
                       </div>
 
                       <div className="pt-2 flex items-center justify-between border-t border-white/5">
-                        <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-wider">
+                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
                           {template.camadasTexto.length} Blocos de Texto
                         </span>
                         <button
@@ -2562,7 +2544,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                             setActiveMenuTab("Design Builder");
                             showToast(`Preset "${template.name}" carregado com sucesso! Clique em "Gerar" na coluna direita.`, "success");
                           }}
-                          className="px-3 py-1 bg-[#1A1A1C] border border-white/10 hover:border-[#c5a880]/40 group-hover:bg-[#c5a880] group-hover:text-black hover:scale-105 active:scale-95 transition-all text-[8px] font-black uppercase tracking-widest text-[#c5a880] rounded-lg"
+                          className="px-3 py-1 bg-zinc-800 border border-white/10 hover:border-[#c5a880]/40 group-hover:bg-[#c5a880] group-hover:text-black hover:scale-105 active:scale-95 transition-all text-[10px] font-black uppercase tracking-widest text-[#c5a880] rounded-lg"
                         >
                           Aplicar Preset
                         </button>
@@ -2578,9 +2560,9 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
             <div className="space-y-6 animate-in fade-in duration-300">
               {/* Comunidade Header */}
               <div className="flex flex-col gap-1 pb-4 border-b border-white/5">
-                <span className="text-[10px] font-black text-[#c5a880] tracking-widest uppercase">Zion Hub</span>
+                <span className="text-xs font-black text-[#c5a880] tracking-widest uppercase">Zion Hub</span>
                 <h3 className="text-sm font-extrabold text-white uppercase tracking-wider">Feed da Comunidade</h3>
-                <p className="text-[9px] text-zinc-500 leading-relaxed uppercase tracking-wider">Inspire-se em layouts de alto nível criados por outros diretores de arte da agência.</p>
+                <p className="text-xs text-zinc-500 leading-relaxed uppercase tracking-wider">Inspire-se em layouts de alto nível criados por outros diretores de arte da agência.</p>
               </div>
 
               {/* Feed List */}
@@ -2589,33 +2571,33 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                   <div key={item.id} className="p-4 bg-zinc-900/20 border border-white/5 rounded-2xl space-y-3.5 hover:border-white/5 transition-all">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <div className={`w-7 h-7 rounded-full flex items-center justify-center ${item.avatarColor} text-black font-semibold text-[10px]`}>
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center ${item.avatarColor} text-black font-semibold text-xs`}>
                           {item.author.charAt(0)}
                         </div>
                         <div className="flex flex-col">
-                          <span className="text-[10px] font-extrabold text-zinc-200 uppercase tracking-wider">{item.author}</span>
+                          <span className="text-xs font-extrabold text-zinc-200 uppercase tracking-wider">{item.author}</span>
                           <span className="text-[7.5px] font-bold text-zinc-500 uppercase tracking-widest">{item.role}</span>
                         </div>
                       </div>
-                      <span className="text-[8px] font-black bg-black/40 border border-white/5 text-zinc-400 px-2 py-0.5 rounded">
+                      <span className="text-[10px] font-black bg-black/40 border border-white/5 text-zinc-400 px-2 py-0.5 rounded">
                         PROPORÇÃO {item.dimensao}
                       </span>
                     </div>
 
                     <div className="space-y-1 bg-zinc-950 p-3 rounded-xl border border-white/5">
-                      <span className="text-[8.5px] font-extrabold text-[#c5a880] uppercase tracking-widest block">Prompt Utilizado</span>
-                      <p className="text-[10px] font-bold text-zinc-300 leading-relaxed font-mono select-all">
+                      <span className="text-[11px] font-extrabold text-[#c5a880] uppercase tracking-widest block">Prompt Utilizado</span>
+                      <p className="text-xs font-bold text-zinc-300 leading-relaxed font-mono select-all">
                         {item.prompt}
                       </p>
                     </div>
 
                     <div className="flex items-center justify-between pt-2 border-t border-white/5">
                       <div className="flex items-center gap-3">
-                        <button className="flex items-center gap-1 text-[9px] font-bold text-zinc-400 hover:text-red-500 transition-colors">
+                        <button className="flex items-center gap-1 text-xs font-bold text-zinc-400 hover:text-red-500 transition-colors">
                           <Heart size={11} />
                           <span>{item.likes}</span>
                         </button>
-                        <button className="flex items-center gap-1 text-[9px] font-bold text-zinc-400 hover:text-[#c5a880] transition-colors">
+                        <button className="flex items-center gap-1 text-xs font-bold text-zinc-400 hover:text-[#c5a880] transition-colors">
                           <Share2 size={11} />
                           <span>{item.shares}</span>
                         </button>
@@ -2631,7 +2613,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                           setActiveMenuTab("Design Builder");
                           showToast("Prompt e dimensões clonados com sucesso!", "success");
                         }}
-                        className="px-3 py-1 bg-[#c5a880]/10 border border-[#c5a880]/20 hover:bg-[#c5a880] hover:text-black transition-all text-[8px] font-black uppercase tracking-widest text-[#c5a880] rounded-lg"
+                        className="px-3 py-1 bg-[#c5a880]/10 border border-[#c5a880]/20 hover:bg-[#c5a880] hover:text-black transition-all text-[10px] font-black uppercase tracking-widest text-[#c5a880] rounded-lg"
                       >
                         Clonar Prompt
                       </button>
@@ -2646,7 +2628,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
             <div className="space-y-6 animate-in fade-in duration-300">
               {/* Galeria Header */}
               <div className="flex flex-col gap-1 pb-4 border-b border-white/5">
-                <span className="text-[10px] font-black text-[#c5a880] tracking-widest uppercase">Histórico Digital</span>
+                <span className="text-xs font-black text-[#c5a880] tracking-widest uppercase">Histórico Digital</span>
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-extrabold text-white uppercase tracking-wider">Minha Galeria</h3>
                   <div className="relative">
@@ -2673,18 +2655,18 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                         e.target.value = "";
                       }}
                     />
-                    <button className="flex items-center gap-1.5 px-3 py-1.5 bg-[#c5a880] hover:bg-[#b39873] text-zinc-950 rounded text-[10px] font-black tracking-widest uppercase transition-colors pointer-events-none">
+                    <button className="flex items-center gap-1.5 px-3 py-1.5 bg-[#c5a880] hover:bg-[#b39873] text-zinc-950 rounded text-xs font-black tracking-widest uppercase transition-colors pointer-events-none">
                       <Upload size={12} />
                       Fazer Upload
                     </button>
                   </div>
                 </div>
-                <p className="text-[9px] text-zinc-500 leading-relaxed uppercase tracking-wider mt-1">Visualize, filtre e gerencie todas as criações premium salvas neste projeto.</p>
+                <p className="text-xs text-zinc-500 leading-relaxed uppercase tracking-wider mt-1">Visualize, filtre e gerencie todas as criações premium salvas neste projeto.</p>
               </div>
 
               {/* Filtros da Galeria */}
               <div className="space-y-3">
-                <span className="text-[9px] font-black text-zinc-550 uppercase tracking-widest block">Filtros de Proporção</span>
+                <span className="text-xs font-black text-zinc-550 uppercase tracking-widest block">Filtros de Proporção</span>
                 <div className="flex flex-wrap gap-1 bg-zinc-950 p-1 rounded-lg border border-white/5">
                   {["Todos", "1:1", "3:4", "9:16", "16:9"].map((dim) => {
                     const isSel = galleryFilterDimension === dim;
@@ -2692,7 +2674,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                       <button
                         key={dim}
                         onClick={() => setGalleryFilterDimension(dim)}
-                        className={`px-2.5 py-1 text-[8.5px] font-extrabold rounded uppercase tracking-wider transition-all cursor-pointer ${
+                        className={`px-2.5 py-1 text-[11px] font-extrabold rounded uppercase tracking-wider transition-all cursor-pointer ${
                           isSel ? "bg-[#c5a880] text-black" : "text-zinc-500 hover:text-zinc-300"
                         }`}
                       >
@@ -2717,7 +2699,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                   if (filteredImages.length === 0) {
                     return (
                       <div className="py-8 text-center border border-dashed border-white/5 rounded-xl bg-zinc-950/20">
-                        <span className="text-[9px] font-bold text-zinc-600 uppercase tracking-wider">Nenhuma correspondência</span>
+                        <span className="text-xs font-bold text-zinc-600 uppercase tracking-wider">Nenhuma correspondência</span>
                       </div>
                     );
                   }
@@ -2783,7 +2765,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
               ) : (
                 <div className="py-8 text-center border border-dashed border-white/5 rounded-xl bg-zinc-950/20">
                   <ImageIcon size={20} className="text-zinc-700 mx-auto mb-2" />
-                  <span className="text-[9px] font-bold text-zinc-650 uppercase tracking-wider">Nenhuma imagem gerada ainda</span>
+                  <span className="text-xs font-bold text-zinc-600 uppercase tracking-wider">Nenhuma imagem gerada ainda</span>
                 </div>
               )}
             </div>
@@ -2798,93 +2780,11 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
       
       
 {/* COLUNA 3: VIEWPORT (MENSAGENS DE PROGRESSO REALISTA & ZOOM) E GALERIA MASONRY */}
-      <div className="w-full md:flex-1 bg-[#000000] flex flex-col h-[55vh] md:h-full overflow-hidden relative">
+      <div className="w-full md:flex-1 bg-zinc-950 flex flex-col md:flex-row h-[55vh] md:h-full overflow-hidden relative">
         
-        {/* NEW TOP TOOLBAR FOR ACTIONS (DOWNLOAD, PINTAR, ETC) */}
-        {activeImage && (
-          <div className="border-b border-white/5 bg-[#0A0A0A] p-2 shrink-0 flex flex-wrap items-center justify-center gap-2 overflow-x-auto z-20">
-            {isGcTv && (
-              <button
-                onClick={() => setShowVmixXamlModal(true)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-gradient-to-r from-sky-500 to-sky-600 border border-sky-400/40 text-white text-[9px] font-black uppercase tracking-wider rounded-md hover:from-sky-400 hover:to-sky-500 active:scale-95 transition-all shadow-xl cursor-pointer"
-              >
-                <Tv size={11} className="stroke-[2.5px]" />
-                <span>vMix XAML</span>
-              </button>
-            )}
-            <button
-              onClick={() => setIsFullscreen(true)}
-              className="flex items-center justify-center w-7 h-7 bg-[#1A1A1C] border border-white/10 text-white rounded-md hover:bg-zinc-800 active:scale-95 transition-all shadow-xl cursor-pointer"
-              title="Tela Cheia"
-            >
-              <Maximize size={11} className="text-white stroke-[2.5px]" />
-            </button>
-            <button
-              onClick={handleDownloadActiveImage}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white text-black text-[9px] font-black uppercase tracking-wider rounded-md hover:bg-zinc-200 active:scale-95 transition-all shadow-xl cursor-pointer"
-            >
-              <Download size={11} className="text-black stroke-[2.5px]" />
-              <span>Download</span>
-            </button>
-            <button
-              onClick={() => setShowMaskPainter(true)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-600 border border-emerald-400/40 text-white text-[9px] font-black uppercase tracking-wider rounded-md hover:from-emerald-400 hover:to-teal-500 active:scale-95 transition-all shadow-xl cursor-pointer shadow-emerald-950/40"
-              title="Pintar uma área da imagem e pedir a IA para remover, alterar ou adicionar algo"
-            >
-              <PenTool size={11} className="stroke-[2.5px]" />
-              <span>Pintar & Editar</span>
-            </button>
-            <button
-              onClick={handleApplyRefinements}
-              disabled={isRefining}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 border border-amber-400/40 text-black text-[9px] font-black uppercase tracking-wider rounded-md hover:from-amber-400 hover:to-amber-500 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition-all shadow-xl cursor-pointer"
-            >
-              <Sparkles size={11} className={`text-black stroke-[2.5px] ${isRefining ? 'animate-spin' : ''}`} />
-              <span>{isRefining ? "Corrigindo..." : "Melhorar (16MB)"}</span>
-            </button>
-            <button
-              onClick={async () => {
-                if (!activeImage) return;
-                showToast("Removendo fundo, aguarde...", "success");
-                try {
-                  const response = await fetch("/api/remove-bg", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ imageBase64: activeImage })
-                  });
-                  if (!response.ok) {
-                    const errData = await response.json();
-                    throw new Error(errData.error || "Erro ao remover fundo.");
-                  }
-                  const data = await response.json();
-                  if (data.image) {
-                    store.setGaleriaImages((prev: string[]) => {
-                      const next = [...prev, data.image];
-                      store.setActiveImageIndex(next.length - 1);
-                      return next;
-                    });
-                    showToast("Fundo removido com sucesso!", "success");
-                  }
-                } catch (e: any) {
-                  showToast("Erro ao remover fundo: " + e.message, "error");
-                }
-              }}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-zinc-900 border border-white/5 text-zinc-300 text-[9px] font-black uppercase tracking-wider rounded-md hover:bg-zinc-800 active:scale-95 transition-all shadow-xl cursor-pointer"
-            >
-              <Scissors size={11} className="stroke-[3px]" />
-              <span>Sem Fundo</span>
-            </button>
-            <button
-              onClick={() => showToast("Formatos extras disponíveis nas configurações!", "success")}
-              className="p-1.5 bg-[#070708]/90 hover:bg-zinc-900 border border-white/10 rounded-md text-white active:scale-95 transition-all cursor-pointer shadow-lg"
-            >
-              <MoreVertical size={11} />
-            </button>
-          </div>
-        )}
-
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex-1 flex flex-col relative overflow-hidden bg-[#0A0A0A] border-b md:border-b-0 border-white/5 min-h-[300px]">
+        {/* Left Side: Image Preview & States */}
+        <div className="flex-1 flex flex-col overflow-hidden relative min-h-0 min-w-0">
+          <div className="flex-1 flex flex-col relative overflow-hidden bg-zinc-900/50 min-h-[300px]">
             
             {/* Banner Orientação GC TV vMix */}
             {isGcTv && (
@@ -2894,15 +2794,15 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                     <Tv size={15} />
                   </div>
                   <div>
-                    <span className="text-[10px] font-black text-sky-400 uppercase tracking-widest block">PAINEL GC DE TV ATIVO</span>
-                    <span className="text-[10.5px] font-medium text-zinc-300">Gere a imagem de referência do seu GC e clique em "Aprovar GC" para escanear e criar o arquivo .XAML do vMix.</span>
+                    <span className="text-xs font-black text-sky-400 uppercase tracking-widest block">PAINEL GC DE TV ATIVO</span>
+                    <span className="text-[11px] font-medium text-zinc-300">Gere a imagem de referência do seu GC e clique em "Aprovar GC" para escanear e criar o arquivo .XAML do vMix.</span>
                   </div>
                 </div>
 
                 {activeImage && (
                   <button
                     onClick={() => setShowVmixXamlModal(true)}
-                    className="px-3.5 py-1.5 bg-sky-500 hover:bg-sky-400 text-black text-[10.5px] font-black uppercase tracking-wider rounded-lg transition-all shadow-md shrink-0 flex items-center gap-1.5 cursor-pointer"
+                    className="px-3.5 py-1.5 bg-sky-500 hover:bg-sky-400 text-black text-[11px] font-black uppercase tracking-wider rounded-lg transition-all shadow-md shrink-0 flex items-center gap-1.5 cursor-pointer"
                   >
                     <Sparkles size={12} />
                     <span>Aprovar & Gerar XAML</span>
@@ -2911,16 +2811,16 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
               </div>
             )}
 
-            <div className="flex-1 flex relative p-3 sm:p-5 items-center justify-center overflow-hidden min-h-0 min-w-0">
+            <div className="flex-1 flex relative items-center justify-center overflow-hidden min-h-0 min-w-0">
               {store.somentePrompt ? (
-                <div className="w-full h-full flex flex-col p-4 sm:p-5 bg-[#0a0a0c]/80 border border-white/5 rounded-2xl overflow-hidden">
+                <div className="w-full h-full flex flex-col p-4 sm:p-5 bg-[#0a0a0c]/80 border border-white/5 overflow-hidden">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/5 shrink-0">
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-2">
                         <Terminal size={14} className="text-[#c5a880]" />
-                        <span className="text-[10px] font-black text-[#c5a880] tracking-widest uppercase">Modo Somente Prompt & Instrução Ativo</span>
+                        <span className="text-xs font-black text-[#c5a880] tracking-widest uppercase">Modo Somente Prompt & Instrução Ativo</span>
                       </div>
-                      <p className="text-[9px] text-zinc-500 uppercase tracking-wider text-left">Copie o Prompt e a Instrução de Sistema estruturados lado a lado para alimentar geradores externos.</p>
+                      <p className="text-xs text-zinc-500 uppercase tracking-wider text-left">Copie o Prompt e a Instrução de Sistema estruturados lado a lado para alimentar geradores externos.</p>
                     </div>
                   </div>
 
@@ -2931,14 +2831,14 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                       </div>
                       <div className="space-y-1.5 max-w-sm">
                         <h4 className="text-xs font-bold text-zinc-300 uppercase tracking-wider">Aguardando Planejamento</h4>
-                        <p className="text-[10px] text-zinc-500 uppercase tracking-wider leading-relaxed">
+                        <p className="text-xs text-zinc-500 uppercase tracking-wider leading-relaxed">
                           O Diretor Criativo escaneará todas as referências visuais e configurações para planejar a composição, pensar e criar o Prompt Mestre e a Instrução de Sistema ideais.
                         </p>
                       </div>
                       <button
                         onClick={() => generatePremiumImage()}
                         disabled={isGenerating}
-                        className="px-6 py-2.5 bg-[#c5a880] hover:bg-[#b39873] border-none disabled:opacity-50 text-black font-black text-[10px] uppercase tracking-widest rounded-lg transition-all shadow-md active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2"
+                        className="px-6 py-2.5 bg-[#c5a880] hover:bg-[#b39873] border-none disabled:opacity-50 text-black font-black text-xs uppercase tracking-widest rounded-lg transition-all shadow-md active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2"
                       >
                         {isGenerating ? (
                           <>
@@ -2960,7 +2860,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                         {/* Mega Prompt Mestre Container */}
                         <div className="bg-[#040406]/90 border border-white/5 p-4 rounded-xl space-y-2.5 flex flex-col min-h-0 h-full">
                           <div className="flex justify-between items-center shrink-0 gap-2">
-                            <span className="text-[10px] font-extrabold text-white uppercase tracking-wider">Mega Prompt Mestre (Flyer BR)</span>
+                            <span className="text-xs font-extrabold text-white uppercase tracking-wider">Mega Prompt Mestre (Flyer BR)</span>
                             
                             {/* Copy Button */}
                             <button
@@ -2968,7 +2868,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                                 navigator.clipboard.writeText(store.lastGeneratedPrompt);
                                 showToast("Prompt copiado!", "success");
                               }}
-                              className="px-3 py-1.5 bg-zinc-900 border border-white/10 hover:bg-zinc-800 text-zinc-300 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+                              className="px-3 py-1.5 bg-zinc-900 border border-white/10 hover:bg-zinc-800 text-zinc-300 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
                             >
                               <Copy size={10} /> Copiar Prompt
                             </button>
@@ -2983,7 +2883,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                         {/* System Instructions Container */}
                         <div className="bg-[#040406]/90 border border-white/5 p-4 rounded-xl space-y-2.5 flex flex-col min-h-0 h-full">
                           <div className="flex justify-between items-center shrink-0 gap-2">
-                            <span className="text-[10px] font-extrabold text-white uppercase tracking-wider">Instrução de Sistema</span>
+                            <span className="text-xs font-extrabold text-white uppercase tracking-wider">Instrução de Sistema</span>
                             
                             {/* Copy Button */}
                             <button
@@ -2991,7 +2891,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                                 navigator.clipboard.writeText(store.lastSystemInstruction);
                                 showToast("Instrução copiada!", "success");
                               }}
-                              className="px-3 py-1.5 bg-zinc-900 border border-white/10 hover:bg-zinc-800 text-zinc-300 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+                              className="px-3 py-1.5 bg-zinc-900 border border-white/10 hover:bg-zinc-800 text-zinc-300 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
                             >
                               <Copy size={10} /> Copiar Instrução
                             </button>
@@ -3009,15 +2909,20 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                 </div>
               ) : activeImage ? (
                 <div 
-                  className="w-full h-full overflow-hidden relative min-h-0 min-w-0"
+                  className={`w-full h-full overflow-hidden relative min-h-0 min-w-0 ${zoomPercent > 100 ? (isDragging ? "cursor-grabbing" : "cursor-grab") : "cursor-default"}`}
                   onWheel={handleWheel}
                   onMouseDown={handleMouseDown}
                   onMouseMove={handleMouseMove}
                   onMouseUp={handleMouseUpOrLeave}
                   onMouseLeave={handleMouseUpOrLeave}
+                  onTouchStart={handleTouchStart}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={handleMouseUpOrLeave}
+                  onTouchCancel={handleMouseUpOrLeave}
+                  style={{ touchAction: zoomPercent > 100 ? "none" : "auto" }}
                 >
                   <div
-                    className="absolute inset-2 sm:inset-4 flex items-center justify-center"
+                    className="absolute inset-0 flex items-center justify-center"
                     style={{
                       transform: `scale(${zoomPercent / 100}) translate(${panOffset.x}px, ${panOffset.y}px)`,
                       transformOrigin: "center center",
@@ -3026,18 +2931,19 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                   >
                     <img
                       src={activeImage}
-                      alt="Preview"
+                      alt="Visualização da Arte Gerada"
+                      draggable={false}
                       className="absolute inset-0 w-full h-full object-contain pointer-events-none"
                     />
                   </div>
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-3.5 text-center p-6">
-                  <div className="w-10 h-10 rounded-full bg-[#1A1A1C] border border-white/10 flex items-center justify-center text-zinc-500 mb-1.5">
+                  <div className="w-10 h-10 rounded-full bg-zinc-800 border border-white/10 flex items-center justify-center text-zinc-500 mb-1.5">
                     <Sparkles size={16} />
                   </div>
-                  <p className="text-[10.5px] font-black text-zinc-400 uppercase tracking-widest">Aguardando Criação</p>
-                  <p className="text-[9.5px] text-zinc-600 max-w-xs leading-relaxed mt-1 mb-4">Monte os parâmetros no formulário central e inicie a geração da imagem.</p>
+                  <p className="text-[11px] font-black text-zinc-400 uppercase tracking-widest">Aguardando Criação</p>
+                  <p className="text-xs text-zinc-600 max-w-xs leading-relaxed mt-1 mb-4">Monte os parâmetros no formulário central e inicie a geração da imagem.</p>
                   
                   <div className="relative inline-flex">
                     <input
@@ -3073,14 +2979,6 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
             </div>
             
             {/* Gallery at the bottom of the Viewport */}
-            {activeImage && (
-              <div className="border-t border-white/5 bg-[#09090b] p-4 shrink-0 max-h-[35vh] overflow-y-auto custom-scrollbar">
-                <MasonryGallery
-                  exportFormat={exportFormat}
-                  showToast={showToast}
-                />
-              </div>
-            )}
             
             {/* Progress Overlay */}
 
@@ -3119,7 +3017,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                           style={{ width: `${progressPercent}%` }}
                         />
                       </div>
-                      <div className="flex justify-between text-[9px] font-bold text-zinc-500 uppercase tracking-wider">
+                      <div className="flex justify-between text-xs font-bold text-zinc-500 uppercase tracking-wider">
                         <span>Progresso</span>
                         <span>{progressPercent}% / 100%</span>
                       </div>
@@ -3127,7 +3025,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
 
                     {/* Countdown Remaining */}
                     {countdown > 0 && (
-                      <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-zinc-900/60 border border-white/5 rounded-full text-[9px] font-bold text-zinc-400 uppercase tracking-wider">
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-zinc-900/60 border border-white/5 rounded-full text-xs font-bold text-zinc-400 uppercase tracking-wider">
                         <span className="relative flex h-1.5 w-1.5">
                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#c5a880] opacity-75"></span>
                           <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#c5a880]"></span>
@@ -3150,7 +3048,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                       <h3 className="text-xs font-black uppercase text-emerald-500 tracking-widest">
                         Geração Concluída!
                       </h3>
-                      <p className="text-[10px] text-zinc-400 uppercase tracking-wider leading-relaxed">
+                      <p className="text-xs text-zinc-400 uppercase tracking-wider leading-relaxed">
                         Sua imagem premium foi criada com sucesso e adicionada à galeria.
                       </p>
                     </div>
@@ -3168,13 +3066,13 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                       <h3 className="text-xs font-black uppercase text-rose-500 tracking-widest">
                         Falha na Geração
                       </h3>
-                      <p className="text-[10.5px] text-zinc-300 font-medium px-4 leading-relaxed bg-zinc-900/60 border border-white/5 p-3 rounded-lg text-left font-mono break-all max-h-[120px] overflow-y-auto custom-scrollbar">
+                      <p className="text-[11px] text-zinc-300 font-medium px-4 leading-relaxed bg-zinc-900/60 border border-white/5 p-3 rounded-lg text-left font-mono break-all max-h-[120px] overflow-y-auto custom-scrollbar">
                         {genError || "Ocorreu um erro inesperado ao conectar à API de geração do Vertex."}
                       </p>
                     </div>
                     <button
                       onClick={() => setGenStatus("idle")}
-                      className="w-full py-2.5 bg-rose-500 hover:bg-rose-600 border-none text-white text-[10px] font-black uppercase tracking-wider rounded-lg transition-colors cursor-pointer"
+                      className="w-full py-2.5 bg-rose-500 hover:bg-rose-600 border-none text-white text-xs font-black uppercase tracking-wider rounded-lg transition-colors cursor-pointer"
                     >
                       Fechar e Tentar Novamente
                     </button>
@@ -3183,12 +3081,155 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
               )}
             </div>
           </div>
+        {/* Right Side: Options & Gallery */}
+        {activeImage && (
+          <div className="w-full md:w-[280px] xl:w-[320px] bg-zinc-900/50 border-t md:border-t-0 border-l-0 md:border-l border-white/5 flex flex-col shrink-0 overflow-y-auto custom-scrollbar relative z-20">
+            {/* Action Buttons */}
+            <div className="p-4 border-b border-white/5 space-y-3 shrink-0">
+              <h3 className="text-xs font-black uppercase text-zinc-500 tracking-widest">Ações Rápidas</h3>
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={() => handleDownloadActiveImage("ORIGINAL")}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-white text-black text-xs font-black uppercase tracking-wider rounded-lg hover:bg-zinc-200 transition-all shadow-xl cursor-pointer"
+                >
+                  <Download size={14} className="stroke-[2.5px] shrink-0" />
+                  <span className="whitespace-nowrap">Download Nativo (API)</span>
+                </button>
+                
+                <button
+                  onClick={handleApplyRefinements}
+                  disabled={isRefining}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-gradient-to-r from-amber-500 to-amber-600 border border-amber-400/40 text-black text-xs font-black uppercase tracking-wider rounded-lg hover:from-amber-400 hover:to-amber-500 disabled:opacity-50 transition-all shadow-xl cursor-pointer"
+                >
+                  <Sparkles size={14} className={`stroke-[2.5px] ${isRefining ? 'animate-spin' : ''}`} />
+                  <span>{isRefining ? "Melhorando..." : "Melhorar Imagem"}</span>
+                </button>
+                
+                <div className="grid grid-cols-2 gap-2 mt-1">
+                  <button
+                    onClick={() => setShowMaskPainter(true)}
+                    className="flex items-center justify-center gap-1.5 px-2 py-2 bg-zinc-900 border border-white/10 text-white text-xs font-black uppercase tracking-wider rounded-lg hover:bg-zinc-800 transition-all cursor-pointer"
+                  >
+                    <PenTool size={12} />
+                    <span>Pintar</span>
+                  </button>
+                  
+                  <button
+                    onClick={async () => {
+                      showToast("Removendo fundo...", "success");
+                      try {
+                        const response = await fetch("/api/remove-bg", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ imageBase64: activeImage })
+                        });
+                        if (!response.ok) throw new Error("Erro");
+                        const data = await response.json();
+                        if (data.image) {
+                          store.setGaleriaImages((prev: string[]) => {
+                            const next = [...prev, data.image];
+                            store.setActiveImageIndex(next.length - 1);
+                            return next;
+                          });
+                          showToast("Fundo removido!", "success");
+                        }
+                      } catch (e: any) {
+                        showToast("Erro ao remover fundo", "error");
+                      }
+                    }}
+                    className="flex items-center justify-center gap-1.5 px-2 py-2 bg-zinc-900 border border-white/10 text-white text-xs font-black uppercase tracking-wider rounded-lg hover:bg-zinc-800 transition-all cursor-pointer"
+                  >
+                    <Scissors size={12} />
+                    <span>Fundo</span>
+                  </button>
+                </div>
+                
+                {isGcTv && (
+                  <button
+                    onClick={() => setShowVmixXamlModal(true)}
+                    className="w-full flex items-center justify-center gap-1.5 px-3 py-2 mt-1 bg-gradient-to-r from-sky-500 to-sky-600 border border-sky-400/40 text-white text-xs font-black uppercase tracking-wider rounded-lg hover:from-sky-400 hover:to-sky-500 transition-all cursor-pointer"
+                  >
+                    <Tv size={14} className="stroke-[2.5px]" />
+                    <span>Exportar vMix XAML</span>
+                  </button>
+                )}
+                
+                <button
+                  onClick={() => setIsFullscreen(true)}
+                  className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-zinc-950 border border-white/10 text-zinc-300 text-xs font-black uppercase tracking-wider rounded-lg hover:bg-zinc-900 transition-all cursor-pointer"
+                >
+                  <Maximize size={12} />
+                  <span>Tela Cheia</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Export Settings */}
+            <div className="p-4 border-b border-white/5 space-y-4 shrink-0">
+              <div>
+                <h3 className="text-xs font-black uppercase text-zinc-500 tracking-widest mb-2">Formato de Arquivo</h3>
+                <div className="grid grid-cols-4 gap-1 bg-zinc-950 p-1.5 rounded-lg border border-white/5">
+                  {["AVIF", "PNG", "JPEG", "WEBP"].map((fmt) => {
+                    const isSelected = exportFormat === fmt;
+                    return (
+                      <button
+                        key={fmt}
+                        onClick={() => {
+                          setExportFormat(fmt as any);
+                          store.updateConfig({ formatoExportacao: fmt as any });
+                        }}
+                        className={`py-1.5 rounded text-xs font-black transition-all cursor-pointer ${
+                          isSelected ? "bg-[#c5a880] text-black shadow-md" : "text-zinc-400 hover:text-white"
+                        }`}
+                      >
+                        {fmt}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              
+              <div>
+                <h3 className="text-xs font-black uppercase text-zinc-500 tracking-widest mb-2">Exportar Redes Sociais</h3>
+                <div className="space-y-2">
+                  <button
+                    onClick={() => { handleDownloadActiveImage(16); showToast("Baixando arquivo cravado em 16MB (WhatsApp HD)", "success"); }}
+                    className="w-full flex items-center justify-between gap-2 px-3 py-2.5 bg-emerald-950/30 border border-emerald-500/20 text-emerald-400 text-xs font-black uppercase tracking-wider rounded-lg hover:bg-emerald-900/50 transition-all cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2 whitespace-nowrap"><Download size={14} className="shrink-0" /> WhatsApp HD</div>
+                    <span className="text-[11px] bg-emerald-500/20 px-1.5 py-0.5 rounded font-bold whitespace-nowrap shrink-0">16MB</span>
+                  </button>
+                  <button
+                    onClick={() => { handleDownloadActiveImage("4K"); showToast("Baixando em Ultra HD 4K (Instagram)", "success"); }}
+                    className="w-full flex items-center justify-between gap-2 px-3 py-2.5 bg-pink-950/30 border border-pink-500/20 text-pink-400 text-xs font-black uppercase tracking-wider rounded-lg hover:bg-pink-900/50 transition-all cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2 whitespace-nowrap"><Download size={14} className="shrink-0" /> Instagram 4K</div>
+                    <span className="text-[11px] bg-pink-500/20 px-1.5 py-0.5 rounded font-bold whitespace-nowrap shrink-0">4K Ultra</span>
+                  </button>
+                  <div className="p-2.5 bg-zinc-950/60 border border-white/5 rounded-lg text-[10px] text-zinc-400 leading-relaxed space-y-1">
+                    <p className="font-bold text-emerald-400 uppercase tracking-wider">💡 Dica WhatsApp HD:</p>
+                    <p>
+                      Ao enviar no WhatsApp, toque na opção <strong className="text-white font-bold">"HD"</strong> no topo da tela antes de enviar, ou envie como <strong className="text-white font-bold">"Documento"</strong> para preservar 100% dos 16 Megapixels sem compressão do aplicativo!
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Masonry Gallery */}
+            <div className="flex-1 p-4 min-h-[200px] flex flex-col shrink-0">
+              <MasonryGallery
+                exportFormat={exportFormat}
+                showToast={showToast}
+              />
+            </div>
+          </div>
+        )}
           
 
         </div>
       </div>
     </div>
-  </div>
 
   {modalImageRefUrl && (
     <div
@@ -3213,12 +3254,17 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
 
   {isFullscreen && activeImage && (
     <div
-      className="fixed inset-0 z-[100] bg-black overflow-hidden"
+      className={`fixed inset-0 z-[100] bg-black overflow-hidden ${zoomPercent > 100 ? (isDragging ? "cursor-grabbing" : "cursor-grab") : "cursor-default"}`}
       onWheel={handleWheel}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUpOrLeave}
       onMouseLeave={handleMouseUpOrLeave}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleMouseUpOrLeave}
+      onTouchCancel={handleMouseUpOrLeave}
+      style={{ touchAction: zoomPercent > 100 ? "none" : "auto" }}
     >
       <div
         className="absolute inset-0 sm:inset-6 flex items-center justify-center"
@@ -3231,6 +3277,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
         <img
           src={activeImage}
           alt="Fullscreen"
+          draggable={false}
           className="absolute inset-0 w-full h-full object-contain shadow-2xl pointer-events-none rounded-lg"
         />
       </div>
@@ -3284,14 +3331,52 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
   {comparingImages && (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4 sm:p-8 backdrop-blur-sm animate-in fade-in duration-300">
       <div className="relative w-full max-w-5xl h-full max-h-[85vh] bg-zinc-950 rounded-2xl border border-white/10 flex flex-col overflow-hidden shadow-2xl">
-        <div className="flex items-center justify-between p-4 border-b border-white/10 shrink-0 bg-[#0A0A0A]">
-          <h3 className="text-white font-bold text-sm uppercase tracking-wider flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-between p-4 border-b border-white/10 shrink-0 bg-zinc-900/50 gap-2">
+          <div className="flex items-center gap-2">
             <Sparkles className="text-[#c5a880]" size={16} /> 
-            Comparação: Antes vs Depois (Refinado)
-          </h3>
-          <button onClick={() => setComparingImages(null)} className="p-2 bg-zinc-900 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
-            <X size={16} />
-          </button>
+            <h3 className="text-white font-bold text-sm uppercase tracking-wider">
+              Comparação: Original vs Melhorada
+            </h3>
+            <span className="hidden sm:inline-block text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded font-bold">
+              Ambas salvas na Galeria
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                const origIdx = store.galeriaImages.indexOf(comparingImages.before);
+                if (origIdx !== -1) {
+                  store.setActiveImageIndex(origIdx);
+                  showToast("Imagem original selecionada na galeria", "info");
+                }
+                setComparingImages(null);
+              }}
+              className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-bold rounded-lg transition-colors cursor-pointer"
+            >
+              Ver Original
+            </button>
+            <button
+              onClick={() => {
+                const enhIdx = store.galeriaImages.indexOf(comparingImages.after);
+                if (enhIdx !== -1) {
+                  store.setActiveImageIndex(enhIdx);
+                  showToast("Imagem melhorada selecionada", "success");
+                }
+                setComparingImages(null);
+              }}
+              className="px-3 py-1.5 bg-[#c5a880] hover:bg-[#b39873] text-black text-xs font-black uppercase rounded-lg transition-colors cursor-pointer"
+            >
+              Ver Melhorada
+            </button>
+            <button 
+              onClick={() => setComparingImages(null)} 
+              className="p-1.5 bg-zinc-900 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
+              title="Fechar comparação"
+            >
+              <X size={16} />
+            </button>
+          </div>
         </div>
         <div className="flex-1 relative overflow-hidden bg-black flex items-center justify-center">
           <CompareSlider before={comparingImages.before} after={comparingImages.after} />
@@ -3299,6 +3384,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
       </div>
     </div>
   )}
-</div>
+      </div>
+    </div>
   );
 }

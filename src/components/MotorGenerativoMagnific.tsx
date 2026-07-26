@@ -80,7 +80,7 @@ export default function MotorGenerativoMagnific({
       const data = await res.json();
       if (res.ok) {
         setAnalysisReport(data);
-        if (data.dominantColorHex) {
+        if (data.dominantColorHex && (!targetHex || targetHex === "#000000" || targetHex === "")) {
           setTargetHex(data.dominantColorHex);
         }
         if (data.recommendedWeights && semPromptAuto) {

@@ -22,37 +22,37 @@ const MasonryGalleryComponent: React.FC<MasonryGalleryProps> = ({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Grid size={12} className="text-zinc-600" />
           <span className="text-[10px] font-black tracking-widest text-zinc-500 uppercase">Galeria Masonry</span>
         </div>
-
         <button
           onClick={() => {
             store.setGaleriaImages([]);
             showToast("Galeria local de visualizações limpa!", "success");
           }}
-          className="flex items-center gap-2 px-3.5 py-2 rounded-lg border border-white/5 bg-zinc-900/60 hover:bg-red-950/20 hover:text-red-500 text-zinc-500 text-[9px] font-black uppercase tracking-wider transition-all"
+          className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg border border-white/5 bg-zinc-900/60 hover:bg-red-950/20 hover:text-red-500 text-zinc-500 text-[9px] font-black uppercase tracking-wider transition-all"
         >
           <Trash2 size={11} />
           <span>Limpar Galeria</span>
         </button>
       </div>
 
-      <div className="grid grid-cols-3 gap-3 overflow-y-auto custom-scrollbar p-0.5">
+      <div className="flex gap-3 overflow-x-auto custom-scrollbar p-1 pb-3 items-center">
         {store.galeriaImages.map((img, index) => {
           const isActive = index === store.activeImageIndex;
           return (
             <div
               key={index}
               onClick={() => store.setActiveImageIndex(index)}
-              className={`relative rounded-lg overflow-hidden border cursor-pointer aspect-square transition-all group ${
-                isActive ? "border-[#c99b3b] scale-[1.02] shadow shadow-[#c99b3b]/5" : "border-white/5"
+              className={`relative rounded-lg overflow-hidden cursor-pointer shrink-0 transition-all group ${
+                isActive ? "scale-[1.02] shadow-xl opacity-100" : "opacity-50 hover:opacity-80"
               }`}
               style={{
-                backgroundColor: store.corDominante && store.corDominante !== "transparent" ? store.corDominante : undefined,
+                width: "80px",
+                height: "80px",
               }}
             >
               <img src={img} className="w-full h-full object-contain" alt={`Thumb ${index}`} />

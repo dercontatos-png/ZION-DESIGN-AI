@@ -309,15 +309,21 @@ export async function applyUpscaleAndRefinement(
     paletteColors?: string[];
     improve?: boolean;
     analysis?: {
+      backgroundType?: string;
+      hasSolidBackground?: boolean;
+      dominantBackgroundHex?: string;
+      detectedSolidColors?: string[];
+      smudgeArtifactsDetected?: boolean;
       faceMappingDetected?: boolean;
       productTextureDetected?: boolean;
+      textEdgesDetected?: boolean;
       recommendedWeights?: {
         background?: number;
         productSubject?: number;
         face?: number;
         textEdges?: number;
-      }
-    }
+      };
+    };
   }
 ): Promise<string> {
   try {
@@ -328,57 +334,25 @@ export async function applyUpscaleAndRefinement(
     const metadata = await sharp(buffer).metadata();
     if (!metadata.width || !metadata.height) return base64Image;
 
-    let targetWidth = metadata.width;
-    if (targetSize === "2K") {
-      targetWidth = Math.max(metadata.width, 2048);
-    } else if (targetSize === "4K") {
-      targetWidth = Math.max(metadata.width, 3840);
-    } else {
-      // 1K default or fallback
-      targetWidth = Math.max(metadata.width, 1080);
+    const pW = metadata.width;
+    const pH = metadata.height;
+
+    let targetWidth = pW;
+    if (targetSize === "4K") {
+      targetWidth = Math.max(pW, 4096);
+    } else if (targetSize === "2K") {
+      targetWidth = Math.max(pW, 2048);
+    } else if (targetSize === "1K") {
+      targetWidth = Math.max(pW, 1024);
     }
 
-    // Resize using Lanczos3 for highest quality scaling
-    let resizedBuffer = await sharp(buffer)
-      .resize({ width: targetWidth, fit: "inside", withoutEnlargement: false, kernel: sharp.kernel.lanczos3 })
-      .toBuffer();
+    console.log(`[applyUpscaleAndRefinement] Non-destructive refinement for size ${targetSize} (${pW}x${pH} -> max ${targetWidth}px)...`);
 
-    // If we only want the original native image (improve !== true), return it instantly
-    if (!options?.improve) {
-      console.log(`[applyUpscaleAndRefinement] Original Native Mode. Resized to ${targetWidth}px wide without applying smoothing/healer filters.`);
-      let finalBuffer = resizedBuffer;
-      return `data:image/png;base64,${finalBuffer.toString("base64")}`;
-    }
-
-    console.log(`[applyUpscaleAndRefinement] Active refinement requested! Applying Vision-guided non-blurry healer and smart denoising...`);
-
-    const nextMetadata = await sharp(resizedBuffer).metadata();
-    const pW = nextMetadata.width || targetWidth;
-    const pH = nextMetadata.height || targetWidth;
-
-    // 1. Build Adaptive Mask (Details vs Background)
-    const edgeMapBuffer = await sharp(resizedBuffer)
-      .greyscale()
-      .convolve({
-        width: 3,
-        height: 3,
-        kernel: [
-          -1, -1, -1,
-          -1,  8, -1,
-          -1, -1, -1
-        ]
-      })
-      .linear(4.5, 0)
-      .blur(4)
-      .negate()
-      .toBuffer();
-
-    const { data: edgeData } = await sharp(edgeMapBuffer).raw().toBuffer({ resolveWithObject: true });
-
-    // 2. Prepare Palette Colors for Snapping RGB correction
-    const targetColors: { r: number; g: number; b: number }[] = [];
-    const parseHex = (hexStr: string) => {
-      const hex = hexStr.replace("#", "").trim();
+    // 1. Solid Vector-Like Background Harmonization (100% uniform, zero pixel noise, zero block artifacts)
+    const parseHexColor = (hexStr?: string) => {
+      if (!hexStr || typeof hexStr !== "string" || hexStr === "transparent") return null;
+      let hex = hexStr.replace("#", "").trim();
+      if (hex.length === 3) hex = hex.split("").map(c => c + c).join("");
       if (hex.length === 6) {
         return {
           r: parseInt(hex.substring(0, 2), 16),
@@ -389,225 +363,268 @@ export async function applyUpscaleAndRefinement(
       return null;
     };
 
-    if (options?.corDominante && options.corDominante !== "transparent") {
-      const parsed = parseHex(options.corDominante);
-      if (parsed) targetColors.push(parsed);
+    // STRICT USER COLOR PRIORITY: user requested corDominante strictly overrides analysis color!
+    const userHex = options?.corDominante?.trim();
+    const parsedUserColor = parseHexColor(userHex);
+    const parsedAnalysisColor = parseHexColor(options?.analysis?.dominantBackgroundHex);
+    let targetColorRgb = parsedUserColor || parsedAnalysisColor;
+
+    // First upscale to target size if targetWidth > pW so pixel processing is natively at 1K, 2K, or 4K resolution!
+    let workingBuffer = buffer;
+    if (targetWidth > pW) {
+      const targetHeight = Math.round(pH * (targetWidth / pW));
+      workingBuffer = await sharp(buffer)
+        .resize(targetWidth, targetHeight, {
+          kernel: sharp.kernel.lanczos3,
+          fastShrinkOnLoad: false
+        })
+        .toBuffer();
     }
-    if (Array.isArray(options?.paletteColors)) {
-      for (const col of options.paletteColors) {
-        if (col && typeof col === "string" && col !== "transparent") {
-          const parsed = parseHex(col);
-          if (parsed && !targetColors.some(c => c.r === parsed.r && c.g === parsed.g && c.b === parsed.b)) {
-            targetColors.push(parsed);
-          }
-        }
-      }
-    }
 
-    // 3. Pixel-Level & Block-Level Outlier Healer + Palette Color Alignment
-    const { data: pixelData, info: pixelInfo } = await sharp(resizedBuffer).raw().toBuffer({ resolveWithObject: true });
-    const pCh = pixelInfo.channels;
-    const outputData = Buffer.from(pixelData);
-    const healedMap = new Uint8Array(pW * pH);
-    let globalHealCount = 0;
+    let pipeline = sharp(workingBuffer);
 
-    // Vision Analysis Weights Guidance
-    const productWeight = options?.analysis?.recommendedWeights?.productSubject ?? 0.8;
-    const faceWeight = options?.analysis?.recommendedWeights?.face ?? 0.9;
-    const hasFace = options?.analysis?.faceMappingDetected ?? false;
+    if (options?.improve || targetColorRgb) {
+      try {
+        const { data: rawPixels, info: rawInfo } = await sharp(workingBuffer).raw().toBuffer({ resolveWithObject: true });
+        const curChannels = rawInfo.channels;
+        const curW = rawInfo.width;
+        const curH = rawInfo.height;
 
-    // Adjust edge threshold based on how much texture we want to protect
-    // If subject or face weight is high, we raise protection to make sure we don't heal any texture
-    const edgeProtectionThreshold = (productWeight > 0.7 || faceWeight > 0.7 || hasFace) ? 140 : 120;
+        // Sample border perimeter & 4 corners to establish base background color
+        let borderSumR = 0, borderSumG = 0, borderSumB = 0, borderCount = 0;
+        const marginW = Math.min(30, Math.floor(curW * 0.04));
+        const marginH = Math.min(30, Math.floor(curH * 0.04));
 
-    for (let y = 3; y < pH - 3; y++) {
-      const rowOffset = y * pW;
-      for (let x = 3; x < pW - 3; x++) {
-        const edgeIdx = rowOffset + x;
-        if (edgeData[edgeIdx] < edgeProtectionThreshold) continue; // Skip edge/text/face regions to protect sharpness
-
-        const idx = (rowOffset + x) * pCh;
-        const r = pixelData[idx];
-        const g = pixelData[idx + 1];
-        const b = pixelData[idx + 2];
-
-        // First: check palette snapping for RGB correction
-        let snapped = false;
-        for (const pal of targetColors) {
-          const dr = r - pal.r;
-          const dg = g - pal.g;
-          const db = b - pal.b;
-          const dist = Math.sqrt(dr * dr + dg * dg + db * db);
-          if (dist > 0 && dist < 45) { // within threshold of off-color
-            outputData[idx] = pal.r;
-            outputData[idx + 1] = pal.g;
-            outputData[idx + 2] = pal.b;
-            healedMap[edgeIdx] = 1;
-            globalHealCount++;
-            snapped = true;
-            break;
-          }
-        }
-
-        if (snapped) continue;
-
-        // Second: Standard outlier block/pixel healing
-        let outerSumR = 0, outerSumG = 0, outerSumB = 0;
-        let outerCount = 0;
-        const outerPixels: { r: number; g: number; b: number }[] = [];
-
-        for (let dy = -3; dy <= 3; dy++) {
-          const nRowOffset = (y + dy) * pW;
-          for (let dx = -3; dx <= 3; dx++) {
-            if (dx >= -1 && dx <= 1 && dy >= -1 && dy <= 1) continue; // Exclude inner 3x3 block
-
-            const nIdx = (nRowOffset + (x + dx)) * pCh;
-            outerSumR += pixelData[nIdx];
-            outerSumG += pixelData[nIdx + 1];
-            outerSumB += pixelData[nIdx + 2];
-            outerPixels.push({ r: pixelData[nIdx], g: pixelData[nIdx + 1], b: pixelData[nIdx + 2] });
-            outerCount++;
-          }
-        }
-
-        const outerAvgR = outerSumR / outerCount;
-        const outerAvgG = outerSumG / outerCount;
-        const outerAvgB = outerSumB / outerCount;
-
-        let outerVariance = 0;
-        for (let i = 0; i < outerCount; i++) {
-          const p = outerPixels[i];
-          outerVariance += Math.sqrt(Math.pow(p.r - outerAvgR, 2) + Math.pow(p.g - outerAvgG, 2) + Math.pow(p.b - outerAvgB, 2));
-        }
-        const outerAvgVariance = outerVariance / outerCount;
-
-        if (outerAvgVariance < 18) {
-          let innerOutliersCount = 0;
-          const innerIndices: number[] = [];
-
-          for (let dy = -1; dy <= 1; dy++) {
-            const nRowOffset = (y + dy) * pW;
-            for (let dx = -1; dx <= 1; dx++) {
-              const innerIdx = (nRowOffset + (x + dx)) * pCh;
-              const distToOuter = Math.sqrt(
-                Math.pow(pixelData[innerIdx] - outerAvgR, 2) +
-                Math.pow(pixelData[innerIdx + 1] - outerAvgG, 2) +
-                Math.pow(pixelData[innerIdx + 2] - outerAvgB, 2)
-              );
-
-              if (distToOuter > 15) {
-                innerOutliersCount++;
-                innerIndices.push(nRowOffset + (x + dx));
-              }
+        for (let y = 0; y < curH; y++) {
+          for (let x = 0; x < curW; x++) {
+            if (x < marginW || x >= curW - marginW || y < marginH || y >= curH - marginH) {
+              const idx = (y * curW + x) * curChannels;
+              borderSumR += rawPixels[idx];
+              borderSumG += rawPixels[idx + 1];
+              borderSumB += rawPixels[idx + 2];
+              borderCount++;
             }
           }
+        }
 
-          if (innerOutliersCount >= 1 && innerOutliersCount <= 6) {
-            outerPixels.sort((a, b) => (a.r + a.g + a.b) - (b.r + b.g + b.b));
-            const medianColor = outerPixels[Math.floor(outerCount / 2)];
+        const bgBaseR = borderCount > 0 ? Math.round(borderSumR / borderCount) : (targetColorRgb?.r ?? 0);
+        const bgBaseG = borderCount > 0 ? Math.round(borderSumG / borderCount) : (targetColorRgb?.g ?? 0);
+        const bgBaseB = borderCount > 0 ? Math.round(borderSumB / borderCount) : (targetColorRgb?.b ?? 0);
 
-            for (const flatCoord of innerIndices) {
-              if (healedMap[flatCoord] === 0) {
-                const writeIdx = flatCoord * pCh;
-                outputData[writeIdx] = medianColor.r;
-                outputData[writeIdx + 1] = medianColor.g;
-                outputData[writeIdx + 2] = medianColor.b;
-                healedMap[flatCoord] = 1;
-                globalHealCount++;
+        if (!targetColorRgb) {
+          targetColorRgb = { r: bgBaseR, g: bgBaseG, b: bgBaseB };
+        }
+
+        const totalPixels = curW * curH;
+        const isBg = new Uint8Array(totalPixels);
+        const queue = new Int32Array(totalPixels);
+        let head = 0;
+        let tail = 0;
+
+        // Perceptual color distance function (human visual weighted RGB distance)
+        const colorDist = (r1: number, g1: number, b1: number, r2: number, g2: number, b2: number) => {
+          const rmean = (r1 + r2) / 2;
+          const dr = r1 - r2;
+          const dg = g1 - g2;
+          const db = b1 - b2;
+          return Math.sqrt((2 + rmean / 256) * dr * dr + 4 * dg * dg + (2 + (255 - rmean) / 256) * db * db);
+        };
+
+        const bgTolerance = 38; // Strict adaptive tolerance to prevent bleeding into subject figures or shadows
+
+        // 1. Pre-pass: Identify foreground graphic elements (3D figures, text, icons) and create a protection mask
+        const isProtected = new Uint8Array(totalPixels);
+        for (let y = 0; y < curH; y++) {
+          for (let x = 0; x < curW; x++) {
+            const pIdx = y * curW + x;
+            const idx = pIdx * curChannels;
+            const r = rawPixels[idx];
+            const g = rawPixels[idx + 1];
+            const b = rawPixels[idx + 2];
+
+            const dBg = colorDist(r, g, b, bgBaseR, bgBaseG, bgBaseB);
+            const dTarget = colorDist(r, g, b, targetColorRgb.r, targetColorRgb.g, targetColorRgb.b);
+            const chroma = Math.max(r, g, b) - Math.min(r, g, b);
+
+            // Mark pixels that significantly differ from background or possess vibrant color chroma
+            if ((dBg > 45 && dTarget > 45) && (chroma > 30 || dBg > 65 || dTarget > 65)) {
+              const radius = 4;
+              for (let dy = -radius; dy <= radius; dy++) {
+                for (let dx = -radius; dx <= radius; dx++) {
+                  const nx = x + dx;
+                  const ny = y + dy;
+                  if (nx >= 0 && nx < curW && ny >= 0 && ny < curH) {
+                    isProtected[ny * curW + nx] = 1;
+                  }
+                }
               }
             }
           }
         }
-      }
-    }
-    console.log(`[applyUpscaleAndRefinement] Healer corrected/snapped ${globalHealCount} pixels.`);
 
-    // 4. SMART, NON-BLURRY Global Denoising, Edge-Preserving Smoothing & High-Detail Sharpening
-    // We use a light median filter and small blur to smooth pure flat backgrounds
-    const smoothBufferTemp = await sharp(outputData, { raw: { width: pW, height: pH, channels: pCh } })
-      .median(3)
-      .blur(1.2)
-      .raw()
-      .toBuffer();
+        // 2. Seed all non-protected pixels matching background color across the entire image (including inside enclosed frames/boxes)
+        for (let y = 0; y < curH; y++) {
+          for (let x = 0; x < curW; x++) {
+            const pIdx = y * curW + x;
+            if (isProtected[pIdx] === 0) {
+              const idx = pIdx * curChannels;
+              const r = rawPixels[idx];
+              const g = rawPixels[idx + 1];
+              const b = rawPixels[idx + 2];
 
-    // Apply high-end sharpening to detailed areas to make text, logos, face features and contours razor-sharp
-    const sharpBufferTemp = await sharp(outputData, { raw: { width: pW, height: pH, channels: pCh } })
-      .sharpen({ sigma: 1.0 })
-      .raw()
-      .toBuffer();
+              const dBg = colorDist(r, g, b, bgBaseR, bgBaseG, bgBaseB);
+              const dTarget = colorDist(r, g, b, targetColorRgb.r, targetColorRgb.g, targetColorRgb.b);
 
-    const finalData = Buffer.from(outputData);
-    for (let y = 0; y < pH; y++) {
-      const rowOffset = y * pW;
-      for (let x = 0; x < pW; x++) {
-        const idx = (rowOffset + x) * pCh;
-        const edgeIdx = rowOffset + x;
-        const edgeVal = edgeData[edgeIdx]; // 0 is edge/text, 255 is flat area
-        
-        const smoothWeight = (edgeVal / 255.0);
-        // Adaptive factor protecting text and high detail regions
-        let factor = Math.pow(smoothWeight, 8.0); // extremely strong power to restrict smoothing only to 100% pure flat background regions
-
-        // Completely protect faces and products if detected
-        if (hasFace) {
-          factor *= 0.05; // virtually skip smoothing on faces
+              if (dBg <= bgTolerance || dTarget <= bgTolerance) {
+                isBg[pIdx] = 1;
+                queue[tail++] = pIdx;
+              }
+            }
+          }
         }
 
-        if (factor > 0.05) {
-          // Flat background areas -> apply adaptive smoothing to remove diffusion smudges
-          finalData[idx] = Math.round(outputData[idx] * (1 - factor) + smoothBufferTemp[idx] * factor);
-          finalData[idx + 1] = Math.round(outputData[idx + 1] * (1 - factor) + smoothBufferTemp[idx + 1] * factor);
-          finalData[idx + 2] = Math.round(outputData[idx + 2] * (1 - factor) + smoothBufferTemp[idx + 2] * factor);
-        } else {
-          // High detail/text/logo/face areas -> apply sharpening to pop details and ensure 8K clarity (no blur!)
-          const detailFactor = 1.0 - (factor / 0.05); // 1.0 at pure details, 0.0 at factor=0.05
-          const sharpStrength = 0.35; // balance of extra detail
-          finalData[idx] = Math.round(outputData[idx] * (1 - detailFactor * sharpStrength) + sharpBufferTemp[idx] * (detailFactor * sharpStrength));
-          finalData[idx + 1] = Math.round(outputData[idx + 1] * (1 - detailFactor * sharpStrength) + sharpBufferTemp[idx + 1] * (detailFactor * sharpStrength));
-          finalData[idx + 2] = Math.round(outputData[idx + 2] * (1 - detailFactor * sharpStrength) + sharpBufferTemp[idx + 2] * (detailFactor * sharpStrength));
+        // 3. BFS Flood fill expansion following background contours
+        while (head < tail) {
+          const pIdx = queue[head++];
+          const cx = pIdx % curW;
+          const cy = Math.floor(pIdx / curW);
+          const cIdx = pIdx * curChannels;
+          const cr = rawPixels[cIdx];
+          const cg = rawPixels[cIdx + 1];
+          const cb = rawPixels[cIdx + 2];
+
+          const dx = [1, -1, 0, 0];
+          const dy = [0, 0, 1, -1];
+
+          for (let i = 0; i < 4; i++) {
+            const nx = cx + dx[i];
+            const ny = cy + dy[i];
+
+            if (nx >= 0 && nx < curW && ny >= 0 && ny < curH) {
+              const nPIdx = ny * curW + nx;
+              if (isBg[nPIdx] === 0 && isProtected[nPIdx] === 0) {
+                const nIdx = nPIdx * curChannels;
+                const nr = rawPixels[nIdx];
+                const ng = rawPixels[nIdx + 1];
+                const nb = rawPixels[nIdx + 2];
+
+                const distBg = colorDist(nr, ng, nb, bgBaseR, bgBaseG, bgBaseB);
+                const distTarget = colorDist(nr, ng, nb, targetColorRgb.r, targetColorRgb.g, targetColorRgb.b);
+                const stepDist = colorDist(nr, ng, nb, cr, cg, cb);
+
+                if ((distBg <= 40 || distTarget <= 40) && stepDist <= 28) {
+                  isBg[nPIdx] = 1;
+                  queue[tail++] = nPIdx;
+                }
+              }
+            }
+          }
         }
+
+        // 4. Safe morphological hole-filling: clean background noise without overriding protected subjects
+        for (let iter = 0; iter < 2; iter++) {
+          for (let y = 1; y < curH - 1; y++) {
+            for (let x = 1; x < curW - 1; x++) {
+              const pIdx = y * curW + x;
+              if (isBg[pIdx] === 0 && isProtected[pIdx] === 0) {
+                const idx = pIdx * curChannels;
+                const r = rawPixels[idx];
+                const g = rawPixels[idx + 1];
+                const b = rawPixels[idx + 2];
+
+                const distBg = colorDist(r, g, b, bgBaseR, bgBaseG, bgBaseB);
+                const distTarget = colorDist(r, g, b, targetColorRgb.r, targetColorRgb.g, targetColorRgb.b);
+
+                if (distBg <= 40 || distTarget <= 40) {
+                  let bgNeighbors = 0;
+                  for (let dy = -1; dy <= 1; dy++) {
+                    for (let dx = -1; dx <= 1; dx++) {
+                      if (dx === 0 && dy === 0) continue;
+                      const nPIdx = (y + dy) * curW + (x + dx);
+                      if (isBg[nPIdx] === 1) bgNeighbors++;
+                    }
+                  }
+
+                  if (bgNeighbors >= 5) {
+                    isBg[pIdx] = 1;
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        // Write pure uniform solid target hex color to background pixels with soft edge anti-aliasing
+        const outputBuffer = Buffer.from(rawPixels);
+
+        for (let y = 0; y < curH; y++) {
+          for (let x = 0; x < curW; x++) {
+            const pIdx = y * curW + x;
+            const idx = pIdx * curChannels;
+
+            if (isBg[pIdx] === 1) {
+              let isEdge = false;
+              if (x > 0 && y > 0 && x < curW - 1 && y < curH - 1) {
+                if (isBg[pIdx - 1] === 0 || isBg[pIdx + 1] === 0 || isBg[pIdx - curW] === 0 || isBg[pIdx + curW] === 0) {
+                  isEdge = true;
+                }
+              }
+
+              if (isEdge) {
+                // Soft edge anti-aliasing on subject border: blend original edge color with target color based on color similarity
+                const origR = rawPixels[idx];
+                const origG = rawPixels[idx + 1];
+                const origB = rawPixels[idx + 2];
+                const d = colorDist(origR, origG, origB, bgBaseR, bgBaseG, bgBaseB);
+                const weight = Math.max(0.15, Math.min(0.85, 1 - d / bgTolerance));
+
+                outputBuffer[idx] = Math.round(origR * (1 - weight) + targetColorRgb.r * weight);
+                outputBuffer[idx + 1] = Math.round(origG * (1 - weight) + targetColorRgb.g * weight);
+                outputBuffer[idx + 2] = Math.round(origB * (1 - weight) + targetColorRgb.b * weight);
+              } else {
+                // 100% pure flat solid target hex color
+                outputBuffer[idx] = targetColorRgb.r;
+                outputBuffer[idx + 1] = targetColorRgb.g;
+                outputBuffer[idx + 2] = targetColorRgb.b;
+              }
+            }
+          }
+        }
+
+        pipeline = sharp(outputBuffer, { raw: { width: curW, height: curH, channels: curChannels } });
+        console.log(`[applyUpscaleAndRefinement] Background vectorized to 100% uniform hex RGB (${targetColorRgb.r}, ${targetColorRgb.g}, ${targetColorRgb.b}).`);
+      } catch (toneErr: any) {
+        console.warn("[applyUpscaleAndRefinement] Vector solid background error:", toneErr?.message || toneErr);
       }
     }
 
-    // 5. Convert to final format (PNG for maximum crisp quality)
-    let processedBuffer = await sharp(finalData, { raw: { width: pW, height: pH, channels: pCh } })
+    // Apply high quality Lanczos3 resize ONLY if upscaling was requested and vector background processing did not already run
+    const currentMeta = await pipeline.metadata();
+    if (targetWidth > pW && (currentMeta.width || 0) < targetWidth) {
+      const targetHeight = Math.round(pH * (targetWidth / pW));
+      pipeline = pipeline.resize(targetWidth, targetHeight, {
+        kernel: sharp.kernel.lanczos3,
+        fastShrinkOnLoad: false
+      });
+    }
+
+    // Output uncompressed PNG buffer without artificial filters
+    let processedBuffer = await pipeline
       .png({ compressionLevel: 8 })
       .toBuffer();
+    let finalMime = "image/png";
 
-    const targetSizeInBytes = 16 * 1024 * 1024; // 16777216 bytes
-
-    // If PNG is larger than 16MB, re-compress it as high-quality JPEG so it fits within 16MB without corrupting
-    if (processedBuffer.length > targetSizeInBytes) {
-      console.log(`[applyUpscaleAndRefinement] PNG size is too big (${processedBuffer.length} bytes). Re-compressing as high-quality JPEG to stay within 16MB...`);
-      processedBuffer = await sharp(finalData, { raw: { width: pW, height: pH, channels: pCh } })
-        .jpeg({ quality: 90 })
+    if (processedBuffer.length > 16 * 1024 * 1024) {
+      processedBuffer = await pipeline
+        .jpeg({ quality: 94 })
         .toBuffer();
+      finalMime = "image/jpeg";
     }
 
-    // safely pad to exactly 16MB Cravado
-    if (processedBuffer.length < targetSizeInBytes) {
-      const paddingNeeded = targetSizeInBytes - processedBuffer.length;
-      const padding = Buffer.alloc(paddingNeeded, 0); // zero-padded bytes
-      processedBuffer = Buffer.concat([processedBuffer, padding]);
-    } else if (processedBuffer.length > targetSizeInBytes) {
-      // If it's still somehow over 16MB, compress with lower quality JPEG
-      processedBuffer = await sharp(finalData, { raw: { width: pW, height: pH, channels: pCh } })
-        .jpeg({ quality: 80 })
-        .toBuffer();
-      if (processedBuffer.length < targetSizeInBytes) {
-        const paddingNeeded = targetSizeInBytes - processedBuffer.length;
-        const padding = Buffer.alloc(paddingNeeded, 0);
-        processedBuffer = Buffer.concat([processedBuffer, padding]);
-      } else {
-        processedBuffer = processedBuffer.subarray(0, targetSizeInBytes);
-      }
-    }
-
-    console.log(`[applyUpscaleAndRefinement] Output size padded to exactly 16MB: ${processedBuffer.length} bytes.`);
-    return `data:image/png;base64,${processedBuffer.toString("base64")}`;
-  } catch (err) {
-    console.error("[applyUpscaleAndRefinement] Error:", err);
-    return base64Image; // fallback to original
+    return `data:${finalMime};base64,${processedBuffer.toString("base64")}`;
+  } catch (err: any) {
+    console.error("[applyUpscaleAndRefinement] Error refining image:", err);
+    return base64Image;
   }
 }
 
@@ -639,29 +656,20 @@ export async function fixSolidBackground(
   }
 }
 
-export function saveImageToDisk(rawData: string, rawMime: string, force16MB: boolean = false): string {
+export async function saveImageToDisk(rawData: string, rawMime: string): Promise<string> {
   try {
-    const ext = rawMime.includes("png") ? "png" : "jpg";
+    const ext = rawMime.includes("png") ? "png" : rawMime.includes("webp") ? "webp" : "jpg";
+    const buffer = Buffer.from(rawData, "base64");
+
     const filename = `img_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${ext}`;
     const publicGenDir = path.join(process.cwd(), "public", "generated-images");
     if (!fs.existsSync(publicGenDir)) {
       fs.mkdirSync(publicGenDir, { recursive: true });
     }
     const filepath = path.join(publicGenDir, filename);
-    let buffer = Buffer.from(rawData, "base64");
 
-    if (force16MB) {
-      console.log(`[saveImageToDisk] Forcing exactly 16MB padding/truncation for refined image...`);
-      const targetSizeInBytes = 16 * 1024 * 1024; // 16777216 bytes
-      if (buffer.length < targetSizeInBytes) {
-        buffer = Buffer.concat([buffer, Buffer.alloc(targetSizeInBytes - buffer.length, 0)]);
-      } else if (buffer.length > targetSizeInBytes) {
-        buffer = buffer.subarray(0, targetSizeInBytes);
-      }
-    }
-
-    fs.writeFileSync(filepath, buffer);
-    console.log(`[saveImageToDisk] Image saved to ${filepath} with size ${buffer.length} bytes.`);
+    await fs.promises.writeFile(filepath, buffer);
+    console.log(`[saveImageToDisk] Original native image saved to ${filepath} (${buffer.length} bytes / ${(buffer.length / 1024 / 1024).toFixed(2)} MB).`);
     return `/generated-images/${filename}`;
   } catch (err) {
     console.error("[saveImageToDisk] Error saving image:", err);
@@ -1665,7 +1673,7 @@ ${textContent}`
           .toBuffer();
       }
 
-      const inpaintedImgUrl = saveImageToDisk(finalResultBuffer.toString("base64"), "image/png");
+      const inpaintedImgUrl = await saveImageToDisk(finalResultBuffer.toString("base64"), "image/png");
       res.json({ image: inpaintedImgUrl });
     } catch (error: any) {
       console.error("Inpaint API Error:", error);
@@ -1698,7 +1706,7 @@ ${textContent}`
       const arrayBuffer = await resultBlob.arrayBuffer();
       const resultBase64 = Buffer.from(arrayBuffer).toString("base64");
 
-      const savedUrl = saveImageToDisk(resultBase64, "image/png");
+      const savedUrl = await saveImageToDisk(resultBase64, "image/png");
       res.json({ image: savedUrl });
     } catch (error: any) {
       console.error("Remove BG API Error:", error);
@@ -2445,8 +2453,8 @@ If no issues are found, return an empty list. Output ONLY valid JSON.`;
       const optimizedBase64 = finalOptimizedBuffer.toString("base64");
       const simulatedBase64 = simulatedBuffer.toString("base64");
 
-      const savedUrl = saveImageToDisk(optimizedBase64, "image/jpeg");
-      const simulatedUrl = saveImageToDisk(simulatedBase64, "image/jpeg");
+      const savedUrl = await saveImageToDisk(optimizedBase64, "image/jpeg");
+      const simulatedUrl = await saveImageToDisk(simulatedBase64, "image/jpeg");
 
       res.json({
         image: savedUrl,
@@ -2500,11 +2508,19 @@ If no issues are found, return an empty list. Output ONLY valid JSON.`;
       try {
         const client = getAiClient(customApiKey);
         if (client) {
-          const techPrompt = `You are a Senior Vision Engineer. Analyze this image to identify where human faces, skin, text edges, logos, and high-frequency textures are located, so we can preserve their sharpness and avoid plastic smoothing. Check if there are diffusion smudge artifacts in flat/background areas.
+          const techPrompt = `You are a Senior Vision & Image Quality Processing Engineer evaluating an image generated by AI.
+Analyze this image to identify background properties, noise/smudge artifacts, and core subjects so we can apply pixel-perfect automated RGB color corrections without degrading the main subject.
+
 Return strictly JSON with the following schema:
 {
+  "backgroundType": "solid_color" | "gradient" | "complex_scene",
+  "hasSolidBackground": boolean,
+  "dominantBackgroundHex": "#hex_code",
+  "detectedSolidColors": ["#hex1", "#hex2"],
+  "smudgeArtifactsDetected": boolean,
   "faceMappingDetected": boolean,
   "productTextureDetected": boolean,
+  "textEdgesDetected": boolean,
   "recommendedWeights": {
     "background": number,
     "productSubject": number,
@@ -2512,7 +2528,7 @@ Return strictly JSON with the following schema:
     "textEdges": number
   }
 }
-Do not return any other text, just valid JSON.`;
+Do not return any markdown formatting outside of valid JSON.`;
 
           const fallbackRes = await executeGenerateContentWithFallbacks(
             client,
@@ -2544,7 +2560,7 @@ Do not return any other text, just valid JSON.`;
         console.warn("[api/apply-refinements] Non-blocking: Vision pre-analysis failed, falling back to default weights:", analError.message || analError);
       }
 
-      // Execute non-destructive, vision-guided pixel corrections
+      // Execute pixel-accurate, non-destructive background denoising and color harmonization
       const refinedImageBase64 = await applyUpscaleAndRefinement(`data:${mimeType};base64,${base64Data}`, size, {
         corDominante,
         paletteColors,
@@ -2553,12 +2569,13 @@ Do not return any other text, just valid JSON.`;
       });
 
       const finalParsed = resolveImageInput(refinedImageBase64);
-      const responseImgUrl = finalParsed.data ? saveImageToDisk(finalParsed.data, finalParsed.mimeType, true) : refinedImageBase64;
+      const responseImgUrl = finalParsed.data ? await saveImageToDisk(finalParsed.data, finalParsed.mimeType) : refinedImageBase64;
 
       res.json({
         success: true,
         image: responseImgUrl,
-        analysis
+        analysis,
+        method: "Sharp Split-Tone Color Harmonization"
       });
     } catch (err: any) {
       console.error("[api/apply-refinements] Error processing image:", err);
@@ -2779,7 +2796,7 @@ Output a pristine, ultra-detailed, hyper-realistic masterpiece image.`;
       }
 
       res.json({
-        image: finalEnhancedImage.startsWith("data:") ? saveImageToDisk(finalEnhancedImage.split(",")[1], finalEnhancedImage.split(",")[0].match(/image\/[a-zA-Z]+/)?.[0] || "image/png") : finalEnhancedImage,
+        image: finalEnhancedImage.startsWith("data:") ? await saveImageToDisk(finalEnhancedImage.split(",")[1], finalEnhancedImage.split(",")[0].match(/image\/[a-zA-Z]+/)?.[0] || "image/png") : finalEnhancedImage,
         techLog,
         weightsUsed: weights,
         status: "success"
@@ -3147,7 +3164,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
           modelUsed = genRes.modelUsed;
           let rawData = genRes.rawData;
           let mimeType = genRes.rawMime;
-          responseImgUrl = rawData ? saveImageToDisk(rawData, mimeType) : genRes.imageBase64Url;
+          responseImgUrl = rawData ? await saveImageToDisk(rawData, mimeType) : genRes.imageBase64Url;
 
           let width = 0;
           let height = 0;
@@ -3205,7 +3222,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
             if (pRes.ok) {
               const pBuffer = Buffer.from(await pRes.arrayBuffer());
               const pBase64 = pBuffer.toString("base64");
-              const savedUrl = saveImageToDisk(pBase64, "image/png");
+              const savedUrl = await saveImageToDisk(pBase64, "image/png");
               results.push(savedUrl);
             }
           }
@@ -3544,10 +3561,10 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
 
 
           const hasLogo = (imgConfig?.useLogo || logoRefs?.length > 0);
-          const logoInclusionType = imgConfig?.logoInclusionType || "overlay";
+          const logoInclusionType = imgConfig?.logoInclusionType || "embedded";
           
           const finalParsed = resolveImageInput(finalImageBase64);
-          responseImgUrl = finalParsed.data ? saveImageToDisk(finalParsed.data, finalParsed.mimeType) : finalImageBase64;
+          responseImgUrl = finalParsed.data ? await saveImageToDisk(finalParsed.data, finalParsed.mimeType) : finalImageBase64;
 
           let width = 0;
           let height = 0;
@@ -3626,7 +3643,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         logoBase64 = "",
         logosList = [],
         useLogo = false,
-        logoInclusionType = "overlay",
+        logoInclusionType = "embedded",
         logoPosOverlay = "top_center",
         logoSizeOverlay = 20,
         dimensao = "1:1",
@@ -3791,12 +3808,12 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         const subjectSysInstructionRule = hasSujeito ? `\n5. Subject Identity Preservation: Instruct the generator to use ONLY the client's provided "Referência do Sujeito Principal" EXACTLY as it is (without modifying facial features, hair, eyes, clothing, or identity), placing them directly on the card canvas with 100% complete exactness.` : "";
         const subjectEmbeddedRule = hasSujeito ? `\n9. STRICT SUBJECT IDENTITY RULE: Dictate that the image generator MUST NOT hallucinate or recreate a different person/subject. It MUST render and integrate the provided subject ("Referência do Sujeito Principal") EXACTLY AS PROVIDED (100% image-to-image identity fidelity) directly onto the image canvas.` : "";
 
-        const logoInclusionRule = hasLogo ? `\n5. BRAND LOGO EMBEDDING (ABSOLUTELY CRITICAL): You MUST look for the brand logo region in the reference. You MUST COMPLETELY ERASE any generic logo present in the reference flyer. You MUST use the client's provided brand logo ("Referência de Logotipo") EXACTLY AS IT IS. DO NOT change its colors, DO NOT change its style, DO NOT remove any words. You MUST preserve the EXACT image-to-image 100% original fidelity of the logo. Put the EXACT SAME logo image directly into the generated card.` : "";
-        const logoCompositionRule = hasLogo ? `\n10. FULL COMPOSITION WITH HIGH-FIDELITY EMBEDDED TYPOGRAPHY AND LOGOS (CRITICAL): Do NOT generate just a blank background. You MUST generate the complete graphic composition, including all layouts, panel cards, curved borders, divided sections, background textures, lighting setups, and the beautifully stylized subject photo, WITH all text layers and the client's original brand logo ("Referência de Logotipo") EXACTLY AS PROVIDED. Preserve the logo's original symbols, texts, exact branding structures, and original COLORS with absolute 100% fidelity. DO NOT adapt colors.` : "";
-        const logoPromptRule = hasLogo ? `\n5. Text & Logo Integration: Explicitly instruct the generator to analyze and replicate the provided brand logo ("Referência de Logotipo") with ABSOLUTE 100% EXACT image-to-image fidelity. Direct the generator to bake this EXACT logo directly on the card canvas, replacing any old logo from the reference. DO NOT change the color of the logo, DO NOT change shapes, DO NOT drop any words. Keep it 100% identical to the uploaded image. Also instruct it to ONLY use the text provided in the prompt, replacing any text from the reference while respecting the original text placements.` : "";
-        const logoPrintRule = hasLogo ? `\n9. EXACT TEXT & LOGO REPLACEMENT: Explicitly instruct the generator to NEVER copy text or logos from the Design Reference. It must print all specified titles, social handles, event details, and the brand logo reference directly on the flyer, ensuring old text/logos from the reference are completely erased and replaced by the new ones requested. If a specific information piece was provided in the prompt, it MUST be placed exactly where the corresponding information was in the reference.` : "";
-        const logoSysInstructionRule = hasLogo ? `\n5. Logo & Text Replacement: Instruct the generator to completely ignore any text, names, handles, or brand logos found in the background design reference. It must use ONLY the client's provided "Referência de Logotipo" EXACTLY as it is (without modifying any shapes, colors, or texts) and the explicitly requested text, pasting them directly on the card canvas with 100% complete exactness. Every piece of information provided in the prompt MUST be included in the final image.` : "";
-        const logoEmbeddedRule = hasLogo ? `\n9. STRICT TYPOGRAPHY & LOGO REPLACEMENT RULE: Dictate that the image generator MUST NOT hallucinate or copy old text/logos. It MUST print, write, embed, and render ONLY the provided texts, titles, words, acronyms, letters, numbers, and embed the provided brand logo ("Referência de Logotipo") EXACTLY AS PROVIDED (100% image-to-image fidelity) directly onto the image canvas. Ensure all provided information is present.` : "";
+        const logoInclusionRule = hasLogo ? `\n5. NATIVE BRAND LOGO EMBEDDING & HAIR/FACE AVOIDANCE (CRITICAL): You MUST examine the attached "Referência de Design/Layout" and identify the logo position. MANDATORY RULE: The brand logo ("Referência de Logotipo") MUST NEVER BE DRAWN ON TOP OF THE SUBJECT'S HAIR, HEAD, FACE, OR BODY. If the subject's hair or head extends to the top center, place the brand logo in clean negative background space in the top-left or top-right corner. You MUST COMPLETELY ERASE any old logo present in the reference flyer and embed the client's provided brand logo NATIVELY on the canvas. DO NOT draw any artificial black boxes or dark container frames around the logo unless part of the original logo file. Do NOT write the logo's name as a written text layer or headline in typography.` : "";
+        const logoCompositionRule = hasLogo ? `\n10. FULL COMPOSITION WITH HIGH-FIDELITY EMBEDDED LOGO (CRITICAL): Generate the complete graphic composition WITH the client's original brand logo ("Referência de Logotipo") placed natively in clean background space (top corner or empty header area), NEVER overlapping the subject's hair, face, or head. Render the logo cleanly onto the background without artificial black container boxes or color inversion, preserving 100% of its original symbols, typography, numbers, and exact colors.` : "";
+        const logoPromptRule = hasLogo ? `\n5. Text & Logo Integration: Explicitly instruct the generator to analyze and replicate the provided brand logo ("Referência de Logotipo") with ABSOLUTE 100% EXACT image-to-image fidelity in clean negative space (top-left, top-right, or empty header, NEVER over the subject's hair/face). Direct the generator to bake this EXACT logo natively onto the canvas, replacing any old logo cleanly without adding artificial black boxes, inverting colors, or duplicating logo text into typography.` : "";
+        const logoPrintRule = hasLogo ? `\n9. EXACT TEXT & LOGO REPLACEMENT: Explicitly instruct the generator to NEVER copy text or logos from the Design Reference. It must print all specified titles and render the brand logo reference directly on the flyer in clean negative space (avoiding subject's hair and face), ensuring old text/logos from the reference are completely erased.` : "";
+        const logoSysInstructionRule = hasLogo ? `\n5. Logo & Text Replacement: Instruct the generator to completely erase old brand logos found in the design reference. It must render ONLY the client's provided "Referência de Logotipo" NATIVELY in clean negative background space (away from hair and face), without modifying shapes, colors, or adding dark container boxes.` : "";
+        const logoEmbeddedRule = hasLogo ? `\n9. STRICT TYPOGRAPHY & LOGO REPLACEMENT RULE: Dictate that the image generator MUST NOT hallucinate or copy old text/logos. It MUST print, write, embed, and render ONLY the provided texts and embed the provided brand logo ("Referência de Logotipo") NATIVELY in clean negative background space (never over subject's hair or face) with 100% shape and color fidelity.` : "";
         const instructionPrompt = `You are the absolute ultimate master Generative AI Image Prompt Engineer, Art Director, and Elite Graphic Designer specializing in High-End Brazilian Flyers (Flyer BR Style / "Design de Eventos e Shows brasileiro").
 Your job is to analyze the attached visual references (especially the Design Layout Reference images and Style References) along with the following initial layout and composition specification:
 "${promptTraduzido}"
@@ -3806,13 +3823,13 @@ Based on this complete multimodal context, you must generate an extremely descri
 CRITICAL VISUAL DESIGN RULES TO EXTRACT FROM THE ATTACHED DESIGN LAYOUT REFERENCE:
 1. NO HALLUCINATIONS & NO ARBITRARY INVENTIONS: You are strictly FORBIDDEN from inventing arbitrary backdrops, stage lights, lasers, smoke, stars, gold particles, dust, or geometric layers. Keep the design clean and high-end. If the reference design has a clean, solid, dark, minimal, gradient, or simple textured background, you MUST describe exactly that clean background. Mirror the exact level of simplicity or complexity, replicating its aesthetic, depth, colors, and layout precisely.
 2. LAYOUT, ALIGNMENT & TYPOGRAPHY FIDELITY: Look closely at the text alignment, composition grid, font weights, and spacing of the Design Layout Reference. Replicate the text placement and typography style exactly as styled on the reference, drawing and embedding the specified text parameters directly inside those regions with beautiful, modern, extremely crisp, and highly-legible typography.
-3. SUPPORTING GRAPHIC ELEMENTS & SOCIAL MEDIA: Look for any social media handles, symbols, or small details (like the Instagram logo/handle, website text, small badges). Command the generator to write and render these elements beautifully and cleanly on the image canvas in their exact corresponding positions.
+3. IGNORE & ERASE ALL REFERENCE TEXT & LOGOS (CRITICAL MANDATORY RULE): You MUST command the generator to COMPLETELY IGNORE AND ERASE 100% of all original text, titles, subtitles, numbers, dates, social media handles (@profiles), addresses, footers, and logos present in the attached Design Layout Reference image! DO NOT copy, read, re-render, or leave behind any text, handle, or logo from the reference layout photo! ONLY render the new custom text explicitly supplied in the prompt.
 4. SIMPLICITY AND FOCUS (CRITICAL): Keep your description CONCISE and HIGH-QUALITY. DO NOT write gigantic, overly verbose paragraphs describing every single microscopic particle. Describe the core structural layout, the lighting, the background environment, and the main subject gracefully. Giant prompts confuse the image generator and cause hallucinations. Less is more.
 ${subjectInclusionRule}
 ${logoInclusionRule}
 6. SOCIAL HANDLE CASE FIDELITY (STRICTLY LOWERCASE): Explicitly instruct the generator to render any social media usernames or handles (containing "@") strictly in lowercase letters, using a thin, modern, high-contrast sans-serif font.
 7. BRAND COLOR PALETTE ENFORCEMENT & COLOR SWAP (CRITICAL): ${!coresAutomaticas ? "The client HAS specified custom brand colors or requested specific colors in the prompt. You MUST strictly enforce these custom brand colors as the primary, dominant colors of the flyer's design, lighting, glows, panel fills, and accents. Perform a precise COLOR SWAP on all background fills, lighting, and accents, overriding the colors of the Design Layout Reference while keeping 100% of the layout, composition, cards, and structure identical." : "The client HAS NOT specified custom colors. You MUST perfectly copy the exact original color palette, lighting colors, and gradient tones of the Design Layout Reference."}
-8. FULL TYPOGRAPHY EMBEDDING (CRITICAL): You MUST command the generator to write, draw, print, and beautifully integrate all titles, text layers, event dates, contact details, and social handles directly onto the image canvas. Style them with gorgeous, sharp, modern typography, ensuring high legibility and precise alignment matching the reference design layout.
+8. CUSTOM TYPOGRAPHY ONLY (CRITICAL): You MUST command the generator to write, draw, print, and beautifully integrate ONLY the new custom titles and text layers explicitly supplied by the client in this prompt directly onto the image canvas, placing them in corresponding spatial areas as the reference layout. NEVER render any old text or old logo from the reference image.
 9. FAITHFUL LAYOUT & COMPOSITION PRESERVATION (ABSOLUTELY CRITICAL): When a Design Layout Reference or Style Reference is provided, you MUST PRESERVE the exact composition grid, layout structure, panel divisions, card shapes, framing, background architecture, and spatial positioning of elements from the reference image. DO NOT alter the layout! DO NOT redesign or change panel positions unless explicitly requested! Keep 100% of the layout, geometry, card borders, subject placement, and composition IDENTICAL to the reference image, applying only the requested colors, texts, and logos.
 ${subjectCompositionRule}
 ${logoCompositionRule}
@@ -3936,8 +3953,11 @@ Return ONLY the JSON object. Do not include any conversational text or markdown 
         fullPrompt += "\n\n" + colorMatch[0];
       }
 
-      const logoMandatoryRule = logoBase64 || (logosList && logosList.length > 0)
-        ? `- EXACT BRAND LOGO IMAGE-TO-IMAGE (MANDATORY): You MUST perfectly use the client's provided brand logo ("Referência de Logotipo") exactly as it is. You MUST completely erase any old logos from the Design Layout Reference image and perfectly draw the client's exact logo directly onto the image. ABSOLUTE CRITICAL RULE: YOU ARE STRICTLY FORBIDDEN FROM MODIFYING THE LOGO'S SHAPE, TEXT, FONT, OR COLORS. DO NOT recolor the logo. Keep every word and element exactly as it is in the uploaded image.`
+      const logoMandatoryRule = (useLogo || logoBase64 || (logosList && logosList.length > 0))
+        ? `- NATIVE BRAND LOGO INTEGRATION (MANDATORY & HAIR/FACE AVOIDANCE): You MUST embed and draw the client's provided brand logo ("Referência de Logotipo") natively directly onto the image canvas.
+  1. HAIR/FACE AVOIDANCE (ABSOLUTE MANDATORY RULE): The brand logo MUST NEVER be rendered on top of the subject's hair, head, face, or body. If the subject's hair or head extends to the top center, place the brand logo in clean negative background space in the top-left or top-right corner, ensuring zero collision or overlap with the subject's hair or face.
+  2. SEAMLESS BLENDING (NO ARTIFICIAL BLACK BOXES): Render the logo cleanly and seamlessly onto the background canvas. DO NOT draw an artificial black box, dark container rectangle, or inverted color background behind the logo unless those shapes are part of the original logo file itself.
+  3. 100% VISUAL & COLOR FIDELITY: Replicate 100% of the original logo's emblem shapes, typography, numbers, and true colors with perfect image-to-image accuracy. Do NOT print the logo's name as a separate text layer in typography.`
         : `- NO RANDOM LOGOS: Do not invent or hallucinate logos if not provided. Erase any existing logos from the reference image.`;
 
       const subjectMandatoryRule = hasSujeito
@@ -3946,21 +3966,21 @@ Return ONLY the JSON object. Do not include any conversational text or markdown 
 
       const mandatorySuffix = `\n\n=== ABSOLUTE CRITICAL CONSTRAINTS (MANDATORY) ===
 ${subjectMandatoryRule}
-- TOTAL FIDELITY & ZERO OMISSIONS (CRITICAL): If a Design Layout Reference is provided, you MUST perfectly clone EVERYTHING from it (the layout, the spatial positioning of texts, the graphic elements, the background, the subject pose/lighting). You MUST put the texts EXACTLY in the same spatial locations as they are in the reference. DO NOT skip any text fields. Replicate the exact typography hierarchy.
+- LAYOUT & COMPOSITION FIDELITY (CRITICAL): If a Design Layout Reference is provided, you MUST clone the visual layout, spatial structure, panel dividers, 3D elements, lighting, and composition grid from it. HOWEVER, ALL WRITTEN TEXT MUST BE REPLACED WITH THE NEW CUSTOM TEXT PROVIDED!
+- MANDATORY TEXT OVERWRITE & COMPLETE ERASURE (CRITICAL): You MUST COMPLETELY ERASE AND REPLACE 100% of the original text, titles, subtitles, dates, handles (@profiles), phone numbers, prices, and words originally present in the Design Layout Reference image. Print ONLY the new custom text explicitly provided by the client in this prompt. NEVER copy, re-render, or leave behind ANY text or words from the original reference photo!
 - ICONS, EFFECTS, & 3D DEPTH (CRITICAL): You MUST perfectly clone all icons, visual effects, lighting glows, 3D elements, depth of field, and graphic adornments present in the Design Layout Reference. Do NOT simplify the design. If the reference has glowing icons, 3D shapes, shadow depth, or cinematic lighting, you MUST reproduce those exact effects and depths with 100% fidelity.
-- EXACT VISUAL CLONE OF DESIGN REFERENCE (IMAGE-TO-IMAGE): You MUST act as an Image-to-Image engine. You MUST perfectly trace and clone the exact shapes, layout grids, panel structures, background gradients, textures, geometric dimensions, 3D elements, icons, particles, lighting effects, and overall depth of the provided Design Layout Reference. Do NOT invent new shapes, structures, or change the composition grid. It must look 100% identical in layout, structural design, and visual elements, simply applying the new text, logos, and colors.
 - BRAND COLOR PALETTE ENFORCEMENT (CRITICAL): ${!coresAutomaticas ? "The client HAS specified custom brand colors in the prompt. You MUST strictly and aggressively use those EXACT colors for the entire graphic composition, background panels, highlights, glows, and ambient lighting. You MUST completely OVERRIDE the original reference flyer's colors with the requested colors." : "The client HAS NOT specified custom colors. You MUST perfectly copy the exact original color palette of the Design Layout Reference."}
-- STRICT REPLACEMENT & NO LEFTOVER INFO (CRITICAL): You MUST completely ERASE any existing logos, Instagram profiles (@handles), social media icons, or contact information that were originally in the Design Layout Reference. ONLY use the exact text, handles, and logos explicitly provided by the client in this prompt. Do not leave traces or hallucinate any of the original reference's handles or logos!
-- TEXT COMPLETENESS & PLACEMENT (CRITICAL): You MUST print ALL provided text fields, titles, and words exactly as requested. DO NOT SKIP ANY TEXT. You MUST place the text EXACTLY in the same spatial positions as the original text blocks found in the Design Layout Reference. DO NOT put text in random places. Replicate the original typographical hierarchy and alignment perfectly, but using the new text.
-- COMPLETE CARD LAYOUT GENERATION: Do NOT generate just a plain empty background backdrop. You MUST generate the complete graphic composition, including all layouts, cards, panels, curved border divides, background textures, lighting setups, and the main visual subjects (e.g., joining hands, models, or products) in their exact spatial positions, proportions, and layouts as shown in the Design Layout Reference image.
+- STRICT REPLACEMENT & NO LEFTOVER INFO (CRITICAL): You MUST completely ERASE, OMIT AND REMOVE any street address, street names, street text ("rua"), Instagram profiles (@handles), social media icons, contact information, old reference logos, or "designer premium" logos originally present in the Design Layout Reference. ${negativePrompt ? `EXPLICIT UNWANTED ITEMS TO REMOVE AND ERASE: ${negativePrompt.trim()}.` : ''} Keep the bottom footer region completely clean and empty of these removed elements! ONLY use the exact text, handles, and logos explicitly provided by the client in this prompt.
+- TEXT COMPLETENESS & PLACEMENT (CRITICAL): You MUST print ALL provided text fields, titles, and words exactly as requested. DO NOT SKIP ANY TEXT. You MUST place the new text EXACTLY in the corresponding spatial positions as the text blocks in the Design Layout Reference. DO NOT put text in random places.
+- COMPLETE CARD LAYOUT GENERATION: Do NOT generate just a plain empty background backdrop. You MUST generate the complete graphic composition, including all layouts, cards, panels, curved border divides, background textures, lighting setups, and the main visual subjects in their exact spatial positions, proportions, and layouts as shown in the Design Layout Reference image.
 - EMBEDDED TYPOGRAPHY (MANDATORY): You MUST print, write, embed, and render all actual written texts, titles, words, acronyms, letters, numbers, and website URLs directly onto the image canvas. Style them with beautiful, modern, extremely crisp, and highly-legible typography matching the alignments and visual style of the reference design. All social media usernames or handles (starting with "@") must be printed strictly in lowercase letters.
 ${corDominante && corDominante !== "transparent" ? "- SOLID BACKGROUND REQUIREMENT FOR CUTOUT: Because the client requested a solid background color, YOU MUST GENERATE ALL TEXTS AND ELEMENTS OVER A PURE WHITE OR HIGHLY CONTRASTING FLAT SOLID BACKGROUND. Do not generate ANY background textures, scenes, or gradients. Just the subjects and text floating over a blank, flat solid color canvas. This is critical so we can cleanly cut them out." : ""}
 ${logoMandatoryRule}`;
 
       if (negativePrompt && negativePrompt.trim() !== "") {
-        fullPrompt += `\nAvoid / Negative constraints: old logos, original reference text, hallucinated words, blurry, pixelated, distorted, low resolution, bad colors, color banding, jpeg artifacts, low quality, glitch, out of focus, noise, visual bugs, ${negativePrompt.trim()}`;
+        fullPrompt += `\nAvoid / Negative constraints: old logos, original reference text, original reference text words, original reference titles, hallucinated words, blurry, pixelated, distorted, low resolution, bad colors, color banding, jpeg artifacts, low quality, glitch, out of focus, noise, visual bugs, ${negativePrompt.trim()}`;
       } else {
-        fullPrompt += `\nAvoid / Negative constraints: old logos, original reference text, original reference logos, hallucinated words, incorrect spelling, blurry, pixelated, distorted, low resolution, bad colors, color banding, jpeg artifacts, low quality, glitch, out of focus, noise, visual bugs`;
+        fullPrompt += `\nAvoid / Negative constraints: old logos, original reference text, original reference text words, original reference titles, original reference logos, hallucinated words, incorrect spelling, blurry, pixelated, distorted, low resolution, bad colors, color banding, jpeg artifacts, low quality, glitch, out of focus, noise, visual bugs`;
       }
       
       fullPrompt += mandatorySuffix;
@@ -4036,15 +4056,19 @@ ${logoMandatoryRule}`;
         });
       }
 
-      // 7. Add Logo References
-      if (useLogo) {
-        if (logoBase64) {
-          addImagePart(logoBase64, "Referência de Logotipo");
-        }
-        if (Array.isArray(logosList)) {
-          logosList.forEach((ref: any, idx: number) => {
-            if (ref) addImagePart(ref, `Referência de Logotipo Adicional ${idx + 1}`);
-          });
+      // 7. Add Logo References for native AI rendering
+      if (useLogo || logoBase64 || (Array.isArray(logosList) && logosList.length > 0)) {
+        if (logoInclusionType !== "overlay") {
+          if (logoBase64) {
+            addImagePart(logoBase64, "Referência de Logotipo do Cliente para Estampar Nativamente no Design na Posição Exata da Referência");
+          }
+          if (Array.isArray(logosList)) {
+            logosList.forEach((ref: any, idx: number) => {
+              if (ref) addImagePart(ref, `Referência de Logotipo Adicional ${idx + 1}`);
+            });
+          }
+        } else {
+          console.log("[api/gerar] Logo explicitly configured as overlay mode: skipping native AI image part attachment.");
         }
       }
 
@@ -4080,17 +4104,23 @@ ${logoMandatoryRule}`;
         
         let finalImageBase64 = rawData ? `data:${rawMime};base64,${rawData}` : genResult.imageBase64Url;
 
-        console.log(`[api/gerar] Applying post-processing details/upscale via sharp for size: ${sizeSelected}...`);
-        // NOT applying upscale/sharp anymore to ensure exact original API output is displayed in UI
-        // finalImageBase64 = await applyUpscaleAndRefinement(finalImageBase64, sizeSelected, {...});
-
-
+        // Apply clean pixel-exact logo overlay if explicitly requested
         if (useLogo && logoInclusionType === "overlay" && (logoBase64 || (logosList && logosList.length > 0))) {
-          console.log(`[api/gerar] Logo provided but overlay is disabled to prevent duplicate logos.`);
+          const targetLogo = logoBase64 || (logosList && logosList[0]);
+          if (targetLogo) {
+            console.log(`[api/gerar] Applying high-precision sharp logo overlay at position "${logoPosOverlay || 'top_left'}"...`);
+            finalImageBase64 = await overlayLogoOnImage(
+              finalImageBase64,
+              targetLogo,
+              logoPosOverlay || "top_left",
+              logoSizeOverlay || 20,
+              100
+            );
+          }
         }
 
         const finalParsed = resolveImageInput(finalImageBase64);
-        const responseImgUrl = finalParsed.data ? saveImageToDisk(finalParsed.data, finalParsed.mimeType) : finalImageBase64;
+        const responseImgUrl = finalParsed.data ? await saveImageToDisk(finalParsed.data, finalParsed.mimeType) : finalImageBase64;
 
         let width = 0;
         let height = 0;
@@ -4454,6 +4484,16 @@ Lembre-se sempre das características de altíssima qualidade de Flyers Brasilei
 3. Sombras & Efeitos: Luzes de recorte dramáticas, glows perfeitamente mesclados, reflexos, integração impecável do sujeito ao fundo e texturas ricas.
 4. Remoção & Exclusões: Se o usuário pedir para remover algo (ex: sem texto, sem pessoas, sem logos), isso deve ser tratado como uma REGRA ABSOLUTA (Negative Prompting rígido).
 
+5. REGRA ABSOLUTA DE LOGOTIPO vs CAMADA DE TEXTO (NÃO CRIA CAMADA DE TEXTO PARA LOGO):
+   - Quando o usuário enviar uma imagem de logo ou citar o nome/tema de uma logo anexada (ex: "coloque a logo 10 anos", "use a logo da festa", "adicione a logo X"):
+     * VOCÊ DEVE ATIVAR "useLogo": true E MAPEAR O ARQUIVO COMO "logo" EM "mapeamentoImagens".
+     * É TERMINANTEMENTE PROIBIDO CRIAR UMA CAMADA DE TEXTO ("camadasTexto") COM O NOME DA LOGO (ex: JAMAIS crie { conteudo: "10 anos" } ou { conteudo: "logo 10 anos" }).
+     * O nome "10 anos" ou "logo X" é APENAS o nome/descrição da imagem do logotipo que o usuário enviou, e NÃO um título ou texto para ser escrito pela IA!
+     * NUNCA escreva a palavra "10 anos" ou o nome da logo em "promptTipografia" ou "additionalPrompt" como se fosse um texto tipográfico.
+   - POSICIONAMENTO DA LOGO & ZONA DE PROTEÇÃO DE CABELO E ROSTO:
+     * A logo NUNCA PODE FICAR EM CIMA DO CABELO, ROSTO OU CABEÇA DO SUJEITO!
+     * Se houver sujeito/pessoa no centro com cabelo ou cabeça alta, posicione a logo no canto superior esquerdo (top-left) ou canto superior direito (top-right) em espaço negativo limpo, NUNCA no centro em cima do cabelo!
+
 AUTONOMIA TOTAL E INTELIGÊNCIA DE DESIGN (AUTO-FILL):
 Você tem AUTONOMIA ABSOLUTA para tomar decisões de design. Analise rigorosamente se a arte deve ter um Sujeito Principal (pessoa ou produto central):
 - Se o usuário enviar uma ou mais fotos de pessoas/produtos, ou se o briefing descrever um sujeito/personagem central, ou se for uma arte típica que exige modelo/produto, você DEVE ativar o sujeito ("desativarSujeito": false, "noPeople": false), identificar o gênero ("Masculino"/"Feminino"/"") e descrever a pose ("poseDescription").
@@ -4501,21 +4541,21 @@ O JSON deve ser formatado exatamente assim (inclua apenas as chaves que você co
   "enableBlur": false, // true se o cenário precisar de desfoque (fundo desfocado), false se não
   "lateralGradient": false, // true se quiser gradiente/degradê lateral, false se não
   "floatingElementsMode": "auto", // "off" para desligar, "auto" para ativar automático, "custom" para descrever os elementos flutuantes personalizados
-  "floatingElementsCustom": "Ex: golden dust and glowing sparks flying behind the subject", // preencher caso use modo "custom"
+  "floatingElementsCustom": "Ex: poeira dourada e faíscas brilhantes ao fundo", // preencher em PORTUGUÊS do Brasil caso use modo "custom"
   "gender": "Masculino", // "Masculino", "Feminino", "Outros", ou "" (vazio se sem sujeito)
-  "poseDescription": "descrição curta em inglês da pose ou enquadramento (ex: confident pose, looking at camera)", 
+  "poseDescription": "descrição da pose ou enquadramento em PORTUGUÊS DO BRASIL (ex: postura confiante, olhando para a câmera)", 
   "positioning": "Centro", // "Centro", "Esquerda", "Direita"
   "typographyPosition": "CENTRO", // OBRIGATÓRIO: Escolha exatamente "ESQUERDA", "CENTRO" ou "DIREITA"
   "composicao": "Plano Americano", // "Close-up (Rosto)", "Plano Médio (Busto)", "Plano Americano", "Customizada"
-  "composicaoCustom": "Ex: Dramatic low angle cinematic shot", // preencher se quiser uma composição personalizada
-  "promptCenario": "descrição do cenário em inglês",
-  "promptDesign": "descrição curta do que extrair do layout/design do card de referência (ex: Copy the diagonal structures and asymmetric composition)",
-  "promptTipografia": "INSTRUÇÕES CRÍTICAS DE POSICIONAMENTO ESPACIAL (em inglês): Descreva o local EXATO onde cada texto e a logo devem ficar na arte final (ex: 'The logo MUST be positioned at the top center. The main headline MUST be centered in the middle. The Instagram handle MUST be at the very bottom right.'). Seja preciso nas direções para evitar alucinações espaciais.",
-  "additionalPrompt": "MEGA PROMPT MASTERPIECE com texturas, iluminação 3-point, glows, câmera e estética",
-  "negativePrompt": "prompt negativo em inglês",
+  "composicaoCustom": "Ex: Ângulo baixo dramático cinematográfico", // preencher em PORTUGUÊS do Brasil
+  "promptCenario": "descrição do fundo/cenário em PORTUGUÊS DO BRASIL (ex: Fundo de estúdio escuro com iluminação neon azul e fumaça dramática)",
+  "promptDesign": "descrição do que extrair do layout/design da referência em PORTUGUÊS DO BRASIL (ex: Copiar a estrutura diagonal e os painéis assimétricos)",
+  "promptTipografia": "INSTRUÇÕES DE POSICIONAMENTO ESPACIAL EM PORTUGUÊS DO BRASIL: Descreva em português do Brasil onde cada texto e logo devem ficar. REGRA ABSOLUTA PARA A LOGO: A logo NUNCA deve ficar em cima do cabelo, rosto ou corpo do sujeito! Se houver sujeito no centro superior, posicione a logo no topo à esquerda ou topo à direita em espaço limpo. O título principal deve ficar centralizado abaixo.",
+  "additionalPrompt": "detalhes adicionais, texturas, iluminação e estética em PORTUGUÊS DO BRASIL (ex: Iluminação dramática de estúdio, brilho suave e alta definição)",
+  "negativePrompt": "elementos indesejados em PORTUGUÊS DO BRASIL (ex: texto ilegível, desfoque, deformação, logo sobre o cabelo)",
   "enableEstiloVisual": true, // true para ativar o estilo visual, false para desativar
   "estilosVisuais": ["Cyberpunk", "Minimalista", "Neon"], 
-  "estiloVisualCustom": "Pintura barroca dramática com iluminação de Caravaggio", // Descreva o estilo detalhadamente se não estiver nas opções predefinidas
+  "estiloVisualCustom": "descrição do estilo personalizado em PORTUGUÊS DO BRASIL (ex: Pintura barroca dramática com iluminação de Caravaggio)",
   "substituirImagens": true,
   "mapeamentoImagens": { "nome_do_arquivo.png": "subject", "outro_arquivo.jpg": "logo", "layout.jpg": "design", "estilo.jpg": "style" }, // IMPORTANTE: Classifique cada arquivo como: "subject" (sujeito), "logo" (logotipo), "scene" (cenário/fundo), "design" (referência de layout/design completo) ou "style" (referência de estilo visual/estética). Se receber um flyer/card de referência de design, SEMPRE mapeie como "design".
   "descricoesEstilo": { "estilo.jpg": "Descrição detalhada do estilo e paleta de cores dessa referência (O que copiar: texturas, luz, cores, etc). Obrigatorio se o tipo for 'style'" },

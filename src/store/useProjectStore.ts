@@ -107,7 +107,7 @@ const defaultConfig: ProjectConfig = {
   useLogo: false,
   logoPosOverlay: "top_center",
   logoSizeOverlay: 20,
-  logoInclusionType: "overlay",
+  logoInclusionType: "embedded",
   sujeitosBase64List: [],
   cenariosBase64List: [],
   tipografiaRefsList: [],
@@ -311,16 +311,26 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
 
   setGaleriaImages: (images) => set((state) => {
     const nextImages = typeof images === "function" ? images(state.galeriaImages) : images;
+    const seen = new Set<string>();
+    const uniqueImages: string[] = [];
+    if (Array.isArray(nextImages)) {
+      for (const img of nextImages) {
+        if (img && typeof img === "string" && !seen.has(img)) {
+          seen.add(img);
+          uniqueImages.push(img);
+        }
+      }
+    }
     
     const updatedProjects = state.projectsList.map((proj) => {
       if (proj.id === state.activeProjectId) {
-        return { ...proj, galeria: nextImages };
+        return { ...proj, galeria: uniqueImages };
       }
       return proj;
     });
     saveProjectsToLocalStorage(updatedProjects);
 
-    return { galeriaImages: nextImages, projectsList: updatedProjects };
+    return { galeriaImages: uniqueImages, projectsList: updatedProjects };
   }),
 
   addImagesToProjectGallery: (projectId, images) => {
@@ -329,18 +339,34 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
       isActive = state.activeProjectId === projectId;
       const updatedProjects = state.projectsList.map((proj) => {
         if (proj.id === projectId) {
-          const nextGaleria = [...images, ...(proj.galeria || [])];
-          return { ...proj, galeria: nextGaleria };
+          const combined = [...images, ...(proj.galeria || [])];
+          const seen = new Set<string>();
+          const uniqueGaleria: string[] = [];
+          for (const img of combined) {
+            if (img && typeof img === "string" && !seen.has(img)) {
+              seen.add(img);
+              uniqueGaleria.push(img);
+            }
+          }
+          return { ...proj, galeria: uniqueGaleria };
         }
         return proj;
       });
       saveProjectsToLocalStorage(updatedProjects);
 
       if (isActive) {
-        const nextGaleria = [...images, ...state.galeriaImages];
+        const combined = [...images, ...state.galeriaImages];
+        const seen = new Set<string>();
+        const uniqueGaleria: string[] = [];
+        for (const img of combined) {
+          if (img && typeof img === "string" && !seen.has(img)) {
+            seen.add(img);
+            uniqueGaleria.push(img);
+          }
+        }
         return {
           projectsList: updatedProjects,
-          galeriaImages: nextGaleria,
+          galeriaImages: uniqueGaleria,
           activeImageIndex: 0
         };
       }

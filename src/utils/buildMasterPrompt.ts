@@ -70,21 +70,30 @@ export const buildMasterPrompt = (config: ProjectConfig): string => {
   } else {
     promptParts.push(`Lighting/Colors & Palette: The primary background color and overall ambient light of the entire composition MUST BE EXACTLY HEX ${config.cores?.ambiente || "#000000"}. The rim lighting, highlights, contour glow, and laser highlights on the subject MUST BE EXACTLY HEX ${config.cores?.recorte || "#ffffff"}. The auxiliary elements, glows, and secondary lights MUST BE EXACTLY HEX ${config.cores?.complementar || "#c5a880"}. Create a high-contrast theme strictly using this custom palette: ${config.cores?.ambiente || "#000000"} (background/ambient), ${config.cores?.recorte || "#ffffff"} (rim lights/accents), and ${config.cores?.complementar || "#c5a880"} (secondary glows).`);
   }
-  if (config.useCorDominante && config.corDominante && config.corDominante !== "#000000") {
-    promptParts.push(`Color Palette Dominant override: The dominant theme color and primary background color MUST BE EXACTLY HEX ${config.corDominante}. Apply this specific hex value as the primary background color and primary theme color with high, intense vibrance. Do not deviate from this exact hex value.`);
+  if (config.corDominante && config.corDominante !== "#000000" && config.corDominante !== "transparent") {
+    promptParts.push(`Color Palette Dominant override: The dominant theme color, main background color, AND any text container box backgrounds MUST BE EXACTLY HEX ${config.corDominante}. Apply this specific hex value as the primary background color and container fill color with high, rich vibrance and zero color drift. Do not deviate from this exact hex value.`);
   }
 
   // 8. TYPOGRAPHY & TEXT LAYOUT (The true Flyer BR magic)
   if (config.camadasTexto && config.camadasTexto.length > 0) {
     const activeLayers = config.camadasTexto.filter(l => l.conteudo?.trim());
     if (activeLayers.length > 0) {
-      promptParts.push(`\n=== TEXT ===\nInclude text layers: ${activeLayers.map(l => `"${l.conteudo.trim()}"`).join(", ")}. Professional hierarchy.`);
+      const formattedTexts = activeLayers.map(l => {
+        const funcao = l.funcao ? `[${l.funcao.toUpperCase()}]` : '[TEXTO]';
+        return `${funcao}: "${l.conteudo.trim()}"`;
+      }).join(", ");
+      
+      promptParts.push(`\n=== MANDATORY CUSTOM TEXT LAYERS (ERASE ALL REFERENCE TEXT) ===\nRender ONLY these new custom text layers on the canvas: ${formattedTexts}.\nCRITICAL TEXT OVERWRITE RULE: You MUST completely ERASE and OVERWRITE 100% of the original text, titles, dates, handles, and numbers from the Design Layout Reference image. Do NOT keep or copy any words from the reference photo. Print ONLY these new custom text layers!`);
     }
   }
 
   // 9. LOGO & DESIGN FIDELITY
-  if (config.useLogo && (config.logoBase64 || config.logosList?.length)) {
-    promptParts.push(`Include brand logo at: ${config.logoPosOverlay || "top_center"}. Ensure the logo is highly visible against the background. Do NOT modify the logo's design, text, or original colors. If needed to increase contrast against the background, apply a subtle drop shadow, outer glow, or outline to the logo container, do not alter the logo itself.`);
+  if (config.useLogo || config.logoBase64 || config.logosList?.length) {
+    promptParts.push(`NATIVE BRAND LOGO INTEGRATION (MANDATORY & EXACT POSITIONING):
+Draw and embed the client's provided brand logo ("Referência de Logotipo") natively directly onto the image canvas.
+- POSITIONING & HAIR/FACE AVOIDANCE (CRITICAL): The logo MUST NEVER be rendered on top of the subject's hair, head, face, or body. If the subject's hair or head extends near the top center, place the brand logo in clean negative background space in the top-left or top-right corner, ensuring zero collision or overlap with the subject's hair, head, face, or body.
+- SEAMLESS INTEGRATION: Render the logo cleanly onto the background. DO NOT draw an artificial black box, dark container rectangle, or inverted background box around the logo unless those shapes are part of the original logo file.
+- FIDELITY & NO DUPLICATE TEXT: Replicate 100% of the original logo's shapes, symbols, numbers, typography, and original colors without inverting or distorting any details. Do NOT print the logo's name as a separate text layer or headline in typography.`);
   }
 
   if (config.designRefBase64 || config.designRefsList?.length) {
