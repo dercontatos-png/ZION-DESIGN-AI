@@ -85,8 +85,8 @@
   .markdown-body p { @apply mb-2 leading-relaxed text-zinc-300 text-xs sm:text-sm; }
   .markdown-body ul { @apply list-disc list-inside mb-2 text-zinc-300 text-xs sm:text-sm space-y-1; }
   .markdown-body ol { @apply list-decimal list-inside mb-2 text-zinc-300 text-xs sm:text-sm space-y-1; }
-  .markdown-body code { @apply bg-zinc-950 text-[#c5a880] px-1.5 py-0.5 rounded border border-zinc-800 font-mono text-xs; }
-  .markdown-body blockquote { @apply border-l-2 border-[#c5a880] pl-3 italic text-zinc-400 my-2 bg-zinc-950/40 py-1 rounded-r; }
+  .markdown-body code { @apply bg-black text-[#c5a880] px-1.5 py-0.5 rounded border border-zinc-800 font-mono text-xs; }
+  .markdown-body blockquote { @apply border-l-2 border-[#c5a880] pl-3 italic text-zinc-400 my-2 bg-black/40 py-1 rounded-r; }
 }
 
 /* Global Selection & Smooth Transitions */

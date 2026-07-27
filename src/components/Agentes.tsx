@@ -42,14 +42,14 @@ export const Agentes: React.FC = () => {
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="w-full h-full flex flex-col p-8 overflow-y-auto bg-[#000000]"
+      className="w-full h-full flex flex-col p-8 overflow-y-auto bg-black"
     >
       <div className="flex flex-col gap-2 mb-10">
         <h2 className="text-2xl font-bold text-zinc-100">Ferramentas e Agentes</h2>
         <p className="text-zinc-500">Selecione uma ferramenta para começar a otimizar seu processo.</p>
       </div>
 
-      <div className="flex items-center gap-2 mb-8 mt-4 bg-[#070708] p-2 rounded-2xl border border-white/10 w-fit max-w-full overflow-x-auto py-3 px-2.5 my-2 scrollbar-none">
+      <div className="flex items-center gap-2 mb-8 mt-4 bg-black p-2 rounded-2xl border border-white/5 w-fit max-w-full overflow-x-auto py-3 px-2.5 my-2 scrollbar-none">
         {filters.map(filter => (
           <button
             key={filter}
@@ -70,7 +70,7 @@ export const Agentes: React.FC = () => {
           <motion.div 
             key={agent.id} 
             whileHover={{ y: -4 }}
-            className="group flex flex-col p-6 rounded-2xl bg-[#070708] border border-white/5 hover:border-amber-500/30 transition-all cursor-pointer shadow-lg hover:shadow-amber-500/5" 
+            className="group flex flex-col p-6 rounded-2xl bg-black border border-white/5 hover:border-amber-500/30 transition-all cursor-pointer shadow-lg hover:shadow-amber-500/5" 
             onClick={() => {
               if (agent.id === "deep-work") {
                 window.open("https://open.spotify.com/playlist/37i9dQZF1DWZeKCadgRdKQ", "_blank");
@@ -80,7 +80,7 @@ export const Agentes: React.FC = () => {
               }
             }}
           >
-            <div className="w-12 h-12 mb-6 rounded-xl bg-zinc-800/50 flex items-center justify-center text-zinc-400 group-hover:text-amber-500 group-hover:bg-amber-500/10 transition-colors">
+            <div className="w-12 h-12 mb-6 rounded-xl bg-[#111]/50 flex items-center justify-center text-zinc-400 group-hover:text-amber-500 group-hover:bg-amber-500/10 transition-colors">
                {getIcon(agent.id, agent.category)}
             </div>
             <h3 className="text-base font-bold text-zinc-100 mb-2 group-hover:text-amber-400 transition-colors">{agent.title}</h3>

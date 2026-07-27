@@ -23,6 +23,10 @@ export type Client = {
   startDate?: string;
   notes?: string;
   avatarUrl?: string;
+  bancoDeDadosIA?: string;
+  roteirosChat?: any[];
+  infoExtra?: string;
+  paletaCores?: string[];
 };
 
 export type Transaction = {

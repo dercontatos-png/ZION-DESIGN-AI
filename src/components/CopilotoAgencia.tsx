@@ -495,9 +495,9 @@ Retorne um JSON estrito com o seguinte formato:
   };
 
   return (
-    <div className="flex flex-col h-full w-full bg-zinc-950 text-zinc-100 font-sans overflow-hidden">
+    <div className="flex flex-col h-full w-full bg-black text-zinc-100 font-sans overflow-hidden">
       {/* HEADER DO COPILOTO DA AGÊNCIA */}
-      <div className="px-6 py-4 bg-zinc-900 border-b border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
+      <div className="px-6 py-4 bg-black border-b border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#c5a880] to-[#b39873] flex items-center justify-center text-black font-black shadow-lg shadow-[#c5a880]/10 shrink-0">
             <Bot size={22} />
@@ -518,13 +518,13 @@ Retorne um JSON estrito com o seguinte formato:
         </div>
 
         {/* NAVEGAÇÃO DE ABAS INTERNAS */}
-        <div className="flex items-center gap-1.5 bg-zinc-950 p-1.5 rounded-xl border border-white/10 shrink-0">
+        <div className="flex items-center gap-1.5 bg-black p-1.5 rounded-xl border border-white/5 shrink-0">
           <button
             onClick={() => setActiveTab("chat")}
             className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               activeTab === "chat"
                 ? "bg-[#c5a880] text-black font-black shadow-md"
-                : "text-zinc-400 hover:text-white hover:bg-zinc-900"
+                : "text-zinc-400 hover:text-white hover:bg-black"
             }`}
           >
             <Bot size={14} />
@@ -536,7 +536,7 @@ Retorne um JSON estrito com o seguinte formato:
             className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               activeTab === "orcamento"
                 ? "bg-[#c5a880] text-black font-black shadow-md"
-                : "text-zinc-400 hover:text-white hover:bg-zinc-900"
+                : "text-zinc-400 hover:text-white hover:bg-black"
             }`}
           >
             <FileText size={14} />
@@ -548,7 +548,7 @@ Retorne um JSON estrito com o seguinte formato:
             className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               activeTab === "organograma"
                 ? "bg-[#c5a880] text-black font-black shadow-md"
-                : "text-zinc-400 hover:text-white hover:bg-zinc-900"
+                : "text-zinc-400 hover:text-white hover:bg-black"
             }`}
           >
             <GitFork size={14} />
@@ -563,7 +563,7 @@ Retorne um JSON estrito com o seguinte formato:
         {activeTab === "chat" && (
           <div className="h-full flex flex-col md:flex-row overflow-hidden">
             {/* LADO ESQUERDO: BARRA LATERAL DE PROMPTS RÁPIDOS */}
-            <div className="w-full md:w-80 bg-zinc-900/60 border-b md:border-b-0 md:border-r border-white/10 p-4 flex flex-col gap-4 shrink-0 overflow-y-auto custom-scrollbar">
+            <div className="w-full md:w-80 bg-black/60 border-b md:border-b-0 md:border-r border-white/5 p-4 flex flex-col gap-4 shrink-0 overflow-y-auto custom-scrollbar">
               <div className="flex items-center gap-2 text-xs font-black uppercase text-[#c5a880] tracking-wider">
                 <Sparkles size={14} />
                 <span>Atalhos Estratégicos</span>
@@ -603,7 +603,7 @@ Retorne um JSON estrito com o seguinte formato:
                   <button
                     key={idx}
                     onClick={() => handleSendMessage(item.text)}
-                    className="w-full text-left p-3 rounded-xl bg-zinc-950 border border-white/5 hover:border-[#c5a880]/40 hover:bg-zinc-900 transition-all text-xs font-medium text-zinc-300 hover:text-white group flex items-center justify-between cursor-pointer"
+                    className="w-full text-left p-3 rounded-xl bg-black border border-white/5 hover:border-[#c5a880]/40 hover:bg-black transition-all text-xs font-medium text-zinc-300 hover:text-white group flex items-center justify-between cursor-pointer"
                   >
                     <span>{item.label}</span>
                     <ChevronRight size={12} className="text-zinc-600 group-hover:text-[#c5a880] shrink-0 ml-2" />
@@ -611,7 +611,7 @@ Retorne um JSON estrito com o seguinte formato:
                 ))}
               </div>
 
-              <div className="mt-auto p-3.5 bg-zinc-950/80 rounded-xl border border-white/5 space-y-1.5">
+              <div className="mt-auto p-3.5 bg-black/80 rounded-xl border border-white/5 space-y-1.5">
                 <div className="flex items-center gap-2 text-[10px] font-bold text-[#c5a880] uppercase">
                   <ShieldCheck size={12} />
                   <span>Dica Zion</span>
@@ -623,7 +623,7 @@ Retorne um JSON estrito com o seguinte formato:
             </div>
 
             {/* LADO DIREITO: CHAT FEED & INPUT */}
-            <div className="flex-1 flex flex-col h-full bg-zinc-950 overflow-hidden">
+            <div className="flex-1 flex flex-col h-full bg-black overflow-hidden">
               {/* FEED DE MENSAGENS */}
               <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 custom-scrollbar">
                 {messages.map((msg) => (
@@ -647,7 +647,7 @@ Retorne um JSON estrito com o seguinte formato:
                       className={`p-4 rounded-2xl text-xs sm:text-sm leading-relaxed space-y-2 max-w-[85%] ${
                         msg.sender === "user"
                           ? "bg-[#c5a880] text-zinc-950 font-medium rounded-tr-none"
-                          : "bg-zinc-900 border border-white/10 text-zinc-200 rounded-tl-none shadow-md"
+                          : "bg-black border border-white/5 text-zinc-200 rounded-tl-none shadow-md"
                       }`}
                     >
                       <div className="flex items-center justify-between gap-4 mb-1 border-b border-black/10 pb-1 text-[10px] opacity-70">
@@ -673,7 +673,7 @@ Retorne um JSON estrito com o seguinte formato:
                     <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#c5a880] to-[#b39873] text-black flex items-center justify-center shrink-0">
                       <Bot size={16} />
                     </div>
-                    <div className="p-4 rounded-2xl bg-zinc-900 border border-white/10 text-zinc-400 text-xs flex items-center gap-2">
+                    <div className="p-4 rounded-2xl bg-black border border-white/5 text-zinc-400 text-xs flex items-center gap-2">
                       <RefreshCw size={14} className="animate-spin text-[#c5a880]" />
                       <span>Estrategista pensando na melhor resposta...</span>
                     </div>
@@ -683,8 +683,8 @@ Retorne um JSON estrito com o seguinte formato:
               </div>
 
               {/* BARRA DE INPUT DE MENSAGEM */}
-              <div className="p-4 bg-zinc-900/80 border-t border-white/10">
-                <div className="flex items-center gap-2 max-w-4xl mx-auto bg-zinc-950 border border-white/10 rounded-2xl p-2 focus-within:border-[#c5a880]/50 transition-colors">
+              <div className="p-4 bg-black/80 border-t border-white/5">
+                <div className="flex items-center gap-2 max-w-4xl mx-auto bg-black border border-white/5 rounded-2xl p-2 focus-within:border-[#c5a880]/50 transition-colors">
                   <input
                     type="text"
                     value={inputText}
@@ -709,10 +709,10 @@ Retorne um JSON estrito com o seguinte formato:
 
         {/* ==================== ABA 2: GERADOR DE PROPOSTAS PDF ==================== */}
         {activeTab === "orcamento" && (
-          <div className="h-full flex flex-col lg:flex-row overflow-hidden bg-zinc-950">
+          <div className="h-full flex flex-col lg:flex-row overflow-hidden bg-black">
             {/* PAINEL ESQUERDO: FORMULÁRIO */}
-            <div className="w-full lg:w-1/2 p-6 overflow-y-auto space-y-6 custom-scrollbar border-r border-white/10">
-              <div className="flex items-center justify-between border-b border-white/10 pb-4">
+            <div className="w-full lg:w-1/2 p-6 overflow-y-auto space-y-6 custom-scrollbar border-r border-white/5">
+              <div className="flex items-center justify-between border-b border-white/5 pb-4">
                 <div>
                   <h2 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
                     <FileText size={18} className="text-[#c5a880]" />
@@ -743,7 +743,7 @@ Retorne um JSON estrito com o seguinte formato:
               </div>
 
               {formError && (
-                <div className="p-4 bg-zinc-900 border border-[#c5a880]/30 text-[#c5a880] text-xs rounded-xl flex items-start justify-between gap-2 animate-in fade-in duration-200">
+                <div className="p-4 bg-black border border-[#c5a880]/30 text-[#c5a880] text-xs rounded-xl flex items-start justify-between gap-2 animate-in fade-in duration-200">
                   <span className="font-medium">{formError}</span>
                   <button onClick={() => setFormError(null)} className="font-bold text-white hover:text-[#c5a880] shrink-0 cursor-pointer">✕</button>
                 </div>
@@ -759,7 +759,7 @@ Retorne um JSON estrito com o seguinte formato:
                     type="text"
                     value={orcamento.agenciaNome}
                     onChange={(e) => setOrcamento({ ...orcamento, agenciaNome: e.target.value })}
-                    className="w-full bg-zinc-900 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-[#c5a880] focus:outline-none"
+                    className="w-full bg-black border border-white/5 rounded-lg px-3 py-2 text-xs text-white focus:border-[#c5a880] focus:outline-none"
                     placeholder="Ex: Agência Zion Marketing"
                   />
                 </div>
@@ -772,7 +772,7 @@ Retorne um JSON estrito com o seguinte formato:
                     type="text"
                     value={orcamento.agenciaContato}
                     onChange={(e) => setOrcamento({ ...orcamento, agenciaContato: e.target.value })}
-                    className="w-full bg-zinc-900 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-[#c5a880] focus:outline-none"
+                    className="w-full bg-black border border-white/5 rounded-lg px-3 py-2 text-xs text-white focus:border-[#c5a880] focus:outline-none"
                     placeholder="Ex: (11) 99999-8888 | contato@zion.com"
                   />
                 </div>
@@ -785,7 +785,7 @@ Retorne um JSON estrito com o seguinte formato:
                     type="text"
                     value={orcamento.clienteNome}
                     onChange={(e) => setOrcamento({ ...orcamento, clienteNome: e.target.value })}
-                    className="w-full bg-zinc-900 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-[#c5a880] focus:outline-none"
+                    className="w-full bg-black border border-white/5 rounded-lg px-3 py-2 text-xs text-white focus:border-[#c5a880] focus:outline-none"
                     placeholder="Ex: Dr. Roberto Mendes"
                   />
                 </div>
@@ -798,7 +798,7 @@ Retorne um JSON estrito com o seguinte formato:
                     type="text"
                     value={orcamento.clienteEmpresa}
                     onChange={(e) => setOrcamento({ ...orcamento, clienteEmpresa: e.target.value })}
-                    className="w-full bg-zinc-900 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-[#c5a880] focus:outline-none"
+                    className="w-full bg-black border border-white/5 rounded-lg px-3 py-2 text-xs text-white focus:border-[#c5a880] focus:outline-none"
                     placeholder="Ex: Clínica Odontológica Estética"
                   />
                 </div>
@@ -811,7 +811,7 @@ Retorne um JSON estrito com o seguinte formato:
                     type="text"
                     value={orcamento.clienteNicho}
                     onChange={(e) => setOrcamento({ ...orcamento, clienteNicho: e.target.value })}
-                    className="w-full bg-zinc-900 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-[#c5a880] focus:outline-none"
+                    className="w-full bg-black border border-white/5 rounded-lg px-3 py-2 text-xs text-white focus:border-[#c5a880] focus:outline-none"
                     placeholder="Ex: Odontologia de Alto Padrão / Implantes"
                   />
                 </div>
@@ -824,7 +824,7 @@ Retorne um JSON estrito com o seguinte formato:
                     rows={3}
                     value={orcamento.doresObjetivos}
                     onChange={(e) => setOrcamento({ ...orcamento, doresObjetivos: e.target.value })}
-                    className="w-full bg-zinc-900 border border-white/10 rounded-lg p-3 text-xs text-white focus:border-[#c5a880] focus:outline-none"
+                    className="w-full bg-black border border-white/5 rounded-lg p-3 text-xs text-white focus:border-[#c5a880] focus:outline-none"
                     placeholder="Descreva as dores que o cliente relatou na reunião (ex: baixa atração de pacientes particulares, dependência de convênios)..."
                   />
                 </div>
@@ -850,7 +850,7 @@ Retorne um JSON estrito com o seguinte formato:
                           className={`flex items-center gap-2 p-2.5 rounded-lg border text-xs cursor-pointer transition-all ${
                             isSelected
                               ? "bg-[#c5a880]/10 border-[#c5a880] text-white"
-                              : "bg-zinc-900 border-white/5 text-zinc-400 hover:text-zinc-200"
+                              : "bg-black border-white/5 text-zinc-400 hover:text-zinc-200"
                           }`}
                         >
                           <input
@@ -866,7 +866,7 @@ Retorne um JSON estrito com o seguinte formato:
                                 });
                               }
                             }}
-                            className="rounded bg-zinc-950 border-white/10 text-[#c5a880] focus:ring-0 accent-[#c5a880]"
+                            className="rounded bg-black border-white/5 text-[#c5a880] focus:ring-0 accent-[#c5a880]"
                           />
                           <span>{servico}</span>
                         </label>
@@ -883,7 +883,7 @@ Retorne um JSON estrito com o seguinte formato:
                     rows={3}
                     value={orcamento.escopoDetalhado}
                     onChange={(e) => setOrcamento({ ...orcamento, escopoDetalhado: e.target.value })}
-                    className="w-full bg-zinc-900 border border-white/10 rounded-lg p-3 text-xs text-white focus:border-[#c5a880] focus:outline-none"
+                    className="w-full bg-black border border-white/5 rounded-lg p-3 text-xs text-white focus:border-[#c5a880] focus:outline-none"
                     placeholder="Mês 1: Setup da BM, Pixel e 10 criativos. Mês 2: Testes de públicos e escala..."
                   />
                 </div>
@@ -896,7 +896,7 @@ Retorne um JSON estrito com o seguinte formato:
                     type="text"
                     value={orcamento.investimentoSetup}
                     onChange={(e) => setOrcamento({ ...orcamento, investimentoSetup: e.target.value })}
-                    className="w-full bg-zinc-900 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-[#c5a880] focus:outline-none"
+                    className="w-full bg-black border border-white/5 rounded-lg px-3 py-2 text-xs text-white focus:border-[#c5a880] focus:outline-none"
                     placeholder="Ex: 1.500,00"
                   />
                 </div>
@@ -909,7 +909,7 @@ Retorne um JSON estrito com o seguinte formato:
                     type="text"
                     value={orcamento.investimentoMensal}
                     onChange={(e) => setOrcamento({ ...orcamento, investimentoMensal: e.target.value })}
-                    className="w-full bg-zinc-900 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-[#c5a880] focus:outline-none"
+                    className="w-full bg-black border border-white/5 rounded-lg px-3 py-2 text-xs text-white focus:border-[#c5a880] focus:outline-none"
                     placeholder="Ex: 3.000,00"
                   />
                 </div>
@@ -922,7 +922,7 @@ Retorne um JSON estrito com o seguinte formato:
                     type="text"
                     value={orcamento.condicoesPagamento}
                     onChange={(e) => setOrcamento({ ...orcamento, condicoesPagamento: e.target.value })}
-                    className="w-full bg-zinc-900 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-[#c5a880] focus:outline-none"
+                    className="w-full bg-black border border-white/5 rounded-lg px-3 py-2 text-xs text-white focus:border-[#c5a880] focus:outline-none"
                     placeholder="Ex: Pix ou Boleto Bancário mensal. Vencimento todo dia 10."
                   />
                 </div>
@@ -935,7 +935,7 @@ Retorne um JSON estrito com o seguinte formato:
                     rows={3}
                     value={orcamento.termosLegais}
                     onChange={(e) => setOrcamento({ ...orcamento, termosLegais: e.target.value })}
-                    className="w-full bg-zinc-900 border border-white/10 rounded-lg p-3 text-xs text-white focus:border-[#c5a880] focus:outline-none"
+                    className="w-full bg-black border border-white/5 rounded-lg p-3 text-xs text-white focus:border-[#c5a880] focus:outline-none"
                     placeholder="Cláusulas de fidelidade, NDA, propriedade dos ativos e prazos de cancelamento..."
                   />
                 </div>
@@ -943,7 +943,7 @@ Retorne um JSON estrito com o seguinte formato:
             </div>
 
             {/* PAINEL DIREITO: PREVISÃO & EXPORTAÇÃO PDF */}
-            <div className="w-full lg:w-1/2 p-6 flex flex-col h-full bg-zinc-900/50 overflow-hidden">
+            <div className="w-full lg:w-1/2 p-6 flex flex-col h-full bg-black/50 overflow-hidden">
               <div className="flex items-center justify-between mb-4 shrink-0">
                 <div className="flex items-center gap-2">
                   <Printer size={18} className="text-[#c5a880]" />
@@ -965,7 +965,7 @@ Retorne um JSON estrito com o seguinte formato:
               <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
                 <div
                   ref={pdfPrintRef}
-                  className="w-full bg-[#09090b] border border-white/10 rounded-2xl p-8 space-y-6 text-zinc-200 shadow-2xl min-h-[700px]"
+                  className="w-full bg-[#09090b] border border-white/5 rounded-2xl p-8 space-y-6 text-zinc-200 shadow-2xl min-h-[700px]"
                 >
                   {/* CABEÇALHO DO DOCUMENTO */}
                   <div className="flex items-center justify-between border-b border-[#c5a880]/30 pb-6">
@@ -989,7 +989,7 @@ Retorne um JSON estrito com o seguinte formato:
                   </div>
 
                   {/* IDENTIFICAÇÃO DO CLIENTE */}
-                  <div className="p-4 rounded-xl bg-zinc-900/80 border border-white/5 space-y-1">
+                  <div className="p-4 rounded-xl bg-black/80 border border-white/5 space-y-1">
                     <div className="text-[10px] font-black text-[#c5a880] uppercase tracking-wider">
                       CLIENTE SELECIONADO
                     </div>
@@ -1008,7 +1008,7 @@ Retorne um JSON estrito com o seguinte formato:
                         <Target size={14} />
                         <span>1. Diagnóstico & Objetivos Estratégicos</span>
                       </div>
-                      <p className="text-xs text-zinc-300 leading-relaxed bg-zinc-900/40 p-3 rounded-lg border border-white/5 whitespace-pre-wrap">
+                      <p className="text-xs text-zinc-300 leading-relaxed bg-black/40 p-3 rounded-lg border border-white/5 whitespace-pre-wrap">
                         {orcamento.doresObjetivos}
                       </p>
                     </div>
@@ -1023,7 +1023,7 @@ Retorne um JSON estrito com o seguinte formato:
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {orcamento.escopoServicos.map((serv, idx) => (
-                        <div key={idx} className="flex items-center gap-2 text-xs text-zinc-200 bg-zinc-900/60 p-2.5 rounded-lg border border-white/5">
+                        <div key={idx} className="flex items-center gap-2 text-xs text-zinc-200 bg-black/60 p-2.5 rounded-lg border border-white/5">
                           <CheckCircle2 size={14} className="text-[#c5a880] shrink-0" />
                           <span>{serv}</span>
                         </div>
@@ -1031,7 +1031,7 @@ Retorne um JSON estrito com o seguinte formato:
                     </div>
 
                     {orcamento.escopoDetalhado && (
-                      <p className="text-xs text-zinc-400 bg-zinc-900/30 p-3 rounded-lg border border-white/5 whitespace-pre-wrap mt-2">
+                      <p className="text-xs text-zinc-400 bg-black/30 p-3 rounded-lg border border-white/5 whitespace-pre-wrap mt-2">
                         {orcamento.escopoDetalhado}
                       </p>
                     )}
@@ -1045,7 +1045,7 @@ Retorne um JSON estrito com o seguinte formato:
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="p-4 rounded-xl bg-zinc-900 border border-white/10 text-center">
+                      <div className="p-4 rounded-xl bg-black border border-white/5 text-center">
                         <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
                           Setup & Estruturação
                         </span>
@@ -1066,7 +1066,7 @@ Retorne um JSON estrito com o seguinte formato:
                       </div>
                     </div>
 
-                    <div className="text-xs text-zinc-400 bg-zinc-900/40 p-3 rounded-lg border border-white/5">
+                    <div className="text-xs text-zinc-400 bg-black/40 p-3 rounded-lg border border-white/5">
                       <strong>Pagamento:</strong> {orcamento.condicoesPagamento}
                     </div>
                   </div>
@@ -1078,14 +1078,14 @@ Retorne um JSON estrito com o seguinte formato:
                         <ShieldCheck size={14} />
                         <span>4. Termos Legais & Validade</span>
                       </div>
-                      <p className="text-[11px] text-zinc-400 leading-relaxed bg-zinc-900/30 p-3 rounded-lg border border-white/5 whitespace-pre-wrap">
+                      <p className="text-[11px] text-zinc-400 leading-relaxed bg-black/30 p-3 rounded-lg border border-white/5 whitespace-pre-wrap">
                         {orcamento.termosLegais}
                       </p>
                     </div>
                   )}
 
                   {/* ASSINATURAS */}
-                  <div className="pt-8 grid grid-cols-2 gap-8 border-t border-white/10 text-center text-xs">
+                  <div className="pt-8 grid grid-cols-2 gap-8 border-t border-white/5 text-center text-xs">
                     <div>
                       <div className="border-b border-zinc-700 pb-1 font-extrabold text-white">
                         {orcamento.agenciaNome}
@@ -1108,7 +1108,7 @@ Retorne um JSON estrito com o seguinte formato:
 
         {/* ==================== ABA 3: FUNIL ANTIPROSPECÇÃO (ORGANOGRAMA VISUAL) ==================== */}
         {activeTab === "organograma" && (
-          <div className="h-full overflow-y-auto p-6 space-y-8 custom-scrollbar bg-zinc-950">
+          <div className="h-full overflow-y-auto p-6 space-y-8 custom-scrollbar bg-black">
             {/* CABEÇALHO DO FUNIL */}
             <div className="max-w-4xl mx-auto text-center space-y-4">
               <div className="space-y-2">
@@ -1124,13 +1124,13 @@ Retorne um JSON estrito com o seguinte formato:
               </div>
 
               {/* TOGGLE SUB-TABS */}
-              <div className="max-w-md mx-auto flex items-center justify-center bg-zinc-900 p-1.5 rounded-xl border border-white/10 gap-2">
+              <div className="max-w-md mx-auto flex items-center justify-center bg-black p-1.5 rounded-xl border border-white/5 gap-2">
                 <button
                   onClick={() => setOrganogramaSubTab("visual")}
                   className={`flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
                     organogramaSubTab === "visual"
                       ? "bg-[#c5a880] text-black shadow-lg font-black"
-                      : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+                      : "text-zinc-400 hover:text-zinc-200 hover:bg-[#111]/50"
                   }`}
                 >
                   Mapa do Funil (Imagem)
@@ -1140,7 +1140,7 @@ Retorne um JSON estrito com o seguinte formato:
                   className={`flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
                     organogramaSubTab === "checklists"
                       ? "bg-[#c5a880] text-black shadow-lg font-black"
-                      : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+                      : "text-zinc-400 hover:text-zinc-200 hover:bg-[#111]/50"
                   }`}
                 >
                   Roteiros e Checklist (5 Etapas)
@@ -1163,7 +1163,7 @@ Retorne um JSON estrito com o seguinte formato:
                     {/* CARD DA ETAPA */}
                     <div
                       onClick={() => setSelectedEtapaModal(etapa)}
-                      className="w-full bg-zinc-900 border border-white/10 hover:border-[#c5a880] p-4 rounded-2xl cursor-pointer transition-all hover:scale-105 shadow-xl hover:shadow-[#c5a880]/10 flex flex-col justify-between h-52 text-left relative overflow-hidden"
+                      className="w-full bg-black border border-white/5 hover:border-[#c5a880] p-4 rounded-2xl cursor-pointer transition-all hover:scale-105 shadow-xl hover:shadow-[#c5a880]/10 flex flex-col justify-between h-52 text-left relative overflow-hidden"
                     >
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
@@ -1203,8 +1203,8 @@ Retorne um JSON estrito com o seguinte formato:
 
             {/* DETALHAMENTO EXPANDIDO SELECIONADO OU MODAL */}
             {selectedEtapaModal ? (
-              <div className="max-w-4xl mx-auto bg-zinc-900 border border-[#c5a880]/40 rounded-2xl p-6 space-y-6 shadow-2xl animate-in fade-in duration-200">
-                <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div className="max-w-4xl mx-auto bg-black border border-[#c5a880]/40 rounded-2xl p-6 space-y-6 shadow-2xl animate-in fade-in duration-200">
+                <div className="flex items-center justify-between border-b border-white/5 pb-4">
                   <div className="flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-xl bg-gradient-to-r ${selectedEtapaModal.color} flex items-center justify-center text-black font-black`}>
                       <selectedEtapaModal.icon size={22} />
@@ -1219,7 +1219,7 @@ Retorne um JSON estrito com o seguinte formato:
 
                   <button
                     onClick={() => setSelectedEtapaModal(null)}
-                    className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-xs font-bold uppercase"
+                    className="px-3 py-1.5 bg-[#111] hover:bg-zinc-700 text-zinc-300 rounded-lg text-xs font-bold uppercase"
                   >
                     Fechar
                   </button>
@@ -1235,7 +1235,7 @@ Retorne um JSON estrito com o seguinte formato:
 
                     <div className="space-y-2">
                       {selectedEtapaModal.creativeIdeas.map((idea, idx) => (
-                        <div key={idx} className="p-3 bg-zinc-950 rounded-xl border border-white/5 text-xs text-zinc-300 leading-relaxed">
+                        <div key={idx} className="p-3 bg-black rounded-xl border border-white/5 text-xs text-zinc-300 leading-relaxed">
                           💡 {idea}
                         </div>
                       ))}
@@ -1251,7 +1251,7 @@ Retorne um JSON estrito com o seguinte formato:
 
                     <div className="space-y-1.5">
                       {selectedEtapaModal.checklist.map((check, idx) => (
-                        <div key={idx} className="flex items-start gap-2.5 p-2.5 bg-zinc-950 rounded-lg border border-white/5 text-xs text-zinc-300">
+                        <div key={idx} className="flex items-start gap-2.5 p-2.5 bg-black rounded-lg border border-white/5 text-xs text-zinc-300">
                           <CheckCircle2 size={15} className="text-[#c5a880] shrink-0 mt-0.5" />
                           <span>{check}</span>
                         </div>
@@ -1260,7 +1260,7 @@ Retorne um JSON estrito com o seguinte formato:
                   </div>
 
                   {/* SCRIPTS VALIDADOS */}
-                  <div className="md:col-span-2 space-y-3 border-t border-white/10 pt-4">
+                  <div className="md:col-span-2 space-y-3 border-t border-white/5 pt-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 text-xs font-black text-[#c5a880] uppercase tracking-wider">
                         <MessageSquare size={16} />
@@ -1269,7 +1269,7 @@ Retorne um JSON estrito com o seguinte formato:
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="p-4 bg-zinc-950 rounded-xl border border-white/5 space-y-2 relative">
+                      <div className="p-4 bg-black rounded-xl border border-white/5 space-y-2 relative">
                         <div className="flex items-center justify-between">
                           <span className="text-[10px] font-black text-zinc-400 uppercase">
                             Script de Abordagem / Primeiro Contato
@@ -1287,7 +1287,7 @@ Retorne um JSON estrito com o seguinte formato:
                         </p>
                       </div>
 
-                      <div className="p-4 bg-zinc-950 rounded-xl border border-white/5 space-y-2 relative">
+                      <div className="p-4 bg-black rounded-xl border border-white/5 space-y-2 relative">
                         <div className="flex items-center justify-between">
                           <span className="text-[10px] font-black text-zinc-400 uppercase">
                             Roteiro de Reunião / Alinhamento
@@ -1309,7 +1309,7 @@ Retorne um JSON estrito com o seguinte formato:
                 </div>
               </div>
             ) : (
-              <div className="max-w-4xl mx-auto p-8 rounded-2xl bg-zinc-900/50 border border-dashed border-white/10 text-center space-y-3">
+              <div className="max-w-4xl mx-auto p-8 rounded-2xl bg-black/50 border border-dashed border-white/5 text-center space-y-3">
                 <GitFork size={32} className="text-[#c5a880] mx-auto" />
                 <h3 className="text-sm font-black text-white uppercase tracking-wider">
                   Clique em qualquer etapa acima para ver o guia detalhado

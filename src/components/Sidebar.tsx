@@ -13,7 +13,8 @@ import {
   Plus,
   FolderOpen,
   Trash2,
-  Loader2
+  Loader2,
+  Copy
 } from "lucide-react";
 
 interface SidebarProps {
@@ -75,7 +76,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   return (
-    <div className="w-[15%] bg-[#0f0f11] border-r border-zinc-800/80 flex flex-col h-full shrink-0">
+    <div className="w-[15%] bg-black border-r border-zinc-800/80 flex flex-col h-full shrink-0">
       
       {/* Header da Sidebar com Nome do Projeto Editável e Badge */}
       <div className="p-6 flex flex-col gap-3 border-b border-zinc-800 shrink-0 relative">
@@ -99,7 +100,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
         
         {/* Nome do projeto editável */}
-        <div className="mt-1 flex items-center justify-between gap-1 bg-zinc-950/60 p-2 rounded-lg border border-zinc-900 group">
+        <div className="mt-1 flex items-center justify-between gap-1 bg-black/60 p-2 rounded-lg border border-zinc-900 group">
           {isEditingName ? (
             <input
               type="text"
@@ -129,13 +130,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
         
         {showProjectSelector && !isEditingName && (
-          <div className="absolute top-full left-6 right-6 mt-1 bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto">
+          <div className="absolute top-full left-6 right-6 mt-1 bg-black border border-zinc-800 rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto">
             {store.projectsList.map((p) => {
               const isProjGenerating = !!store.generatingProjectIds?.[p.id];
               return (
                 <div
                   key={p.id}
-                  className={`w-full flex items-center justify-between px-3 py-2 border-b border-zinc-800/50 hover:bg-zinc-800 transition-colors cursor-pointer ${
+                  className={`w-full flex items-center justify-between px-3 py-2 border-b border-zinc-800/50 hover:bg-[#111] transition-colors cursor-pointer ${
                     p.id === store.activeProjectId ? "text-[#ad8330]" : "text-zinc-400"
                   }`}
                   onClick={() => {
@@ -150,13 +151,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       {p.name}
                     </span>
                   </div>
-                  <button
-                    onClick={(e) => handleDeleteProject(p.id, e)}
-                    className="text-zinc-600 hover:text-red-500 transition-colors p-1 shrink-0"
-                    title="Deletar Conversa"
-                  >
-                    <Trash2 size={10} />
-                  </button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (p.id !== store.activeProjectId) {
+                          store.loadProjectById(p.id);
+                        }
+                        store.duplicateProject();
+                        setShowProjectSelector(false);
+                        showToast(`Projeto "${p.name}" duplicado!`, "success");
+                      }}
+                      className="text-zinc-600 hover:text-[#ad8330] transition-colors p-1"
+                      title="Duplicar Conversa / Configuração"
+                    >
+                      <Copy size={10} />
+                    </button>
+                    <button
+                      onClick={(e) => handleDeleteProject(p.id, e)}
+                      className="text-zinc-600 hover:text-red-500 transition-colors p-1"
+                      title="Deletar Conversa"
+                    >
+                      <Trash2 size={10} />
+                    </button>
+                  </div>
                 </div>
               );
             })}
@@ -185,7 +203,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className={`w-full flex items-center justify-between px-4 py-3.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
               tab.active || (activeMenuTab === tab.name)
                 ? "bg-[#ad8330]/10 text-[#ad8330] border border-[#ad8330]/20 ring-1 ring-[#ad8330]/10"
-                : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/40"
+                : "text-zinc-400 hover:text-zinc-200 hover:bg-black/40"
             }`}
           >
             <span>{tab.name}</span>
@@ -215,7 +233,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Painel de Status da API */}
       <div className="p-5 border-t border-zinc-800 bg-black/15 shrink-0 space-y-3.5">
         {/* Status Indicator */}
-        <div className="flex items-center justify-between px-3.5 py-3 rounded-lg bg-zinc-900/60 border border-zinc-800">
+        <div className="flex items-center justify-between px-3.5 py-3 rounded-lg bg-black/60 border border-zinc-800">
           <div className="flex items-center gap-2">
             <span className={`w-2 h-2 rounded-full ${store.apiStatus === "Online" ? "bg-emerald-500 animate-pulse" : "bg-red-500"} shrink-0`} />
             <span className="text-[10px] font-black uppercase tracking-widest text-zinc-450">
@@ -229,7 +247,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <button
           onClick={handleTestToken}
           disabled={isTesting}
-          className="w-full flex items-center justify-center gap-2 py-2.5 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 active:scale-95 disabled:opacity-50 text-[10px] font-extrabold uppercase tracking-widest text-zinc-300 rounded-lg transition-all cursor-pointer"
+          className="w-full flex items-center justify-center gap-2 py-2.5 bg-black border border-zinc-800 hover:border-zinc-700 active:scale-95 disabled:opacity-50 text-[10px] font-extrabold uppercase tracking-widest text-zinc-300 rounded-lg transition-all cursor-pointer"
         >
           {isTesting ? (
             <>

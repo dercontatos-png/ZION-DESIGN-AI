@@ -1,11 +1,55 @@
 const fs = require('fs');
 let code = fs.readFileSync('server.ts', 'utf8');
 
-const oldDir = `Analise qualquer imagem de referência e diga como reproduzir aquela excelência técnica em Midjourney, Leonardo AI ou outras plataformas, mapeando a estrutura perfeita para cada botão/opção da arte.\`;`;
+const target1 = `            h.files.forEach((file: any) => {
+              if (file.name) {
+                parts.push({ text: \`[Imagem Anexada: \${file.name}]\` });
+              }
+              parts.push({
+                inlineData: {
+                  data: file.data,
+                  mimeType: file.type
+                }
+              });
+            });`;
 
-const newDir = `Analise qualquer imagem de referência e diga como reproduzir aquela excelência técnica em Midjourney, Leonardo AI ou outras plataformas, mapeando a estrutura perfeita para cada botão/opção da arte.
+const replacement1 = `            h.files.forEach((file: any) => {
+              if (file.name) {
+                parts.push({ text: \`[Imagem Anexada: \${file.name}]\` });
+              }
+              parts.push({
+                inlineData: {
+                  data: file.data,
+                  mimeType: file.mimeType || file.type || "image/jpeg"
+                }
+              });
+            });`;
 
-MUITO IMPORTANTE: No final da sua resposta, você DEVE SEMPRE incluir um bloco \`\`\`json { ... } \`\`\` contendo os parâmetros atualizados da interface, como "desativarSujeito": true/false, "noPeople": true/false, "cores", "promptCenario", "estiloVisualCustom", etc. O usuário EXIGE que você faça o preenchimento automático de TUDO que vocês conversarem!\`;`;
+code = code.replace(target1, replacement1);
 
-code = code.replace(oldDir, newDir);
+const target2 = `        attachedFiles.forEach((file: any) => {
+          if (file.name) {
+            userParts.push({ text: \`[Imagem Anexada: \${file.name}]\` });
+          }
+          userParts.push({
+            inlineData: {
+              data: file.data,
+              mimeType: file.type
+            }
+          });
+        });`;
+
+const replacement2 = `        attachedFiles.forEach((file: any) => {
+          if (file.name) {
+            userParts.push({ text: \`[Imagem Anexada: \${file.name}]\` });
+          }
+          userParts.push({
+            inlineData: {
+              data: file.data,
+              mimeType: file.mimeType || file.type || "image/jpeg"
+            }
+          });
+        });`;
+
+code = code.replace(target2, replacement2);
 fs.writeFileSync('server.ts', code);

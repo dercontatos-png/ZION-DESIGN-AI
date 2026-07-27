@@ -93,6 +93,7 @@ export interface ProjectConfig {
   modelId?: string;
   enableEstiloVisual?: boolean;
   estiloVisualCustom?: string;
+  seedUsuario?: string; // Seed para geração de imagens (Imagem 3)
 }
 
 export interface ImageResponse {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Tv, Scan, Download, Copy, Check, Sparkles, RefreshCw, Layers, Sliders, Play, Info, FileCode, Upload, Image as ImageIcon } from 'lucide-react';
+import { X, Tv, Scan, Download, Copy, Check, Sparkles, RefreshCw, Layers, Sliders, Play, Info, FileCode, Upload, Image as ImageIcon, Wand2 } from 'lucide-react';
 import JSZip from "jszip";
 
 interface VmixXamlModalProps {
@@ -989,6 +989,9 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
   const [isCopied, setIsCopied] = useState(false);
   const [isPlayingAnimation, setIsPlayingAnimation] = useState(false);
 
+  // Dedicated prompt state for GC generation/refinement
+  const [customPrompt, setCustomPrompt] = useState(additionalPrompt || promptCenario || "");
+
   const [containerWidth, setContainerWidth] = useState(1920);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
@@ -1016,6 +1019,11 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
   // Pre-fill parameters and trigger auto-scanning when modal is opened with a reference image
   useEffect(() => {
     if (isOpen) {
+      if (additionalPrompt || promptCenario) {
+        const combinedPrompt = ((additionalPrompt || "") + " " + (promptCenario || "")).trim();
+        if (combinedPrompt) setCustomPrompt(combinedPrompt);
+      }
+
       const detectedStyle = autoDetectLayoutStyle(selectedTemplateId, camadasTexto, additionalPrompt, promptCenario);
       
       // Pull initial text from camadasTexto
@@ -1065,7 +1073,7 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
         barHeight: 170,
         barCornerRadius: 12,
         barOpacity: 0.95,
-        summary: "Clique no botão 'Gerar GC via IA' para analisar a imagem e gerar o código.",
+        summary: "Clique no botão 'Gerar / Refinar GC com IA' para analisar e gerar a estrutura XAML.",
         generatedXaml: undefined
       });
 
@@ -1075,10 +1083,11 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
     }
   }, [isOpen, selectedTemplateId, imageBase64]);
 
-  const handleScanImage = async (styleHint?: any) => {
+  const handleScanImage = async (styleHint?: any, promptOverride?: string) => {
     if (!imageBase64) return;
     setIsScanning(true);
-    showToast("Escanear referência com Visão Computacional Gemini...", "info");
+    const activePromptToSend = promptOverride !== undefined ? promptOverride : customPrompt;
+    showToast("Escanear referência e instrução prompt com Visão IA...", "info");
 
     try {
       const hintStr = typeof styleHint === "string" ? styleHint : undefined;
@@ -1089,7 +1098,8 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
         body: JSON.stringify({ 
           imageBase64, 
           customApiKey,
-          layoutStyleHint: hint
+          layoutStyleHint: hint,
+          userPrompt: activePromptToSend
         })
       });
 
@@ -1115,7 +1125,7 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
         hasLogo: data.hasLogo ?? prev.hasLogo ?? true,
         logoUrl: data.logoUrl || imageBase64 || prev.logoUrl
       }));
-      showToast("Estrutura do GC escaneada e XAML gerado!", "success");
+      showToast("Estrutura do GC atualizada pela IA e XAML gerado!", "success");
       handlePlayPreviewAnimation();
     } catch (e: any) {
       console.warn("Scan failed, using extracted defaults:", e.message);
@@ -1216,7 +1226,7 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
       <div className="bg-[#0a0a0c] border border-[#c5a880]/30 rounded-2xl w-full max-w-5xl overflow-hidden shadow-2xl flex flex-col max-h-[92vh]">
         
         {/* Header */}
-        <div className="p-4 sm:px-6 bg-zinc-950 border-b border-white/10 flex items-center justify-between shrink-0">
+        <div className="p-4 sm:px-6 bg-black border-b border-white/5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 p-0.5 shadow-lg flex items-center justify-center text-black font-extrabold">
               <Tv size={20} />
@@ -1240,7 +1250,7 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
 
           <button
             onClick={onClose}
-            className="p-2 rounded-xl bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all cursor-pointer"
+            className="p-2 rounded-xl bg-black border border-white/5 text-zinc-400 hover:text-white hover:bg-[#111] transition-all cursor-pointer"
           >
             <X size={18} />
           </button>
@@ -1249,9 +1259,65 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
         {/* Content Body */}
         <div className="flex-1 grid grid-cols-1 md:grid-cols-12 min-h-0 overflow-y-auto custom-scrollbar p-4 sm:p-6 gap-6">
           
-          {/* Left Column: Image Reference & Scan Form */}
-          <div className="md:col-span-5 space-y-5 flex flex-col">
+          {/* Left Column: Prompt Input, Image Reference & Scan Form */}
+          <div className="md:col-span-5 space-y-4 flex flex-col">
             
+            {/* 1. Dedicated Prompt Box for GC IA */}
+            <div className="bg-[#121318] border border-[#c5a880]/30 p-4 rounded-xl space-y-3 shadow-lg relative overflow-hidden">
+              <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                <span className="text-xs font-black text-[#c5a880] uppercase tracking-wider flex items-center gap-1.5">
+                  <Wand2 size={14} className="text-[#c5a880]" />
+                  Prompt & Instruções do GC (IA)
+                </span>
+                <span className="text-[9.5px] font-bold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20 uppercase tracking-widest">
+                  Customizador
+                </span>
+              </div>
+
+              <div className="space-y-2">
+                <textarea
+                  value={customPrompt}
+                  onChange={(e) => setCustomPrompt(e.target.value)}
+                  placeholder="Digite aqui instruções para a IA personalizar o seu GC vMix... (ex: 'Crie uma tarja dupla azul escuro com detalhes em dourado, tag AO VIVO em vermelho e caixa alta')"
+                  className="w-full bg-black/90 border border-white/10 rounded-lg p-3 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#c5a880] transition-colors resize-y min-h-[85px] leading-relaxed"
+                />
+
+                {/* Presets / Sugestões de Prompt Rápido */}
+                <div className="space-y-1.5">
+                  <span className="text-[9.5px] font-bold text-zinc-400 uppercase tracking-wider block">
+                    Sugestões de Prompt Rápido:
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { label: "Jornalismo Ao Vivo", prompt: "GC de Jornalismo Ao Vivo, cores azul marinho e dourado, tarja dupla com nome e cargo" },
+                      { label: "Placar Esportivo", prompt: "Placar Esportivo de Futebol com escudos, placar 2x1, relógio 1T e badge AO VIVO" },
+                      { label: "Plantão Urgente", prompt: "GC de Plantão Urgente, cores vermelho e amarelo vibrante, caixa alta" },
+                      { label: "Podcast Minimalista", prompt: "Lower Third clean e moderno para Podcast, cantos arredondados, tons neutros e sofisticados" }
+                    ].map((item, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setCustomPrompt(item.prompt)}
+                        className="text-[9.5px] font-bold px-2.5 py-1 rounded-md bg-black/60 hover:bg-[#c5a880]/20 text-zinc-300 hover:text-[#c5a880] border border-white/10 hover:border-[#c5a880]/40 transition-all cursor-pointer"
+                      >
+                        + {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Button: Apply Prompt & Generate XAML */}
+              <button
+                onClick={() => handleScanImage(scanData.layoutStyle, customPrompt)}
+                disabled={isScanning}
+                className="w-full py-3 px-4 bg-gradient-to-r from-amber-500 via-[#c5a880] to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-black text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg active:scale-98 disabled:opacity-50 border border-amber-300/30"
+              >
+                <Sparkles size={15} className={isScanning ? "animate-spin" : "animate-pulse"} />
+                <span>{isScanning ? "IA Gerando GC com Prompt..." : "Gerar / Refinar GC com este Prompt"}</span>
+              </button>
+            </div>
+
             {/* Reference Image Box with Scan Effect */}
             <div className="space-y-2">
               <div className="flex justify-between items-center text-xs font-bold uppercase tracking-wider text-zinc-400">
@@ -1259,7 +1325,7 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
                   <Layers size={13} className="text-[#c5a880]" /> Imagem Gerada (Referência GC)
                 </span>
                 <button
-                  onClick={handleScanImage}
+                  onClick={() => handleScanImage(scanData.layoutStyle, customPrompt)}
                   disabled={isScanning}
                   className="text-[10px] text-[#c5a880] hover:underline font-bold flex items-center gap-1 cursor-pointer disabled:opacity-50"
                 >
@@ -1268,7 +1334,7 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
                 </button>
               </div>
 
-              <div className="relative aspect-video rounded-xl overflow-hidden border border-white/10 bg-black shadow-lg group">
+              <div className="relative aspect-video rounded-xl overflow-hidden border border-white/5 bg-black shadow-lg group">
                 {imageBase64 ? (
                   <img src={imageBase64} alt="GC Referência" className="w-full h-full object-cover" />
                 ) : (
@@ -1279,29 +1345,19 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
 
                 {/* Radar Scanning animation overlay */}
                 {isScanning && (
-                  <div className="absolute inset-0 bg-sky-950/40 backdrop-blur-[2px] flex flex-col items-center justify-center gap-2">
+                  <div className="absolute inset-0 bg-sky-950/40 backdrop-blur-[2px] flex flex-col items-center justify-center gap-2 z-20">
                     <div className="w-full h-1 bg-gradient-to-r from-transparent via-sky-400 to-transparent absolute top-0 animate-bounce shadow-[0_0_15px_#38bdf8]" />
                     <Scan size={32} className="text-sky-400 animate-spin" />
                     <span className="text-[10px] font-black text-sky-200 uppercase tracking-widest bg-black/80 px-3 py-1 rounded-full border border-sky-400/30">
-                      Analisando cores e fontes...
+                      Analisando cores, fontes e prompt...
                     </span>
                   </div>
                 )}
               </div>
-
-              {/* HIGH-VISIBILITY MANUAL GENERATE BUTTON */}
-              <button
-                onClick={() => handleScanImage(scanData.layoutStyle)}
-                disabled={isScanning}
-                className="w-full py-3.5 px-4 bg-gradient-to-r from-amber-500 to-[#c5a880] hover:from-amber-400 hover:to-amber-500 text-black font-black text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2.5 cursor-pointer shadow-xl active:scale-98 disabled:opacity-50 border border-amber-400/20"
-              >
-                <Scan size={15} className={isScanning ? "animate-spin" : "animate-pulse"} />
-                <span>{isScanning ? "IA Analisando & Gerando..." : "Gerar com Inteligência Artificial"}</span>
-              </button>
             </div>
 
             {/* Extracted Parameters Editor */}
-            <div className="bg-zinc-950 border border-white/5 p-4 rounded-xl space-y-3.5 flex-1">
+            <div className="bg-black border border-white/5 p-4 rounded-xl space-y-3.5 flex-1">
               <div className="flex items-center justify-between border-b border-white/5 pb-2">
                 <span className="text-xs font-extrabold text-white uppercase tracking-wider flex items-center gap-1.5">
                   <Sliders size={13} className="text-[#c5a880]" /> Parâmetros do XAML
@@ -1310,23 +1366,30 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
               </div>
 
               <div className="space-y-3 text-xs">
-                {/* Layout Type (Defined Automatically) */}
+                {/* Layout Type Selector */}
                 <div>
-                  <label className="block text-[10px] font-black text-[#c5a880] uppercase mb-1 flex items-center gap-1.5">
-                    <Sparkles size={11} className="text-[#c5a880] animate-pulse" />
-                    Modelo / Formato (Definido Automático)
-                  </label>
-                  <div className="w-full bg-[#18181b]/80 border border-[#c5a880]/30 rounded-lg px-3 py-2.5 text-white font-bold flex items-center justify-between">
-                    <span className="capitalize">
-                      {scanData.layoutStyle === "esportes" ? "Placar de Esportes / Placar" : 
-                       scanData.layoutStyle === "urgente" ? "Alerta Urgente / Plantão" : 
-                       scanData.layoutStyle === "clean" ? "Clean Minimalista" : "Jornalismo / Tarja Dupla"}
+                  <label className="block text-[10px] font-black text-[#c5a880] uppercase mb-1 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Sparkles size={11} className="text-[#c5a880] animate-pulse" />
+                      Modelo / Formato do GC
                     </span>
-                    <span className="text-[9px] font-black bg-[#c5a880]/20 text-[#c5a880] px-2 py-0.5 rounded uppercase tracking-wider">IA DETECTOU</span>
-                  </div>
-                  <p className="text-[9.5px] text-zinc-500 mt-1">
-                    ✓ Identificado e formatado automaticamente pela IA a partir do design da imagem.
-                  </p>
+                    <span className="text-[9px] font-bold text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded uppercase">
+                      Editável
+                    </span>
+                  </label>
+                  <select
+                    value={scanData.layoutStyle}
+                    onChange={(e) => {
+                      const newStyle = e.target.value as "jornalismo" | "esportes" | "urgente" | "clean";
+                      setScanData({ ...scanData, layoutStyle: newStyle });
+                    }}
+                    className="w-full bg-[#18181b] border border-[#c5a880]/40 rounded-lg px-3 py-2 text-white font-bold text-xs focus:outline-none focus:border-[#c5a880] cursor-pointer"
+                  >
+                    <option value="jornalismo">Jornalismo / Tarja Dupla com Nome & Cargo</option>
+                    <option value="esportes">Placar de Esportes / Placar & Relógio</option>
+                    <option value="urgente">Alerta Urgente / Plantão de Notícias</option>
+                    <option value="clean">Clean / Minimalista (Podcast)</option>
+                  </select>
                 </div>
 
                 {/* Conditional Inputs for Sports Placar */}
@@ -1338,7 +1401,7 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
                         type="text"
                         value={scanData.roundText}
                         onChange={(e) => setScanData({ ...scanData, roundText: e.target.value })}
-                        className="w-full bg-zinc-900 border border-white/10 rounded-lg px-3 py-2 text-white font-medium focus:outline-none focus:border-[#c5a880]"
+                        className="w-full bg-black border border-white/5 rounded-lg px-3 py-2 text-white font-medium focus:outline-none focus:border-[#c5a880]"
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-2">
@@ -1348,7 +1411,7 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
                           type="text"
                           value={scanData.homeTeam}
                           onChange={(e) => setScanData({ ...scanData, homeTeam: e.target.value })}
-                          className="w-full bg-zinc-900 border border-white/10 rounded-lg px-3 py-2 text-white font-medium focus:outline-none focus:border-[#c5a880]"
+                          className="w-full bg-black border border-white/5 rounded-lg px-3 py-2 text-white font-medium focus:outline-none focus:border-[#c5a880]"
                         />
                       </div>
                       <div>
@@ -1357,7 +1420,7 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
                           type="text"
                           value={scanData.awayTeam}
                           onChange={(e) => setScanData({ ...scanData, awayTeam: e.target.value })}
-                          className="w-full bg-zinc-900 border border-white/10 rounded-lg px-3 py-2 text-white font-medium focus:outline-none focus:border-[#c5a880]"
+                          className="w-full bg-black border border-white/5 rounded-lg px-3 py-2 text-white font-medium focus:outline-none focus:border-[#c5a880]"
                         />
                       </div>
                     </div>
@@ -1368,7 +1431,7 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
                           type="text"
                           value={scanData.score}
                           onChange={(e) => setScanData({ ...scanData, score: e.target.value })}
-                          className="w-full bg-zinc-900 border border-white/10 rounded-lg px-3 py-2 text-white font-medium focus:outline-none focus:border-[#c5a880]"
+                          className="w-full bg-black border border-white/5 rounded-lg px-3 py-2 text-white font-medium focus:outline-none focus:border-[#c5a880]"
                         />
                       </div>
                       <div>
@@ -1377,7 +1440,7 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
                           type="text"
                           value={scanData.clock}
                           onChange={(e) => setScanData({ ...scanData, clock: e.target.value })}
-                          className="w-full bg-zinc-900 border border-white/10 rounded-lg px-3 py-2 text-white font-medium focus:outline-none focus:border-[#c5a880]"
+                          className="w-full bg-black border border-white/5 rounded-lg px-3 py-2 text-white font-medium focus:outline-none focus:border-[#c5a880]"
                         />
                       </div>
                     </div>
@@ -1391,7 +1454,7 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
                         type="text"
                         value={scanData.gcTitle}
                         onChange={(e) => setScanData({ ...scanData, gcTitle: e.target.value })}
-                        className="w-full bg-zinc-900 border border-white/10 rounded-lg px-3 py-2 text-white font-medium focus:outline-none focus:border-[#c5a880]"
+                        className="w-full bg-black border border-white/5 rounded-lg px-3 py-2 text-white font-medium focus:outline-none focus:border-[#c5a880]"
                       />
                     </div>
 
@@ -1401,7 +1464,7 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
                         type="text"
                         value={scanData.gcSubtitle}
                         onChange={(e) => setScanData({ ...scanData, gcSubtitle: e.target.value })}
-                        className="w-full bg-zinc-900 border border-white/10 rounded-lg px-3 py-2 text-white font-medium focus:outline-none focus:border-[#c5a880]"
+                        className="w-full bg-black border border-white/5 rounded-lg px-3 py-2 text-white font-medium focus:outline-none focus:border-[#c5a880]"
                       />
                     </div>
 
@@ -1411,7 +1474,7 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
                         type="text"
                         value={scanData.gcBadge}
                         onChange={(e) => setScanData({ ...scanData, gcBadge: e.target.value })}
-                        className="w-full bg-zinc-900 border border-white/10 rounded-lg px-3 py-2 text-white font-medium focus:outline-none focus:border-[#c5a880]"
+                        className="w-full bg-black border border-white/5 rounded-lg px-3 py-2 text-white font-medium focus:outline-none focus:border-[#c5a880]"
                       />
                     </div>
                   </>
@@ -1427,21 +1490,21 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
                       type="checkbox"
                       checked={scanData.hasLogo}
                       onChange={(e) => setScanData({ ...scanData, hasLogo: e.target.checked })}
-                      className="w-4 h-4 rounded bg-zinc-900 border-white/20 text-[#c5a880] focus:ring-0 cursor-pointer"
+                      className="w-4 h-4 rounded bg-black border-white/20 text-[#c5a880] focus:ring-0 cursor-pointer"
                     />
                   </div>
 
                   {scanData.hasLogo && (
                     <>
-                      <div className="flex items-center gap-2 bg-zinc-900 p-2 rounded-lg border border-white/10">
+                      <div className="flex items-center gap-2 bg-black p-2 rounded-lg border border-white/5">
                         {scanData.logoUrl ? (
-                          <img src={scanData.logoUrl} alt="Logo GC" className="w-8 h-8 object-contain rounded bg-black/40 p-1 border border-white/10" />
+                          <img src={scanData.logoUrl} alt="Logo GC" className="w-8 h-8 object-contain rounded bg-black/40 p-1 border border-white/5" />
                         ) : (
-                          <div className="w-8 h-8 rounded bg-zinc-800 flex items-center justify-center text-zinc-500">
+                          <div className="w-8 h-8 rounded bg-[#111] flex items-center justify-center text-zinc-500">
                             <ImageIcon size={14} />
                           </div>
                         )}
-                        <label className="flex-1 py-1 px-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[10px] font-bold rounded cursor-pointer transition-all flex items-center justify-center gap-1 border border-white/10">
+                        <label className="flex-1 py-1 px-2.5 bg-[#111] hover:bg-zinc-700 text-zinc-200 text-[10px] font-bold rounded cursor-pointer transition-all flex items-center justify-center gap-1 border border-white/5">
                           <Upload size={11} />
                           <span>{scanData.logoUrl ? "Alterar Logo..." : "Carregar Logo..."}</span>
                           <input type="file" accept="image/*" onChange={handleLogoFileUpload} className="hidden" />
@@ -1449,7 +1512,7 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
                       </div>
 
                       {/* Configuração do Nome do Campo para vMix */}
-                      <div className="space-y-2 bg-zinc-950 p-2.5 rounded-lg border border-white/5 mt-2 animate-in slide-in-from-top-1 duration-200 text-xs">
+                      <div className="space-y-2 bg-black p-2.5 rounded-lg border border-white/5 mt-2 animate-in slide-in-from-top-1 duration-200 text-xs">
                         {scanData.layoutStyle === "esportes" ? (
                           <div className="space-y-2">
                             <div>
@@ -1458,7 +1521,7 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
                                 type="text"
                                 value={scanData.homeLogoName || "HomeLogo"}
                                 onChange={(e) => setScanData({ ...scanData, homeLogoName: e.target.value })}
-                                className="w-full bg-zinc-900 border border-white/10 rounded px-2.5 py-1.5 text-[11px] text-white font-medium focus:outline-none focus:border-[#c5a880]"
+                                className="w-full bg-black border border-white/5 rounded px-2.5 py-1.5 text-[11px] text-white font-medium focus:outline-none focus:border-[#c5a880]"
                                 placeholder="HomeLogo"
                               />
                             </div>
@@ -1468,7 +1531,7 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
                                 type="text"
                                 value={scanData.awayLogoName || "AwayLogo"}
                                 onChange={(e) => setScanData({ ...scanData, awayLogoName: e.target.value })}
-                                className="w-full bg-zinc-900 border border-white/10 rounded px-2.5 py-1.5 text-[11px] text-white font-medium focus:outline-none focus:border-[#c5a880]"
+                                className="w-full bg-black border border-white/5 rounded px-2.5 py-1.5 text-[11px] text-white font-medium focus:outline-none focus:border-[#c5a880]"
                                 placeholder="AwayLogo"
                               />
                             </div>
@@ -1480,7 +1543,7 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
                               type="text"
                               value={scanData.logoName || "Logo"}
                               onChange={(e) => setScanData({ ...scanData, logoName: e.target.value })}
-                              className="w-full bg-zinc-900 border border-white/10 rounded px-2.5 py-1.5 text-[11px] text-white font-medium focus:outline-none focus:border-[#c5a880]"
+                              className="w-full bg-black border border-white/5 rounded px-2.5 py-1.5 text-[11px] text-white font-medium focus:outline-none focus:border-[#c5a880]"
                               placeholder="Logo"
                             />
                           </div>
@@ -1497,7 +1560,7 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
                 <div className="grid grid-cols-2 gap-2.5 pt-1 border-t border-white/5">
                   <div>
                     <label className="block text-[9px] font-bold text-zinc-500 uppercase mb-1">Cor Principal (Barra)</label>
-                    <div className="flex items-center gap-2 bg-zinc-900 p-1.5 rounded-lg border border-white/10">
+                    <div className="flex items-center gap-2 bg-black p-1.5 rounded-lg border border-white/5">
                       <input
                         type="color"
                         value={scanData.primaryColor}
@@ -1510,7 +1573,7 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
 
                   <div>
                     <label className="block text-[9px] font-bold text-zinc-500 uppercase mb-1">Cor Secundária (Fundo)</label>
-                    <div className="flex items-center gap-2 bg-zinc-900 p-1.5 rounded-lg border border-white/10">
+                    <div className="flex items-center gap-2 bg-black p-1.5 rounded-lg border border-white/5">
                       <input
                         type="color"
                         value={scanData.secondaryColor}
@@ -1523,7 +1586,7 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
 
                   <div>
                     <label className="block text-[9px] font-bold text-zinc-500 uppercase mb-1">Cor do Fundo do Badge</label>
-                    <div className="flex items-center gap-2 bg-zinc-900 p-1.5 rounded-lg border border-white/10">
+                    <div className="flex items-center gap-2 bg-black p-1.5 rounded-lg border border-white/5">
                       <input
                         type="color"
                         value={scanData.badgeBgColor}
@@ -1536,7 +1599,7 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
 
                   <div>
                     <label className="block text-[9px] font-bold text-zinc-500 uppercase mb-1">Detalhe / Faixa Glow</label>
-                    <div className="flex items-center gap-2 bg-zinc-900 p-1.5 rounded-lg border border-white/10">
+                    <div className="flex items-center gap-2 bg-black p-1.5 rounded-lg border border-white/5">
                       <input
                         type="color"
                         value={scanData.accentColor}
@@ -1557,14 +1620,14 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
           <div className="md:col-span-7 flex flex-col space-y-4">
             
             {/* Tab selector */}
-            <div className="flex items-center justify-between border-b border-white/10 pb-2">
+            <div className="flex items-center justify-between border-b border-white/5 pb-2">
               <div className="flex gap-2">
                 <button
                   onClick={() => setActiveTab("preview")}
                   className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
                     activeTab === "preview"
                       ? "bg-[#c5a880] text-black shadow-md"
-                      : "bg-zinc-900 text-zinc-400 hover:text-white"
+                      : "bg-black text-zinc-400 hover:text-white"
                   }`}
                 >
                   <Play size={13} /> Prévia Interativa vMix
@@ -1574,7 +1637,7 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
                   className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
                     activeTab === "xaml_code"
                       ? "bg-[#c5a880] text-black shadow-md"
-                      : "bg-zinc-900 text-zinc-400 hover:text-white"
+                      : "bg-black text-zinc-400 hover:text-white"
                   }`}
                 >
                   <FileCode size={13} /> Código .XAML WPF (Canvas)
@@ -1593,10 +1656,10 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
             {/* TAB 1: PREVIEW */}
             {activeTab === "preview" && (
               <div className="flex-1 flex flex-col space-y-3">
-                <div className="relative aspect-video w-full rounded-2xl border border-white/10 overflow-hidden bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:16px_16px] bg-slate-950 shadow-2xl flex flex-col justify-end p-4 sm:p-6">
+                <div className="relative aspect-video w-full rounded-2xl border border-white/5 overflow-hidden bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:16px_16px] bg-slate-950 shadow-2xl flex flex-col justify-end p-4 sm:p-6">
                   
                   {/* Broadcast Screen Background Overlay simulation */}
-                  <div className="absolute top-3 left-3 bg-black/70 border border-white/10 backdrop-blur-md px-2.5 py-1 rounded text-[9px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1.5 z-10">
+                  <div className="absolute top-3 left-3 bg-black/70 border border-white/5 backdrop-blur-md px-2.5 py-1 rounded text-[9px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1.5 z-10">
                     <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
                     vMix Output Preview [1080p Canvas]
                   </div>
@@ -1679,7 +1742,7 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
 
                 </div>
 
-                <div className="p-3 bg-zinc-950 border border-white/5 rounded-xl space-y-1">
+                <div className="p-3 bg-black border border-white/5 rounded-xl space-y-1">
                   <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1">
                     <Info size={12} className="text-[#c5a880]" /> Resumo Técnico do GC:
                   </span>
@@ -1697,14 +1760,14 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
                   <span>Estrutura WPF XAML Root Canvas (vMix Title)</span>
                   <button
                     onClick={handleCopyCode}
-                    className="flex items-center gap-1.5 px-3 py-1 bg-zinc-900 border border-white/10 hover:bg-zinc-800 text-zinc-300 rounded-lg text-[10px] cursor-pointer transition-all"
+                    className="flex items-center gap-1.5 px-3 py-1 bg-black border border-white/5 hover:bg-[#111] text-zinc-300 rounded-lg text-[10px] cursor-pointer transition-all"
                   >
                     {isCopied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
                     <span>{isCopied ? "Copiado!" : "Copiar Código"}</span>
                   </button>
                 </div>
 
-                <pre className="p-4 bg-zinc-950 border border-white/10 rounded-xl text-[11px] font-mono text-emerald-300 leading-relaxed overflow-x-auto max-h-[280px] custom-scrollbar select-text">
+                <pre className="p-4 bg-black border border-white/5 rounded-xl text-[11px] font-mono text-emerald-300 leading-relaxed overflow-x-auto max-h-[280px] custom-scrollbar select-text">
                   {xamlCode}
                 </pre>
               </div>
@@ -1744,7 +1807,7 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
 
                 <button
                   onClick={handleDownloadWpfXaml}
-                  className="py-3.5 px-4 bg-zinc-900 border border-amber-400/30 text-amber-400 font-black text-[11px] uppercase tracking-wider rounded-xl hover:bg-zinc-800 active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-2"
+                  className="py-3.5 px-4 bg-black border border-amber-400/30 text-amber-400 font-black text-[11px] uppercase tracking-wider rounded-xl hover:bg-[#111] active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-2"
                 >
                   <Play size={14} className="animate-pulse" />
                   <span>Baixar vMix Animado</span>
@@ -1753,7 +1816,7 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
 
               <button
                 onClick={handleCopyCode}
-                className="w-full py-2.5 bg-zinc-950 border border-white/5 text-zinc-400 font-bold text-[10.5px] uppercase tracking-wider rounded-lg hover:text-white hover:bg-zinc-900 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                className="w-full py-2.5 bg-black border border-white/5 text-zinc-400 font-bold text-[10.5px] uppercase tracking-wider rounded-lg hover:text-white hover:bg-black transition-all cursor-pointer flex items-center justify-center gap-1.5"
               >
                 <Copy size={13} />
                 <span>Copiar Código XAML Completo</span>

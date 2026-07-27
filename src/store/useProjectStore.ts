@@ -15,6 +15,7 @@ interface ProjectStoreState extends ProjectConfig {
   lastSystemInstruction: string;
   setLastSystemInstruction: (s: string) => void;
   setLastGeneratedPrompt: (p: string) => void;
+  setSeedUsuario: (seed: string | null) => void;
   chatDrawerOpen: boolean;
   chatActiveAssistantId: string | null;
   setChatDrawerOpen: (isOpen: boolean) => void;
@@ -58,6 +59,7 @@ interface ProjectStoreState extends ProjectConfig {
 
   // Projetos
   createProject: () => void;
+  duplicateProject: () => string;
   deleteProject: (id: string) => void;
   loadProjectById: (id: string) => void;
   initProjectsList: () => void;
@@ -147,6 +149,7 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
   lastGeneratedPrompt: "",
   lastSystemInstruction: "",
   setLastSystemInstruction: (s) => set({ lastSystemInstruction: s }),
+  setSeedUsuario: (seed) => set({ seedUsuario: seed }),
   chatDrawerOpen: false,
   chatActiveAssistantId: null,
   setChatDrawerOpen: (isOpen) => set({ chatDrawerOpen: isOpen }),
@@ -428,6 +431,48 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
         lastSystemInstruction: ""
       };
     });
+  },
+
+  duplicateProject: () => {
+    const id = `proj_${Date.now()}`;
+    const state = get();
+    const activeProj = state.projectsList.find((p) => p.id === state.activeProjectId);
+    const baseName = activeProj ? activeProj.name : "Projeto";
+    const name = `${baseName} (Cópia)`;
+
+    const configKeys = Object.keys(defaultConfig) as (keyof ProjectConfig)[];
+    const duplicatedConfig = {} as ProjectConfig;
+    configKeys.forEach((key) => {
+      const val = state[key] !== undefined ? state[key] : defaultConfig[key];
+      try {
+        (duplicatedConfig as any)[key] = val !== undefined && val !== null ? JSON.parse(JSON.stringify(val)) : val;
+      } catch (e) {
+        (duplicatedConfig as any)[key] = val;
+      }
+    });
+
+    const newProj = {
+      id,
+      name,
+      config: duplicatedConfig,
+      galeria: []
+    };
+
+    set((state) => {
+      const newList = [newProj, ...state.projectsList];
+      saveProjectsToLocalStorage(newList);
+      return {
+        projectsList: newList,
+        activeProjectId: id,
+        ...duplicatedConfig,
+        galeriaImages: [],
+        activeImageIndex: 0,
+        lastGeneratedPrompt: "",
+        lastSystemInstruction: ""
+      };
+    });
+
+    return id;
   },
 
   deleteProject: (id) => {

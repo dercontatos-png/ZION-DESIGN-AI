@@ -123,7 +123,7 @@ const formatMessage = (text: string) => {
     
     if (isHeader) {
       return (
-        <div key={i} className="my-2 p-3 bg-zinc-950 border border-zinc-800 rounded-lg text-[12px] text-zinc-300 font-semibold">
+        <div key={i} className="my-2 p-3 bg-black border border-zinc-800 rounded-lg text-[12px] text-zinc-300 font-semibold">
            {line}
         </div>
       );
@@ -1742,7 +1742,7 @@ Exemplo de JSON de saída:
           setChatDrawerOpen(!chatDrawerOpen);
           setIsDropdownOpen(false);
         }}
-        className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-[0_4px_24px_rgba(197,168,128,0.25)] flex items-center justify-center cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 bg-[#0a0a0a]/90 border border-[#c5a880]/30 hover:border-[#c5a880]/60 text-[#c5a880]"
+        className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-[0_4px_24px_rgba(197,168,128,0.25)] flex items-center justify-center cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 bg-black/90 border border-[#c5a880]/30 hover:border-[#c5a880]/60 text-[#c5a880]"
         title="Assistente ZION AI"
       >
         {chatDrawerOpen ? <X size={20} className="text-[#c5a880]" /> : <MessageSquare size={20} className="text-[#c5a880]" />}
@@ -1750,14 +1750,14 @@ Exemplo de JSON de saída:
       </button>
 
       {chatDrawerOpen && (
-        <div className={`border border-zinc-800 bg-[#070708] shadow-[0_25px_80px_rgba(0,0,0,0.95)] flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-300 transition-all ${isExpanded ? 'fixed inset-0 z-[100] rounded-none w-full h-full' : 'fixed sm:absolute bottom-20 right-4 left-4 sm:left-auto sm:right-0 sm:bottom-[68px] rounded-2xl w-[calc(100vw-32px)] sm:w-[440px] h-[560px] max-h-[82vh]'}`}>
+        <div className={`border border-zinc-800 bg-black shadow-[0_25px_80px_rgba(0,0,0,0.95)] flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-300 transition-all ${isExpanded ? 'fixed inset-0 z-[100] rounded-none w-full h-full' : 'fixed sm:absolute bottom-20 right-4 left-4 sm:left-auto sm:right-0 sm:bottom-[68px] rounded-2xl w-[calc(100vw-32px)] sm:w-[440px] h-[560px] max-h-[82vh]'}`}>
           
           {/* Header */}
           <div className="shrink-0 p-3 sm:p-4 border-b border-zinc-900 bg-black/90 backdrop-blur-md relative z-20">
             <div className="flex items-center justify-between gap-2">
               <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="flex items-center gap-2.5 flex-1 min-w-0 group cursor-pointer rounded-xl p-1 -ml-1 hover:bg-zinc-900/80 transition-colors"
+                className="flex items-center gap-2.5 flex-1 min-w-0 group cursor-pointer rounded-xl p-1 -ml-1 hover:bg-black/80 transition-colors"
               >
                 <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 shadow-lg text-black bg-[#ad8330]">
                   {activeAssistant.icon}
@@ -1773,14 +1773,14 @@ Exemplo de JSON de saída:
               <div className="flex items-center gap-1 shrink-0">
                 <button
                   onClick={() => setShowModelSettings(!showModelSettings)}
-                  className={`p-1.5 sm:p-2 rounded-lg transition-all cursor-pointer ${showModelSettings ? "text-[#ad8330] bg-zinc-900" : "text-zinc-400 hover:text-[#ad8330] hover:bg-zinc-900"}`}
+                  className={`p-1.5 sm:p-2 rounded-lg transition-all cursor-pointer ${showModelSettings ? "text-[#ad8330] bg-black" : "text-zinc-400 hover:text-[#ad8330] hover:bg-black"}`}
                   title="Modelo de IA"
                 >
                   <Settings size={14} />
                 </button>
                 <button
                   onClick={() => setIsExpanded(!isExpanded)}
-                  className="p-1.5 sm:p-2 rounded-lg transition-all cursor-pointer text-zinc-400 hover:text-[#ad8330] hover:bg-zinc-900 hidden sm:flex"
+                  className="p-1.5 sm:p-2 rounded-lg transition-all cursor-pointer text-zinc-400 hover:text-[#ad8330] hover:bg-black hidden sm:flex"
                   title={isExpanded ? "Restaurar tamanho" : "Expandir painel"}
                 >
                   {isExpanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
@@ -1788,7 +1788,7 @@ Exemplo de JSON de saída:
 
                 <button
                   onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-                  className={`p-1.5 sm:p-2 rounded-lg transition-all cursor-pointer ${isHistoryOpen ? "text-[#ad8330] bg-zinc-900" : "text-zinc-400 hover:text-[#ad8330] hover:bg-zinc-900"}`}
+                  className={`p-1.5 sm:p-2 rounded-lg transition-all cursor-pointer ${isHistoryOpen ? "text-[#ad8330] bg-black" : "text-zinc-400 hover:text-[#ad8330] hover:bg-black"}`}
                   title="Histórico de Conversas"
                 >
                   <FolderOpen size={14} />
@@ -1801,21 +1801,21 @@ Exemplo de JSON de saída:
                     setActiveClient(null);
                     showToast("Nova conversa iniciada. Configurações zeradas.", "success");
                   }}
-                  className="p-1.5 sm:p-2 text-zinc-400 hover:text-[#ad8330] hover:bg-zinc-900 rounded-lg transition-all cursor-pointer"
+                  className="p-1.5 sm:p-2 text-zinc-400 hover:text-[#ad8330] hover:bg-black rounded-lg transition-all cursor-pointer"
                   title="Nova Conversa"
                 >
                   <Plus size={14} />
                 </button>
                 <button
                   onClick={clearChat}
-                  className="p-1.5 sm:p-2 text-zinc-400 hover:text-[#ad8330] hover:bg-zinc-900 rounded-lg transition-all cursor-pointer"
+                  className="p-1.5 sm:p-2 text-zinc-400 hover:text-[#ad8330] hover:bg-black rounded-lg transition-all cursor-pointer"
                   title="Limpar mensagens"
                 >
                   <Trash2 size={14} />
                 </button>
                 <button
                   onClick={() => setChatDrawerOpen(false)}
-                  className="p-1.5 sm:p-2 text-zinc-400 hover:text-white hover:bg-zinc-900 rounded-lg transition-all cursor-pointer"
+                  className="p-1.5 sm:p-2 text-zinc-400 hover:text-white hover:bg-black rounded-lg transition-all cursor-pointer"
                   title="Fechar"
                 >
                   <X size={14} />
@@ -1825,19 +1825,19 @@ Exemplo de JSON de saída:
 
             {/* Model Settings Dropdown */}
             {showModelSettings && (
-              <div className="absolute top-14 left-3 right-3 z-50 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl p-3">
+              <div className="absolute top-14 left-3 right-3 z-50 bg-black border border-zinc-800 rounded-xl shadow-2xl p-3">
                 <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400 mb-2 block">Selecione o Modelo</label>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setSelectedModel("gemini-3.6-flash")}
-                    className={`flex-1 flex flex-col items-center justify-center py-2.5 text-xs rounded-lg transition-all ${selectedModel === "gemini-3.6-flash" ? "bg-[#ad8330]/20 text-[#d4af37] border border-[#ad8330]/50 font-bold" : "bg-zinc-950 text-zinc-400 hover:text-zinc-200 border border-white/5"}`}
+                    className={`flex-1 flex flex-col items-center justify-center py-2.5 text-xs rounded-lg transition-all ${selectedModel === "gemini-3.6-flash" ? "bg-[#ad8330]/20 text-[#d4af37] border border-[#ad8330]/50 font-bold" : "bg-black text-zinc-400 hover:text-zinc-200 border border-white/5"}`}
                   >
                     <Zap size={16} className="mb-1" />
                     Gemini Flash
                   </button>
                   <button
                     onClick={() => setSelectedModel("gemini-3-pro-image")}
-                    className={`flex-1 flex flex-col items-center justify-center py-2.5 text-xs rounded-lg transition-all ${selectedModel === "gemini-3-pro-image" ? "bg-[#ad8330]/20 text-[#d4af37] border border-[#ad8330]/50 font-bold" : "bg-zinc-950 text-zinc-400 hover:text-zinc-200 border border-white/5"}`}
+                    className={`flex-1 flex flex-col items-center justify-center py-2.5 text-xs rounded-lg transition-all ${selectedModel === "gemini-3-pro-image" ? "bg-[#ad8330]/20 text-[#d4af37] border border-[#ad8330]/50 font-bold" : "bg-black text-zinc-400 hover:text-zinc-200 border border-white/5"}`}
                   >
                     <Sparkles size={16} className="mb-1" />
                     Gemini Pro
@@ -1848,7 +1848,7 @@ Exemplo de JSON de saída:
             
             {/* History Dropdown */}
             {isHistoryOpen && (
-              <div className="absolute top-14 right-3 left-3 z-50 bg-[#0a0a0a] border border-zinc-800 rounded-xl shadow-2xl p-3 max-h-60 overflow-y-auto custom-scrollbar">
+              <div className="absolute top-14 right-3 left-3 z-50 bg-black border border-zinc-800 rounded-xl shadow-2xl p-3 max-h-60 overflow-y-auto custom-scrollbar">
                 <div className="flex justify-between items-center mb-2.5 pb-2 border-b border-zinc-800">
                   <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">Suas Conversas Salvas</span>
                 </div>
@@ -1858,7 +1858,7 @@ Exemplo de JSON de saída:
                     return (
                       <div 
                         key={p.id} 
-                        className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors ${p.id === store.activeProjectId ? "bg-[#ad8330]/10 border border-[#ad8330]/30" : "hover:bg-zinc-900 border border-transparent"}`}
+                        className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors ${p.id === store.activeProjectId ? "bg-[#ad8330]/10 border border-[#ad8330]/30" : "hover:bg-black border border-transparent"}`}
                         onClick={() => {
                           store.loadProjectById(p.id);
                           setIsHistoryOpen(false);
@@ -1901,8 +1901,8 @@ Exemplo de JSON de saída:
                     title={a.label}
                     className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center shrink-0 text-white transition-all duration-200 cursor-pointer relative group ${
                       isActive 
-                        ? "ring-1 ring-[#ad8330] scale-105 shadow-md bg-zinc-900" 
-                        : "opacity-50 hover:opacity-100 hover:scale-105 bg-zinc-950"
+                        ? "ring-1 ring-[#ad8330] scale-105 shadow-md bg-black" 
+                        : "opacity-50 hover:opacity-100 hover:scale-105 bg-black"
                     }`}
                   >
                     <span className={isActive ? "text-[#ad8330]" : "text-zinc-400"}>{a.icon}</span>
@@ -1915,7 +1915,7 @@ Exemplo de JSON de saída:
           {/* Dropdown */}
           {isDropdownOpen && (
             <div className="absolute top-[115px] left-3 right-3 z-50 bg-[#09090b] border border-zinc-800 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.95)] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-              <div className="p-2.5 border-b border-zinc-900 bg-zinc-950">
+              <div className="p-2.5 border-b border-zinc-900 bg-black">
                 <p className="text-[9px] font-black text-[#ad8330] uppercase tracking-widest">Escolha o Assistente Ideal</p>
               </div>
               <div className="overflow-y-auto max-h-[260px] sm:max-h-[320px] divide-y divide-zinc-900/60 custom-scrollbar">
@@ -1923,7 +1923,7 @@ Exemplo de JSON de saída:
                   <button
                     key={a.id}
                     onClick={() => switchAgent(a)}
-                    className={`w-full px-3.5 py-2.5 flex items-center gap-3 hover:bg-zinc-900/60 transition-colors cursor-pointer text-left ${
+                    className={`w-full px-3.5 py-2.5 flex items-center gap-3 hover:bg-black/60 transition-colors cursor-pointer text-left ${
                       activeAssistant.id === a.id ? "bg-[#c5a880]/10" : ""
                     }`}
                   >
@@ -1950,7 +1950,7 @@ Exemplo de JSON de saída:
 
           {/* Messages Area */}
           <div
-            className="flex-1 overflow-y-auto p-3.5 sm:p-4 space-y-3.5 relative bg-zinc-950/30 custom-scrollbar"
+            className="flex-1 overflow-y-auto p-3.5 sm:p-4 space-y-3.5 relative bg-black/30 custom-scrollbar"
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
@@ -1993,7 +1993,7 @@ Exemplo de JSON de saída:
                         const isImg = file.type.startsWith("image/");
                         if (isImg) {
                           return (
-                            <div key={fIdx} className="rounded-xl overflow-hidden border border-zinc-800 w-40 shadow-md bg-zinc-900/60 p-1">
+                            <div key={fIdx} className="rounded-xl overflow-hidden border border-zinc-800 w-40 shadow-md bg-black/60 p-1">
                               <img src={`data:${file.type};base64,${file.data}`} className="w-full h-24 object-cover rounded-lg" alt={file.name} />
                             </div>
                           );
@@ -2001,7 +2001,7 @@ Exemplo de JSON de saída:
                         return (
                           <div 
                             key={fIdx} 
-                            className="flex items-center gap-2 px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-xl w-44 shadow-sm text-left"
+                            className="flex items-center gap-2 px-3 py-2 bg-black border border-zinc-800 rounded-xl w-44 shadow-sm text-left"
                           >
                             <File size={15} className="text-[#ad8330] shrink-0" />
                             <div className="flex-1 min-w-0">
@@ -2017,7 +2017,7 @@ Exemplo de JSON de saída:
                   <div
                     className={`max-w-[92%] sm:max-w-[88%] px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl text-xs sm:text-[13px] leading-relaxed font-medium shadow-sm transition-all duration-200 break-words overflow-hidden ${
                       isModel 
-                        ? "bg-zinc-900/60 border border-zinc-800/80 text-zinc-200 rounded-bl-sm" 
+                        ? "bg-black/60 border border-zinc-800/80 text-zinc-200 rounded-bl-sm" 
                         : "bg-[#ad8330]/20 border border-[#ad8330]/30 text-white rounded-br-sm"
                     }`}
                   >
@@ -2027,7 +2027,7 @@ Exemplo de JSON de saída:
                   {isModel && (
                     <button
                       onClick={() => applyModelMessageToEditor(index, msg.content)}
-                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider cursor-pointer transition-all hover:bg-zinc-800 border border-zinc-800 text-zinc-400 hover:text-[#ad8330]"
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider cursor-pointer transition-all hover:bg-[#111] border border-zinc-800 text-zinc-400 hover:text-[#ad8330]"
                     >
                       <Zap size={10} />
                       <span>Aplicar no Editor</span>
@@ -2042,7 +2042,7 @@ Exemplo de JSON de saída:
                 <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-black bg-[#ad8330]">
                   {activeAssistant.icon}
                 </div>
-                <div className="px-4 py-3 bg-zinc-900/70 border border-zinc-800 rounded-2xl rounded-tl-sm flex items-center gap-1.5 shadow-sm">
+                <div className="px-4 py-3 bg-black/70 border border-zinc-800 rounded-2xl rounded-tl-sm flex items-center gap-1.5 shadow-sm">
                   <span className="w-1.5 h-1.5 rounded-full animate-bounce bg-[#ad8330]" style={{ animationDelay: "0ms" }} />
                   <span className="w-1.5 h-1.5 rounded-full animate-bounce bg-[#ad8330]" style={{ animationDelay: "150ms" }} />
                   <span className="w-1.5 h-1.5 rounded-full animate-bounce bg-[#ad8330]" style={{ animationDelay: "300ms" }} />
@@ -2063,7 +2063,7 @@ Exemplo de JSON de saída:
                   return (
                     <div 
                       key={idx} 
-                      className="flex flex-col gap-1 p-2 bg-zinc-900 border border-zinc-800 rounded-xl animate-in slide-in-from-bottom-2 duration-150"
+                      className="flex flex-col gap-1 p-2 bg-black border border-zinc-800 rounded-xl animate-in slide-in-from-bottom-2 duration-150"
                     >
                       <div className="flex items-center gap-2">
                         {isImg ? (
@@ -2081,7 +2081,7 @@ Exemplo de JSON de saída:
                         
                         <button 
                           onClick={() => removeAttachedFile(idx)} 
-                          className="p-1 hover:bg-zinc-800 rounded-lg text-zinc-500 hover:text-red-500 transition-colors cursor-pointer shrink-0"
+                          className="p-1 hover:bg-[#111] rounded-lg text-zinc-500 hover:text-red-500 transition-colors cursor-pointer shrink-0"
                         >
                           <X size={11} />
                         </button>
@@ -2096,7 +2096,7 @@ Exemplo de JSON de saída:
                           className={`px-1.5 py-0.5 text-[9px] font-bold rounded-md transition-all shrink-0 cursor-pointer ${
                             file.category === "info" || !file.category
                               ? "bg-zinc-700 text-white shadow-sm border border-zinc-600"
-                              : "bg-zinc-800 text-zinc-400 hover:text-white"
+                              : "bg-[#111] text-zinc-400 hover:text-white"
                           }`}
                           title="Arquivo/Informação para leitura da IA (NÃO altera o editor)"
                         >
@@ -2110,7 +2110,7 @@ Exemplo de JSON de saída:
                               className={`px-1.5 py-0.5 text-[9px] font-bold rounded-md transition-all shrink-0 cursor-pointer ${
                                 file.category === "logo"
                                   ? "bg-[#ad8330] text-black shadow-sm font-extrabold"
-                                  : "bg-zinc-800 text-zinc-400 hover:text-white"
+                                  : "bg-[#111] text-zinc-400 hover:text-white"
                               }`}
                               title="Usar esta imagem como Logotipo da Marca no Editor"
                             >
@@ -2122,7 +2122,7 @@ Exemplo de JSON de saída:
                               className={`px-1.5 py-0.5 text-[9px] font-bold rounded-md transition-all shrink-0 cursor-pointer ${
                                 file.category === "design"
                                   ? "bg-[#ad8330] text-black shadow-sm font-extrabold"
-                                  : "bg-zinc-800 text-zinc-400 hover:text-white"
+                                  : "bg-[#111] text-zinc-400 hover:text-white"
                               }`}
                               title="Usar esta imagem como Referência de Layout/Design no Editor"
                             >
@@ -2134,7 +2134,7 @@ Exemplo de JSON de saída:
                               className={`px-1.5 py-0.5 text-[9px] font-bold rounded-md transition-all shrink-0 cursor-pointer ${
                                 file.category === "subject"
                                   ? "bg-emerald-600 text-white shadow-sm font-bold"
-                                  : "bg-zinc-800 text-zinc-400 hover:text-white"
+                                  : "bg-[#111] text-zinc-400 hover:text-white"
                               }`}
                               title="Usar esta imagem como Sujeito/Pessoa Principal no Editor"
                             >
@@ -2146,7 +2146,7 @@ Exemplo de JSON de saída:
                               className={`px-1.5 py-0.5 text-[9px] font-bold rounded-md transition-all shrink-0 cursor-pointer ${
                                 file.category === "scene"
                                   ? "bg-purple-600 text-white shadow-sm font-bold"
-                                  : "bg-zinc-800 text-zinc-400 hover:text-white"
+                                  : "bg-[#111] text-zinc-400 hover:text-white"
                               }`}
                               title="Usar esta imagem como Cenário/Fundo no Editor"
                             >
@@ -2210,7 +2210,7 @@ Exemplo de JSON de saída:
                 type="button"
                 onClick={() => fileInputInfoRef.current?.click()}
                 disabled={isUploading}
-                className="flex items-center gap-1 px-2 py-1 rounded-lg border border-zinc-800 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 text-[10px] font-semibold transition-all cursor-pointer shrink-0 whitespace-nowrap disabled:opacity-40"
+                className="flex items-center gap-1 px-2 py-1 rounded-lg border border-zinc-800 bg-black hover:bg-[#111] text-zinc-300 text-[10px] font-semibold transition-all cursor-pointer shrink-0 whitespace-nowrap disabled:opacity-40"
                 title="Anexar arquivos de texto, PDFs ou imagens informativas para a IA ler"
               >
                 <Paperclip size={11} className="text-zinc-400 shrink-0" />
@@ -2272,7 +2272,7 @@ Exemplo de JSON de saída:
                 onPaste={handlePaste}
                 placeholder={`Digite sua mensagem...`}
                 rows={1}
-                className="flex-1 bg-zinc-900/80 border border-zinc-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-[#ad8330]/60 resize-none font-medium leading-relaxed transition-colors"
+                className="flex-1 bg-black/80 border border-zinc-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-[#ad8330]/60 resize-none font-medium leading-relaxed transition-colors"
                 style={{ minHeight: "38px", maxHeight: "90px", scrollbarWidth: "none" }}
               />
               <button

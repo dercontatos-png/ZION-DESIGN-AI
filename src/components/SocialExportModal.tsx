@@ -287,10 +287,14 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
   const handleDownload = () => {
     if (!optimizedImage) return;
     
+    const platformLabel = platform === "whatsapp" ? "WhatsApp_Status" : "Instagram_Feed";
+    const typeLabel = imageType !== "auto" ? imageType : "HD";
+    const fileName = `Zion_Otimizado_${platformLabel}_${typeLabel}_${Date.now().toString().slice(-4)}.jpg`;
+
     // Create direct download
     const link = document.createElement("a");
     link.href = optimizedImage;
-    link.download = `Zion_Otimizado_${platform}_${Date.now()}.jpg`;
+    link.download = fileName;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -323,7 +327,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
       >
         
          {/* Left Column: Visual Comparison Preview */}
-         <div className={`flex-1 bg-zinc-950 p-4 md:p-6 flex flex-col justify-between border-b md:border-b-0 md:border-r border-zinc-900 min-h-0 overflow-y-auto ${currentTab === "preview" ? "flex" : "hidden md:flex"}`}>
+         <div className={`flex-1 bg-black p-4 md:p-6 flex flex-col justify-between border-b md:border-b-0 md:border-r border-zinc-900 min-h-0 overflow-y-auto ${currentTab === "preview" ? "flex" : "hidden md:flex"}`}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-black uppercase tracking-widest text-[#ad8330] bg-[#ad8330]/10 px-2 py-1 rounded">
@@ -333,7 +337,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
             </div>
             
             {/* Display toggle for Mobile adjustments */}
-            <div className="flex bg-zinc-900 rounded-lg p-0.5 border border-zinc-800">
+            <div className="flex bg-black rounded-lg p-0.5 border border-zinc-800">
               <button 
                 onClick={() => setCurrentTab("preview")}
                 className={`px-3 py-1 text-[10px] font-bold uppercase rounded-md transition-all ${
@@ -359,7 +363,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             onWheel={handleWheel}
-            className={`flex-1 flex flex-col items-center justify-center relative rounded-xl overflow-hidden bg-black/80 border ${isDragging ? "border-emerald-500 bg-zinc-950/90" : "border-zinc-900"} p-4 min-h-[280px] md:min-h-[420px] transition-all`}
+            className={`flex-1 flex flex-col items-center justify-center relative rounded-xl overflow-hidden bg-black/80 border ${isDragging ? "border-emerald-500 bg-black/90" : "border-zinc-900"} p-4 min-h-[280px] md:min-h-[420px] transition-all`}
           >
             {isProcessing && (
               <div className="absolute inset-0 z-20 bg-black/85 backdrop-blur-sm flex flex-col items-center justify-center space-y-4 p-6 text-center">
@@ -368,7 +372,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
                   <span className="text-[10px] font-black uppercase tracking-widest text-zinc-300 block">
                     Otimizando imagem para {platform === "instagram" ? "Instagram" : "WhatsApp"}...
                   </span>
-                  <div className="w-full h-1 bg-zinc-800 rounded-full overflow-hidden">
+                  <div className="w-full h-1 bg-[#111] rounded-full overflow-hidden">
                     <div 
                       className="h-full bg-[#ad8330] transition-all duration-300" 
                       style={{ width: `${processingProgress}%` }}
@@ -395,7 +399,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
             )}
 
             {/* Interactive Zoom Floating Overlay */}
-            <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 bg-zinc-900/95 backdrop-blur-sm border border-zinc-800 px-2.5 py-1.5 rounded-xl shadow-lg select-none">
+            <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 bg-black/95 backdrop-blur-sm border border-zinc-800 px-2.5 py-1.5 rounded-xl shadow-lg select-none">
               <button 
                 type="button"
                 onClick={() => {
@@ -403,7 +407,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
                   setZoom(nz);
                   if (nz === 1) setPanOffset({ x: 0, y: 0 });
                 }}
-                className="w-5 h-5 rounded bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center text-zinc-300 text-xs font-black active:scale-90 transition-all cursor-pointer"
+                className="w-5 h-5 rounded bg-[#111] hover:bg-zinc-700 flex items-center justify-center text-zinc-300 text-xs font-black active:scale-90 transition-all cursor-pointer"
                 title="Diminuir Zoom"
               >
                 -
@@ -417,7 +421,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
                   const nz = Math.min(4, zoom + 0.5);
                   setZoom(nz);
                 }}
-                className="w-5 h-5 rounded bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center text-zinc-300 text-xs font-black active:scale-90 transition-all cursor-pointer"
+                className="w-5 h-5 rounded bg-[#111] hover:bg-zinc-700 flex items-center justify-center text-zinc-300 text-xs font-black active:scale-90 transition-all cursor-pointer"
                 title="Aumentar Zoom"
               >
                 +
@@ -442,11 +446,11 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
             </div>
 
             {/* View Mode Interactive Tabs */}
-            <div className="flex bg-zinc-900/80 rounded-xl p-1 border border-zinc-800/80 mb-4 z-10">
+            <div className="flex bg-black/80 rounded-xl p-1 border border-zinc-800/80 mb-4 z-10">
               <button
                 onClick={() => setPreviewMode("original")}
                 className={`px-3.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
-                  previewMode === "original" ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-zinc-300"
+                  previewMode === "original" ? "bg-[#111] text-white" : "text-zinc-500 hover:text-zinc-300"
                 }`}
               >
                 Original
@@ -472,7 +476,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
             {/* Displaying Image according to Mode with Zoom and Pan */}
             <div className="relative w-full flex-1 flex items-center justify-center min-h-0 overflow-hidden">
               {!baseImage && !activeImage ? (
-                <label className="flex flex-col items-center justify-center gap-3 p-8 border border-dashed border-zinc-800 hover:border-[#ad8330]/40 hover:bg-[#ad8330]/5 rounded-2xl cursor-pointer max-w-sm text-center transition-all bg-zinc-950/25">
+                <label className="flex flex-col items-center justify-center gap-3 p-8 border border-dashed border-zinc-800 hover:border-[#ad8330]/40 hover:bg-[#ad8330]/5 rounded-2xl cursor-pointer max-w-sm text-center transition-all bg-black/25">
                   <ImageIcon size={32} className="text-[#ad8330]" />
                   <div className="space-y-1">
                     <span className="text-[10px] font-black text-zinc-300 uppercase tracking-widest block">Nenhuma imagem carregada</span>
@@ -591,7 +595,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
             </div>
 
             {/* Descriptive text helper */}
-            <div className="mt-4 px-3 py-1.5 bg-zinc-900/40 border border-zinc-800/50 rounded-lg text-center max-w-xl">
+            <div className="mt-4 px-3 py-1.5 bg-black/40 border border-zinc-800/50 rounded-lg text-center max-w-xl">
               <p className="text-[10px] font-medium text-zinc-400 leading-normal">
                 {getPreviewModeDescription()}
               </p>
@@ -629,7 +633,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
               </div>
               <button 
                 onClick={onClose} 
-                className="w-8 h-8 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-white transition-all hover:border-zinc-700"
+                className="w-8 h-8 rounded-full bg-black border border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-white transition-all hover:border-zinc-700"
               >
                 <X size={14} />
               </button>
@@ -641,7 +645,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
                 Origem da Imagem
               </span>
               <div className="flex flex-col gap-2">
-                <label className="flex items-center justify-center gap-2 p-2.5 rounded-xl border border-dashed border-zinc-800 hover:border-[#ad8330]/40 hover:bg-[#ad8330]/5 bg-zinc-900/20 text-zinc-400 hover:text-zinc-200 cursor-pointer transition-all text-[10px] font-black uppercase tracking-wider">
+                <label className="flex items-center justify-center gap-2 p-2.5 rounded-xl border border-dashed border-zinc-800 hover:border-[#ad8330]/40 hover:bg-[#ad8330]/5 bg-black/20 text-zinc-400 hover:text-zinc-200 cursor-pointer transition-all text-[10px] font-black uppercase tracking-wider">
                   <ImageIcon size={13} className="text-[#ad8330]" />
                   <span>Escolher qualquer Imagem</span>
                   <input 
@@ -660,7 +664,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
                       setMetadata(null);
                       showToast("Restaurada a imagem original do projeto.", "info");
                     }}
-                    className="w-full py-1.5 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-zinc-900/30 text-[9px] font-bold text-zinc-400 hover:text-zinc-200 uppercase tracking-wider transition-all"
+                    className="w-full py-1.5 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-black/30 text-[9px] font-bold text-zinc-400 hover:text-zinc-200 uppercase tracking-wider transition-all"
                   >
                     Restaurar Imagem do Projeto
                   </button>
@@ -679,7 +683,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
                   className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-all ${
                     platform === "instagram"
                     ? "bg-gradient-to-br from-purple-950/20 via-[#ad8330]/10 to-[#ad8330]/15 border-[#ad8330] text-[#ad8330]"
-                    : "bg-zinc-900/50 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200"
+                    : "bg-black/50 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200"
                   }`}
                 >
                   <Smartphone size={16} className="mb-1 text-zinc-300" />
@@ -691,7 +695,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
                   className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-all ${
                     platform === "whatsapp"
                     ? "bg-gradient-to-br from-emerald-950/20 to-emerald-900/20 border-emerald-500 text-emerald-400"
-                    : "bg-zinc-900/50 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200"
+                    : "bg-black/50 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200"
                   }`}
                 >
                   <Send size={16} className="mb-1 text-zinc-300" />
@@ -719,8 +723,8 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
                     onClick={() => setImageType(item.id as any)}
                     className={`w-full flex items-start gap-2.5 p-2.5 rounded-xl border text-left transition-all ${
                       imageType === item.id
-                      ? "bg-zinc-900 border-[#ad8330] text-zinc-100"
-                      : "bg-zinc-900/30 border-zinc-800/80 text-zinc-400 hover:border-zinc-800 hover:text-zinc-300"
+                      ? "bg-black border-[#ad8330] text-zinc-100"
+                      : "bg-black/30 border-zinc-800/80 text-zinc-400 hover:border-zinc-800 hover:text-zinc-300"
                     }`}
                   >
                     <div className="mt-0.5">
@@ -753,7 +757,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
               </div>
 
               {/* Toggle Recreate Background */}
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-zinc-900/40 border border-zinc-800/80">
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-black/40 border border-zinc-800/80">
                 <div className="flex flex-col">
                   <span className="text-[10px] font-bold text-zinc-200">Reconstruir Fundo</span>
                   <span className="text-[8px] text-zinc-500">Gradiente 100% contínuo e limpo</span>
@@ -762,19 +766,19 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
                   type="checkbox" 
                   checked={recreateBackground}
                   onChange={(e) => setRecreateBackground(e.target.checked)}
-                  className="w-4 h-4 rounded border-zinc-700 bg-zinc-800 text-[#ad8330] focus:ring-[#ad8330]"
+                  className="w-4 h-4 rounded border-zinc-700 bg-[#111] text-[#ad8330] focus:ring-[#ad8330]"
                 />
               </div>
 
               {recreateBackground && (
-                <div className="space-y-3 p-3 bg-zinc-900/20 border border-zinc-900 rounded-xl animate-in slide-in-from-top-2 duration-200">
+                <div className="space-y-3 p-3 bg-black/20 border border-zinc-900 rounded-xl animate-in slide-in-from-top-2 duration-200">
                   {/* Background Colors */}
                   <div className="space-y-1.5">
                     <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-wider block">Cores do Fundo Gradiente</span>
                     <div className="grid grid-cols-2 gap-2">
                       <div className="flex flex-col gap-1">
                         <span className="text-[8px] text-zinc-500">Cor Principal</span>
-                        <div className="flex items-center gap-1.5 bg-zinc-950 p-1.5 rounded-lg border border-zinc-800">
+                        <div className="flex items-center gap-1.5 bg-black p-1.5 rounded-lg border border-zinc-800">
                           <input 
                             type="color" 
                             value={bgColor}
@@ -799,7 +803,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
                       </div>
                       <div className="flex flex-col gap-1">
                         <span className="text-[8px] text-zinc-500">Cor Central</span>
-                        <div className="flex items-center gap-1.5 bg-zinc-950 p-1.5 rounded-lg border border-zinc-800">
+                        <div className="flex items-center gap-1.5 bg-black p-1.5 rounded-lg border border-zinc-800">
                           <input 
                             type="color" 
                             value={bgGradientCenter}
@@ -826,7 +830,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
                   </div>
 
                   {/* Auto Adjust via IA Toggle */}
-                  <div className="flex items-center justify-between p-2 rounded-lg bg-zinc-950/60 border border-zinc-800/60 mb-2">
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-black/60 border border-zinc-800/60 mb-2">
                     <div className="flex flex-col">
                       <span className="text-[9px] font-bold text-zinc-300">Ajuste Automático via IA</span>
                       <span className="text-[8px] text-zinc-500">Definir feather e suavização com base na análise</span>
@@ -835,7 +839,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
                       type="checkbox" 
                       checked={autoParameters}
                       onChange={(e) => setAutoParameters(e.target.checked)}
-                      className="w-3.5 h-3.5 rounded border-zinc-700 bg-zinc-800 text-[#ad8330] focus:ring-[#ad8330]"
+                      className="w-3.5 h-3.5 rounded border-zinc-700 bg-[#111] text-[#ad8330] focus:ring-[#ad8330]"
                     />
                   </div>
 
@@ -853,7 +857,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
                       value={featherWidth}
                       disabled={autoParameters}
                       onChange={(e) => setFeatherWidth(Number(e.target.value))}
-                      className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-[#ad8330] disabled:cursor-not-allowed"
+                      className="w-full h-1 bg-[#111] rounded-lg appearance-none cursor-pointer accent-[#ad8330] disabled:cursor-not-allowed"
                     />
                   </div>
 
@@ -871,14 +875,14 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
                       value={edgeSmoothing}
                       disabled={autoParameters}
                       onChange={(e) => setEdgeSmoothing(Number(e.target.value))}
-                      className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-[#ad8330] disabled:cursor-not-allowed"
+                      className="w-full h-1 bg-[#111] rounded-lg appearance-none cursor-pointer accent-[#ad8330] disabled:cursor-not-allowed"
                     />
                   </div>
                 </div>
               )}
 
               {/* Toggle Gemini Vision Corrections */}
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-zinc-900/40 border border-zinc-800/80">
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-black/40 border border-zinc-800/80">
                 <div className="flex flex-col">
                   <span className="text-[10px] font-bold text-zinc-200">Correção Inteligente via IA</span>
                   <span className="text-[8px] text-zinc-500">Corrige ruídos, reconstrói blocos vazios/falhas e suaviza banding</span>
@@ -887,14 +891,14 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
                   type="checkbox" 
                   checked={localCorrections}
                   onChange={(e) => setLocalCorrections(e.target.checked)}
-                  className="w-4 h-4 rounded border-zinc-700 bg-zinc-800 text-[#ad8330] focus:ring-[#ad8330]"
+                  className="w-4 h-4 rounded border-zinc-700 bg-[#111] text-[#ad8330] focus:ring-[#ad8330]"
                 />
               </div>
             </div>
 
             {/* Interactive metadata details */}
             {metadata && (
-              <div className="bg-zinc-900/40 border border-zinc-800 p-3.5 rounded-xl space-y-2">
+              <div className="bg-black/40 border border-zinc-800 p-3.5 rounded-xl space-y-2">
                 
                 {/* Banding Verification Status Alert */}
                 {metadata.bandingVerification && (

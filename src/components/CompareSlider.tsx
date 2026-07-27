@@ -34,7 +34,7 @@ export function CompareSlider({ before, after }: { before: string; after: string
   return (
     <div 
       ref={containerRef}
-      className="relative w-full h-full select-none overflow-hidden flex items-center justify-center bg-zinc-950 touch-none cursor-ew-resize"
+      className="relative w-full h-full select-none overflow-hidden flex items-center justify-center bg-black touch-none cursor-ew-resize"
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
@@ -57,13 +57,13 @@ export function CompareSlider({ before, after }: { before: string; after: string
           className="absolute inset-y-0 w-0.5 bg-amber-500 pointer-events-none z-10 flex items-center justify-center"
           style={{ left: `${sliderPos}%`, transform: 'translateX(-50%)' }}
         >
-          <div className="w-8 h-8 rounded-full bg-zinc-900 shadow-xl flex items-center justify-center border-2 border-amber-500">
+          <div className="w-8 h-8 rounded-full bg-black shadow-xl flex items-center justify-center border-2 border-amber-500">
             <MoveHorizontal size={14} className="text-amber-500" />
           </div>
         </div>
         
         {/* Labels */}
-        <div className="absolute top-4 left-4 px-3 py-1.5 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 text-white font-black tracking-widest text-[10px] uppercase z-10 pointer-events-none">Antes</div>
+        <div className="absolute top-4 left-4 px-3 py-1.5 bg-black/60 backdrop-blur-md rounded-lg border border-white/5 text-white font-black tracking-widest text-[10px] uppercase z-10 pointer-events-none">Antes</div>
         <div className="absolute top-4 right-4 px-3 py-1.5 bg-amber-500/20 backdrop-blur-md rounded-lg border border-amber-500/50 text-amber-500 font-black tracking-widest text-[10px] uppercase z-10 pointer-events-none">Depois (Refinado)</div>
       </div>
     </div>

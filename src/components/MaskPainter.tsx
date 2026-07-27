@@ -165,7 +165,7 @@ export const MaskPainter: React.FC<MaskPainterProps> = ({ imageUrl, onConfirm, o
   return (
     <div className="fixed inset-0 z-[110] bg-[#09090b] flex flex-col font-sans select-none overflow-hidden">
       {/* Top Header Controls */}
-      <div className="h-16 border-b border-white/10 bg-zinc-950/90 backdrop-blur-md flex items-center justify-between px-4 sm:px-6 shrink-0 z-20">
+      <div className="h-16 border-b border-white/5 bg-black/90 backdrop-blur-md flex items-center justify-between px-4 sm:px-6 shrink-0 z-20">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-[#c5a880]/20 border border-[#c5a880]/40 flex items-center justify-center text-[#c5a880]">
             <PenTool size={16} />
@@ -177,7 +177,7 @@ export const MaskPainter: React.FC<MaskPainterProps> = ({ imageUrl, onConfirm, o
         </div>
 
         {/* Center Brush Controls */}
-        <div className="flex items-center gap-3 bg-zinc-900/80 border border-white/5 rounded-xl px-3 py-1.5">
+        <div className="flex items-center gap-3 bg-black/80 border border-white/5 rounded-xl px-3 py-1.5">
           <button
             onClick={() => setIsEraser(false)}
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase transition-all ${!isEraser ? 'bg-[#c5a880] text-black shadow-md' : 'text-zinc-400 hover:text-white'}`}
@@ -206,7 +206,7 @@ export const MaskPainter: React.FC<MaskPainterProps> = ({ imageUrl, onConfirm, o
               max="150" 
               value={brushSize}
               onChange={(e) => setBrushSize(parseInt(e.target.value))}
-              className="w-20 sm:w-28 h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-[#c5a880]"
+              className="w-20 sm:w-28 h-1.5 bg-[#111] rounded-lg appearance-none cursor-pointer accent-[#c5a880]"
             />
             <span className="text-[10px] font-mono text-amber-300 w-6">{brushSize}</span>
           </div>
@@ -217,7 +217,7 @@ export const MaskPainter: React.FC<MaskPainterProps> = ({ imageUrl, onConfirm, o
           <button 
             onClick={handleUndo}
             disabled={history.length <= 1}
-            className="p-2 bg-zinc-900 hover:bg-zinc-800 border border-white/5 text-zinc-300 disabled:opacity-40 rounded-lg transition-colors"
+            className="p-2 bg-black hover:bg-[#111] border border-white/5 text-zinc-300 disabled:opacity-40 rounded-lg transition-colors"
             title="Desfazer"
           >
             <RotateCcw size={15} />
@@ -225,7 +225,7 @@ export const MaskPainter: React.FC<MaskPainterProps> = ({ imageUrl, onConfirm, o
 
           <button 
             onClick={handleClear}
-            className="p-2 bg-zinc-900 hover:bg-zinc-800 border border-white/5 text-red-400 hover:text-red-300 rounded-lg transition-colors"
+            className="p-2 bg-black hover:bg-[#111] border border-white/5 text-red-400 hover:text-red-300 rounded-lg transition-colors"
             title="Limpar Pintura"
           >
             <Trash2 size={15} />
@@ -233,7 +233,7 @@ export const MaskPainter: React.FC<MaskPainterProps> = ({ imageUrl, onConfirm, o
 
           <button 
             onClick={() => setShowMask(!showMask)}
-            className={`p-2 rounded-lg border transition-colors ${showMask ? 'bg-amber-500/20 border-amber-500/40 text-amber-300' : 'bg-zinc-900 border-white/5 text-zinc-500'}`}
+            className={`p-2 rounded-lg border transition-colors ${showMask ? 'bg-amber-500/20 border-amber-500/40 text-amber-300' : 'bg-black border-white/5 text-zinc-500'}`}
             title="Visualizar Máscara"
           >
             <Eye size={15} />
@@ -242,7 +242,7 @@ export const MaskPainter: React.FC<MaskPainterProps> = ({ imageUrl, onConfirm, o
           <button 
             onClick={onCancel}
             disabled={isProcessing}
-            className="p-2 bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-300 rounded-lg transition-colors"
+            className="p-2 bg-black hover:bg-[#111] border border-white/5 text-zinc-300 rounded-lg transition-colors"
             title="Fechar"
           >
             <X size={16} />
@@ -265,7 +265,7 @@ export const MaskPainter: React.FC<MaskPainterProps> = ({ imageUrl, onConfirm, o
           </div>
         )}
 
-        <div className="relative shadow-2xl rounded-xl overflow-hidden border border-white/10" style={{
+        <div className="relative shadow-2xl rounded-xl overflow-hidden border border-white/5" style={{
             maxWidth: '100%', 
             maxHeight: '100%', 
             aspectRatio: imageSize.width && imageSize.height ? `${imageSize.width}/${imageSize.height}` : 'auto',
@@ -296,7 +296,7 @@ export const MaskPainter: React.FC<MaskPainterProps> = ({ imageUrl, onConfirm, o
       </div>
       
       {/* Bottom Command Bar */}
-      <div className="border-t border-white/10 bg-zinc-950 p-4 shrink-0 flex flex-col gap-3 z-20">
+      <div className="border-t border-white/5 bg-black p-4 shrink-0 flex flex-col gap-3 z-20">
         {/* Preset quick prompt suggestions */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar text-[11px]">
           <span className="text-zinc-500 font-bold uppercase tracking-wider shrink-0 text-[10px]">Sugestões:</span>
@@ -342,7 +342,7 @@ export const MaskPainter: React.FC<MaskPainterProps> = ({ imageUrl, onConfirm, o
               value={promptText}
               onChange={(e) => setPromptText(e.target.value)}
               placeholder="Digite o comando do que fazer na área pintada (ex: remover pessoa, mudar cor para azul, adicionar relógio)..."
-              className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[#c5a880] focus:ring-1 focus:ring-[#c5a880]/30 pr-10"
+              className="w-full bg-black border border-white/5 rounded-xl px-4 py-3 text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[#c5a880] focus:ring-1 focus:ring-[#c5a880]/30 pr-10"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && promptText.trim() && !isProcessing) {
                   handleConfirm();

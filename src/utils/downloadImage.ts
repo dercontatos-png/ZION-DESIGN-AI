@@ -1,3 +1,108 @@
+export interface DownloadMetaInfo {
+  title?: string;
+  clientName?: string;
+  prompt?: string;
+  aspectRatio?: string;
+  platform?: string;
+  formatLabel?: string;
+  targetResolution?: string | number;
+  customFileName?: string;
+}
+
+export function sanitizeFileNamePart(str: string, maxLength: number = 30): string {
+  if (!str) return "";
+  return str
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // remove accents
+    .replace(/[^a-zA-Z0-9\s_-]/g, "") // remove special chars
+    .trim()
+    .replace(/\s+/g, "_")
+    .slice(0, maxLength);
+}
+
+export function generateSmartFileName(
+  meta?: DownloadMetaInfo,
+  defaultExtension: string = "png"
+): string {
+  const extension = defaultExtension.toLowerCase();
+
+  if (meta?.customFileName) {
+    const cleanCustom = sanitizeFileNamePart(meta.customFileName, 60);
+    return cleanCustom ? `${cleanCustom}.${extension}` : `Zion_Arte_Gerada.${extension}`;
+  }
+
+  // 1. Subject / Topic / Title
+  let subjectPart = "";
+  if (meta?.clientName) {
+    subjectPart = sanitizeFileNamePart(meta.clientName, 20);
+  }
+  if (meta?.title) {
+    const cleanTitle = sanitizeFileNamePart(meta.title, 25);
+    if (cleanTitle) {
+      subjectPart = subjectPart ? `${subjectPart}_${cleanTitle}` : cleanTitle;
+    }
+  } else if (!subjectPart && meta?.prompt) {
+    subjectPart = sanitizeFileNamePart(meta.prompt, 25);
+  }
+
+  if (!subjectPart) {
+    subjectPart = "Arte_Gerada";
+  }
+
+  // 2. Format / Social Platform / Ratio
+  let formatPart = "";
+  if (meta?.platform) {
+    formatPart = sanitizeFileNamePart(meta.platform, 15);
+  }
+
+  if (meta?.formatLabel) {
+    const cleanFormat = sanitizeFileNamePart(meta.formatLabel, 15);
+    formatPart = formatPart ? `${formatPart}_${cleanFormat}` : cleanFormat;
+  } else if (meta?.aspectRatio) {
+    switch (meta.aspectRatio) {
+      case "1:1":
+        formatPart = formatPart ? `${formatPart}_Feed_1x1` : "Instagram_Feed_1x1";
+        break;
+      case "3:4":
+        formatPart = formatPart ? `${formatPart}_Retrato_3x4` : "Instagram_Retrato_3x4";
+        break;
+      case "9:16":
+        formatPart = formatPart ? `${formatPart}_Story_Status_9x16` : "WhatsApp_Status_9x16";
+        break;
+      case "16:9":
+        formatPart = formatPart ? `${formatPart}_Desktop_16x9` : "Banner_16x9";
+        break;
+      default:
+        formatPart = formatPart ? `${formatPart}_${meta.aspectRatio.replace(":", "x")}` : `Formato_${meta.aspectRatio.replace(":", "x")}`;
+        break;
+    }
+  }
+
+  if (!formatPart) {
+    formatPart = "Social";
+  }
+
+  // 3. Resolution / Mode
+  let qualityPart = "";
+  const targetRes = meta?.targetResolution;
+  if (targetRes === "16MP" || targetRes === 16) {
+    qualityPart = "WhatsApp_HD_16MB";
+  } else if (targetRes === "4K" || targetRes === 30) {
+    qualityPart = "4K_UltraHD";
+  } else if (targetRes === "2K") {
+    qualityPart = "2K_HD";
+  } else if (targetRes === "1K") {
+    qualityPart = "1K";
+  } else if (targetRes === "ORIGINAL" || !targetRes) {
+    qualityPart = "Nativo";
+  } else {
+    qualityPart = `${targetRes}`;
+  }
+
+  const timestamp = Date.now().toString().slice(-4);
+  return `Zion_${subjectPart}_${formatPart}_${qualityPart}_${timestamp}.${extension}`;
+}
+
 /**
  * Downloads image directly with maximum resolution & fidelity,
  * eliminating loss or compression artifacts.
@@ -9,7 +114,8 @@ export const downloadImage = (
   logoConfig?: any,
   typographyConfig?: any,
   backgroundColor?: string,
-  targetResolution?: "16MP" | "4K" | "2K" | "1K" | "ORIGINAL" | "30MB" | number
+  targetResolution?: "16MP" | "4K" | "2K" | "1K" | "ORIGINAL" | "30MB" | number,
+  metaInfo?: DownloadMetaInfo
 ): Promise<void> => {
   return new Promise(async (resolve, reject) => {
     try {
@@ -29,7 +135,7 @@ export const downloadImage = (
             const blobUrl = URL.createObjectURL(blob);
             const link = document.createElement("a");
             link.href = blobUrl;
-            link.download = `Zion_API_Nativa_${Date.now()}.${extension}`;
+            link.download = generateSmartFileName({ ...metaInfo, targetResolution: metaInfo?.targetResolution || targetResolution }, extension);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -172,15 +278,7 @@ export const downloadImage = (
           const blobUrl = URL.createObjectURL(outputBlob);
           const link = document.createElement("a");
           link.href = blobUrl;
-          
-          let prefix = "Zion_Arte_Nativa";
-          if (isWhatsAppHD) {
-            prefix = "Zion_WhatsApp_16MB_HD";
-          } else if (targetResolution === "4K" || targetResolution === 30) {
-            prefix = "Zion_UltraHD_4K";
-          }
-
-          link.download = `${prefix}_${Date.now()}.${extension}`;
+          link.download = generateSmartFileName({ ...metaInfo, targetResolution: metaInfo?.targetResolution || targetResolution }, extension);
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);

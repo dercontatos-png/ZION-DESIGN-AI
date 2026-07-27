@@ -1,9 +1,53 @@
 const fs = require('fs');
 let code = fs.readFileSync('server.ts', 'utf8');
 
-const regex = /Analise qualquer imagem de referência e diga como reproduzir aquela excelência técnica em Midjourney, Leonardo AI ou outras plataformas, mapeando a estrutura perfeita para cada botão\/opção da arte\.[\s\S]*?O usuário EXIGE que você faça o preenchimento automático de TUDO que vocês conversarem!`;/g;
+const target = `  // 2. If customApiKey was supplied as a standard string API key (e.g. AIza... or AQ...)
+  if (customApiKey?.trim() && !customApiKey.trim().startsWith('{')) {`;
+const replacement = `  // 2. Se houver Vertex configurado, usar ele primeiro (a pedido do usuário)
+  if (hasChaveVertex) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(credentialsPath, 'utf8'));
+      const projectId = parsed.project_id || "gerador-de-imagens-ia-502303";
+      const clientInstance = new GoogleGenAI({
+        vertexai: true,
+        project: projectId,
+        location: "global",
+        googleAuthOptions: { credentials: parsed }
+      });
+      (clientInstance as any).debugInfo = {
+        resolvedTokenSource: "Vertex AI (chave-vertex.json)",
+        isUsingVertex: true,
+        projectIdUsed: projectId
+      };
+      return clientInstance;
+    } catch (e) {
+      console.warn("Erro ao instanciar Vertex client pelo arquivo:", e);
+    }
+  }
 
-const replacement = "Analise qualquer imagem de referência e diga como reproduzir aquela excelência técnica em Midjourney, Leonardo AI ou outras plataformas, mapeando a estrutura perfeita para cada botão/opção da arte.\n\nMUITO IMPORTANTE: No final da sua resposta, você DEVE SEMPRE incluir um bloco \\`\\`\\`json { ... } \\`\\`\\` contendo os parâmetros atualizados da interface, como \"desativarSujeito\": true/false, \"noPeople\": true/false, \"cores\", \"promptCenario\", \"estiloVisualCustom\", etc. O usuário EXIGE que você faça o preenchimento automático de TUDO que vocês conversarem!`;";
+  // 3. If customApiKey was supplied as a standard string API key (e.g. AIza... or AQ...)
+  if (customApiKey?.trim() && !customApiKey.trim().startsWith('{')) {`;
 
-code = code.replace(regex, replacement);
+code = code.replace(target, replacement);
+
+const target2 = `  // 3. If chave-vertex.json exists on disk
+  if (hasChaveVertex) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(credentialsPath, 'utf8'));
+      const projectId = parsed.project_id || "gerador-de-imagens-ia-502303";
+      
+      const clientInstance = new GoogleGenAI({
+        vertexai: true,
+        project: projectId,
+        location: "global",
+        googleAuthOptions: { credentials: parsed }
+      });
+      return clientInstance;
+    } catch (e) {
+      console.warn("Erro ao instanciar Vertex client pelo arquivo:", e);
+    }
+  }`;
+const replacement2 = `  // Vertex logic moved above`;
+
+code = code.replace(target2, replacement2);
 fs.writeFileSync('server.ts', code);

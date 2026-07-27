@@ -201,7 +201,7 @@ export default function WhatsAppTab({ userId, userData, myProfile, setMyProfile 
             </p>
           </div>
 
-          <div className="flex items-center gap-3 bg-zinc-950/60 p-4 rounded-2xl border border-white/5 backdrop-blur-sm self-start md:self-auto">
+          <div className="flex items-center gap-3 bg-black/60 p-4 rounded-2xl border border-white/5 backdrop-blur-sm self-start md:self-auto">
             <div className={`p-3 rounded-xl ${status === "connected" ? "bg-emerald-500/10 text-emerald-400" : "bg-amber-500/10 text-amber-400"}`}>
               {status === "connected" ? <CheckCircle size={24} /> : <MessageSquare size={24} />}
             </div>
@@ -218,7 +218,7 @@ export default function WhatsAppTab({ userId, userData, myProfile, setMyProfile 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Connection Setup Container (Left) */}
         <div className="lg:col-span-5 space-y-8">
-          <div className="bg-zinc-900 border border-white/5 rounded-3xl p-6 relative overflow-hidden">
+          <div className="bg-black border border-white/5 rounded-3xl p-6 relative overflow-hidden">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-bold text-white flex items-center gap-2">
                 <QrCode size={20} className="text-emerald-400" /> Dispositivo Virtual
@@ -234,10 +234,10 @@ export default function WhatsAppTab({ userId, userData, myProfile, setMyProfile 
               )}
             </div>
 
-            <div className="flex flex-col items-center justify-center min-h-[300px] border border-white/5 bg-zinc-950/40 rounded-2xl p-6">
+            <div className="flex flex-col items-center justify-center min-h-[300px] border border-white/5 bg-black/40 rounded-2xl p-6">
               {status === "disconnected" && (
                 <div className="text-center space-y-4 py-8">
-                  <div className="w-16 h-16 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center mx-auto text-zinc-400">
+                  <div className="w-16 h-16 bg-white/5 border border-white/5 rounded-2xl flex items-center justify-center mx-auto text-zinc-400">
                     <MessageSquare size={32} />
                   </div>
                   <div className="space-y-1">
@@ -273,7 +273,7 @@ export default function WhatsAppTab({ userId, userData, myProfile, setMyProfile 
 
               {status === "qr" && qrCode && (
                 <div className="text-center space-y-6">
-                  <div className="bg-white p-4 rounded-2xl shadow-xl shadow-black/40 inline-block border border-white/10">
+                  <div className="bg-white p-4 rounded-2xl shadow-xl shadow-black/40 inline-block border border-white/5">
                     <img src={qrCode} alt="WhatsApp Connection QR Code" className="w-56 h-56" />
                   </div>
                   <div className="space-y-2">
@@ -301,7 +301,7 @@ export default function WhatsAppTab({ userId, userData, myProfile, setMyProfile 
                   </div>
                   <div className="space-y-2">
                     <p className="text-lg font-black text-white">Dispositivo Conectado!</p>
-                    <div className="inline-flex flex-col gap-1.5 bg-zinc-950 p-4 rounded-xl border border-white/5 w-full text-left">
+                    <div className="inline-flex flex-col gap-1.5 bg-black p-4 rounded-xl border border-white/5 w-full text-left">
                       <div className="flex items-center gap-2 text-xs text-zinc-400">
                         <Phone size={14} className="text-emerald-400" />
                         <span className="font-mono text-white">+{phoneNumber || "---"}</span>
@@ -334,7 +334,7 @@ export default function WhatsAppTab({ userId, userData, myProfile, setMyProfile 
 
           {/* WhatsApp Privacy & Access Control Settings */}
           {setMyProfile && (
-            <div className="bg-zinc-900 border border-white/5 rounded-3xl p-6 space-y-4">
+            <div className="bg-black border border-white/5 rounded-3xl p-6 space-y-4">
               <h3 className="text-sm font-bold text-zinc-300 uppercase tracking-wider flex items-center gap-1.5 border-b border-white/5 pb-3">
                 <Settings size={16} className="text-emerald-400 animate-spin-slow" /> Controle de Acesso
               </h3>
@@ -377,7 +377,7 @@ export default function WhatsAppTab({ userId, userData, myProfile, setMyProfile 
                         value={ownerNumber}
                         onChange={(e) => setOwnerNumber(e.target.value.replace(/\D/g, ""))}
                         placeholder="Ex: 5511999999999"
-                        className="w-full bg-zinc-950 border border-white/5 rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-emerald-500 transition-all font-mono"
+                        className="w-full bg-black border border-white/5 rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-emerald-500 transition-all font-mono"
                       />
                       <p className="text-[9px] text-zinc-500">
                         Insira com DDI (Ex: 55 para o Brasil) + DDD + Número. Não use espaços, traços ou parênteses.
@@ -393,7 +393,7 @@ export default function WhatsAppTab({ userId, userData, myProfile, setMyProfile 
                         value={authorizedNumbers}
                         onChange={(e) => setAuthorizedNumbers(e.target.value)}
                         placeholder="Ex: 5511888888888, 5511777777777"
-                        className="w-full bg-zinc-950 border border-white/5 rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-emerald-500 transition-all font-mono"
+                        className="w-full bg-black border border-white/5 rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-emerald-500 transition-all font-mono"
                       />
                       <p className="text-[9px] text-zinc-500">
                         Insira os números separados por vírgula.
@@ -405,7 +405,7 @@ export default function WhatsAppTab({ userId, userData, myProfile, setMyProfile 
                 <button
                   type="button"
                   onClick={handleSaveSettings}
-                  className="w-full py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white font-semibold text-xs border border-white/10 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  className="w-full py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white font-semibold text-xs border border-white/5 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                 >
                   <CheckCircle size={14} className={saveSuccess ? "text-emerald-400 animate-bounce" : "text-zinc-400"} />
                   {saveSuccess ? "Configurações Salvas!" : "Salvar Configurações"}
@@ -415,21 +415,21 @@ export default function WhatsAppTab({ userId, userData, myProfile, setMyProfile 
           )}
 
           {/* Quick Guide */}
-          <div className="bg-zinc-900 border border-white/5 rounded-3xl p-6 space-y-4">
+          <div className="bg-black border border-white/5 rounded-3xl p-6 space-y-4">
             <h3 className="text-sm font-bold text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
               <HelpCircle size={16} className="text-amber-400" /> Como Utilizar o Bot
             </h3>
             <ul className="space-y-3.5 text-xs text-zinc-400">
               <li className="flex items-start gap-2.5">
-                <span className="w-5 h-5 rounded bg-white/5 border border-white/10 text-white flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">1</span>
+                <span className="w-5 h-5 rounded bg-white/5 border border-white/5 text-white flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">1</span>
                 <span>Envie mensagens de texto ou áudio diretamente para <span className="text-white font-semibold">o seu próprio número</span> (um chat consigo mesmo) ou para a conta conectada.</span>
               </li>
               <li className="flex items-start gap-2.5">
-                <span className="w-5 h-5 rounded bg-white/5 border border-white/10 text-white flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">2</span>
+                <span className="w-5 h-5 rounded bg-white/5 border border-white/5 text-white flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">2</span>
                 <span>Diga coisas como: <span className="text-emerald-400 font-medium">"Criar tarefa de revisar o design amanhã"</span> ou envie áudios explicando despesas <span className="text-emerald-400 font-medium">"Paguei 45 reais de gasolina hoje de tarde"</span>.</span>
               </li>
               <li className="flex items-start gap-2.5">
-                <span className="w-5 h-5 rounded bg-white/5 border border-white/10 text-white flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">3</span>
+                <span className="w-5 h-5 rounded bg-white/5 border border-white/5 text-white flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">3</span>
                 <span>O agente processa com Gemini AI, atualiza a plataforma em tempo real e responde no WhatsApp confirmando!</span>
               </li>
             </ul>
@@ -439,7 +439,7 @@ export default function WhatsAppTab({ userId, userData, myProfile, setMyProfile 
         {/* Chat Logs and Interactive Simulator (Right) */}
         <div className="lg:col-span-7 space-y-8">
           {/* Interactive Tester & Simulator */}
-          <div className="bg-zinc-900 border border-white/5 rounded-3xl p-6 space-y-4">
+          <div className="bg-black border border-white/5 rounded-3xl p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-bold text-white flex items-center gap-2">
                 <Terminal size={20} className="text-amber-400" /> Simulador de Interação (Testador)
@@ -461,7 +461,7 @@ export default function WhatsAppTab({ userId, userData, myProfile, setMyProfile 
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold border flex items-center gap-1.5 transition cursor-pointer ${
                     simType === "text"
                       ? "bg-amber-500/10 border-amber-500/30 text-amber-400"
-                      : "bg-zinc-950/40 border-white/5 text-zinc-400 hover:text-white"
+                      : "bg-black/40 border-white/5 text-zinc-400 hover:text-white"
                   }`}
                 >
                   <MessageSquare size={14} /> Mensagem de Texto
@@ -472,7 +472,7 @@ export default function WhatsAppTab({ userId, userData, myProfile, setMyProfile 
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold border flex items-center gap-1.5 transition cursor-pointer ${
                     simType === "audio"
                       ? "bg-amber-500/10 border-amber-500/30 text-amber-400"
-                      : "bg-zinc-950/40 border-white/5 text-zinc-400 hover:text-white"
+                      : "bg-black/40 border-white/5 text-zinc-400 hover:text-white"
                   }`}
                 >
                   <Mic size={14} /> Mensagem de Áudio (Voz)
@@ -483,7 +483,7 @@ export default function WhatsAppTab({ userId, userData, myProfile, setMyProfile 
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold border flex items-center gap-1.5 transition cursor-pointer ${
                     simType === "receipt"
                       ? "bg-amber-500/10 border-amber-500/30 text-amber-400"
-                      : "bg-zinc-950/40 border-white/5 text-zinc-400 hover:text-white"
+                      : "bg-black/40 border-white/5 text-zinc-400 hover:text-white"
                   }`}
                 >
                   <FileText size={14} /> Comprovante de Pagamento
@@ -502,7 +502,7 @@ export default function WhatsAppTab({ userId, userData, myProfile, setMyProfile 
                       ? "Fale o texto simulado do áudio: Ex: 'Gravar despesa de R$ 50 de combustível'..."
                       : "Fale os dados do comprovante: Ex: 'Comprovante Pix R$ 120 para hospedagem do site'..."
                   }
-                  className="w-full bg-zinc-950/60 border border-white/10 rounded-2xl py-3.5 pl-4 pr-12 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-all"
+                  className="w-full bg-black/60 border border-white/5 rounded-2xl py-3.5 pl-4 pr-12 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-all"
                   disabled={isSimulating}
                 />
                 <button
@@ -526,7 +526,7 @@ export default function WhatsAppTab({ userId, userData, myProfile, setMyProfile 
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 10 }}
-                  className="bg-zinc-950 border border-white/5 p-4 rounded-2xl space-y-2.5"
+                  className="bg-black border border-white/5 p-4 rounded-2xl space-y-2.5"
                 >
                   <div className="flex items-center justify-between border-b border-white/5 pb-2">
                     <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Resposta do Bot</span>
@@ -548,7 +548,7 @@ export default function WhatsAppTab({ userId, userData, myProfile, setMyProfile 
           </div>
 
           {/* Real-time Webhook Processed Messages Logs */}
-          <div className="bg-zinc-900 border border-white/5 rounded-3xl p-6 space-y-4">
+          <div className="bg-black border border-white/5 rounded-3xl p-6 space-y-4">
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
               <Layers size={20} className="text-emerald-400" /> Registro de Atividades Recentes
             </h2>
@@ -564,10 +564,10 @@ export default function WhatsAppTab({ userId, userData, myProfile, setMyProfile 
                 </div>
               ) : (
                 logs.map((log: any) => (
-                  <div key={log.id} className="bg-zinc-950/60 border border-white/5 rounded-2xl p-4 space-y-3 relative hover:border-white/10 transition-all">
+                  <div key={log.id} className="bg-black/60 border border-white/5 rounded-2xl p-4 space-y-3 relative hover:border-white/5 transition-all">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-zinc-900 text-zinc-400 border border-white/5">
+                        <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-black text-zinc-400 border border-white/5">
                           Remetente: {log.sender === "simulador_teste" ? "Simulador" : `+${log.sender}`}
                         </span>
                         <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
@@ -583,7 +583,7 @@ export default function WhatsAppTab({ userId, userData, myProfile, setMyProfile 
                       {/* Incoming Message */}
                       <div className="space-y-1">
                         <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider block">Mensagem Recebida</span>
-                        <div className="bg-zinc-900/40 p-2.5 rounded-xl text-xs text-zinc-300 border border-white/5">
+                        <div className="bg-black/40 p-2.5 rounded-xl text-xs text-zinc-300 border border-white/5">
                           {log.message}
                         </div>
                       </div>

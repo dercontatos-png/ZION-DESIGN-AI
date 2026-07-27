@@ -183,7 +183,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
           <span className="text-[10px] font-black text-zinc-350 uppercase tracking-widest block">
             Comprimindo ({compressProgress.current}/{compressProgress.total})...
           </span>
-          <div className="w-24 h-1 bg-zinc-800 rounded-full mx-auto mt-2 overflow-hidden">
+          <div className="w-24 h-1 bg-[#111] rounded-full mx-auto mt-2 overflow-hidden">
             <div 
               className="h-full bg-[#ad8330] transition-all duration-300"
               style={{ width: `${(compressProgress.current / compressProgress.total) * 100}%` }}
@@ -212,7 +212,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
             
             <div className="grid grid-cols-4 gap-2 max-h-[140px] overflow-y-auto custom-scrollbar pr-1">
               {currentList.map((item, idx) => (
-                <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-zinc-800 bg-zinc-950 group">
+                <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-zinc-800 bg-black group">
                   <img src={item.startsWith("data:image/") ? item : `data:image/jpeg;base64,${item}`} className="w-full h-full object-cover" alt={`Ref ${idx + 1}`} />
                   <button
                     onClick={() => removeImage(idx)}
@@ -223,7 +223,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
                 </div>
               ))}
               
-              <div className="relative aspect-square rounded-lg border border-dashed border-zinc-800 hover:border-[#ad8330]/40 flex flex-col items-center justify-center cursor-pointer bg-zinc-950/40 hover:bg-zinc-900/20 transition-all">
+              <div className="relative aspect-square rounded-lg border border-dashed border-zinc-800 hover:border-[#ad8330]/40 flex flex-col items-center justify-center cursor-pointer bg-black/40 hover:bg-black/20 transition-all">
                 <Plus size={16} className="text-zinc-550 group-hover:text-zinc-400 mb-0.5" />
                 <span className="text-[8px] font-black text-zinc-550 uppercase tracking-wider">Adicionar</span>
                 <input
@@ -242,7 +242,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       // Single mode
       if (base64) {
         return (
-          <div className="relative aspect-square w-24 rounded-lg overflow-hidden border border-zinc-800 bg-zinc-950 group" onClick={(e) => e.stopPropagation()}>
+          <div className="relative aspect-square w-24 rounded-lg overflow-hidden border border-zinc-800 bg-black group" onClick={(e) => e.stopPropagation()}>
             <img src={base64.startsWith("data:image/") ? base64 : `data:image/jpeg;base64,${base64}`} className="w-full h-full object-cover" alt="Anexo Ref" />
             <button
               onClick={(e) => {
@@ -275,8 +275,8 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className={`border border-dashed rounded-xl p-5 flex flex-col items-center justify-center cursor-pointer transition-all bg-zinc-900/20 relative min-h-[110px] ${
-        isDragOver ? "border-[#ad8330] bg-[#ad8330]/5" : "border-zinc-800 hover:border-[#ad8330]/30 hover:bg-zinc-900/40"
+      className={`border border-dashed rounded-xl p-5 flex flex-col items-center justify-center cursor-pointer transition-all bg-black/20 relative min-h-[110px] ${
+        isDragOver ? "border-[#ad8330] bg-[#ad8330]/5" : "border-zinc-800 hover:border-[#ad8330]/30 hover:bg-black/40"
       }`}
     >
       {/* Hide input if compress is running or if multiple images exist to avoid clicking overlay conflicts */}

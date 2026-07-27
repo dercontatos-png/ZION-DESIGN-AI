@@ -15,7 +15,7 @@ const MasonryGalleryComponent: React.FC<MasonryGalleryProps> = ({
 
   if (store.galeriaImages.length === 0) {
     return (
-      <div className="py-5 text-center border border-dashed border-white/5 rounded-xl bg-zinc-950/20">
+      <div className="py-5 text-center border border-dashed border-white/5 rounded-xl bg-black/20">
         <span className="text-[9px] font-black text-zinc-650 uppercase tracking-widest">Nenhuma imagem gerada nesta sessão</span>
       </div>
     );
@@ -33,7 +33,7 @@ const MasonryGalleryComponent: React.FC<MasonryGalleryProps> = ({
             store.setGaleriaImages([]);
             showToast("Galeria local de visualizações limpa!", "success");
           }}
-          className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg border border-white/5 bg-zinc-900/60 hover:bg-red-950/20 hover:text-red-500 text-zinc-500 text-[9px] font-black uppercase tracking-wider transition-all"
+          className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg border border-white/5 bg-black/60 hover:bg-red-950/20 hover:text-red-500 text-zinc-500 text-[9px] font-black uppercase tracking-wider transition-all"
         >
           <Trash2 size={11} />
           <span>Limpar Galeria</span>
@@ -61,7 +61,7 @@ const MasonryGalleryComponent: React.FC<MasonryGalleryProps> = ({
               <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-2 p-1.5">
                 <a
                   href={img}
-                  download={`zion-local-${index}-${store.resolucao}.${exportFormat.toLowerCase()}`}
+                  download={`Zion_Galeria_Item_${index + 1}_${(store.dimensao || "1x1").replace(":", "x")}_${store.resolucao || "HD"}.${exportFormat.toLowerCase()}`}
                   onClick={(e) => e.stopPropagation()}
                   className="p-2 bg-black/85 hover:bg-[#c99b3b] hover:text-black border border-white/5 hover:border-[#c99b3b] rounded-lg text-zinc-300 transition-all shadow-xl"
                   title={`Baixar em ${store.resolucao}`}

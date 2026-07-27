@@ -68,7 +68,29 @@ const getAiClient = (customApiKey?: string) => {
     }
   }
 
-  // 2. If customApiKey was supplied as a standard string API key (e.g. AIza... or AQ...)
+  // 2. Se houver Vertex configurado, usar ele primeiro (a pedido do usuário)
+  if (hasChaveVertex) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(credentialsPath, 'utf8'));
+      const projectId = parsed.project_id || "gerador-de-imagens-ia-502303";
+      const clientInstance = new GoogleGenAI({
+        vertexai: true,
+        project: projectId,
+        location: "global",
+        googleAuthOptions: { credentials: parsed }
+      });
+      (clientInstance as any).debugInfo = {
+        resolvedTokenSource: "Vertex AI (chave-vertex.json)",
+        isUsingVertex: true,
+        projectIdUsed: projectId
+      };
+      return clientInstance;
+    } catch (e) {
+      console.warn("Erro ao instanciar Vertex client pelo arquivo:", e);
+    }
+  }
+
+  // 3. If customApiKey was supplied as a standard string API key (e.g. AIza... or AQ...)
   if (customApiKey?.trim() && !customApiKey.trim().startsWith('{')) {
     const clientInstance = new GoogleGenAI({ apiKey: customApiKey.trim() });
     (clientInstance as any).debugInfo = {
@@ -706,7 +728,8 @@ async function executeImageGenerationWithFallbacks(
   selectedRatio: string,
   sizeSelected: string,
   customApiKey?: string,
-  modelId?: string
+  modelId?: string,
+  seedUsuario?: string | number | null
 ): Promise<{ imageBase64Url: string; rawData: string; rawMime: string; modelUsed: string }> {
 
   const candidateClients: { name: string; instance: GoogleGenAI }[] = [];
@@ -776,18 +799,18 @@ async function executeImageGenerationWithFallbacks(
   // 6. Default client passed in as parameter (always append as fallback)
   candidateClients.push({ name: "Primary Client", instance: client });
 
-  let lastError = "";
+  let lastError = ""; let specificError = "";
 
   for (const cItem of candidateClients) {
     const curClient = cItem.instance;
 
     // Use gemini-2.5-flash-image as primary, and fall back to gemini-3.1-flash-image if prepayment credits are depleted.
     const baseStrategies = [
-      { name: "gemini-3-pro-image", type: "generateContent" },
-      { name: "gemini-2.5-flash-image", type: "generateContent" },
-      { name: "gemini-3.1-flash-image", type: "generateContent" }
+      { name: "imagen-3.0-generate-002", type: "generateImages" },
+      { name: "imagen-3.0-generate-001", type: "generateImages" },
+      { name: "gemini-3-pro-image", type: "generateContent" }
     ];
-    const strategies = modelId ? [{ name: modelId, type: "generateContent" }, ...baseStrategies.filter(s => s.name !== modelId)] : baseStrategies;
+    const strategies = modelId ? [{ name: modelId, type: modelId.startsWith("imagen") ? "generateImages" : "generateContent" }, ...baseStrategies.filter(s => s.name !== modelId)] : baseStrategies;
 
     for (const strategy of strategies) {
       try {
@@ -825,13 +848,16 @@ async function executeImageGenerationWithFallbacks(
             prompt: promptText,
             config: {
               numberOfImages: 1,
-              aspectRatio: selectedRatio
+              outputMimeType: "image/jpeg",
+              aspectRatio: selectedRatio,
+              personGeneration: "ALLOW_ADULT",
+              ...(seedUsuario ? { seed: Number(seedUsuario) } : {})
             }
           });
 
           if (res?.generatedImages?.[0]?.image?.imageBytes) {
             const rawData = res.generatedImages[0].image.imageBytes;
-            const rawMime = "image/png";
+            const rawMime = strategy.type === "generateImages" ? "image/jpeg" : "image/png";
             return {
               imageBase64Url: `data:${rawMime};base64,${rawData}`,
               rawData,
@@ -849,10 +875,16 @@ async function executeImageGenerationWithFallbacks(
           console.info(`[generate] ${strategy.name} did not complete on ${cItem.name}. Status:`, msg);
         }
         lastError = rawMsg;
+        if (rawMsg.includes("429") || rawMsg.includes("RESOURCE_EXHAUSTED")) {
+          specificError = rawMsg;
+        }
       }
     }
   }
 
+  if (specificError) {
+    throw new Error(`Geração de imagem falhou por falta de créditos (429). Detalhes: ${specificError}`);
+  }
   throw new Error(`Geração de imagem falhou nos modelos do Google/Vertex AI. Detalhes: ${lastError}`);
 }
 
@@ -929,7 +961,8 @@ async function executeGenerateContentWithFallbacks(
   // 6. Default client passed in as parameter
   candidateClients.push({ name: "Primary Client", instance: client });
 
-  let lastError = null;
+  let lastError: any = null;
+  let specificError: any = null;
 
   for (const cItem of candidateClients) {
     const curClient = cItem.instance;
@@ -1436,7 +1469,7 @@ Input Text:
 ${textContent}`
       });
 
-      const parseModels = ["gemini-3.6-flash", "gemini-3-pro-preview"];
+      const parseModels = ["gemini-3-pro-preview", "gemini-3.6-flash"];
       let jsonStr = "";
       let parseErr: any = null;
 
@@ -1584,7 +1617,7 @@ ${textContent}`
 
       let response: any = null;
       let lastErr: any = null;
-      const modelsToTry = ["gemini-3-pro-image", "gemini-2.5-flash-image", "gemini-3.1-flash-image"];
+      const modelsToTry = ["gemini-3-pro-image"];
 
       for (const cItem of candidateClients) {
         for (const modelName of modelsToTry) {
@@ -2625,7 +2658,7 @@ Output ONLY the JSON object. Do not include conversational filler.`;
         const fallbackRes = await executeGenerateContentWithFallbacks(
           currentAi,
           customApiKey,
-          ["gemini-3.6-flash", "gemini-3-pro-preview"],
+          ["gemini-3-pro-preview", "gemini-3.6-flash"],
           {
             contents: [
               {
@@ -2756,7 +2789,7 @@ Output a pristine, ultra-detailed, hyper-realistic masterpiece image.`;
         const fallbackRes = await executeGenerateContentWithFallbacks(
           currentAi,
           customApiKey,
-          ["gemini-3-pro-image", "gemini-2.5-flash-image", "gemini-3.1-flash-image"],
+          ["gemini-3-pro-image"],
           {
             contents: [
               {
@@ -3025,20 +3058,20 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
 
       // Inject person reference images into Art Director's vision
       personRefs.forEach((ref: any, idx: number) => {
-        thinkParts.push({ inlineData: { data: ref.data, mimeType: ref.mimeType || "image/jpeg" } });
+        thinkParts.push({ inlineData: { data: ref.data, mimeType: ref.mimeType || "image/jpeg" || "image/jpeg" } });
         thinkParts.push({ text: `This is "Person Reference Image ${idx + 1}". Look closely at this face. You must describe this person's key physical appearance (hair, age, expression, features) in detail in the output prompt to maintain facial likeness.` });
       });
 
       // Inject style reference images into Art Director's vision
       styleRefs.forEach((ref: any, idx: number) => {
-        thinkParts.push({ inlineData: { data: ref.data, mimeType: ref.mimeType || "image/jpeg" } });
+        thinkParts.push({ inlineData: { data: ref.data, mimeType: ref.mimeType || "image/jpeg" || "image/jpeg" } });
         thinkParts.push({ text: `This is "Style Reference Image ${idx + 1}". Replicate the aesthetic, layout, colors, lighting, and textures of this image in your prompt instructions.` });
       });
 
       thinkParts.push({ text: thinkPrompt });
 
       let finalPrompt = "";
-      const thinkModels = ["gemini-3.6-flash", "gemini-3-pro-preview"];
+      const thinkModels = ["gemini-3-pro-preview", "gemini-3.6-flash"];
       try {
         const fallbackRes = await executeGenerateContentWithFallbacks(
           currentAi,
@@ -3104,13 +3137,13 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
       // Handle reference images
       personRefs.forEach((ref: any, i: number) => {
         parts.push({ text: `Reference image ${i + 1} for the person/subject:` });
-        parts.push({ inlineData: { data: ref.data, mimeType: ref.mimeType } });
+        parts.push({ inlineData: { data: ref.data, mimeType: ref.mimeType || "image/jpeg" } });
       });
 
       if (imgConfig?.useEnvRef) {
         envRefs.forEach((ref: any, i: number) => {
           parts.push({ text: `Reference image ${i + 1} for the environment/background:` });
-          parts.push({ inlineData: { data: ref.data, mimeType: ref.mimeType } });
+          parts.push({ inlineData: { data: ref.data, mimeType: ref.mimeType || "image/jpeg" } });
         });
       }
 
@@ -3118,7 +3151,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         parts.push({ 
           text: `Reference image ${i + 1} for the desired style/aesthetic:${imgConfig?.extractTypography ? " Analyze and extract the typographic style, including effects, 3D elements, etc." : ""}` 
         });
-        parts.push({ inlineData: { data: ref.data, mimeType: ref.mimeType } });
+        parts.push({ inlineData: { data: ref.data, mimeType: ref.mimeType || "image/jpeg" } });
         if (imgConfig?.extractTypography && ref.description) {
           parts.push({ text: `Description of this reference style: ${ref.description}` });
         }
@@ -3126,7 +3159,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
 
       logoRefs.forEach((logo: any) => {
         parts.push({ text: `Reference image for a logo to be included at position: ${logo.position || "Top Left"}:` });
-        parts.push({ inlineData: { data: logo.data, mimeType: logo.mimeType } });
+        parts.push({ inlineData: { data: logo.data, mimeType: logo.mimeType || "image/jpeg" } });
       });
 
       // 3. Generation Strategy: Use gemini-2.5-flash-image with Vertex AI Global
@@ -3143,7 +3176,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
       }
 
       const sizeSelected = imgConfig?.imageSize || "1K";
-      const targetModel = "gemini-2.5-flash-image";
+      const targetModel = "gemini-3-pro-image";
       let modelUsed = `Vertex AI (${targetModel})`;
       let lastErrors: string[] = [];
 
@@ -3262,7 +3295,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
 
       console.log("\n--- CONFIGURAÇÃO DE GERAÇÃO (/api/generate) ---");
       console.log({
-        model: "gemini-2.5-flash-image",
+        model: "gemini-3-pro-image",
         resolution: imgConfig?.imageSize || "1K",
         aspectRatio: imgConfig?.aspectRatio || "1:1",
         variations: imgConfig?.variations || 1,
@@ -3471,7 +3504,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
             parts.push({
               inlineData: {
                 data: b64,
-                mimeType: ref.mimeType || "image/jpeg"
+                mimeType: ref.mimeType || "image/jpeg" || "image/jpeg"
               }
             });
             parts.push({ text: `Referência de Pessoa/Sujeito ${idx + 1}` });
@@ -3487,7 +3520,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
             parts.push({
               inlineData: {
                 data: b64,
-                mimeType: ref.mimeType || "image/jpeg"
+                mimeType: ref.mimeType || "image/jpeg" || "image/jpeg"
               }
             });
             parts.push({ text: `Referência de Ambiente/Cenário ${idx + 1}` });
@@ -3503,7 +3536,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
             parts.push({
               inlineData: {
                 data: b64,
-                mimeType: ref.mimeType || "image/jpeg"
+                mimeType: ref.mimeType || "image/jpeg" || "image/jpeg"
               }
             });
             parts.push({ text: `Referência de Estilo/Estética ${idx + 1}${ref.description ? `: ${ref.description}` : ''}` });
@@ -3519,7 +3552,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
             parts.push({
               inlineData: {
                 data: b64,
-                mimeType: ref.mimeType || "image/jpeg"
+                mimeType: ref.mimeType || "image/jpeg" || "image/jpeg"
               }
             });
             parts.push({ text: `Referência de Logotipo ${idx + 1} para o design (Posição: ${ref.position || "Livre"})` });
@@ -3530,7 +3563,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
       const results: string[] = [];
       const variationsCount = Math.min(Math.max(imgConfig?.variations || 1, 1), 4);
       const sizeSelected = imgConfig?.imageSize || "1K";
-      const targetModel = "gemini-2.5-flash-image";
+      const targetModel = "gemini-3-pro-image";
       let modelUsed = `Google AI Studio (${targetModel})`;
       let lastErrors: string[] = [];
 
@@ -3654,7 +3687,8 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         previousImageBase64 = "",
         imagemAnteriorBase64 = "",
         imagemRefinamentoBase64 = "",
-        modelId = "gemini-3-pro-image"
+        modelId = "gemini-3-pro-image",
+        seedUsuario = null
       } = req.body;
 
       const cleanBase64 = (str: string): string => {
@@ -3697,7 +3731,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
 
       // We use gemini-2.5-flash-image for high quality image generation
       const sizeSelectedForModel = resolutionInput === "4K" ? "4K" : (resolutionInput === "2K" ? "2K" : "1K");
-      const targetModel = "gemini-2.5-flash-image";
+      const targetModel = "gemini-3-pro-image";
       
       let targetAspectRatio = "1:1";
       const validRatios = ["1:1", "3:4", "4:3", "9:16", "16:9"];
@@ -3724,7 +3758,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
             expansionParts.push({
               inlineData: {
                 data: parsed.data,
-                mimeType: parsed.mimeType
+                mimeType: parsed.mimeType || "image/jpeg"
               }
             });
             expansionParts.push({ text: `[Multimodal Visual Reference for ${label}]` });
@@ -3874,7 +3908,7 @@ Return ONLY the JSON object. Do not include any conversational text or markdown 
 
         expansionParts.push({ text: instructionPrompt });
 
-        const expModels = ["gemini-3.6-flash", "gemini-3-pro-preview"];
+        const expModels = ["gemini-3-pro-preview", "gemini-3.6-flash"];
         let expText = "";
         let lastExpErr: any = null;
         try {
@@ -3993,7 +4027,7 @@ ${logoMandatoryRule}`;
           parts.push({
             inlineData: {
               data: parsed.data,
-              mimeType: parsed.mimeType
+              mimeType: parsed.mimeType || "image/jpeg"
             }
           });
           parts.push({ text: label });
@@ -4095,7 +4129,8 @@ ${logoMandatoryRule}`;
           targetAspectRatio,
           sizeSelected,
           customApiKey,
-          modelId
+          modelId,
+          seedUsuario
         );
 
         const modelUsed = genResult.modelUsed;
@@ -4199,7 +4234,7 @@ ${logoMandatoryRule}`;
       if (!currentAi) return res.status(400).json({ error: "API Key não configurada." });
 
       const { data: cleanData, mimeType: resolvedMime } = resolveImageInput(imageData);
-      const extractModels = ["gemini-3.6-flash", "gemini-3-pro-preview"];
+      const extractModels = ["gemini-3-pro-preview", "gemini-3.6-flash"];
       let promptText = "";
       let lastErr: any = null;
 
@@ -4250,17 +4285,24 @@ ${logoMandatoryRule}`;
 
   app.post("/api/scan-gc-to-xaml", async (req, res) => {
     try {
-      const { imageBase64, customApiKey, layoutStyleHint } = req.body;
+      const { imageBase64, customApiKey, layoutStyleHint, userPrompt, customPrompt } = req.body;
       if (!imageBase64) return res.status(400).json({ error: "Imagem de referência de GC não fornecida." });
       
       const currentAi = getAiClient(customApiKey);
       if (!currentAi) return res.status(400).json({ error: "API Key não configurada." });
 
       const { data: cleanData, mimeType } = resolveImageInput(imageBase64);
+      const activeUserPrompt = (userPrompt || customPrompt || "").trim();
       
       let promptText = ``;
       if (layoutStyleHint) {
         promptText += `SUGGESTED FORMAT HINT: The current template style is suggested as "${layoutStyleHint}". However, you MUST prioritize the visual reference image content. If the image depicts a different category (e.g. sports scoreboard instead of journalism lower third), you MUST override this hint and choose the correct layoutStyle and corresponding structure.\n\n`;
+      }
+      if (activeUserPrompt) {
+        promptText += `USER PROMPT / DIRECTIVE FOR GC DESIGN & XAML:
+The user explicitly specified the following custom prompt instructions for this GC design:
+"${activeUserPrompt}"
+Please customize the GC layout, visual theme, colors, typography, badge names, texts, and XAML element properties to strictly fulfill these user prompt instructions!\n\n`;
       }
       promptText += `You are an expert TV broadcast graphic designer and vMix XAML specialist. Analyze this graphic overlay reference image (Gerador de Caracteres / Lower Third / Placar de Esportes / Alerta) in detail.
 
@@ -4306,7 +4348,7 @@ Return ONLY a JSON object with this exact structure:
 }
 IMPORTANT: Return valid, strictly parseable JSON. Do not put unescaped raw newlines inside JSON string values like generatedXaml or summary; use \\n instead.`;
 
-      const scanModels = ["gemini-3.6-flash", "gemini-3.1-pro-preview"];
+      const scanModels = ["gemini-3-pro-preview", "gemini-3.6-flash"];
       let responseText = "";
       let lastErr: any = null;
 
@@ -4404,6 +4446,9 @@ IMPORTANTÍSSIMO SOBRE O PREENCHIMENTO AUTOMÁTICO (JSON):
 3. Se a arte não tiver pessoas, retorne sempre "desativarSujeito": true e "noPeople": true. Se tiver, retorne "desativarSujeito": false e "noPeople": false.\n\n`;
 
       let systemInstruction = baseInstructions;
+      if (assistantId === "gerador-roteiros") {
+        systemInstruction = "Você é um Diretor Criativo Especialista em Roteiros de Vídeo (TikTok, Reels, Shorts). Você não é um criador de flyers. Responda de forma criativa, interativa e sem enviar JSON de interface.";
+      }
       switch (assistantId) {
         case "prompt-extrator":
           systemInstruction += `Você é o Prompt Extrator da Zion, assumindo a persona de um DESIGNER EXPERIENTE PROFISSIONAL. Seu objetivo máximo é analisar as imagens de referência enviadas e extrair um MEGA PROMPT técnico e detalhado para IA.
@@ -4584,7 +4629,7 @@ Sempre avise no texto de forma natural se identificou uma logo ou foto de sujeit
               parts.push({
                 inlineData: {
                   data: file.data,
-                  mimeType: file.type
+                  mimeType: file.mimeType || file.type || "image/jpeg"
                 }
               });
             });
@@ -4607,7 +4652,7 @@ Sempre avise no texto de forma natural se identificou uma logo ou foto de sujeit
           userParts.push({
             inlineData: {
               data: file.data,
-              mimeType: file.type
+              mimeType: file.mimeType || file.type || "image/jpeg"
             }
           });
         });
@@ -4623,7 +4668,27 @@ Sempre avise no texto de forma natural se identificou uma logo ou foto de sujeit
         parts: userParts
       });
 
-      const textModels = modelId ? [modelId, "gemini-3.6-flash", "gemini-3-pro-preview"] : ["gemini-3.6-flash", "gemini-3-pro-preview"];
+      // Sanitize contents so that roles strictly alternate between "user" and "model"
+      const sanitizedContents: any[] = [];
+      contents.forEach((item) => {
+        if (!item.parts || item.parts.length === 0) return;
+        const role = item.role === "model" ? "model" : "user";
+        if (sanitizedContents.length === 0) {
+          sanitizedContents.push({ role, parts: item.parts });
+        } else {
+          const lastIndex = sanitizedContents.length - 1;
+          if (sanitizedContents[lastIndex].role === role) {
+            sanitizedContents[lastIndex].parts = [
+              ...sanitizedContents[lastIndex].parts,
+              ...item.parts
+            ];
+          } else {
+            sanitizedContents.push({ role, parts: item.parts });
+          }
+        }
+      });
+
+      const textModels = modelId ? [modelId, "gemini-3-pro-preview", "gemini-3.6-flash"] : ["gemini-3-pro-preview", "gemini-3.6-flash"];
       let responseText = "";
       let lastError: any = null;
 
@@ -4633,7 +4698,7 @@ Sempre avise no texto de forma natural se identificou uma logo ou foto de sujeit
           customApiKey,
           textModels,
           {
-            contents: contents,
+            contents: sanitizedContents,
             config: {
               systemInstruction: systemInstruction
             }
