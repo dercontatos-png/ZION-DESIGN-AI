@@ -18,6 +18,7 @@ console.log = function (...args) {
   originalConsoleLog.apply(console, args);
 }
 import dotenv from "dotenv";
+import os from "os";
 
 dotenv.config();
 
@@ -34,120 +35,160 @@ async function readJimpWithFallback(buffer: Buffer) {
 
 const upload = multer({ storage: multer.memoryStorage() });
 
-const getAiClient = (customApiKey?: string) => {
-  const credentialsPath = path.join(process.cwd(), 'chave-vertex.json');
-  const hasChaveVertex = fs.existsSync(credentialsPath);
-  const jsonEnv = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON || process.env.GOOGLE_APPLICATION_CREDENTIALS;
-  const rawKey = customApiKey?.trim() || jsonEnv || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-
-  // 1. Check if rawKey is JSON credentials (Service Account JSON string)
-  if (rawKey && rawKey.startsWith('{') && rawKey.includes('private_key')) {
-    try {
-      const parsed = JSON.parse(rawKey);
-      if (parsed.project_id || parsed.private_key) {
-        try {
-          fs.writeFileSync(credentialsPath, JSON.stringify(parsed, null, 2));
-          process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialsPath;
-        } catch (e) {}
-
-        const projectId = parsed.project_id || "gerador-de-imagens-ia-502303";
-        const clientInstance = new GoogleGenAI({
-          vertexai: true,
-          project: projectId,
-          location: "global",
-          googleAuthOptions: { credentials: parsed }
-        });
-        (clientInstance as any).debugInfo = {
-          resolvedTokenSource: "JSON Credentials (Custom)",
-          isUsingVertex: true,
-          projectIdUsed: projectId
-        };
-        return clientInstance;
+/** Safely extracts and parses Service Account JSON credentials from environment variables or disk */
+function getServiceAccountCredentials(): any | null {
+  const rawEnv = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON || process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  if (rawEnv && typeof rawEnv === "string") {
+    let cleaned = rawEnv.trim();
+    if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
+      cleaned = cleaned.slice(1, -1).trim();
+    }
+    if (cleaned.includes("{")) {
+      try {
+        const parsed = JSON.parse(cleaned);
+        if (parsed && typeof parsed === "object" && parsed.private_key) {
+          if (typeof parsed.private_key === "string") {
+            parsed.private_key = parsed.private_key.replace(/\\n/g, "\n");
+          }
+          return parsed;
+        }
+      } catch (e) {
+        console.warn("[getServiceAccountCredentials] Error parsing env JSON:", e);
       }
-    } catch (e) {
-      console.warn("[getAiClient] Failed to parse customApiKey as JSON:", e);
     }
   }
 
-  // 2. Se houver Vertex configurado, usar ele primeiro (a pedido do usuário)
-  if (hasChaveVertex) {
+  const pathsToTry = [
+    path.join(process.cwd(), "chave-vertex.json"),
+    path.join(os.tmpdir(), "chave-vertex.json")
+  ];
+  for (const p of pathsToTry) {
+    if (fs.existsSync(p)) {
+      try {
+        const fileContent = fs.readFileSync(p, "utf8");
+        const parsed = JSON.parse(fileContent);
+        if (parsed && typeof parsed === "object" && parsed.private_key) {
+          if (typeof parsed.private_key === "string") {
+            parsed.private_key = parsed.private_key.replace(/\\n/g, "\n");
+          }
+          return parsed;
+        }
+      } catch (e) {}
+    }
+  }
+
+  return null;
+}
+
+/** Builds a prioritized candidate list of GoogleGenAI clients for AI operations */
+function getCandidateClients(customApiKey?: string): { name: string; instance: GoogleGenAI }[] {
+  const candidateClients: { name: string; instance: GoogleGenAI }[] = [];
+
+  // 1. Custom Developer or JSON Key provided in UI
+  if (customApiKey?.trim()) {
+    let rawKey = customApiKey.trim();
+    if ((rawKey.startsWith('"') && rawKey.endsWith('"')) || (rawKey.startsWith("'") && rawKey.endsWith("'"))) {
+      rawKey = rawKey.slice(1, -1).trim();
+    }
+    if (rawKey.startsWith("{") && rawKey.includes("private_key")) {
+      try {
+        const parsed = JSON.parse(rawKey);
+        if (typeof parsed.private_key === "string") {
+          parsed.private_key = parsed.private_key.replace(/\\n/g, "\n");
+        }
+        const projectId = parsed.project_id || "gerador-de-imagens-ia-502303";
+        candidateClients.push({
+          name: "Custom JSON Service Account (us-central1)",
+          instance: new GoogleGenAI({
+            vertexai: true,
+            project: projectId,
+            location: "us-central1",
+            googleAuthOptions: { credentials: parsed }
+          })
+        });
+        candidateClients.push({
+          name: "Custom JSON Service Account (global)",
+          instance: new GoogleGenAI({
+            vertexai: true,
+            project: projectId,
+            location: "global",
+            googleAuthOptions: { credentials: parsed }
+          })
+        });
+      } catch (e) {
+        console.warn("[getCandidateClients] Failed to parse customApiKey JSON:", e);
+      }
+    } else {
+      candidateClients.push({
+        name: "Custom Developer API Key Client",
+        instance: new GoogleGenAI({ apiKey: rawKey })
+      });
+    }
+  }
+
+  // 2. Service Account Credentials from Env or Disk
+  const saParsed = getServiceAccountCredentials();
+  if (saParsed) {
+    const projectId = saParsed.project_id || "gerador-de-imagens-ia-502303";
     try {
-      const parsed = JSON.parse(fs.readFileSync(credentialsPath, 'utf8'));
-      const projectId = parsed.project_id || "gerador-de-imagens-ia-502303";
-      const clientInstance = new GoogleGenAI({
+      const tmpPath = path.join(os.tmpdir(), "chave-vertex.json");
+      fs.writeFileSync(tmpPath, JSON.stringify(saParsed, null, 2));
+      process.env.GOOGLE_APPLICATION_CREDENTIALS = tmpPath;
+    } catch (e) {}
+
+    candidateClients.push({
+      name: `Service Account Vertex AI us-central1 (${projectId})`,
+      instance: new GoogleGenAI({
+        vertexai: true,
+        project: projectId,
+        location: "us-central1",
+        googleAuthOptions: { credentials: saParsed }
+      })
+    });
+    candidateClients.push({
+      name: `Service Account Vertex AI global (${projectId})`,
+      instance: new GoogleGenAI({
         vertexai: true,
         project: projectId,
         location: "global",
-        googleAuthOptions: { credentials: parsed }
-      });
-      (clientInstance as any).debugInfo = {
-        resolvedTokenSource: "Vertex AI (chave-vertex.json)",
-        isUsingVertex: true,
-        projectIdUsed: projectId
-      };
-      return clientInstance;
-    } catch (e) {
-      console.warn("Erro ao instanciar Vertex client pelo arquivo:", e);
-    }
+        googleAuthOptions: { credentials: saParsed }
+      })
+    });
   }
 
-  // 3. If customApiKey was supplied as a standard string API key (e.g. AIza... or AQ...)
-  if (customApiKey?.trim() && !customApiKey.trim().startsWith('{')) {
-    const clientInstance = new GoogleGenAI({ apiKey: customApiKey.trim() });
-    (clientInstance as any).debugInfo = {
-      resolvedTokenSource: "Custom API Key",
-      isUsingVertex: false
-    };
-    return clientInstance;
+  // 3. Platform Environment API Key (GEMINI_API_KEY / GOOGLE_API_KEY)
+  const envKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  if (envKey && !envKey.trim().startsWith("{")) {
+    candidateClients.push({
+      name: "Platform Environment API Key Client",
+      instance: new GoogleGenAI({ apiKey: envKey.trim() })
+    });
   }
 
-  // 3. If chave-vertex.json exists on disk
-  if (hasChaveVertex) {
-    try {
-      process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialsPath;
-      const fileContent = fs.readFileSync(credentialsPath, 'utf8');
-      const parsed = JSON.parse(fileContent);
-      const projectId = parsed.project_id || "gerador-de-imagens-ia-502303";
-      const clientInstance = new GoogleGenAI({
-        vertexai: true,
-        project: projectId,
-        location: "global",
-        googleAuthOptions: { keyFilename: credentialsPath, credentials: parsed }
-      });
-      (clientInstance as any).debugInfo = {
-        resolvedTokenSource: "chave-vertex.json",
-        isUsingVertex: true,
-        projectIdUsed: projectId
-      };
-      return clientInstance;
-    } catch (e) {
-      console.warn("[getAiClient] Error reading chave-vertex.json:", e);
-    }
-  }
-
-  // 4. If environment API key exists or we fall back to default platform key
-  const activeKey = rawKey;
-  if (activeKey && !activeKey.startsWith('{')) {
-    const clientInstance = new GoogleGenAI({ apiKey: activeKey });
-    (clientInstance as any).debugInfo = {
-      resolvedTokenSource: rawKey ? "Env API Key" : "Platform Default Fallback Key",
-      isUsingVertex: false
-    };
-    return clientInstance;
-  }
-
-  // 5. Default Vertex AI Client
-  const clientInstance = new GoogleGenAI({
-    vertexai: true,
-    project: "gerador-de-imagens-ia-502303",
-    location: "global"
+  // 4. Fallback ADC
+  candidateClients.push({
+    name: "Platform Vertex AI (ADC)",
+    instance: new GoogleGenAI({
+      vertexai: true,
+      project: saParsed?.project_id || "gerador-de-imagens-ia-502303",
+      location: "us-central1"
+    })
   });
-  (clientInstance as any).debugInfo = {
-    resolvedTokenSource: "Default Project",
-    isUsingVertex: true,
-    projectIdUsed: "gerador-de-imagens-ia-502303"
-  };
-  return clientInstance;
+
+  return candidateClients;
+}
+
+const getAiClient = (customApiKey?: string) => {
+  const clients = getCandidateClients(customApiKey);
+  const primary = clients[0]?.instance;
+  if (primary) {
+    (primary as any).debugInfo = {
+      resolvedTokenSource: clients[0].name,
+      isUsingVertex: true
+    };
+    return primary;
+  }
+  return new GoogleGenAI({ vertexai: true, project: "gerador-de-imagens-ia-502303", location: "us-central1" });
 };
 
 export function resolveImageInput(input: any): { data: string; mimeType: string } {
@@ -733,88 +774,7 @@ async function executeImageGenerationWithFallbacks(
   seedUsuario?: string | number | null
 ): Promise<{ imageBase64Url: string; rawData: string; rawMime: string; modelUsed: string }> {
 
-  const candidateClients: { name: string; instance: GoogleGenAI }[] = [];
-
-  // 1. Custom Developer/JSON Key provided in UI
-  if (customApiKey?.trim()) {
-    const rawKey = customApiKey.trim();
-    if (rawKey.startsWith("{") && rawKey.includes("private_key")) {
-      try {
-        const parsed = JSON.parse(rawKey);
-        candidateClients.push({
-          name: "Custom JSON Service Account",
-          instance: new GoogleGenAI({
-            vertexai: true,
-            project: parsed.project_id || "gerador-de-imagens-ia-502303",
-            location: "global",
-            googleAuthOptions: { credentials: parsed }
-          })
-        });
-      } catch (e) {}
-    } else {
-      candidateClients.push({
-        name: "Custom Developer API Key Client",
-        instance: new GoogleGenAI({ apiKey: rawKey })
-      });
-    }
-  }
-
-  // 1.5. Environment JSON Service Account
-  const jsonEnv1 = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON || process.env.GOOGLE_APPLICATION_CREDENTIALS;
-  if (jsonEnv1 && jsonEnv1.startsWith("{") && jsonEnv1.includes("private_key")) {
-    try {
-      const parsed = JSON.parse(jsonEnv1);
-      candidateClients.push({
-        name: "Environment JSON Service Account",
-        instance: new GoogleGenAI({
-          vertexai: true,
-          project: parsed.project_id || "gerador-de-imagens-ia-502303",
-          location: "global",
-          googleAuthOptions: { credentials: parsed }
-        })
-      });
-    } catch (e) {}
-  }
-
-  // 2. Platform Vertex AI key from chave-vertex.json
-  const credentialsPath = path.join(process.cwd(), "chave-vertex.json");
-  if (fs.existsSync(credentialsPath)) {
-    try {
-      const fileContent = fs.readFileSync(credentialsPath, "utf8");
-      const parsed = JSON.parse(fileContent);
-      const projectId = parsed.project_id || "gerador-de-imagens-ia-502303";
-      candidateClients.push({
-        name: "Platform Vertex AI (global)",
-        instance: new GoogleGenAI({
-          vertexai: true,
-          project: projectId,
-          location: "global",
-          googleAuthOptions: { keyFilename: credentialsPath, credentials: parsed }
-        })
-      });
-    } catch (e) {}
-  }
-
-  // 3. Platform Environment API Key
-  const envKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-  if (envKey && !envKey.startsWith("{")) {
-    candidateClients.push({
-      name: "Platform Environment API Key Client",
-      instance: new GoogleGenAI({ apiKey: envKey })
-    });
-  }
-
-  // 4. Platform Vertex AI (ADC)
-  candidateClients.push({
-    name: "Platform Vertex AI (ADC)",
-    instance: new GoogleGenAI({
-      vertexai: true,
-      project: "gerador-de-imagens-ia-502303",
-      location: "global"
-    })
-  });
-
-  // 6. Default client passed in as parameter (always append as fallback)
+  const candidateClients = getCandidateClients(customApiKey);
   candidateClients.push({ name: "Primary Client", instance: client });
 
   let lastError = ""; let specificError = "";
@@ -912,71 +872,7 @@ async function executeGenerateContentWithFallbacks(
   modelNames: string[],
   generateParams: any
 ): Promise<{ response: any; modelUsed: string; clientUsed: string }> {
-  const candidateClients: { name: string; instance: GoogleGenAI }[] = [];
-
-  // 1. Custom Developer/JSON Key provided in UI
-  if (customApiKey?.trim()) {
-    const rawKey = customApiKey.trim();
-    if (rawKey.startsWith("{") && rawKey.includes("private_key")) {
-      try {
-        const parsed = JSON.parse(rawKey);
-        candidateClients.push({
-          name: "Custom JSON Service Account",
-          instance: new GoogleGenAI({
-            vertexai: true,
-            project: parsed.project_id || "gerador-de-imagens-ia-502303",
-            location: "global",
-            googleAuthOptions: { credentials: parsed }
-          })
-        });
-      } catch (e) {}
-    } else {
-      candidateClients.push({
-        name: "Custom Developer API Key Client",
-        instance: new GoogleGenAI({ apiKey: rawKey })
-      });
-    }
-  }
-
-  // 2. Platform Vertex AI key from chave-vertex.json
-  const credentialsPath = path.join(process.cwd(), "chave-vertex.json");
-  if (fs.existsSync(credentialsPath)) {
-    try {
-      const fileContent = fs.readFileSync(credentialsPath, "utf8");
-      const parsed = JSON.parse(fileContent);
-      const projectId = parsed.project_id || "gerador-de-imagens-ia-502303";
-      candidateClients.push({
-        name: "Platform Vertex AI (global)",
-        instance: new GoogleGenAI({
-          vertexai: true,
-          project: projectId,
-          location: "global",
-          googleAuthOptions: { keyFilename: credentialsPath, credentials: parsed }
-        })
-      });
-    } catch (e) {}
-  }
-
-  // 3. Platform Environment API Key
-  const envKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-  if (envKey && !envKey.startsWith("{")) {
-    candidateClients.push({
-      name: "Platform Environment API Key Client",
-      instance: new GoogleGenAI({ apiKey: envKey })
-    });
-  }
-
-  // 4. Platform Vertex AI (ADC)
-  candidateClients.push({
-    name: "Platform Vertex AI (ADC)",
-    instance: new GoogleGenAI({
-      vertexai: true,
-      project: "gerador-de-imagens-ia-502303",
-      location: "global"
-    })
-  });
-
-  // 6. Default client passed in as parameter
+  const candidateClients = getCandidateClients(customApiKey);
   candidateClients.push({ name: "Primary Client", instance: client });
 
   let lastError: any = null;
@@ -1567,70 +1463,7 @@ ${textContent}`
 
       console.log(`Calling Gemini for inpainting image editing (Original Size: ${origWidth}x${origHeight}, Aspect Ratio: ${targetAspectRatio})...`);
 
-      const candidateClients: { name: string; instance: GoogleGenAI }[] = [];
-
-      // 1. Custom Developer/JSON Key provided in UI
-      if (customApiKey?.trim()) {
-        const rawKey = customApiKey.trim();
-        if (rawKey.startsWith("{") && rawKey.includes("private_key")) {
-          try {
-            const parsed = JSON.parse(rawKey);
-            candidateClients.push({
-              name: "Custom JSON Service Account",
-              instance: new GoogleGenAI({
-                vertexai: true,
-                project: parsed.project_id || "gerador-de-imagens-ia-502303",
-                location: "global",
-                googleAuthOptions: { credentials: parsed }
-              })
-            });
-          } catch (e) {}
-        } else {
-          candidateClients.push({
-            name: "Custom Developer API Key Client",
-            instance: new GoogleGenAI({ apiKey: rawKey })
-          });
-        }
-      }
-
-      // 2. Vertex JSON key file
-      const credentialsPath = path.join(process.cwd(), "chave-vertex.json");
-      if (fs.existsSync(credentialsPath)) {
-        try {
-          const fileContent = fs.readFileSync(credentialsPath, "utf8");
-          const parsed = JSON.parse(fileContent);
-          candidateClients.push({
-            name: "Platform Vertex AI (global)",
-            instance: new GoogleGenAI({
-              vertexai: true,
-              project: parsed.project_id || "gerador-de-imagens-ia-502303",
-              location: "global",
-              googleAuthOptions: { keyFilename: credentialsPath, credentials: parsed }
-            })
-          });
-        } catch (e) {}
-      }
-
-      // 3. ENV Key
-      const envKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-      if (envKey && !envKey.startsWith("{")) {
-        candidateClients.push({
-          name: "Platform Environment API Key Client",
-          instance: new GoogleGenAI({ apiKey: envKey })
-        });
-      }
-
-      // 4. Vertex ADC
-      candidateClients.push({
-        name: "Platform Vertex AI (ADC)",
-        instance: new GoogleGenAI({
-          vertexai: true,
-          project: "gerador-de-imagens-ia-502303",
-          location: "global"
-        })
-      });
-
-      // 6. Primary client
+      const candidateClients = getCandidateClients(customApiKey);
       candidateClients.push({ name: "Primary Client", instance: currentAi });
 
       let response: any = null;
