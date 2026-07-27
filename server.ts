@@ -37,7 +37,8 @@ const upload = multer({ storage: multer.memoryStorage() });
 const getAiClient = (customApiKey?: string) => {
   const credentialsPath = path.join(process.cwd(), 'chave-vertex.json');
   const hasChaveVertex = fs.existsSync(credentialsPath);
-  const rawKey = customApiKey?.trim() || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  const jsonEnv = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON || process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  const rawKey = customApiKey?.trim() || jsonEnv || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
 
   // 1. Check if rawKey is JSON credentials (Service Account JSON string)
   if (rawKey && rawKey.startsWith('{') && rawKey.includes('private_key')) {
@@ -756,6 +757,23 @@ async function executeImageGenerationWithFallbacks(
         instance: new GoogleGenAI({ apiKey: rawKey })
       });
     }
+  }
+
+  // 1.5. Environment JSON Service Account
+  const jsonEnv1 = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON || process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  if (jsonEnv1 && jsonEnv1.startsWith("{") && jsonEnv1.includes("private_key")) {
+    try {
+      const parsed = JSON.parse(jsonEnv1);
+      candidateClients.push({
+        name: "Environment JSON Service Account",
+        instance: new GoogleGenAI({
+          vertexai: true,
+          project: parsed.project_id || "gerador-de-imagens-ia-502303",
+          location: "global",
+          googleAuthOptions: { credentials: parsed }
+        })
+      });
+    } catch (e) {}
   }
 
   // 2. Platform Vertex AI key from chave-vertex.json
