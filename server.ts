@@ -6,19 +6,41 @@ import { Jimp, ResizeStrategy, BlendMode } from "jimp";
 import sharp from "sharp";
 import path from "path";
 import fs from "fs";
-const logFile = fs.createWriteStream(path.join(process.cwd(), "app.log"), { flags: "a" });
+import os from "os";
+
+let logFileStream: fs.WriteStream | null = null;
+try {
+  const logPath = path.join(os.tmpdir(), "app.log");
+  const stream = fs.createWriteStream(logPath, { flags: "a" });
+  stream.on("error", () => {
+    logFileStream = null;
+  });
+  logFileStream = stream;
+} catch (_) {
+  logFileStream = null;
+}
+
 const originalConsoleError = console.error;
 console.error = function (...args) {
-  logFile.write(new Date().toISOString() + " ERROR: " + args.map(a => typeof a === "object" ? JSON.stringify(a) : String(a)).join(" ") + "\n");
+  if (logFileStream && logFileStream.writable) {
+    try {
+      logFileStream.write(new Date().toISOString() + " ERROR: " + args.map(a => typeof a === "object" ? JSON.stringify(a) : String(a)).join(" ") + "\n");
+    } catch (_) {}
+  }
   originalConsoleError.apply(console, args);
-}
+};
+
 const originalConsoleLog = console.log;
 console.log = function (...args) {
-  logFile.write(new Date().toISOString() + " LOG: " + args.map(a => typeof a === "object" ? JSON.stringify(a) : String(a)).join(" ") + "\n");
+  if (logFileStream && logFileStream.writable) {
+    try {
+      logFileStream.write(new Date().toISOString() + " LOG: " + args.map(a => typeof a === "object" ? JSON.stringify(a) : String(a)).join(" ") + "\n");
+    } catch (_) {}
+  }
   originalConsoleLog.apply(console, args);
-}
+};
+
 import dotenv from "dotenv";
-import os from "os";
 import { GoogleAuth } from "google-auth-library";
 
 dotenv.config();
@@ -957,9 +979,11 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "500mb", extended: true, parameterLimit: 1000000 }));
 
   const publicGenDir = path.join(process.cwd(), "public", "generated-images");
-  if (!fs.existsSync(publicGenDir)) {
-    fs.mkdirSync(publicGenDir, { recursive: true });
-  }
+  try {
+    if (!fs.existsSync(publicGenDir)) {
+      fs.mkdirSync(publicGenDir, { recursive: true });
+    }
+  } catch (_) {}
   app.use("/generated-images", express.static(publicGenDir));
 
   // Initialize WhatsApp Bot routes (locally only, as Vercel is stateless and read-only)
@@ -1163,8 +1187,14 @@ async function startServer() {
         return res.status(400).json({ error: "JSON inválido. Certifique-se de que é uma chave de Conta de Serviço (Service Account) válida da Google Cloud / Vertex AI." });
       }
 
-      const credentialsPath = path.join(process.cwd(), "chave-vertex.json");
-      fs.writeFileSync(credentialsPath, JSON.stringify(parsed, null, 2));
+      let credentialsPath = path.join(os.tmpdir(), "chave-vertex.json");
+      try {
+        const localPath = path.join(process.cwd(), "chave-vertex.json");
+        fs.writeFileSync(localPath, JSON.stringify(parsed, null, 2));
+        credentialsPath = localPath;
+      } catch (_) {
+        fs.writeFileSync(credentialsPath, JSON.stringify(parsed, null, 2));
+      }
       process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialsPath;
 
       console.log(`[upload-vertex-key] chave-vertex.json salva com sucesso para o projeto: ${parsed.project_id}`);
