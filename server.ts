@@ -122,7 +122,8 @@ function getCandidateClients(customApiKey?: string): { name: string; instance: G
             vertexai: true,
             project: projectId,
             location: "us-central1",
-            googleAuthOptions: { credentials: parsed }
+            googleAuthOptions: { credentials: parsed },
+            httpOptions: { timeout: 30000, retryOptions: { attempts: 1 } }
           })
         });
         candidateClients.push({
@@ -131,7 +132,8 @@ function getCandidateClients(customApiKey?: string): { name: string; instance: G
             vertexai: true,
             project: projectId,
             location: "global",
-            googleAuthOptions: { credentials: parsed }
+            googleAuthOptions: { credentials: parsed },
+            httpOptions: { timeout: 30000, retryOptions: { attempts: 1 } }
           })
         });
       } catch (e) {
@@ -140,7 +142,10 @@ function getCandidateClients(customApiKey?: string): { name: string; instance: G
     } else {
       candidateClients.push({
         name: "Custom Developer API Key Client",
-        instance: new GoogleGenAI({ apiKey: rawKey })
+        instance: new GoogleGenAI({ 
+          apiKey: rawKey,
+          httpOptions: { timeout: 30000, retryOptions: { attempts: 1 } }
+        })
       });
     }
   }
@@ -161,7 +166,8 @@ function getCandidateClients(customApiKey?: string): { name: string; instance: G
         vertexai: true,
         project: projectId,
         location: "us-central1",
-        googleAuthOptions: { credentials: saParsed }
+        googleAuthOptions: { credentials: saParsed },
+        httpOptions: { timeout: 30000, retryOptions: { attempts: 1 } }
       })
     });
     candidateClients.push({
@@ -170,7 +176,8 @@ function getCandidateClients(customApiKey?: string): { name: string; instance: G
         vertexai: true,
         project: projectId,
         location: "global",
-        googleAuthOptions: { credentials: saParsed }
+        googleAuthOptions: { credentials: saParsed },
+        httpOptions: { timeout: 30000, retryOptions: { attempts: 1 } }
       })
     });
   }
@@ -180,7 +187,10 @@ function getCandidateClients(customApiKey?: string): { name: string; instance: G
   if (envKey && !envKey.trim().startsWith("{")) {
     candidateClients.push({
       name: "Platform Environment API Key Client",
-      instance: new GoogleGenAI({ apiKey: envKey.trim() })
+      instance: new GoogleGenAI({ 
+        apiKey: envKey.trim(),
+        httpOptions: { timeout: 30000, retryOptions: { attempts: 1 } }
+      })
     });
   }
 
@@ -190,7 +200,8 @@ function getCandidateClients(customApiKey?: string): { name: string; instance: G
     instance: new GoogleGenAI({
       vertexai: true,
       project: saParsed?.project_id || "gerador-de-imagens-ia-502303",
-      location: "us-central1"
+      location: "us-central1",
+      httpOptions: { timeout: 30000, retryOptions: { attempts: 1 } }
     })
   });
 
@@ -679,8 +690,8 @@ async function executeImageGenerationWithFallbacks(
 
     // High quality image generation strategies with Imagen 3 and Gemini 3 Pro Image.
     const baseStrategies = [
-      { name: "gemini-3-pro-image", type: "generateContent" },
-      { name: "imagen-3.0-generate-002", type: "generateImages" },
+      { name: "nano-banana-pro", type: "generateContent" },
+      { name: "nano-banana-2", type: "generateImages" },
       { name: "imagen-3.0-generate-001", type: "generateImages" },
       { name: "imagen-3.0-fast-generate-001", type: "generateImages" }
     ];
@@ -775,7 +786,7 @@ async function executeGenerateContentWithFallbacks(
   candidateClients.push({ name: "Primary Client", instance: client });
 
   // Fallback models if primary model is rate-limited or fails
-  const fallbackList = ["gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash"];
+  const fallbackList = ["gemini-3.6-flash", "gemini-3.5-pro"];
   const combinedModels = Array.from(new Set([...modelNames, ...fallbackList]));
 
   let lastError: any = null;
@@ -1307,7 +1318,7 @@ Input Text:
 ${textContent}`
       });
 
-      const parseModels = ["gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash"];
+      const parseModels = ["gemini-3.6-flash", "gemini-3.5-pro"];
       let jsonStr = "";
       let parseErr: any = null;
 
@@ -1392,7 +1403,7 @@ ${textContent}`
 
       let response: any = null;
       let lastErr: any = null;
-      const modelsToTry = ["gemini-3-pro-image"];
+      const modelsToTry = ["nano-banana-pro"];
 
       for (const cItem of candidateClients) {
         for (const modelName of modelsToTry) {
@@ -1608,7 +1619,7 @@ If no issues are found, return an empty list. Output ONLY valid JSON.`;
           const { data: cleanDataForVision, mimeType: visionMime } = resolveImageInput(imageBase64);
 
           const visionRes = await currentAi.models.generateContent({
-            model: "gemini-3.1-pro-preview",
+            model: "gemini-3.6-flash",
             contents: [
               {
                 inlineData: {
@@ -2341,7 +2352,7 @@ Do not return any markdown formatting outside of valid JSON.`;
           const fallbackRes = await executeGenerateContentWithFallbacks(
             client,
             customApiKey,
-            ["gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash"],
+            ["gemini-3.6-flash", "gemini-3.5-pro"],
             {
               contents: [
                 {
@@ -2433,7 +2444,7 @@ Output ONLY the JSON object. Do not include conversational filler.`;
         const fallbackRes = await executeGenerateContentWithFallbacks(
           currentAi,
           customApiKey,
-          ["gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash"],
+          ["gemini-3.6-flash", "gemini-3.5-pro"],
           {
             contents: [
               {
@@ -2564,7 +2575,7 @@ Output a pristine, ultra-detailed, hyper-realistic masterpiece image.`;
         const fallbackRes = await executeGenerateContentWithFallbacks(
           currentAi,
           customApiKey,
-          ["gemini-3-pro-image"],
+          ["nano-banana-pro"],
           {
             contents: [
               {
@@ -2846,7 +2857,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
       thinkParts.push({ text: thinkPrompt });
 
       let finalPrompt = "";
-      const thinkModels = ["gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash"];
+      const thinkModels = ["gemini-3.6-flash", "gemini-3.5-pro"];
       try {
         const fallbackRes = await executeGenerateContentWithFallbacks(
           currentAi,
@@ -2951,7 +2962,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
       }
 
       const sizeSelected = imgConfig?.imageSize || "1K";
-      const targetModel = "gemini-3-pro-image";
+      const targetModel = "nano-banana-pro";
       let modelUsed = `Vertex AI (${targetModel})`;
       let lastErrors: string[] = [];
 
@@ -3070,7 +3081,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
 
       console.log("\n--- CONFIGURAÇÃO DE GERAÇÃO (/api/generate) ---");
       console.log({
-        model: "gemini-3-pro-image",
+        model: "nano-banana-pro",
         resolution: imgConfig?.imageSize || "1K",
         aspectRatio: imgConfig?.aspectRatio || "1:1",
         variations: imgConfig?.variations || 1,
@@ -3338,7 +3349,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
       const results: string[] = [];
       const variationsCount = Math.min(Math.max(imgConfig?.variations || 1, 1), 4);
       const sizeSelected = imgConfig?.imageSize || "1K";
-      const targetModel = "gemini-3-pro-image";
+      const targetModel = "nano-banana-pro";
       let modelUsed = `Google AI Studio (${targetModel})`;
       let lastErrors: string[] = [];
 
@@ -3464,7 +3475,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         previousImageBase64 = "",
         imagemAnteriorBase64 = "",
         imagemRefinamentoBase64 = "",
-        modelId = "gemini-3-pro-image",
+        modelId = "nano-banana-pro",
         seedUsuario = null
       } = req.body;
 
@@ -3506,9 +3517,9 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
       let credentialsPath = path.join(process.cwd(), 'chave-vertex.json');
       const isVertex = fs.existsSync(credentialsPath) || token.startsWith('AQ.') || debugInfo.isUsingVertex === true;
 
-      // We use gemini-3-pro-image for high quality image generation
+      // We use nano-banana-pro for high quality image generation
       const sizeSelectedForModel = resolutionInput === "4K" ? "4K" : (resolutionInput === "2K" ? "2K" : "1K");
-      const targetModel = "gemini-3-pro-image";
+      const targetModel = "nano-banana-pro";
       
       let targetAspectRatio = "1:1";
       const validRatios = ["1:1", "3:4", "4:3", "9:16", "16:9"];
@@ -3692,7 +3703,7 @@ Return ONLY the JSON object. Do not include any conversational text or markdown 
 
         expansionParts.push({ text: instructionPrompt });
 
-        const expModels = ["gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash"];
+        const expModels = ["gemini-3.6-flash", "gemini-3.5-pro"];
         let expText = "";
         let lastExpErr: any = null;
         try {
@@ -4042,7 +4053,7 @@ ${logoMandatoryRule}`;
       if (!currentAi) return res.status(400).json({ error: "API Key não configurada." });
 
       const { data: cleanData, mimeType: resolvedMime } = resolveImageInput(imageData);
-      const extractModels = ["gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash"];
+      const extractModels = ["gemini-3.6-flash", "gemini-3.5-pro"];
       let promptText = "";
       let lastErr: any = null;
 
@@ -4156,7 +4167,7 @@ Return ONLY a JSON object with this exact structure:
 }
 IMPORTANT: Return valid, strictly parseable JSON. Do not put unescaped raw newlines inside JSON string values like generatedXaml or summary; use \\n instead.`;
 
-      const scanModels = ["gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash"];
+      const scanModels = ["gemini-3.6-flash", "gemini-3.5-pro"];
       let responseText = "";
       let lastErr: any = null;
 
@@ -4644,7 +4655,7 @@ Sempre avise no texto de forma natural se identificou uma logo ou foto de sujeit
         sanitizedContents.shift();
       }
 
-      const textModels = modelId ? [modelId, "gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash"] : ["gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash"];
+      const textModels = modelId ? [modelId, "gemini-3.6-flash", "gemini-3.5-pro"] : ["gemini-3.6-flash", "gemini-3.5-pro"];
       let responseText = "";
       let lastError: any = null;
 
@@ -4767,7 +4778,7 @@ async function generateLyria002(promptText: string, customApiKey?: string): Prom
         const standardAi = getAiClient(customApiKey);
         if (standardAi) {
           const aiAnalysisRes = await standardAi.models.generateContent({
-            model: "gemini-3.1-pro-preview",
+            model: "gemini-3.6-flash",
             contents: [{
               role: "user",
               parts: [{
@@ -4813,7 +4824,7 @@ async function generateLyria002(promptText: string, customApiKey?: string): Prom
         return res.status(400).json({ error: "API Key não configurada." });
       }
 
-      const models = ["gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash", "gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash", "gemini-3.1-pro-preview"];
+      const models = ["gemini-3.6-flash", "gemini-3.5-pro"];
       const systemContextPrompt = `Você é um Engenheiro de Prompts Sênior e Diretor Criativo especialista da plataforma Zion AI Studio.
 O usuário digitou o seguinte rascunho de ideia ou prompt para interagir com o agente especialista "${agentName || "Diretor Criativo"}" (ID: ${assistantId || "diretor-criativo"}):
 
@@ -4907,7 +4918,7 @@ Responda APENAS com o texto do prompt melhorado em Português (curto, direto e u
       const fallbackRes = await executeGenerateContentWithFallbacks(
         currentAi,
         customApiKey,
-        ["gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash"],
+        ["gemini-3.6-flash", "gemini-3.5-pro"],
         { contents: [{ role: "user", parts }] }
       );
 
@@ -4986,7 +4997,7 @@ Responda ESTRITAMENTE em formato JSON com as seguintes chaves exatas:
       const fallbackRes = await executeGenerateContentWithFallbacks(
         currentAi,
         customApiKey,
-        ["gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash"],
+        ["gemini-3.6-flash", "gemini-3.5-pro"],
         {
           contents: [{ role: "user", parts }],
           generationConfig: { responseMimeType: "application/json" }

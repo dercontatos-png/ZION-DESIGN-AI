@@ -2318,20 +2318,20 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
             </div>
             <div className="flex gap-3">
               <button
-                onClick={() => store.updateConfig({ modelId: "gemini-3-pro-image" })}
-                className={`flex-1 flex flex-col items-center justify-center p-4 rounded-xl border transition-all ${(!store.modelId || store.modelId === "gemini-3-pro-image") ? "bg-[#ad8330]/20 border-[#ad8330]/50 text-[#d4af37]" : "bg-black border-white/5 text-zinc-400 hover:text-zinc-200"}`}
+                onClick={() => store.updateConfig({ modelId: "nano-banana-pro" })}
+                className={`flex-1 flex flex-col items-center justify-center p-4 rounded-xl border transition-all ${(!store.modelId || store.modelId === "nano-banana-pro") ? "bg-[#ad8330]/20 border-[#ad8330]/50 text-[#d4af37]" : "bg-black border-white/5 text-zinc-400 hover:text-zinc-200"}`}
               >
                 <Sparkles size={24} className="mb-2" />
-                <span className="font-bold text-sm">Gemini 3 Pro</span>
+                <span className="font-bold text-sm">Nano Banana Pro</span>
                 <span className="text-xs opacity-70">Alta Qualidade & Raciocínio</span>
               </button>
               
               <button
-                onClick={() => store.updateConfig({ modelId: "imagen-3.0-generate-002" })}
-                className={`flex-1 flex flex-col items-center justify-center p-4 rounded-xl border transition-all ${store.modelId === "imagen-3.0-generate-002" ? "bg-[#ad8330]/20 border-[#ad8330]/50 text-[#d4af37]" : "bg-black border-white/5 text-zinc-400 hover:text-zinc-200"}`}
+                onClick={() => store.updateConfig({ modelId: "nano-banana-2" })}
+                className={`flex-1 flex flex-col items-center justify-center p-4 rounded-xl border transition-all ${store.modelId === "nano-banana-2" ? "bg-[#ad8330]/20 border-[#ad8330]/50 text-[#d4af37]" : "bg-black border-white/5 text-zinc-400 hover:text-zinc-200"}`}
               >
                 <Zap size={24} className="mb-2" />
-                <span className="font-bold text-sm">Imagen 3</span>
+                <span className="font-bold text-sm">Nano Banana 2</span>
                 <span className="text-xs opacity-70">Velocidade & Criatividade</span>
               </button>
             </div>
@@ -2349,9 +2349,9 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                 <label className="block text-xs uppercase tracking-widest font-black text-zinc-500 mb-1.5">Qualidade de Renderização</label>
                 <div className="flex gap-1 bg-black p-1.5 rounded-lg border border-white/5">
                   {[
-                    { q: "1K", model: "gemini-3-pro-image" },
-                    { q: "2K", model: "gemini-3-pro-image" },
-                    { q: "4K", model: "gemini-3-pro-image" }
+                    { q: "1K", model: "nano-banana-pro" },
+                    { q: "2K", model: "nano-banana-pro" },
+                    { q: "4K", model: "nano-banana-pro" }
                   ].map(({ q, model }) => {
                     const isSelected = store.resolucao === q;
                     return (

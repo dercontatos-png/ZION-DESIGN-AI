@@ -200,7 +200,7 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<string>("gemini-3.1-pro-preview");
+  const [selectedModel, setSelectedModel] = useState<string>("gemini-3.6-flash");
   const [showModelSettings, setShowModelSettings] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
@@ -479,7 +479,7 @@ ${(store.camadasTexto || []).map((t, idx) => `  ${idx + 1}. [Função: "${t.func
 - Sujeitos Carregados: ${store.sujeitosBase64List?.length || 0} fotos
 - Cenários Carregados: ${store.cenariosBase64List?.length || 0} fotos
 - Logos Carregados: ${store.logosList?.length || 0} logos
-- Qualidade / Modelo Ativo: ${store.resolucao} (usando o modelo: gemini-3-pro-image)
+- Qualidade / Modelo Ativo: ${store.resolucao} (usando o modelo: gemini-3.5-pro)
 
 Regras de Automação do JSON (SEMPRE adicione no final se houver mudança de contexto):
 0. MAPEAMENTO E PREENCHIMENTO AUTOMÁTICO DE IMAGENS ANEXADAS (EDITAR FOTO / MELHORAR PROMPT / REFERÊNCIA):
@@ -1974,18 +1974,18 @@ Exemplo de JSON de saída:
                 <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400 mb-2 block">Selecione o Modelo</label>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => setSelectedModel("gemini-3.1-pro-preview")}
-                    className={`flex-1 flex flex-col items-center justify-center py-2.5 text-xs rounded-lg transition-all ${selectedModel === "gemini-3.1-pro-preview" ? "bg-[#ad8330]/20 text-[#d4af37] border border-[#ad8330]/50 font-bold" : "bg-black text-zinc-400 hover:text-zinc-200 border border-white/5"}`}
+                    onClick={() => setSelectedModel("gemini-3.6-flash")}
+                    className={`flex-1 flex flex-col items-center justify-center py-2.5 text-xs rounded-lg transition-all ${selectedModel === "gemini-3.6-flash" ? "bg-[#ad8330]/20 text-[#d4af37] border border-[#ad8330]/50 font-bold" : "bg-black text-zinc-400 hover:text-zinc-200 border border-white/5"}`}
                   >
                     <Zap size={16} className="mb-1" />
-                    Pro 3.1
+                    Flash 3.6
                   </button>
                   <button
-                    onClick={() => setSelectedModel("gemini-3-pro-image")}
-                    className={`flex-1 flex flex-col items-center justify-center py-2.5 text-xs rounded-lg transition-all ${selectedModel === "gemini-3-pro-image" ? "bg-[#ad8330]/20 text-[#d4af37] border border-[#ad8330]/50 font-bold" : "bg-black text-zinc-400 hover:text-zinc-200 border border-white/5"}`}
+                    onClick={() => setSelectedModel("gemini-3.5-pro")}
+                    className={`flex-1 flex flex-col items-center justify-center py-2.5 text-xs rounded-lg transition-all ${selectedModel === "gemini-3.5-pro" ? "bg-[#ad8330]/20 text-[#d4af37] border border-[#ad8330]/50 font-bold" : "bg-black text-zinc-400 hover:text-zinc-200 border border-white/5"}`}
                   >
                     <Sparkles size={16} className="mb-1" />
-                    Image Pro
+                    Pro 3.5
                   </button>
                 </div>
               </div>
