@@ -6,15 +6,24 @@ import { Jimp, ResizeStrategy, BlendMode } from "jimp";
 import sharp from "sharp";
 import path from "path";
 import fs from "fs";
-const logFile = fs.createWriteStream(path.join(process.cwd(), "app.log"), { flags: "a" });
+
+let logFile;
+try {
+  logFile = fs.createWriteStream(path.join(process.cwd(), "app.log"), { flags: "a" }); logFile.on('error', () => {});
+} catch(e) {
+  try {
+    logFile = fs.createWriteStream(path.join(require('os').tmpdir(), "app.log"), { flags: "a" }); logFile.on('error', () => {});
+  } catch(e2) {}
+}
+
 const originalConsoleError = console.error;
 console.error = function (...args) {
-  logFile.write(new Date().toISOString() + " ERROR: " + args.map(a => typeof a === "object" ? JSON.stringify(a) : String(a)).join(" ") + "\n");
+  logFile && logFile.write(new Date().toISOString() + " ERROR: " + args.map(a => typeof a === "object" ? JSON.stringify(a) : String(a)).join(" ") + "\n");
   originalConsoleError.apply(console, args);
 }
 const originalConsoleLog = console.log;
 console.log = function (...args) {
-  logFile.write(new Date().toISOString() + " LOG: " + args.map(a => typeof a === "object" ? JSON.stringify(a) : String(a)).join(" ") + "\n");
+  logFile && logFile.write(new Date().toISOString() + " LOG: " + args.map(a => typeof a === "object" ? JSON.stringify(a) : String(a)).join(" ") + "\n");
   originalConsoleLog.apply(console, args);
 }
 import dotenv from "dotenv";

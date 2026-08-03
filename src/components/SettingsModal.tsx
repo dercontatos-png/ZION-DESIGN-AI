@@ -59,7 +59,13 @@ const SettingsModal: React.FC<{
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ jsonContent: trimmedKey })
           });
-          const data = await resp.json();
+          
+          let data;
+          try {
+            data = await resp.json();
+          } catch(e) {
+            throw new Error(resp.status === 504 ? "Timeout na Vercel (Limite de 10-60s atingido)" : "O servidor retornou um erro fatal (HTTP " + resp.status + "). Verifique os logs da Vercel.");
+          }
           if (data.success) {
             setUploadNotice(`✅ ${data.message}`);
             setVertexStatus({ hasKey: true, projectId: data.projectId, clientEmail: data.clientEmail });
@@ -95,7 +101,13 @@ const SettingsModal: React.FC<{
         method: 'POST',
         body: formData
       });
-      const data = await resp.json();
+      
+          let data;
+          try {
+            data = await resp.json();
+          } catch(e) {
+            throw new Error(resp.status === 504 ? "Timeout na Vercel (Limite de 10-60s atingido)" : "O servidor retornou um erro fatal (HTTP " + resp.status + "). Verifique os logs da Vercel.");
+          }
 
       if (data.success) {
         localStorage.setItem('custom_gemini_api_key', text);
