@@ -6,10 +6,11 @@ export const config = {
 
 export default async (req: any, res: any) => {
   try {
-    const module = await import("../dist/server.cjs");
+    const module = await import("../server.ts");
     const app = await module.getApp();
-    app(req, res);
+    return app(req, res);
   } catch (error: any) {
+    console.error("Vercel Serverless Function Error:", error);
     res.status(500).json({
       error: "VERCEL_BOOTSTRAP_ERROR",
       message: error.message,
