@@ -757,10 +757,6 @@ export default function App() {
         console.log("Limpando chave de API customizada antiga para usar o Vertex AI oficial do servidor...");
         localStorage.removeItem("custom_gemini_api_key");
         safeStorageSetItem("custom_key_cleared_for_vertex_v2", "true");
-        // Forçar reload rápido para aplicar a limpeza
-        setTimeout(() => {
-          window.location.reload();
-        }, 300);
       } else {
         safeStorageSetItem("custom_key_cleared_for_vertex_v2", "true");
       }
