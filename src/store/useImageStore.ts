@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { safeStorageSetItem } from '../utils/imageStorageManager';
+import { safeJsonResponse } from '../utils/safeFetch';
 
 export interface ImgConfig {
   imageSize: string;
@@ -336,12 +337,7 @@ export const useImageStore = create<ImageStoreState>((set, get) => ({
         body: JSON.stringify(payload)
       });
 
-      if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.error || "Erro desconhecido na geração.");
-      }
-
-      const data = await response.json();
+      const data = await safeJsonResponse(response);
       if (data.images && data.images.length > 0) {
         set((state) => ({
           generatedImages: [...state.generatedImages, ...data.images],
@@ -381,12 +377,7 @@ export const useImageStore = create<ImageStoreState>((set, get) => ({
         })
       });
 
-      if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.error || "Erro na edição de Inpainting.");
-      }
-
-      const data = await response.json();
+      const data = await safeJsonResponse(response);
       if (data.image) {
         set((state) => ({
           generatedImages: [...state.generatedImages, data.image],
@@ -415,12 +406,7 @@ export const useImageStore = create<ImageStoreState>((set, get) => ({
         body: JSON.stringify({ imageBase64: canvasImage })
       });
 
-      if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.error || "Erro ao remover fundo.");
-      }
-
-      const data = await response.json();
+      const data = await safeJsonResponse(response);
       if (data.image) {
         set((state) => ({
           generatedImages: [...state.generatedImages, data.image],
@@ -583,12 +569,7 @@ export const useImageStore = create<ImageStoreState>((set, get) => ({
         body: JSON.stringify({ imageData, mimeType, customApiKey: effectiveApiKey }),
       });
       
-      if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.error || 'Erro na extração.');
-      }
-      
-      const data = await response.json();
+      const data = await safeJsonResponse(response);
       if (data.prompt) {
         set({ promptExtractorResult: data.prompt });
       } else {

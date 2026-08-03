@@ -5102,6 +5102,11 @@ Responda ESTRITAMENTE em formato JSON com as seguintes chaves exatas:
     }
   });
 
+  // Fallback para rotas /api não encontradas (retorna JSON em vez de HTML index.html)
+  app.all("/api/*", (req, res) => {
+    res.status(404).json({ error: `Rota de API não encontrada: ${req.method} ${req.path}` });
+  });
+
   if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
     const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({

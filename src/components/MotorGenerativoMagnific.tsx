@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { safeJsonResponse } from "../utils/safeFetch";
 import {
   Sparkles,
   Zap,
@@ -77,22 +78,18 @@ export default function MotorGenerativoMagnific({
         })
       });
 
-      const data = await res.json();
-      if (res.ok) {
-        setAnalysisReport(data);
-        if (data.dominantColorHex && (!targetHex || targetHex === "#000000" || targetHex === "")) {
-          setTargetHex(data.dominantColorHex);
-        }
-        if (data.recommendedWeights && semPromptAuto) {
-          setWeights({
-            background: data.recommendedWeights.background ?? 0.1,
-            productSubject: data.recommendedWeights.productSubject ?? 0.95,
-            face: data.recommendedWeights.face ?? 0.9,
-            textEdges: data.recommendedWeights.textEdges ?? 1.0
-          });
-        }
-      } else {
-        alert("Erro na análise: " + (data.error || "Falha na resposta"));
+      const data = await safeJsonResponse(res);
+      setAnalysisReport(data);
+      if (data.dominantColorHex && (!targetHex || targetHex === "#000000" || targetHex === "")) {
+        setTargetHex(data.dominantColorHex);
+      }
+      if (data.recommendedWeights && semPromptAuto) {
+        setWeights({
+          background: data.recommendedWeights.background ?? 0.1,
+          productSubject: data.recommendedWeights.productSubject ?? 0.95,
+          face: data.recommendedWeights.face ?? 0.9,
+          textEdges: data.recommendedWeights.textEdges ?? 1.0
+        });
       }
     } catch (err: any) {
       console.error(err);
@@ -123,8 +120,8 @@ export default function MotorGenerativoMagnific({
         })
       });
 
-      const data = await res.json();
-      if (res.ok && data.image) {
+      const data = await safeJsonResponse(res);
+      if (data.image) {
         setResultImage(data.image);
         if (data.techLog) {
           setTechLogs(data.techLog);
