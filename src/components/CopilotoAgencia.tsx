@@ -280,7 +280,7 @@ export const CopilotoAgencia: React.FC<CopilotoAgenciaProps> = ({
 
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.error || "Erro ao se comunicar com o servidor.");
+        throw new Error(errJson.error || "Erro ao se comunicar com o servidor. Status: " + res.status + " Text: " + await res.text().catch(()=>""));
       }
 
       const data = await res.json();
@@ -347,7 +347,7 @@ Retorne um JSON estrito com o seguinte formato:
 
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.error || "Erro ao se comunicar com o servidor.");
+        throw new Error(errJson.error || "Erro ao se comunicar com o servidor. Status: " + res.status + " Text: " + await res.text().catch(()=>""));
       }
 
       const resData = await res.json();

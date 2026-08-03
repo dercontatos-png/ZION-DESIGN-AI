@@ -3,9 +3,7 @@ import { getApp } from "../dist/server.cjs";
 
 export const config = {
   api: {
-    bodyParser: {
-      sizeLimit: "10mb",
-    },
+    bodyParser: false,
   },
 };
 

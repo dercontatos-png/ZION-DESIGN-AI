@@ -734,6 +734,9 @@ async function executeImageGenerationWithFallbacks(
           console.info(`[generate] ${strategy.name} did not complete on ${cItem.name}. Status:`, msg);
         }
         lastError = rawMsg;
+        if (rawMsg.includes("403") || rawMsg.includes("401") || rawMsg.includes("Permission") || rawMsg.includes("Unauthorized")) {
+          throw new Error("Erro de Permissão (403/401): Verifique se a sua Service Account tem a permissão 'Vertex AI User' e se a API Vertex AI está ativada. Detalhes: " + rawMsg);
+        }
         if (rawMsg.includes("429") || rawMsg.includes("RESOURCE_EXHAUSTED")) {
           specificError = rawMsg;
         }
@@ -757,7 +760,7 @@ async function executeGenerateContentWithFallbacks(
   candidateClients.push({ name: "Primary Client", instance: client });
 
   // Fallback models if primary model is rate-limited or fails
-  const fallbackList = ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview", "gemini-3.1-pro-preview", "gemini-3.1-pro-preview", "gemini-3.1-pro-preview"];
+  const fallbackList = ["gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-flash"];
   const combinedModels = Array.from(new Set([...modelNames, ...fallbackList]));
 
   let lastError: any = null;
@@ -1271,7 +1274,7 @@ Input Text:
 ${textContent}`
       });
 
-      const parseModels = ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"];
+      const parseModels = ["gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash"];
       let jsonStr = "";
       let parseErr: any = null;
 
@@ -2305,7 +2308,7 @@ Do not return any markdown formatting outside of valid JSON.`;
           const fallbackRes = await executeGenerateContentWithFallbacks(
             client,
             customApiKey,
-            ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"],
+            ["gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash"],
             {
               contents: [
                 {
@@ -2397,7 +2400,7 @@ Output ONLY the JSON object. Do not include conversational filler.`;
         const fallbackRes = await executeGenerateContentWithFallbacks(
           currentAi,
           customApiKey,
-          ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"],
+          ["gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash"],
           {
             contents: [
               {
@@ -2810,7 +2813,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
       thinkParts.push({ text: thinkPrompt });
 
       let finalPrompt = "";
-      const thinkModels = ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"];
+      const thinkModels = ["gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash"];
       try {
         const fallbackRes = await executeGenerateContentWithFallbacks(
           currentAi,
@@ -3656,7 +3659,7 @@ Return ONLY the JSON object. Do not include any conversational text or markdown 
 
         expansionParts.push({ text: instructionPrompt });
 
-        const expModels = ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"];
+        const expModels = ["gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash"];
         let expText = "";
         let lastExpErr: any = null;
         try {
@@ -4006,7 +4009,7 @@ ${logoMandatoryRule}`;
       if (!currentAi) return res.status(400).json({ error: "API Key não configurada." });
 
       const { data: cleanData, mimeType: resolvedMime } = resolveImageInput(imageData);
-      const extractModels = ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"];
+      const extractModels = ["gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash"];
       let promptText = "";
       let lastErr: any = null;
 
@@ -4120,7 +4123,7 @@ Return ONLY a JSON object with this exact structure:
 }
 IMPORTANT: Return valid, strictly parseable JSON. Do not put unescaped raw newlines inside JSON string values like generatedXaml or summary; use \\n instead.`;
 
-      const scanModels = ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"];
+      const scanModels = ["gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash"];
       let responseText = "";
       let lastErr: any = null;
 
@@ -4608,7 +4611,7 @@ Sempre avise no texto de forma natural se identificou uma logo ou foto de sujeit
         sanitizedContents.shift();
       }
 
-      const textModels = modelId ? [modelId, "gemini-3.1-pro-preview", "gemini-3.1-pro-preview"] : ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"];
+      const textModels = modelId ? [modelId, "gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash"] : ["gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash"];
       let responseText = "";
       let lastError: any = null;
 
@@ -4777,7 +4780,7 @@ async function generateLyria002(promptText: string, customApiKey?: string): Prom
         return res.status(400).json({ error: "API Key não configurada." });
       }
 
-      const models = ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview", "gemini-3.1-pro-preview", "gemini-3.1-pro-preview", "gemini-3.1-pro-preview"];
+      const models = ["gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash", "gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash", "gemini-3.1-pro-preview"];
       const systemContextPrompt = `Você é um Engenheiro de Prompts Sênior e Diretor Criativo especialista da plataforma Zion AI Studio.
 O usuário digitou o seguinte rascunho de ideia ou prompt para interagir com o agente especialista "${agentName || "Diretor Criativo"}" (ID: ${assistantId || "diretor-criativo"}):
 
@@ -4871,7 +4874,7 @@ Responda APENAS com o texto do prompt melhorado em Português (curto, direto e u
       const fallbackRes = await executeGenerateContentWithFallbacks(
         currentAi,
         customApiKey,
-        ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"],
+        ["gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash"],
         { contents: [{ role: "user", parts }] }
       );
 
@@ -4950,7 +4953,7 @@ Responda ESTRITAMENTE em formato JSON com as seguintes chaves exatas:
       const fallbackRes = await executeGenerateContentWithFallbacks(
         currentAi,
         customApiKey,
-        ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"],
+        ["gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash"],
         {
           contents: [{ role: "user", parts }],
           generationConfig: { responseMimeType: "application/json" }

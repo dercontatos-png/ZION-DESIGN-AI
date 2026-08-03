@@ -1,52 +1,14 @@
 const fs = require('fs');
 let code = fs.readFileSync('server.ts', 'utf8');
 
-// Undo the mess
-code = code.replace(/const expModels = \["gemini-1\.5-flash", "gemini-2\.0-flash", "gemini-1\.5-pro"\];[\s\S]*?let cleanedExpText = expText\.trim\(\);/, 
-`const expModels = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"];
-        let expText = "";
-        let lastExpErr: any = null;
-        for (const expModel of expModels) {
-          try {
-            console.log(\`[api/gerar] Expanding prompt with model: \${expModel}...\`);
-            const expResponse = await client.models.generateContent({
-              model: expModel,
-              contents: [{ role: "user", parts: expansionParts }],
-              config: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                  type: "object",
-                  properties: {
-                    prompt: { type: "string" },
-                    systemInstruction: { type: "string" }
-                  },
-                  required: ["prompt", "systemInstruction"]
-                }
-              }
-            });
-            if (expResponse?.text) {
-              expText = expResponse.text;
-              break;
-            }
-          } catch (expErr: any) {
-            lastExpErr = expErr;
-            console.warn(\`[api/gerar] Prompt expansion with \${expModel} failed:\`, expErr?.message || expErr);
-            if (expErr?.message?.includes("429") || expErr?.message?.includes("RESOURCE_EXHAUSTED")) {
-              break;
-            }
-          }
+code = code.replace(/lastError = err;\n      }\n    }\n  }\n  throw lastError/g, `lastError = err;
+        if (rawMsg.includes("403") || rawMsg.includes("401") || rawMsg.includes("Permission") || rawMsg.includes("Unauthorized")) {
+          console.warn("[generateContent-fallback] Fast failing due to auth/permission error:", rawMsg);
+          throw new Error("Erro de Permissão (403/401): Verifique se a sua Service Account tem a permissão 'Vertex AI User' e se a API Vertex AI está ativada no seu Google Cloud Project. Detalhes: " + rawMsg);
         }
-        
-        if (!expText && lastExpErr) {
-          throw lastExpErr;
-        }
-
-        let cleanedExpText = expText.trim();`);
-
-code = code.replace(/const extractModels = \["gemini-2\.5-flash", "gemini-2\.5-flash", "gemini-3\.1-pro-preview"\];/g, 'const extractModels = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"];');
-code = code.replace(/const scanModels = \["gemini-2\.5-flash", "gemini-2\.5-flash", "gemini-3\.1-pro-preview"\];/g, 'const scanModels = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"];');
-code = code.replace(/const textModels = \["gemini-2\.5-flash", "gemini-2\.5-flash", "gemini-3\.1-pro-preview"\];/g, 'const textModels = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"];');
-code = code.replace(/const thinkModels = \["gemini-2\.5-flash", "gemini-2\.5-flash", "gemini-3\.1-pro-preview"\];/g, 'const thinkModels = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"];');
-
+      }
+    }
+  }
+  throw lastError`);
 
 fs.writeFileSync('server.ts', code);
