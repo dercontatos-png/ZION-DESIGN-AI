@@ -607,9 +607,15 @@ export async function saveImageToDisk(rawData: string, rawMime: string): Promise
 
     const filename = `img_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${ext}`;
     const publicGenDir = path.join(process.cwd(), "public", "generated-images");
-    if (!fs.existsSync(publicGenDir)) {
-      fs.mkdirSync(publicGenDir, { recursive: true });
+  if (!process.env.VERCEL) {
+    try {
+      if (!fs.existsSync(publicGenDir)) {
+        fs.mkdirSync(publicGenDir, { recursive: true });
+      }
+    } catch (e) {
+      console.warn("Could not create public directory:", e.message);
     }
+  }
     const filepath = path.join(publicGenDir, filename);
 
     await fs.promises.writeFile(filepath, buffer);
@@ -957,8 +963,14 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "500mb", extended: true, parameterLimit: 1000000 }));
 
   const publicGenDir = path.join(process.cwd(), "public", "generated-images");
-  if (!fs.existsSync(publicGenDir)) {
-    fs.mkdirSync(publicGenDir, { recursive: true });
+  if (!process.env.VERCEL) {
+    try {
+      if (!fs.existsSync(publicGenDir)) {
+        fs.mkdirSync(publicGenDir, { recursive: true });
+      }
+    } catch (e) {
+      console.warn("Could not create public directory:", e.message);
+    }
   }
   app.use("/generated-images", express.static(publicGenDir));
 
@@ -1163,8 +1175,16 @@ async function startServer() {
         return res.status(400).json({ error: "JSON inválido. Certifique-se de que é uma chave de Conta de Serviço (Service Account) válida da Google Cloud / Vertex AI." });
       }
 
-      const credentialsPath = path.join(process.cwd(), "chave-vertex.json");
-      fs.writeFileSync(credentialsPath, JSON.stringify(parsed, null, 2));
+      let credentialsPath = path.join(process.cwd(), "chave-vertex.json");
+      
+      try {
+        fs.writeFileSync(credentialsPath, JSON.stringify(parsed, null, 2));
+      } catch (e) {
+        console.warn("Could not save credentials to disk on this environment, saving to /tmp instead.");
+        credentialsPath = require('path').join(require('os').tmpdir(), "chave-vertex.json");
+        try { fs.writeFileSync(credentialsPath, JSON.stringify(parsed, null, 2)); } catch(e2){}
+      }
+
       process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialsPath;
 
       console.log(`[upload-vertex-key] chave-vertex.json salva com sucesso para o projeto: ${parsed.project_id}`);
@@ -1187,7 +1207,7 @@ async function startServer() {
   });
 
   app.get("/api/check-vertex-key", (req, res) => {
-    const credentialsPath = path.join(process.cwd(), "chave-vertex.json");
+    let credentialsPath = path.join(process.cwd(), "chave-vertex.json");
     if (fs.existsSync(credentialsPath)) {
       try {
         const parsed = JSON.parse(fs.readFileSync(credentialsPath, "utf8"));
@@ -3050,7 +3070,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
       }
 
       const token = customApiKey?.trim() || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
-      const credentialsPath = path.join(process.cwd(), 'chave-vertex.json');
+      let credentialsPath = path.join(process.cwd(), 'chave-vertex.json');
       const isVertex = fs.existsSync(credentialsPath) || token.startsWith('AQ.');
 
       // HIDDEN PROMPT MOTOR - EXPERT DESIGNER FLYER BR STYLE
@@ -3470,7 +3490,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
 
       const debugInfo = (client as any).debugInfo || {};
       const token = customApiKey?.trim() || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
-      const credentialsPath = path.join(process.cwd(), 'chave-vertex.json');
+      let credentialsPath = path.join(process.cwd(), 'chave-vertex.json');
       const isVertex = fs.existsSync(credentialsPath) || token.startsWith('AQ.') || debugInfo.isUsingVertex === true;
 
       // We use gemini-3-pro-image for high quality image generation
