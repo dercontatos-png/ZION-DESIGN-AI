@@ -1,0 +1,98 @@
+const fs = require('fs');
+let content = fs.readFileSync('server.ts', 'utf8');
+
+const startStr = `                  const audioPart = step.model_output.parts.find((part: any) => part.type === 'audio' || part.inline_data || (part.inlin`;
+const endStr = `          } catch (candErr: any) {`;
+
+const targetStart = content.indexOf(startStr);
+const targetEnd = content.indexOf(endStr, targetStart);
+
+if (targetStart === -1 || targetEnd === -1) {
+    console.log("NOT FOUND");
+    process.exit(1);
+}
+
+const newContent = `                  const audioPart = step.model_output.parts.find((part: any) => part.type === 'audio' || part.inline_data || (part.inlineData && part.inlineData.data));
+                  if (audioPart) {
+                    const rawData = audioPart.inline_data ? audioPart.inline_data.data : (audioPart.inlineData ? audioPart.inlineData.data : audioPart.data);
+                    if (rawData) {
+                       audioBase64 = rawData;
+                       if (audioPart.mime_type || audioPart.mimeType) {
+                           mimeType = audioPart.mime_type || audioPart.mimeType;
+                       }
+                       lyriaSuccess = true;
+                       break;
+                    }
+                  }
+                }
+              }
+              if (lyriaSuccess) {
+                  console.log(\`[Lyria API] Success via Interactions API for model \${currentModel}! Output audio length: \${audioBase64.length}\`);
+                  break;
+              }
+            } catch (err: any) {
+              console.warn(\`[Lyria API] Direct Interactions API failed for \${currentModel}:\`, err.message);
+              lastLyriaErr = err.message;
+            }
+        }
+
+        if (lyriaSuccess) break;
+
+        for (const cand of lyriaCandidatesToTry) {
+          try {
+            console.log(\`[Lyria API] Invoking model \${currentModel} via generateContentStream on candidate '\${cand.name}'...\`);
+            
+            try {
+              const audioBase64_arr: Buffer[] = [];
+              const lyriaStream = await cand.instance.models.generateContentStream({
+                model: currentModel,
+                contents: lyriaContentsParts
+              });
+
+              for await (const chunk of lyriaStream) {
+                const parts = chunk.candidates?.[0]?.content?.parts;
+                if (!parts) continue;
+
+                for (const part of parts) {
+                  if (part.inlineData?.data) {
+                    if (!mimeType || mimeType === "audio/wav") {
+                      mimeType = part.inlineData.mimeType || "audio/wav";
+                    }
+                    audioBase64_arr.push(Buffer.from(part.inlineData.data, "base64"));
+                  }
+                  if (part.text && !lyrics) {
+                    lyrics = part.text;
+                  }
+                }
+              }
+              if (audioBase64_arr.length > 0) audioBase64 = Buffer.concat(audioBase64_arr).toString("base64");
+            } catch (streamErr: any) {
+              console.warn(\`[Lyria Stream Error on \${cand.name}]:\`, streamErr?.message || streamErr, "- Trying generateContent direct...");
+                
+              const audioBase64_arr2: Buffer[] = [];
+              const lyriaDirect = await cand.instance.models.generateContent({
+                model: currentModel,
+                contents: lyriaContentsParts
+              });
+
+              const parts = lyriaDirect.candidates?.[0]?.content?.parts || [];
+              for (const part of parts) {
+                if (part.inlineData?.data) {
+                  audioBase64_arr2.push(Buffer.from(part.inlineData.data, "base64"));
+                  if (part.inlineData.mimeType) mimeType = part.inlineData.mimeType;
+                }
+                if (part.text && !lyrics) lyrics = part.text;
+              }
+              if (audioBase64_arr2.length > 0) audioBase64 = Buffer.concat(audioBase64_arr2).toString("base64");
+            }
+
+            if (audioBase64 && audioBase64.length > 100) {
+              lyriaSuccess = true;
+              console.log(\`[Lyria API] Success on '\${cand.name}' with model \${currentModel}! Output audio length: \${audioBase64.length}\`);
+              break;
+            }
+`;
+
+content = content.substring(0, targetStart) + newContent + content.substring(targetEnd);
+fs.writeFileSync('server.ts', content);
+console.log("Replaced!");

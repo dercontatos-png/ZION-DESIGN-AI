@@ -6,7 +6,6 @@ import {defineConfig, loadEnv} from 'vite';
 export default defineConfig(({mode}) => {
   const env = loadEnv(mode, '.', '');
   return {
-    base: '/',
     plugins: [react(), tailwindcss()],
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
@@ -17,32 +16,6 @@ export default defineConfig(({mode}) => {
         '@': path.resolve(__dirname, '.'),
         'formdata-polyfill/esm.min.js': path.resolve(__dirname, 'src/mock-formdata.js'),
         'formdata-polyfill': path.resolve(__dirname, 'src/mock-formdata.js'),
-      },
-    },
-    build: {
-      chunkSizeWarningLimit: 2000,
-      rollupOptions: {
-        output: {
-          manualChunks(id) {
-            if (id.includes('node_modules')) {
-              if (id.includes('jspdf') || id.includes('html2canvas') || id.includes('jszip')) {
-                return 'vendor-pdf';
-              }
-              if (id.includes('@google/genai')) {
-                return 'vendor-genai';
-              }
-              if (id.includes('lucide-react')) {
-                return 'vendor-icons';
-              }
-              if (id.includes('motion')) {
-                return 'vendor-motion';
-              }
-              if (id.includes('react') || id.includes('react-dom')) {
-                return 'vendor-react';
-              }
-            }
-          },
-        },
       },
     },
     server: {

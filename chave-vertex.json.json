@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "gerador-de-imagens-ia-502303",
+  "private_key_id": "b00c99d48e19fb82f2ab27096d15ab9b9e773b07",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDpU/5ser0Pfqnl\nZsUeba8JAAN4q67UMCApBKbtKiFaLsRXbZ8cWsqfgFZIZj9/SWQBZMg9ktQsf+mV\neCSVvjN1wteqdTfezDNP0lecQTYNghO6YEoG6N7pM8+Kj5iAK7VLleyJ+S+ibo3m\nzjtZcXCgRWBzdwxYoaCrgYhUMLuyMCA/FiyVFkCxlt1dDVpvGol7TzfFVmKXUhEJ\nJet2vpa4sMHdsj2AXGmY+xzD9S1UpFOxa38Mcc85/e++c1h27tzfh7XsCl3l/dmb\nEIlAAgbHgWGcg6EC9TZNC5DTxaZLYexjakzNktK+b1BZI6Q4yb71j+XPNLH+tDRd\ngJ6qocb7AgMBAAECggEAcQjM17a6QnhlTAn2cqBGTIDiLaJWZtsNqXFkgL6JO8wu\nOACWNUFSqeSdaCOInVxrgzVUwGeSPCCXg16ZsqVa/rCulBiHQXsBXKkU4lDBI9gh\nQIgHNMO5wZXk9EZOZcFG6eAuoETEq9cNDYRZQiJvomUZrbY9l+5tDMkKx2Z4d4Bm\nCQa0nir8vxJNp8hfN6Vut7Uxu5ver1DLjOaV8czpz9y0ydMEA+lFbVmYUh4u0Lqy\naWr8EQWll+3gKteuz/Q8ietvpOvQaj3Pszyzg0JbVB5IEoXwo2mo5J3i4C1MOPAF\nuQOjxg8ZdU5JvWILoH+zdjNyS8imPgINs+hyjObOuQKBgQD/M814Y49RQ0O9dis5\n5VYPwgZqmIx96/RP9A753KlhbPz1miof5NW8gcpvKueQzh9lviA/AlL4Xc5Dy7qn\nV1t3A8/o2DmttvyJMaxXECG4zcR7gwIvLfHKJVHH4EfBk4UJPAl2cU8ve0hXpGGr\nDqWsAHlRs4SXergmFFkX69+ttQKBgQDqDrBT2MUixvi84nCzkDBLVbQ5e2iTV42P\n8omat6CyiS4vRrO/RrTcFANXVN3F0Ww02X0FSmk50NAxqchUTVvGDTG6nBSR6erb\nwqPlz/DUWpCCVaxpko2+uHiIgEhf27O2CBcHMaB1KVX0pyYP8mvWVrPdQY2oPOmq\ndoycj70P7wKBgAtJ7FXd+ZH7qrxvxLu75FGwIH6InvZXAKikwCDXXPq9SndGyYQ9\nqCK9jwnZ2QJzy7nBbkW7QZZQ9/XRxkDuwVIDbif7oJmJlaQv+VKkmQlGuOFJy0fw\n/VgWzIZN6n6qmuDssfJ2Uq1kA7A0ykk5zaRNJRCzIzNcL1cn4UUInw1dAoGAINIq\ne7d7/WJ1YtdGAogHnajI+v6JLZArc7IJBb8WM7L03QBHGF1r4yiTR13JM4IocEjH\nNUS3+LmFWFF8nAW1BtK21HoqkEODAYoLvaApHz4L4Zrt8GfypHntvQZwH7EJRE9i\nG0okPAmt2f7OYZIW+RlzY2Vb3emcwqCZGyM02dUCgYAgpeD6EPoE9Yvzloq5CTjE\nbWmD16jN54lEqD8ZTYFv3PiNXdOq+KVTD8QJ8YQyp1tNstd1joI98B3UeSU1mdHx\n/Q27PLhfq50Dau3g+AV8Y6ornrsxyzHnklTxynfNt4n9ZVXoGQgqx32q/2iW5bNg\nxDw12e3Xmq4jkx0sYGVkmg==\n-----END PRIVATE KEY-----\n",
+  "client_email": "agora-vai@gerador-de-imagens-ia-502303.iam.gserviceaccount.com",
+  "client_id": "108705963470343389092",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/agora-vai%40gerador-de-imagens-ia-502303.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

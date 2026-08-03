@@ -2,12 +2,6 @@
   "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "functions": {
-    "api/**/*": {
-      "maxDuration": 60,
-      "includeFiles": "dist/server.cjs"
-    }
-  },
   "rewrites": [
     {
       "source": "/api/(.*)",

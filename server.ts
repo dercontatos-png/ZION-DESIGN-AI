@@ -6,24 +6,15 @@ import { Jimp, ResizeStrategy, BlendMode } from "jimp";
 import sharp from "sharp";
 import path from "path";
 import fs from "fs";
-
-let logFile;
-try {
-  logFile = fs.createWriteStream(path.join(process.cwd(), "app.log"), { flags: "a" }); logFile.on('error', () => {});
-} catch(e) {
-  try {
-    logFile = fs.createWriteStream(path.join(require('os').tmpdir(), "app.log"), { flags: "a" }); logFile.on('error', () => {});
-  } catch(e2) {}
-}
-
+const logFile = fs.createWriteStream(path.join(process.cwd(), "app.log"), { flags: "a" });
 const originalConsoleError = console.error;
 console.error = function (...args) {
-  logFile && logFile.write(new Date().toISOString() + " ERROR: " + args.map(a => typeof a === "object" ? JSON.stringify(a) : String(a)).join(" ") + "\n");
+  logFile.write(new Date().toISOString() + " ERROR: " + args.map(a => typeof a === "object" ? JSON.stringify(a) : String(a)).join(" ") + "\n");
   originalConsoleError.apply(console, args);
 }
 const originalConsoleLog = console.log;
 console.log = function (...args) {
-  logFile && logFile.write(new Date().toISOString() + " LOG: " + args.map(a => typeof a === "object" ? JSON.stringify(a) : String(a)).join(" ") + "\n");
+  logFile.write(new Date().toISOString() + " LOG: " + args.map(a => typeof a === "object" ? JSON.stringify(a) : String(a)).join(" ") + "\n");
   originalConsoleLog.apply(console, args);
 }
 import dotenv from "dotenv";
@@ -122,8 +113,7 @@ function getCandidateClients(customApiKey?: string): { name: string; instance: G
             vertexai: true,
             project: projectId,
             location: "us-central1",
-            googleAuthOptions: { credentials: parsed },
-            httpOptions: { timeout: 30000, retryOptions: { attempts: 1 } }
+            googleAuthOptions: { credentials: parsed }
           })
         });
         candidateClients.push({
@@ -132,8 +122,7 @@ function getCandidateClients(customApiKey?: string): { name: string; instance: G
             vertexai: true,
             project: projectId,
             location: "global",
-            googleAuthOptions: { credentials: parsed },
-            httpOptions: { timeout: 30000, retryOptions: { attempts: 1 } }
+            googleAuthOptions: { credentials: parsed }
           })
         });
       } catch (e) {
@@ -142,10 +131,7 @@ function getCandidateClients(customApiKey?: string): { name: string; instance: G
     } else {
       candidateClients.push({
         name: "Custom Developer API Key Client",
-        instance: new GoogleGenAI({ 
-          apiKey: rawKey,
-          httpOptions: { timeout: 30000, retryOptions: { attempts: 1 } }
-        })
+        instance: new GoogleGenAI({ apiKey: rawKey })
       });
     }
   }
@@ -166,8 +152,7 @@ function getCandidateClients(customApiKey?: string): { name: string; instance: G
         vertexai: true,
         project: projectId,
         location: "us-central1",
-        googleAuthOptions: { credentials: saParsed },
-        httpOptions: { timeout: 30000, retryOptions: { attempts: 1 } }
+        googleAuthOptions: { credentials: saParsed }
       })
     });
     candidateClients.push({
@@ -176,8 +161,7 @@ function getCandidateClients(customApiKey?: string): { name: string; instance: G
         vertexai: true,
         project: projectId,
         location: "global",
-        googleAuthOptions: { credentials: saParsed },
-        httpOptions: { timeout: 30000, retryOptions: { attempts: 1 } }
+        googleAuthOptions: { credentials: saParsed }
       })
     });
   }
@@ -187,10 +171,7 @@ function getCandidateClients(customApiKey?: string): { name: string; instance: G
   if (envKey && !envKey.trim().startsWith("{")) {
     candidateClients.push({
       name: "Platform Environment API Key Client",
-      instance: new GoogleGenAI({ 
-        apiKey: envKey.trim(),
-        httpOptions: { timeout: 30000, retryOptions: { attempts: 1 } }
-      })
+      instance: new GoogleGenAI({ apiKey: envKey.trim() })
     });
   }
 
@@ -200,8 +181,7 @@ function getCandidateClients(customApiKey?: string): { name: string; instance: G
     instance: new GoogleGenAI({
       vertexai: true,
       project: saParsed?.project_id || "gerador-de-imagens-ia-502303",
-      location: "us-central1",
-      httpOptions: { timeout: 30000, retryOptions: { attempts: 1 } }
+      location: "us-central1"
     })
   });
 
@@ -627,15 +607,9 @@ export async function saveImageToDisk(rawData: string, rawMime: string): Promise
 
     const filename = `img_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${ext}`;
     const publicGenDir = path.join(process.cwd(), "public", "generated-images");
-  if (!process.env.VERCEL) {
-    try {
-      if (!fs.existsSync(publicGenDir)) {
-        fs.mkdirSync(publicGenDir, { recursive: true });
-      }
-    } catch (e) {
-      console.warn("Could not create public directory:", e.message);
+    if (!fs.existsSync(publicGenDir)) {
+      fs.mkdirSync(publicGenDir, { recursive: true });
     }
-  }
     const filepath = path.join(publicGenDir, filename);
 
     await fs.promises.writeFile(filepath, buffer);
@@ -690,8 +664,8 @@ async function executeImageGenerationWithFallbacks(
 
     // High quality image generation strategies with Imagen 3 and Gemini 3 Pro Image.
     const baseStrategies = [
-      { name: "nano-banana-pro", type: "generateContent" },
-      { name: "nano-banana-2", type: "generateImages" },
+      { name: "gemini-3-pro-image", type: "generateContent" },
+      { name: "imagen-3.0-generate-002", type: "generateImages" },
       { name: "imagen-3.0-generate-001", type: "generateImages" },
       { name: "imagen-3.0-fast-generate-001", type: "generateImages" }
     ];
@@ -760,9 +734,6 @@ async function executeImageGenerationWithFallbacks(
           console.info(`[generate] ${strategy.name} did not complete on ${cItem.name}. Status:`, msg);
         }
         lastError = rawMsg;
-        if (rawMsg.includes("403") || rawMsg.includes("401") || rawMsg.includes("Permission") || rawMsg.includes("Unauthorized")) {
-          throw new Error("Erro de Permissão (403/401): Verifique se a sua Service Account tem a permissão 'Vertex AI User' e se a API Vertex AI está ativada. Detalhes: " + rawMsg);
-        }
         if (rawMsg.includes("429") || rawMsg.includes("RESOURCE_EXHAUSTED")) {
           specificError = rawMsg;
         }
@@ -786,7 +757,7 @@ async function executeGenerateContentWithFallbacks(
   candidateClients.push({ name: "Primary Client", instance: client });
 
   // Fallback models if primary model is rate-limited or fails
-  const fallbackList = ["gemini-3.6-flash", "gemini-3.5-pro"];
+  const fallbackList = ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview", "gemini-3.1-pro-preview", "gemini-3.1-pro-preview", "gemini-3.1-pro-preview"];
   const combinedModels = Array.from(new Set([...modelNames, ...fallbackList]));
 
   let lastError: any = null;
@@ -983,14 +954,8 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "500mb", extended: true, parameterLimit: 1000000 }));
 
   const publicGenDir = path.join(process.cwd(), "public", "generated-images");
-  if (!process.env.VERCEL) {
-    try {
-      if (!fs.existsSync(publicGenDir)) {
-        fs.mkdirSync(publicGenDir, { recursive: true });
-      }
-    } catch (e) {
-      console.warn("Could not create public directory:", e.message);
-    }
+  if (!fs.existsSync(publicGenDir)) {
+    fs.mkdirSync(publicGenDir, { recursive: true });
   }
   app.use("/generated-images", express.static(publicGenDir));
 
@@ -1195,16 +1160,8 @@ async function startServer() {
         return res.status(400).json({ error: "JSON inválido. Certifique-se de que é uma chave de Conta de Serviço (Service Account) válida da Google Cloud / Vertex AI." });
       }
 
-      let credentialsPath = path.join(process.cwd(), "chave-vertex.json");
-      
-      try {
-        fs.writeFileSync(credentialsPath, JSON.stringify(parsed, null, 2));
-      } catch (e) {
-        console.warn("Could not save credentials to disk on this environment, saving to /tmp instead.");
-        credentialsPath = require('path').join(require('os').tmpdir(), "chave-vertex.json");
-        try { fs.writeFileSync(credentialsPath, JSON.stringify(parsed, null, 2)); } catch(e2){}
-      }
-
+      const credentialsPath = path.join(process.cwd(), "chave-vertex.json");
+      fs.writeFileSync(credentialsPath, JSON.stringify(parsed, null, 2));
       process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialsPath;
 
       console.log(`[upload-vertex-key] chave-vertex.json salva com sucesso para o projeto: ${parsed.project_id}`);
@@ -1222,16 +1179,12 @@ async function startServer() {
     }
   });
 
-  
-  app.post("/api/ping", (req, res) => {
-    res.json({ pong: true, body: req.body });
-  });
   app.get("/api/config/active-key", (req, res) => {
     res.json({ key: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "" });
   });
 
   app.get("/api/check-vertex-key", (req, res) => {
-    let credentialsPath = path.join(process.cwd(), "chave-vertex.json");
+    const credentialsPath = path.join(process.cwd(), "chave-vertex.json");
     if (fs.existsSync(credentialsPath)) {
       try {
         const parsed = JSON.parse(fs.readFileSync(credentialsPath, "utf8"));
@@ -1318,7 +1271,7 @@ Input Text:
 ${textContent}`
       });
 
-      const parseModels = ["gemini-3.6-flash", "gemini-3.5-pro"];
+      const parseModels = ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"];
       let jsonStr = "";
       let parseErr: any = null;
 
@@ -1403,7 +1356,7 @@ ${textContent}`
 
       let response: any = null;
       let lastErr: any = null;
-      const modelsToTry = ["nano-banana-pro"];
+      const modelsToTry = ["gemini-3-pro-image"];
 
       for (const cItem of candidateClients) {
         for (const modelName of modelsToTry) {
@@ -1619,7 +1572,7 @@ If no issues are found, return an empty list. Output ONLY valid JSON.`;
           const { data: cleanDataForVision, mimeType: visionMime } = resolveImageInput(imageBase64);
 
           const visionRes = await currentAi.models.generateContent({
-            model: "gemini-3.6-flash",
+            model: "gemini-3.1-pro-preview",
             contents: [
               {
                 inlineData: {
@@ -2352,7 +2305,7 @@ Do not return any markdown formatting outside of valid JSON.`;
           const fallbackRes = await executeGenerateContentWithFallbacks(
             client,
             customApiKey,
-            ["gemini-3.6-flash", "gemini-3.5-pro"],
+            ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"],
             {
               contents: [
                 {
@@ -2444,7 +2397,7 @@ Output ONLY the JSON object. Do not include conversational filler.`;
         const fallbackRes = await executeGenerateContentWithFallbacks(
           currentAi,
           customApiKey,
-          ["gemini-3.6-flash", "gemini-3.5-pro"],
+          ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"],
           {
             contents: [
               {
@@ -2575,7 +2528,7 @@ Output a pristine, ultra-detailed, hyper-realistic masterpiece image.`;
         const fallbackRes = await executeGenerateContentWithFallbacks(
           currentAi,
           customApiKey,
-          ["nano-banana-pro"],
+          ["gemini-3-pro-image"],
           {
             contents: [
               {
@@ -2857,7 +2810,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
       thinkParts.push({ text: thinkPrompt });
 
       let finalPrompt = "";
-      const thinkModels = ["gemini-3.6-flash", "gemini-3.5-pro"];
+      const thinkModels = ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"];
       try {
         const fallbackRes = await executeGenerateContentWithFallbacks(
           currentAi,
@@ -2962,7 +2915,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
       }
 
       const sizeSelected = imgConfig?.imageSize || "1K";
-      const targetModel = "nano-banana-pro";
+      const targetModel = "gemini-3-pro-image";
       let modelUsed = `Vertex AI (${targetModel})`;
       let lastErrors: string[] = [];
 
@@ -3081,7 +3034,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
 
       console.log("\n--- CONFIGURAÇÃO DE GERAÇÃO (/api/generate) ---");
       console.log({
-        model: "nano-banana-pro",
+        model: "gemini-3-pro-image",
         resolution: imgConfig?.imageSize || "1K",
         aspectRatio: imgConfig?.aspectRatio || "1:1",
         variations: imgConfig?.variations || 1,
@@ -3094,7 +3047,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
       }
 
       const token = customApiKey?.trim() || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
-      let credentialsPath = path.join(process.cwd(), 'chave-vertex.json');
+      const credentialsPath = path.join(process.cwd(), 'chave-vertex.json');
       const isVertex = fs.existsSync(credentialsPath) || token.startsWith('AQ.');
 
       // HIDDEN PROMPT MOTOR - EXPERT DESIGNER FLYER BR STYLE
@@ -3349,7 +3302,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
       const results: string[] = [];
       const variationsCount = Math.min(Math.max(imgConfig?.variations || 1, 1), 4);
       const sizeSelected = imgConfig?.imageSize || "1K";
-      const targetModel = "nano-banana-pro";
+      const targetModel = "gemini-3-pro-image";
       let modelUsed = `Google AI Studio (${targetModel})`;
       let lastErrors: string[] = [];
 
@@ -3475,7 +3428,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         previousImageBase64 = "",
         imagemAnteriorBase64 = "",
         imagemRefinamentoBase64 = "",
-        modelId = "nano-banana-pro",
+        modelId = "gemini-3-pro-image",
         seedUsuario = null
       } = req.body;
 
@@ -3514,12 +3467,12 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
 
       const debugInfo = (client as any).debugInfo || {};
       const token = customApiKey?.trim() || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
-      let credentialsPath = path.join(process.cwd(), 'chave-vertex.json');
+      const credentialsPath = path.join(process.cwd(), 'chave-vertex.json');
       const isVertex = fs.existsSync(credentialsPath) || token.startsWith('AQ.') || debugInfo.isUsingVertex === true;
 
-      // We use nano-banana-pro for high quality image generation
+      // We use gemini-3-pro-image for high quality image generation
       const sizeSelectedForModel = resolutionInput === "4K" ? "4K" : (resolutionInput === "2K" ? "2K" : "1K");
-      const targetModel = "nano-banana-pro";
+      const targetModel = "gemini-3-pro-image";
       
       let targetAspectRatio = "1:1";
       const validRatios = ["1:1", "3:4", "4:3", "9:16", "16:9"];
@@ -3703,7 +3656,7 @@ Return ONLY the JSON object. Do not include any conversational text or markdown 
 
         expansionParts.push({ text: instructionPrompt });
 
-        const expModels = ["gemini-3.6-flash", "gemini-3.5-pro"];
+        const expModels = ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"];
         let expText = "";
         let lastExpErr: any = null;
         try {
@@ -4053,7 +4006,7 @@ ${logoMandatoryRule}`;
       if (!currentAi) return res.status(400).json({ error: "API Key não configurada." });
 
       const { data: cleanData, mimeType: resolvedMime } = resolveImageInput(imageData);
-      const extractModels = ["gemini-3.6-flash", "gemini-3.5-pro"];
+      const extractModels = ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"];
       let promptText = "";
       let lastErr: any = null;
 
@@ -4167,7 +4120,7 @@ Return ONLY a JSON object with this exact structure:
 }
 IMPORTANT: Return valid, strictly parseable JSON. Do not put unescaped raw newlines inside JSON string values like generatedXaml or summary; use \\n instead.`;
 
-      const scanModels = ["gemini-3.6-flash", "gemini-3.5-pro"];
+      const scanModels = ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"];
       let responseText = "";
       let lastErr: any = null;
 
@@ -4655,7 +4608,7 @@ Sempre avise no texto de forma natural se identificou uma logo ou foto de sujeit
         sanitizedContents.shift();
       }
 
-      const textModels = modelId ? [modelId, "gemini-3.6-flash", "gemini-3.5-pro"] : ["gemini-3.6-flash", "gemini-3.5-pro"];
+      const textModels = modelId ? [modelId, "gemini-3.1-pro-preview", "gemini-3.1-pro-preview"] : ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"];
       let responseText = "";
       let lastError: any = null;
 
@@ -4778,7 +4731,7 @@ async function generateLyria002(promptText: string, customApiKey?: string): Prom
         const standardAi = getAiClient(customApiKey);
         if (standardAi) {
           const aiAnalysisRes = await standardAi.models.generateContent({
-            model: "gemini-3.6-flash",
+            model: "gemini-3.1-pro-preview",
             contents: [{
               role: "user",
               parts: [{
@@ -4824,7 +4777,7 @@ async function generateLyria002(promptText: string, customApiKey?: string): Prom
         return res.status(400).json({ error: "API Key não configurada." });
       }
 
-      const models = ["gemini-3.6-flash", "gemini-3.5-pro"];
+      const models = ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview", "gemini-3.1-pro-preview", "gemini-3.1-pro-preview", "gemini-3.1-pro-preview"];
       const systemContextPrompt = `Você é um Engenheiro de Prompts Sênior e Diretor Criativo especialista da plataforma Zion AI Studio.
 O usuário digitou o seguinte rascunho de ideia ou prompt para interagir com o agente especialista "${agentName || "Diretor Criativo"}" (ID: ${assistantId || "diretor-criativo"}):
 
@@ -4918,7 +4871,7 @@ Responda APENAS com o texto do prompt melhorado em Português (curto, direto e u
       const fallbackRes = await executeGenerateContentWithFallbacks(
         currentAi,
         customApiKey,
-        ["gemini-3.6-flash", "gemini-3.5-pro"],
+        ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"],
         { contents: [{ role: "user", parts }] }
       );
 
@@ -4997,7 +4950,7 @@ Responda ESTRITAMENTE em formato JSON com as seguintes chaves exatas:
       const fallbackRes = await executeGenerateContentWithFallbacks(
         currentAi,
         customApiKey,
-        ["gemini-3.6-flash", "gemini-3.5-pro"],
+        ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"],
         {
           contents: [{ role: "user", parts }],
           generationConfig: { responseMimeType: "application/json" }
@@ -5100,11 +5053,6 @@ Responda ESTRITAMENTE em formato JSON com as seguintes chaves exatas:
       console.error("Omni Flash Generate Error:", error);
       res.status(500).json({ error: error.message || "Erro ao processar chamada Omni Flash" });
     }
-  });
-
-  // Fallback para rotas /api não encontradas (retorna JSON em vez de HTML index.html)
-  app.all("/api/*", (req, res) => {
-    res.status(404).json({ error: `Rota de API não encontrada: ${req.method} ${req.path}` });
   });
 
   if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
