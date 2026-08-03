@@ -1211,6 +1211,10 @@ async function startServer() {
     }
   });
 
+  
+  app.post("/api/ping", (req, res) => {
+    res.json({ pong: true, body: req.body });
+  });
   app.get("/api/config/active-key", (req, res) => {
     res.json({ key: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "" });
   });
