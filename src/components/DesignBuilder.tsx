@@ -603,7 +603,7 @@ const communityCreations = [
     id: "comm_2",
     author: "Larissa Melo",
     role: "Art Director",
-    avatarColor: "bg-purple-600",
+    avatarColor: "bg-[#c5a880]",
     name: "Minimalist Cosmetic Glass",
     likes: 89,
     shares: 34,
@@ -670,11 +670,17 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
     }
     const activeImg = store.galeriaImages?.[store.activeImageIndex] || "";
 
+    const lowerQuery = refineQuery.toLowerCase();
+    const isRemoval = lowerQuery.includes("remov") || lowerQuery.includes("tir") || lowerQuery.includes("apag") || lowerQuery.includes("sem");
+    
     // Adiciona o ajuste ao prompt adicional e gera
     store.updateConfig({
       additionalPrompt: store.additionalPrompt 
-        ? `${store.additionalPrompt}, ${refineQuery}` 
-        : refineQuery
+        ? `${store.additionalPrompt}. EXPLICIT INSTRUCTION FOR THIS REFINEMENT: ${refineQuery}` 
+        : `EXPLICIT INSTRUCTION FOR THIS REFINEMENT: ${refineQuery}`,
+      negativePrompt: isRemoval 
+        ? (store.negativePrompt ? `${store.negativePrompt}, ${refineQuery}` : refineQuery)
+        : store.negativePrompt
     });
     const adjustmentText = refineQuery;
     setRefineQuery("");
@@ -1339,12 +1345,11 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                       Módulo: <span className="text-[#c5a880] font-black">{store.tipoPainel === "GC_TV" ? "GC TV" : store.tipoPainel}</span>
                     </span>
                   </div>
-                  <div className="grid grid-cols-4 gap-1 p-1 bg-black rounded-xl border border-white/5">
+                  <div className="grid grid-cols-3 gap-1 p-1 bg-black rounded-xl border border-white/5">
                     {[
                       { label: "DESIGNER", value: "DESIGNER" },
                       { label: "PRODUCT", value: "PRODUCT" },
-                      { label: "LOGO", value: "LOGO" },
-                      { label: "GC TV", value: "GC_TV" }
+                      { label: "LOGO", value: "LOGO" }
                     ].map((pnl) => {
                       const isSel = store.tipoPainel === pnl.value;
                       return (
@@ -2725,6 +2730,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
               </div>
             </div>
           )}
+
 
           {activeMenuTab === "Minha Galeria" && (
             <div className="space-y-6 animate-in fade-in duration-300">

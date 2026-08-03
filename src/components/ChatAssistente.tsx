@@ -145,8 +145,38 @@ const formatMessage = (text: string) => {
   });
 };
 
-const compressImage = (base64Str: string, maxWidth = 1024, maxHeight = 1024, quality = 0.8): Promise<string> => {
-  return Promise.resolve(base64Str);
+const compressImage = (base64Str: string, maxWidth = 1280, maxHeight = 1280, quality = 0.82): Promise<string> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      let width = img.width;
+      let height = img.height;
+      if (width > maxWidth || height > maxHeight) {
+        if (width > height) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        } else {
+          width = Math.round((width * maxHeight) / height);
+          height = maxHeight;
+        }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      } else {
+        resolve(base64Str);
+      }
+    };
+    img.onerror = () => {
+      resolve(base64Str);
+    };
+    img.src = base64Str;
+  });
 };
 
 
@@ -170,7 +200,7 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<string>("gemini-3.6-flash");
+  const [selectedModel, setSelectedModel] = useState<string>("gemini-3.1-pro-preview");
   const [showModelSettings, setShowModelSettings] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
@@ -218,6 +248,7 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
   const [inputText, setInputText] = useState("");
   const [attachedFiles, setAttachedFiles] = useState<ChatFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [isImprovingPrompt, setIsImprovingPrompt] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatPanelRef = useRef<HTMLDivElement>(null);
@@ -242,74 +273,90 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleAttachFiles = useCallback((
+  const handleAttachFiles = useCallback(async (
     files: FileList | File[], 
     forcedCategory?: "logo" | "design" | "subject" | "scene" | "style" | "info",
     triggerFlow = false
   ) => {
     setIsUploading(true);
     const fileList = Array.from(files);
-    let count = 0;
+    const successfullyAttached: ChatFile[] = [];
 
-    fileList.forEach(async (file) => {
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        let b64 = reader.result as string;
+    try {
+      for (const file of fileList) {
+        if (file.size > 50 * 1024 * 1024) {
+          showToast(`O arquivo ${file.name} excede o limite de 50MB. Por favor, envie um arquivo menor.`, "error");
+          continue;
+        }
 
-        // Se for imagem, aplica compressão local para reduzir de MBs para KBs
-        if (file.type.startsWith("image/")) {
-          try {
-            b64 = await compressImage(b64, 512, 512, 0.6);
-          } catch (compressErr) {
-            console.error("Erro na compressão automática do chat:", compressErr);
+        try {
+          const b64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+
+          let processedB64 = b64;
+          let fileType = file.type || "application/octet-stream";
+          if (file.type.startsWith("image/")) {
+            try {
+              processedB64 = await compressImage(b64, 1280, 1280, 0.82);
+              fileType = "image/jpeg";
+            } catch (compressErr) {
+              console.error("Erro na compressão automática do chat:", compressErr);
+            }
           }
-        }
 
-        const cleanBytes = b64.replace(/^data:[^;]+;base64,/, "");
+          const cleanBytes = processedB64.replace(/^data:[^;]+;base64,/, "");
 
-        let fileCat: "logo" | "design" | "subject" | "scene" | "style" | "info" = forcedCategory || "info";
+          let fileCat: "logo" | "design" | "subject" | "scene" | "style" | "info" = forcedCategory || (file.type.startsWith("image/") ? ("auto" as any) : "info");
 
-        if (!forcedCategory) {
-          const lowerName = file.name.toLowerCase();
-          if (lowerName.includes("logo") || lowerName.includes("marca") || lowerName.includes("logomarca") || lowerName.includes("logotipo") || lowerName.includes("10anos") || lowerName.includes("icon") || lowerName.includes("symbol")) {
-            fileCat = "logo";
-          } else if (lowerName.includes("pessoa") || lowerName.includes("modelo") || lowerName.includes("sujeito") || lowerName.includes("homem") || lowerName.includes("mulher") || lowerName.includes("foto") || lowerName.includes("face") || lowerName.includes("portrait")) {
-            fileCat = "subject";
-          } else if (lowerName.includes("cenario") || lowerName.includes("background") || lowerName.includes("fundo") || lowerName.includes("scene") || lowerName.includes("ambiente")) {
-            fileCat = "scene";
-          } else if (lowerName.includes("estilo") || lowerName.includes("style")) {
-            fileCat = "style";
-          } else if (lowerName.includes("layout") || lowerName.includes("design") || lowerName.includes("flyer") || lowerName.includes("card") || lowerName.includes("ref")) {
-            fileCat = "design";
-          } else {
-            fileCat = "info";
+          if (!forcedCategory) {
+            const lowerName = file.name.toLowerCase();
+            if (lowerName.includes("logo") || lowerName.includes("marca") || lowerName.includes("logomarca") || lowerName.includes("logotipo") || lowerName.includes("10anos") || lowerName.includes("icon") || lowerName.includes("symbol")) {
+              fileCat = "logo";
+            } else if (lowerName.includes("pessoa") || lowerName.includes("modelo") || lowerName.includes("sujeito") || lowerName.includes("homem") || lowerName.includes("mulher") || lowerName.includes("face") || lowerName.includes("portrait")) {
+              fileCat = "subject";
+            } else if (lowerName.includes("cenario") || lowerName.includes("background") || lowerName.includes("fundo") || lowerName.includes("scene") || lowerName.includes("ambiente")) {
+              fileCat = "scene";
+            } else if (lowerName.includes("estilo") || lowerName.includes("style")) {
+              fileCat = "style";
+            } else if (lowerName.includes("layout") || lowerName.includes("design") || lowerName.includes("flyer") || lowerName.includes("card") || lowerName.includes("ref")) {
+              fileCat = "design";
+            } else {
+              fileCat = file.type.startsWith("image/") ? ("auto" as any) : "info";
+            }
           }
-        }
 
-        const newFile: ChatFile = {
-          name: file.name,
-          type: file.type || "application/octet-stream",
-          data: cleanBytes,
-          size: file.size,
-          category: fileCat
-        };
+          const newFile: ChatFile = {
+            name: file.name,
+            type: fileType,
+            data: cleanBytes,
+            size: file.size,
+            category: fileCat
+          };
 
-        setAttachedFiles((prev) => [...prev, newFile]);
-        count++;
-        
-        if (count === fileList.length) {
-          setIsUploading(false);
-          showToast(`${fileList.length} arquivo(s) anexado(s) com sucesso!`, "success");
-        }
+          successfullyAttached.push(newFile);
 
-        if (triggerFlow && activeAssistant.id === "prompt-extrator" && file.type.startsWith("image/")) {
-          setTimeout(() => {
-            handleSendMessage("Por favor, analise a imagem e extraia o prompt.", [newFile]);
-          }, 100);
+          if (triggerFlow && activeAssistant.id === "prompt-extrator" && file.type.startsWith("image/")) {
+            setTimeout(() => {
+              handleSendMessage("Por favor, analise a imagem e extraia o prompt.", [newFile]);
+            }, 100);
+          }
+        } catch (fileErr) {
+          console.error("Erro ao ler arquivo:", fileErr);
+          showToast(`Erro ao processar arquivo ${file.name}.`, "error");
         }
-      };
-      reader.readAsDataURL(file);
-    });
+      }
+
+      if (successfullyAttached.length > 0) {
+        setAttachedFiles((prev) => [...prev, ...successfullyAttached]);
+        showToast(`${successfullyAttached.length} arquivo(s) anexado(s) com sucesso!`, "success");
+      }
+    } finally {
+      setIsUploading(false);
+    }
   }, [activeAssistant.id]);
 
   const updateFileCategory = (idx: number, cat: "logo" | "design" | "subject" | "scene" | "style" | "info") => {
@@ -320,6 +367,48 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
       }
       return next;
     });
+  };
+
+  const handleImprovePrompt = async () => {
+    if (!inputText.trim()) {
+      showToast("Escreva algo no campo de texto para a IA melhorar o prompt.", "warning");
+      return;
+    }
+
+    setIsImprovingPrompt(true);
+    try {
+      const response = await fetch("/api/melhorar-prompt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: inputText,
+          assistantId: activeAssistant.id,
+          agentName: activeAssistant.label,
+          customApiKey
+        })
+      });
+
+      const data = await response.json();
+      if (response.ok && data.improvedPrompt) {
+        setInputText(data.improvedPrompt);
+        showToast("Prompt aprimorado com sucesso! Confira e aperte em enviar.", "success");
+        if (textareaRef.current) {
+          setTimeout(() => {
+            if (textareaRef.current) {
+              textareaRef.current.style.height = "auto";
+              textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 120) + "px";
+            }
+          }, 50);
+        }
+      } else {
+        showToast(data.error || "Não foi possível aprimorar o prompt.", "error");
+      }
+    } catch (err: any) {
+      console.error("Erro ao aprimorar prompt:", err);
+      showToast("Erro ao conectar ao serviço de aprimoramento de prompt.", "error");
+    } finally {
+      setIsImprovingPrompt(false);
+    }
   };
 
   const handleSendMessage = async (overrideText?: string, overrideFiles?: ChatFile[]) => {
@@ -393,6 +482,17 @@ ${(store.camadasTexto || []).map((t, idx) => `  ${idx + 1}. [Função: "${t.func
 - Qualidade / Modelo Ativo: ${store.resolucao} (usando o modelo: gemini-3-pro-image)
 
 Regras de Automação do JSON (SEMPRE adicione no final se houver mudança de contexto):
+0. MAPEAMENTO E PREENCHIMENTO AUTOMÁTICO DE IMAGENS ANEXADAS (EDITAR FOTO / MELHORAR PROMPT / REFERÊNCIA):
+   - Sempre que o usuário anexar 1 ou mais fotos/imagens ao chat (ou pedir para editar uma foto, melhorar o prompt, ou criar uma arte com base em uma foto):
+     * VOCÊ DEVE OBRIGATORIAMENTE ANALISAR E ESCANEAR VISUALMENTE A IMAGEM ANEXADA COM SUA CAPACIDADE MULTIMODAL GEMINI.
+     * VOCÊ DEVE RETORNAR EM 'mapeamentoImagens' NO JSON O MAPEAMENTO DO ARQUIVO para: 'design,scene,subject,style' (se houver sujeito na foto), ou 'design,scene,style' (se não houver pessoa/sujeito humano), ou 'logo' (se for logotipo de marca).
+     * OBRIGATÓRIO: ATIVE 'useEnvRef': true (para preservar o fundo/cenário original), 'desativarSujeito': false e 'noPeople': false (se houver pessoa/sujeito).
+     * OBRIGATÓRIO: VOCÊ DEVE ESCANEAR A FOTO E PREENCHER OS CAMPOS DE TEXTO DO JSON COM DESCRIÇÕES DETALHADAS EM PORTUGUÊS:
+       - 'promptCenario': Descreva minuciosamente em Português o fundo, cenário, iluminação, cores e ambiente da foto original enviada.
+       - 'promptDesign': Descreva minuciosamente em Português o enquadramento, composição visual e proporções da foto original.
+       - 'poseDescription': Descreva minuciosamente em Português o sujeito/pessoa/modelo, suas roupas, pose, traços faciais e expressão.
+       - 'promptEstilo': Descreva minuciosamente em Português o estilo fotográfico, tons, tratamento de pele, contraste e edição Lightroom.
+       - 'additionalPrompt': Crie um prompt completo em Português unindo a descrição visual detalhada da foto original com TODAS as edições e remoções específicas pedidas pelo usuário (ex: remover coisas da mesa, remover sombras, desfocar o fundo, limpeza de pele), iniciando com: "MANDATO DE EDIÇÃO E REMOÇÃO DE OBJETOS: Manter o sujeito e enquadramento da foto enviada, aplicando OBRIGATORIAMENTE as seguintes edições e remoções solicitadas: [detalhar remoções e edições pedidas pelo usuário]".
 - Se uma das imagens for CLARAMENTE um Logotipo de uma marca ou se o usuário disser "coloque a logo X" / "use a logo 10 anos": ative "useLogo": true e mapeie como "logo". NÃO crie camada de texto em "camadasTexto" para o nome da logo! O nome da logo refere-se ao ARQUIVO DE IMAGEM enviado pelo cliente.
 1. REGRA ABSOLUTA DE LOGOTIPO vs CAMADA DE TEXTO:
    - Se o usuário enviar uma imagem de logo ou disser "coloque a logo 10 anos" / "use a logo X":
@@ -427,7 +527,8 @@ Regras de Automação do JSON (SEMPRE adicione no final se houver mudança de co
 8. MANTENHA SIMPLES: Não gere descrições gigantes em "promptCenario", "estiloVisualCustom", "additionalPrompt" ou outros campos de texto. Seja extremamente DIRETO e CONCISO. Textos muito longos confundem o gerador de imagens e geram alucinações. Foque no que importa.
 9. DADOS DA REFERÊNCIA: Se na imagem de referência houver logos de outras marcas, textos antigos, ou perfis de instagram, NÃO inclua isso na geração! Remova essas informações e use APENAS as informações enviadas pelo cliente.
 10. POSICIONAMENTO EXATO: Instrua claramente na descrição o lugar EXATO onde deve ficar a logo, ícones, textos e efeitos (ex: "logo posicionada no topo ao centro", "texto centralizado na parte inferior"). Isso ajuda a IA a não espalhar as coisas aleatoriamente.
-11. MODELOS PREMIUM DE ULTRA PRECISÃO: O sistema agora utiliza o modelo "gemini-3-pro-image" (suportando qualidades 1K, 2K e 4K) no GoogleGenAI. Para alterar o modelo/resolução ativo, passe a chave "resolucao": "1K" | "2K" | "4K" correspondente no JSON. Explique essa novidade ao usuário se ele pedir ajustes de qualidade!
+11. REGRA ABSOLUTA DE RESOLUÇÃO E TAMANHO (NÃO PERGUNTE AO USUÁRIO):
+    JAMAIS pergunte ao usuário se ele deseja resolução 1K, 2K ou 4K, e JAMAIS pergunte sobre dimensões/tamanhos de imagem ou inicie conversas sobre qualidade! O usuário define a resolução e tamanho manualmente no painel quando quiser. Assuma sempre altíssima qualidade automaticamente no background sem mencionar 1K, 2K ou 4K nas suas respostas de chat.
 12. REGRA ABSOLUTA DE FUNDO SÓLIDO / COR ÚNICA (PURE SOLID COLOR BACKGROUND):
     Se o usuário pedir apenas um fundo sólido, cor de fundo, canvas limpo ou cor única (ex: "CRIE UM FUNDO SOLIDO NA COR #0b1c32 4:5", "fundo liso azul", "cor sólida"):
     - "desativarSujeito": true, "noPeople": true, "enableTypography": false, "camadasTexto": [], "promptTipografia": "", "useLogo": false, "useEnvRef": false
@@ -438,15 +539,20 @@ Regras de Automação do JSON (SEMPRE adicione no final se houver mudança de co
     - "dimensao": "3:4" (se 4:5) ou "1:1"
     - "corDominante": "#0b1c32", "useCorDominante": true, "coresAutomaticas": false
     - JAMAIS adicione mockups de celular, frases de sindicato, modelos ou neon que o usuário NÃO solicitou!
-13. REGRA ABSOLUTA DE EDIÇÃO, ALTERAÇÃO E REMOÇÃO DE ELEMENTOS:
-    - Se o usuário pedir para REMOVER, EXCLUIR, TIRAR ou APAGAR elementos específicos da imagem (ex: "tire rua", "remova o instagram", "tire a logo designer premium", "remova o endereço"):
-      * Preencha OBRIGATORIAMENTE no campo "negativePrompt" a lista exata dos itens a remover em português: "endereço, rua, instagram, @, logo designer premium, texto do rodapé, logos de referência".
-      * Preencha em "additionalPrompt" e "promptDesign": "MANDATO DE REMOÇÃO: Remover e apagar completamente qualquer endereço, perfil do instagram (@) ou logo do rodapé do design. Manter a área inferior do rodapé totalmente limpa."
+13. REGRA ABSOLUTA DE EDIÇÃO, ALTERAÇÃO E REMOÇÃO DE ELEMENTOS (SOMBRAS DE FLASH, OBJETOS, MESAS):
+    - Se o usuário pedir para REMOVER, EXCLUIR, TIRAR ou APAGAR elementos, sombras ou objetos da imagem (ex: "tire sombras", "remova a sombra atrás da segunda menina", "tire as coisas da mesa", "remova o instagram"):
+      * Preencha OBRIGATORIAMENTE no campo "negativePrompt" a lista exata dos itens a remover, ESPECIFICANDO o alvo em português: "sombras, sombra escura de contorno na parede, sombra pesada atrás da menina da direita, sombras fortes de flash, fundo branco de estúdio".
+      * Preencha em "promptCenario": "MANTENHA A PAREDE, A COR DO FUNDO E O AMBIENTE EXATAMENTE ORIGINAIS DA FOTO. NÃO REMOVA O FUNDO E NÃO FAÇA FUNDO BRANCO. Apenas faça a parede atrás da segunda pessoa ficar clara, lisa e sem nenhuma sombra projetada pesada, mesclando e clonando a cor original da parede iluminada no lugar da sombra escura."
+      * Preencha em "additionalPrompt" e "promptDesign": "MANDATO DE ABSOLUTA FIDELIDADE AOS ROSTOS, POSES E CENÁRIO + REMOÇÃO TOTAL DA SOMBRA DE FLASH: Manter 100% idênticos os rostos, traços faciais e poses das pessoas. Manter 100% o FUNDO ORIGINAL da foto. NUNCA DEIXE O FUNDO BRANCO OU REMOVA O CENÁRIO! ATENÇÃO MÁXIMA AO PEDIDO: VOCÊ DEVE APENAS PINTAR POR CIMA e DISSOLVER a sombra escura projetada na parede atrás da segunda pessoa (menina da direita). Substitua a sombra pintando a textura da própria parede (mesma cor da parede, sem fundo branco). NENHUMA sombra grossa deve restar atrás da segunda pessoa."
     - Se o usuário pedir para POSICIONAR OU COLOCAR A LOGO EM LUGAR MELHOR (ex: "coloque essa logo", "lugar melhor para a logo", "não coloque em cima do cabelo"):
       * Defina "useLogo": true, "logoInclusionType": "embedded".
       * Preencha em "promptTipografia": "Posicionar o logotipo da marca no canto superior esquerdo ou superior direito em espaço limpo. REGRA CRÍTICA: O logotipo JAMAIS deve ficar em cima do cabelo, cabeça, rosto ou corpo do sujeito!"
     - Se o usuário pedir formato para Instagram retrato / post retrato / 4:5:
       * Defina "dimensao": "3:4".
+    - Se o usuário pedir para ALTERAR, MUDAR OU FAZER MELHORIAS mantendo a referência original ou foto enviada (ex: "mude X mas mantenha o mesmo fundo original", "faça melhorias mantendo igual", "altere a iluminação", "troque a cor", "só faça melhorias"):
+      * Mantenha as referências de imagem originais ativas no editor ("useEnvRef": true, "designRefBase64" mantido).
+      * Preencha em "promptCenario": "Fundo e ambiente originais da foto de referência (manter o mesmo cômodo/parede da foto sem transformar em estúdio fotográfico)."
+      * Preencha em "additionalPrompt": "MANDATO DE FIDELIDADE TOTAL: Manter 100% fiel o fundo, sujeito, iluminação e cenário original da foto/imagem de referência. Não alterar o cenário nem criar um fundo sintético de estúdio. Aplicar OBRIGATORIAMENTE APENAS as melhorias e alterações específicas solicitadas: [solicitação do usuário]."
     - Se o usuário pedir para ALTERAR ou MUDAR um texto ou valor (ex: "mude o valor para R$ 600", "troque locução por apresentadora", "corrija X"):
       * MANTENHA TODOS OS OUTROS TEXTOS do editor que já estavam certos e não foram mencionados pelo usuário.
       * Consulte a lista "[Camadas de Texto Atuais no Editor]" enviada no contexto acima e retorne em "camadasTexto" a lista COMPLETA das camadas com as alterações solicitadas.
@@ -454,6 +560,21 @@ Regras de Automação do JSON (SEMPRE adicione no final se houver mudança de co
     - Se o usuário pedir para REMOVER CENÁRIO/FUNDO: defina "useEnvRef": false e "promptCenario": "".
     - Se o usuário pedir para REMOVER LOGO: defina "useLogo": false.
     - Se o usuário pedir para LIMPAR um prompt/observação/estilo: envie o campo correspondente como string vazia (ex: "additionalPrompt": "", "negativePrompt": "", "promptCenario": "").
+14. REGRA ABSOLUTA DE PRESERVAÇÃO DE ROSTOS, EXPRESSÕES, POSES E POSIÇÕES DAS PESSOAS:
+    - Sempre que houver pessoas na foto enviada ou em edição (a menos que o usuário peça explicitamente para remover ou trocar as pessoas):
+      * É TERMINANTEMENTE PROIBIDO alterar a fisionomia, mudar feições faciais, trocar os rostos, alterar as poses corporais ou mudar as pessoas de lugar/posição!
+      * JAMAIS mencione "estúdio fotográfico", "parede neutra de estúdio" ou "fundo sintético" em "promptCenario" ou "additionalPrompt" ao editar fotos, pois isso confunde a IA e faz com que ela redesenhe o cenário e os rostos das pessoas!
+      * REGRA CRÍTICA DE ANÁLISE DE EXPRESSÃO FACIAL: Ao analisar a foto enviada, EXAMINE ATENTAMENTE A EXPRESSÃO INDIVIDUAL DE CADA PESSOA. NUNCA use termos genéricos como "pessoas sorrindo" ou "duas mulheres sorrindo" se apenas uma pessoa está sorrindo. Descreva a fisionomia e a expressão EXATA de cada pessoa separadamente (ex: "Mulher da esquerda sorrindo de dentes à mostra; mulher da direita com lábios fechados e expressão suave/serena sem sorrir de dentes").
+      * OBRIGATÓRIO: Descreva em "poseDescription" os rostos, traços, roupas e a EXPRESSÃO FACIAL INDIVIDUAL EXATA de cada pessoa e reforce em "additionalPrompt": "MANDATO DE ROSTOS, POSES, EXPRESSÕES E POSIÇÕES IDÊNTICOS: Manter 100% idênticos os rostos, feições, fisionomia, idade, roupas, poses corporais, a expressão facial INDIVIDUAL exata de cada pessoa (respeitando quem está de boca fechada e quem está sorrindo sem forçar sorrisos) e a posição física exata de cada pessoa na foto de referência. Não alterar os rostos, não forçar sorrisos e não trocar as pessoas de lugar."
+15. REGRA ABSOLUTA DE TRATAMENTO FOTOGRÁFICO ADOBE LIGHTROOM E REMOÇÃO DE SOMBRAS DE FLASH:
+    - Sempre que o usuário solicitar tratamento, edição, melhoria ou correção estilo Lightroom/fotografia profissional:
+      * Adicione em "promptEstilo" e "additionalPrompt" a suíte completa de ajustes Lightroom:
+        1. AJUSTES BÁSICOS: Equilíbrio perfeito de Exposição, Contraste, Highlights (preservados sem estourar), Shadows (abertas e sem manchas pretas), Whites e Blacks limpos. Temperatura e Tint corrigidos para cores e pele 100% naturais. Vibrância inteligente com saturação sob controle.
+        2. TEXTURA E IMPACTO: Aplicação de Texture, Clarity e Dehaze para máxima definição e nitidez nos fios de cabelo, roupas e detalhes.
+        3. CURVA DE TONS (TONE CURVE): Curva S-Curve suave RGB para contraste de estúdio cinematográfico e pretos levemente elevados estilo filme profissional.
+        4. HSL / COR INDIVIDUAL: Laranja ajustado para tom de pele dourado e natural, azuis profundos e verdes equilibrados.
+        5. COLOR GRADING CINEMATOGRÁFICO: Sombras levemente frias, realces quentes dourados, balanço profissional Teal & Orange.
+        6. MÁSCARAS E REMOÇÃO DE ERROS (HEALING): Máscara inteligente no sujeito para luz e nitidez no rosto. Remoção completa e absoluta de sombras de flash na parede e desordem na mesa. Nitidez refinada com redução de ruído de iluminação e cor. Leve vinheta e granulação fina.
 
 Exemplo OBRIGATÓRIO de JSON no final da sua resposta (use o bloco \`\`\`json):
 \`\`\`json
@@ -500,10 +621,15 @@ Lembre-se: converse como humano primeiro e só anexe o JSON no final se for nece
           assistantId: activeAssistant.id,
           message: (userMsg.content || "Analise os arquivos enviados.") + clientContext + configContext,
           attachedFiles: userMsg.files,
-          history: currentMessages.map((m) => ({ 
+          history: currentMessages.map((m, idx, arr) => ({ 
             role: m.role, 
             content: m.content,
-            files: m.files 
+            files: m.files ? m.files.map(f => ({
+              name: f.name,
+              type: f.type,
+              category: f.category,
+              data: (idx >= arr.length - 2) ? f.data : undefined
+            })) : undefined 
           })),
           customApiKey: customApiKey || localStorage.getItem("custom_gemini_api_key") || "",
           modelId: selectedModel
@@ -718,10 +844,15 @@ Exemplo de JSON de saída:
           assistantId: activeAssistant.id,
           message: autoFillPrompt + clientContext,
           attachedFiles: filesToSend,
-          history: activeMessages.map((m) => ({ 
+          history: activeMessages.map((m, idx, arr) => ({ 
             role: m.role, 
             content: m.content,
-            files: m.files 
+            files: m.files ? m.files.map(f => ({
+              name: f.name,
+              type: f.type,
+              category: f.category,
+              data: (idx >= arr.length - 2) ? f.data : undefined
+            })) : undefined 
           })),
           customApiKey: localStorage.getItem("custom_gemini_api_key") || "",
           modelId: selectedModel
@@ -1473,21 +1604,11 @@ Exemplo de JSON de saída:
 
           const nameLower = (img.name || "").toLowerCase();
 
-          // 1. Prioridade Máxima: Categoria selecionada explicitamente pelo usuário no anexador
-          if (img.category) {
+          // 1. Categoria selecionada explicitamente pelo usuário no anexador (quando não é info ou auto)
+          if (img.category && img.category !== "info" && (img.category as string) !== "auto") {
             targetType = img.category;
           } 
-          // 2. Detecção direta por nome do arquivo
-          else if (nameLower.includes("logo") || nameLower.includes("marca") || nameLower.includes("logomarca") || nameLower.includes("logotipo") || nameLower.includes("10anos") || nameLower.includes("icon") || nameLower.includes("symbol")) {
-            targetType = "logo";
-          } else if (nameLower.includes("pessoa") || nameLower.includes("modelo") || nameLower.includes("sujeito") || nameLower.includes("homem") || nameLower.includes("mulher") || nameLower.includes("foto") || nameLower.includes("face") || nameLower.includes("portrait")) {
-            targetType = "subject";
-          } else if (nameLower.includes("cenario") || nameLower.includes("background") || nameLower.includes("fundo") || nameLower.includes("scene") || nameLower.includes("ambiente")) {
-            targetType = "scene";
-          } else if (nameLower.includes("layout") || nameLower.includes("design") || nameLower.includes("flyer") || nameLower.includes("card") || nameLower.includes("ref")) {
-            targetType = "design";
-          } 
-          // 3. Mapeamento retornado pela IA no JSON
+          // 2. Mapeamento retornado pela IA no JSON (jsonImageMap ou imagemAnexadaTipo)
           else {
             let matchedKey = null;
             if (img.name && jsonImageMap[img.name]) {
@@ -1502,23 +1623,35 @@ Exemplo de JSON de saída:
               targetType = singleMappingVal;
             } else if (jsonImageMap["*"]) {
               targetType = jsonImageMap["*"];
+            } else if (parsedConfigJson?.imagemAnexadaTipo) {
+              targetType = parsedConfigJson.imagemAnexadaTipo;
+            }
+            // 3. Detecção por nome do arquivo ou palavras-chave
+            else if (nameLower.includes("logo") || nameLower.includes("marca") || nameLower.includes("logomarca") || nameLower.includes("logotipo") || nameLower.includes("10anos") || nameLower.includes("icon") || nameLower.includes("symbol")) {
+              targetType = "logo";
+            } else if (nameLower.includes("estilo") || nameLower.includes("style")) {
+              targetType = "style";
+            } else if (nameLower.includes("texto") || nameLower.includes("tipografia") || nameLower.includes("font")) {
+              targetType = "typography";
             } else if (textLower.includes("logo") || textLower.includes("marca") || textLower.includes("logomarca") || textLower.includes("logotipo")) {
               targetType = "logo";
-            } else if (textLower.includes("sujeito") || textLower.includes("produto") || textLower.includes("subject") || textLower.includes("product") || textLower.includes("pessoa") || textLower.includes("modelo")) {
-              targetType = "subject";
-            } else if (textLower.includes("cenário") || textLower.includes("background") || textLower.includes("cenario") || textLower.includes("ambiente") || textLower.includes("scene") || textLower.includes("fundo")) {
-              targetType = "scene";
-            } else if (textLower.includes("texto") || textLower.includes("tipografia") || textLower.includes("typography") || textLower.includes("print") || textLower.includes("font") || textLower.includes("letter")) {
-              targetType = "typography";
-            } else if (textLower.includes("layout") || textLower.includes("design") || textLower.includes("referência principal") || textLower.includes("flyer") || textLower.includes("card")) {
-              targetType = "design";
-            } else {
-              targetType = activeAssistant.id === "diretor-criativo" ? "design" : "style";
+            } else if (textLower.includes("estilo") || textLower.includes("style") || textLower.includes("vibe")) {
+              targetType = "style";
+            }
+            // 4. Mapeamento Multicampo Inteligente para Edição de Foto e Referência Completa:
+            // Toda imagem/foto enviada pelo usuário para edição ou referência deve preencher SIMULTANEAMENTE:
+            // Referência de Design/Layout + Cenário de Fundo (com useEnvRef=true) + Sujeito Principal (se houver pessoa/sujeito ativo).
+            else {
+              const isSubjectDisabled = updates.desativarSujeito === true || (updates.desativarSujeito === undefined && store.desativarSujeito === true);
+              if (isSubjectDisabled) {
+                targetType = "design,scene,style";
+              } else {
+                targetType = "design,scene,subject,style";
+              }
             }
           }
           
-          
-          if (targetType === "style") {
+          if (targetType.includes("style")) {
              let descMatchedKey = null;
              if (img.name && jsonStyleDescMap[img.name]) {
                descMatchedKey = img.name;
@@ -1533,29 +1666,41 @@ Exemplo de JSON de saída:
                styleDescription = singleStyleDescVal;
              } else if (jsonStyleDescMap["*"]) {
                styleDescription = jsonStyleDescMap["*"];
+             } else if (parsedConfigJson?.promptEstilo) {
+               styleDescription = parsedConfigJson.promptEstilo;
+             } else if (parsedConfigJson?.estiloVisualCustom) {
+               styleDescription = parsedConfigJson.estiloVisualCustom;
+             } else if (parsedConfigJson?.additionalPrompt) {
+               styleDescription = parsedConfigJson.additionalPrompt.substring(0, 300);
+             } else {
+               styleDescription = "Referência de estilo e edição fotográfica enviada.";
              }
           }
 
-          const rawBase64 = `data:${img.type};base64,${img.data}`;
+          const rawBase64 = img.data.startsWith("data:") ? img.data : `data:${img.type || "image/jpeg"};base64,${img.data}`;
+          const typesList = targetType.split(",").map(t => t.trim().toLowerCase());
 
-          if (targetType === "info") {
-            // Arquivo de informação do chat - Não aplica a nenhum campo do editor
-          } else if (targetType === "subject") {
+          if (typesList.includes("subject")) {
             newSubjects.push(rawBase64);
             subCount++;
-          } else if (targetType === "scene") {
+          }
+          if (typesList.includes("scene")) {
             newScenes.push(rawBase64);
             sceCount++;
-          } else if (targetType === "logo") {
+          }
+          if (typesList.includes("logo")) {
             newLogos.push(rawBase64);
             logCount++;
-          } else if (targetType === "design") {
+          }
+          if (typesList.includes("design")) {
             newDesigns.push(rawBase64);
             desCount++;
-          } else if (targetType === "typography") {
+          }
+          if (typesList.includes("typography")) {
             newTypographies.push(rawBase64);
             typoCount++;
-          } else if (targetType === "style") {
+          }
+          if (typesList.includes("style")) {
             // style reference
             if (isReplaceMode && styCount === 0 && store.referenciasEstilo) {
               // Limpa as atuais se for a primeira do replace
@@ -1567,8 +1712,8 @@ Exemplo de JSON de saída:
                 store.updateReferenciaEstilo(existingRef.id, styleDescription);
               }
             } else {
-                store.addReferenciaEstilo(rawBase64, styleDescription);
-                styCount++;
+              store.addReferenciaEstilo(rawBase64, styleDescription);
+              styCount++;
             }
           }
         });
@@ -1829,18 +1974,18 @@ Exemplo de JSON de saída:
                 <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400 mb-2 block">Selecione o Modelo</label>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => setSelectedModel("gemini-3.6-flash")}
-                    className={`flex-1 flex flex-col items-center justify-center py-2.5 text-xs rounded-lg transition-all ${selectedModel === "gemini-3.6-flash" ? "bg-[#ad8330]/20 text-[#d4af37] border border-[#ad8330]/50 font-bold" : "bg-black text-zinc-400 hover:text-zinc-200 border border-white/5"}`}
+                    onClick={() => setSelectedModel("gemini-3.1-pro-preview")}
+                    className={`flex-1 flex flex-col items-center justify-center py-2.5 text-xs rounded-lg transition-all ${selectedModel === "gemini-3.1-pro-preview" ? "bg-[#ad8330]/20 text-[#d4af37] border border-[#ad8330]/50 font-bold" : "bg-black text-zinc-400 hover:text-zinc-200 border border-white/5"}`}
                   >
                     <Zap size={16} className="mb-1" />
-                    Gemini Flash
+                    Pro 3.1
                   </button>
                   <button
                     onClick={() => setSelectedModel("gemini-3-pro-image")}
                     className={`flex-1 flex flex-col items-center justify-center py-2.5 text-xs rounded-lg transition-all ${selectedModel === "gemini-3-pro-image" ? "bg-[#ad8330]/20 text-[#d4af37] border border-[#ad8330]/50 font-bold" : "bg-black text-zinc-400 hover:text-zinc-200 border border-white/5"}`}
                   >
                     <Sparkles size={16} className="mb-1" />
-                    Gemini Pro
+                    Image Pro
                   </button>
                 </div>
               </div>
@@ -2145,7 +2290,7 @@ Exemplo de JSON de saída:
                               onClick={() => updateFileCategory(idx, "scene")}
                               className={`px-1.5 py-0.5 text-[9px] font-bold rounded-md transition-all shrink-0 cursor-pointer ${
                                 file.category === "scene"
-                                  ? "bg-purple-600 text-white shadow-sm font-bold"
+                                  ? "bg-[#c5a880] text-white shadow-sm font-bold"
                                   : "bg-[#111] text-zinc-400 hover:text-white"
                               }`}
                               title="Usar esta imagem como Cenário/Fundo no Editor"
@@ -2247,10 +2392,27 @@ Exemplo de JSON de saída:
                 type="button"
                 onClick={() => fileInputSceneRef.current?.click()}
                 disabled={isUploading}
-                className="flex items-center gap-1 px-2 py-1 rounded-lg border border-purple-500/40 bg-purple-950/30 hover:bg-purple-900/50 text-purple-300 text-[10px] font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap disabled:opacity-40"
+                className="flex items-center gap-1 px-2 py-1 rounded-lg border border-[#c5a880]/40 bg-[#c5a880]/30 hover:bg-[#c5a880]/50 text-[#c5a880] text-[10px] font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap disabled:opacity-40"
                 title="Anexar Foto de Cenário/Fundo para o Editor"
               >
                 <span className="whitespace-nowrap">🏞️ Cenário</span>
+              </button>
+
+              <div className="h-3 w-px bg-zinc-800 my-auto shrink-0 mx-0.5" />
+
+              <button
+                type="button"
+                onClick={handleImprovePrompt}
+                disabled={isImprovingPrompt || isTyping || !inputText.trim()}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg border border-[#ad8330]/50 bg-[#ad8330]/15 hover:bg-[#ad8330]/30 text-[#e6c687] text-[10px] font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap disabled:opacity-30 disabled:cursor-not-allowed"
+                title="Melhorar meu prompt usando Inteligência Artificial antes de enviar"
+              >
+                {isImprovingPrompt ? (
+                  <Loader2 size={11} className="animate-spin text-[#ad8330]" />
+                ) : (
+                  <Sparkles size={11} className="text-[#ad8330]" />
+                )}
+                <span>Melhorar prompt</span>
               </button>
             </div>
 
@@ -2270,15 +2432,36 @@ Exemplo de JSON de saída:
                   }
                 }}
                 onPaste={handlePaste}
-                placeholder={`Digite sua mensagem...`}
+                placeholder={`Escreva o que você quer e aperte em "Melhorar prompt"...`}
                 rows={1}
                 className="flex-1 bg-black/80 border border-zinc-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-[#ad8330]/60 resize-none font-medium leading-relaxed transition-colors"
-                style={{ minHeight: "38px", maxHeight: "90px", scrollbarWidth: "none" }}
+                style={{ minHeight: "38px", maxHeight: "100px", scrollbarWidth: "none" }}
               />
               <button
+                type="button"
+                onClick={handleImprovePrompt}
+                disabled={isImprovingPrompt || isTyping || !inputText.trim()}
+                className="h-[38px] px-3 rounded-xl flex items-center gap-1.5 text-xs font-bold bg-[#ad8330]/15 hover:bg-[#ad8330]/25 border border-[#ad8330]/40 hover:border-[#ad8330] text-[#e6c687] cursor-pointer transition-all active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed shrink-0 shadow-sm mb-0.5"
+                title="Melhorar meu prompt usando Inteligência Artificial"
+              >
+                {isImprovingPrompt ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin text-[#ad8330]" />
+                    <span className="hidden sm:inline">Melhorando...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={14} className="text-[#ad8330]" />
+                    <span className="whitespace-nowrap hidden sm:inline">Melhorar prompt</span>
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
                 onClick={handleSend}
                 disabled={isTyping || isUploading || (inputText.trim() === "" && attachedFiles.length === 0)}
-                className="w-9 h-9 rounded-xl flex items-center justify-center text-black bg-[#ad8330] cursor-pointer transition-all active:scale-90 disabled:opacity-30 disabled:cursor-not-allowed hover:brightness-110 shrink-0 shadow-md mb-0.5"
+                className="w-9 h-[38px] rounded-xl flex items-center justify-center text-black bg-[#ad8330] cursor-pointer transition-all active:scale-90 disabled:opacity-30 disabled:cursor-not-allowed hover:brightness-110 shrink-0 shadow-md mb-0.5"
+                title="Enviar mensagem"
               >
                 {isTyping ? <RefreshCw size={14} className="animate-spin" /> : <Send size={14} />}
               </button>

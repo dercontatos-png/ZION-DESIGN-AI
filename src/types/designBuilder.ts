@@ -55,6 +55,7 @@ export interface ProjectConfig {
   promptCenario: string; // Prompt Adicional Cenário
   promptDesign?: string; // Descrição de extração do layout do design obrigatório
   promptTipografia?: string; // Descrição de extração do texto/tipografia do print
+  promptEstilo?: string; // Descrição de estilo visual e tratamento fotográfico
   negativePrompt: string;
   enableTypography: boolean;
   

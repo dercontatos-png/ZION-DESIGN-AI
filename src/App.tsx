@@ -59,6 +59,7 @@ import {
   Layers,
   Globe,
   Bot,
+  Tv, Music, Film, Video,
 } from "lucide-react";
 import { GoogleGenAI, Type } from "@google/genai";
 import SettingsModal from "./components/SettingsModal";
@@ -69,8 +70,11 @@ import WhatsAppTab from "./components/WhatsAppTab";
 import { useImageStore } from "./store/useImageStore";
 import { InpaintCanvas } from "./components/InpaintCanvas";
 import DesignBuilder from "./components/DesignBuilder";
+import { GeradorGcTv } from "./components/GeradorGcTv";
 import Agentes from "./components/Agentes";
 import { CopilotoAgencia } from "./components/CopilotoAgencia";
+import AudioStudio from "./components/AudioStudio";
+import GeradorOmniFlash from "./components/GeradorOmniFlash";
 import { safeStorageSetItem, getStorageStats, cleanImageStorage } from "./utils/imageStorageManager";
 
 
@@ -155,7 +159,7 @@ Consigo analisar a saúde financeira dos seus **${clients.length} clientes**, su
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractedPrompt, setExtractedPrompt] = useState("");
   const [extractedTypography, setExtractedTypography] = useState("");
-  const [selectedModel, setSelectedModel] = useState("gemini-3.6-flash");
+  const [selectedModel, setSelectedModel] = useState("gemini-3.1-pro-preview");
   const [showSettings, setShowSettings] = useState(false);
 
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
@@ -263,7 +267,6 @@ Consigo analisar a saúde financeira dos seus **${clients.length} clientes**, su
     if (!customText) setInput("");
 
     try {
-      const ai = new GoogleGenAI({ apiKey: getActiveApiKey() });
       const clientsContext =
         clients.length > 0
           ? clients
@@ -274,29 +277,41 @@ Consigo analisar a saúde financeira dos seus **${clients.length} clientes**, su
               .join("\n")
           : "Nenhum cliente cadastrado no momento.";
 
-      let response;
-      const promptContext = `Você é o assistente inteligente pessoal da agência digital "Zion Company", focado no sucesso de mídias sociais, tráfego pago e branding.
-      Sua personalidade é extremamente profissional, criativa, amigável e focada em resultados práticos.
-      
-      Aqui estão os clientes cadastrados atualmente na agência para você ter o contexto operacional:
-      ${clientsContext}
-      
-      Por favor, forneça respostas de altíssima qualidade técnica para a agência. Use formatação markdown elegante para tópicos e destaques importantes.
-      
-      Pergunta ou comando do usuário:
-      "${textToSend}"`;
+      const fullPrompt = `Você é o assistente inteligente pessoal da agência digital "Zion Company", focado no sucesso de mídias sociais, tráfego pago e branding.
+Sua personalidade é extremamente profissional, criativa, amigável e focada em resultados práticos.
 
-      response = await ai.models.generateContent({
-        model: selectedModel,
-        contents: promptContext,
+Aqui estão os clientes cadastrados atualmente na agência para você ter o contexto operacional:
+${clientsContext}
+
+Por favor, forneça respostas de altíssima qualidade técnica para a agência. Use formatação markdown elegante para tópicos e destaques importantes.
+
+Pergunta ou comando do usuário:
+"${textToSend}"`;
+
+      const res = await fetch("/api/chat-agentes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          assistantId: "creative-assistant",
+          message: fullPrompt,
+          customApiKey: getActiveApiKey(),
+          modelId: selectedModel
+        })
       });
-      if (response.text) {
-        setMessages((prev) => [
-          ...prev,
-          { role: "assistant", content: response.text! },
-        ]);
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || "Erro de servidor ao processar mensagem.");
       }
-    } catch (error) {
+
+      const data = await res.json();
+      const aiReply = data.response || data.text || "Não foi possível obter resposta.";
+
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: aiReply },
+      ]);
+    } catch (error: any) {
       console.error("Erro ao enviar mensagem:", error);
       setMessages((prev) => [
         ...prev,
@@ -322,7 +337,7 @@ Consigo analisar a saúde financeira dos seus **${clients.length} clientes**, su
               <h3 className="font-bold text-sm text-white flex items-center gap-2">
                 Assistente Zion AI
                 <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-zinc-300">
-                  {selectedModel === "gemini-3.6-flash" ? "Flash" : "Pro"}
+                  {selectedModel === "gemini-3.1-pro-preview" ? "Pro 3.1" : "Image Pro"}
                 </span>
               </h3>
               <span className="text-[10px] text-emerald-400 flex items-center gap-1 font-semibold">
@@ -353,20 +368,20 @@ Consigo analisar a saúde financeira dos seus **${clients.length} clientes**, su
             <label className="text-xs font-semibold text-zinc-300">Modelo de IA</label>
             <div className="flex gap-2">
               <button
-                onClick={() => setSelectedModel("gemini-3.6-flash")}
-                className={`flex-1 py-1.5 flex items-center justify-center gap-1.5 text-xs rounded-lg transition-all ${selectedModel === "gemini-3.6-flash" ? "bg-[#c5a880] text-zinc-950 font-bold" : "bg-black text-zinc-400 hover:text-zinc-200 border border-white/5"}`}
+                onClick={() => setSelectedModel("gemini-3.1-pro-preview")}
+                className={`flex-1 py-1.5 flex items-center justify-center gap-1.5 text-xs rounded-lg transition-all ${selectedModel === "gemini-3.1-pro-preview" ? "bg-[#c5a880] text-zinc-950 font-bold" : "bg-black text-zinc-400 hover:text-zinc-200 border border-white/5"}`}
               >
-                <Zap size={14} /> Flash
+                <Zap size={14} /> Pro 3.1
               </button>
               <button
                 onClick={() => setSelectedModel("gemini-3-pro-image")}
                 className={`flex-1 py-1.5 flex items-center justify-center gap-1.5 text-xs rounded-lg transition-all ${selectedModel === "gemini-3-pro-image" ? "bg-[#c5a880] text-zinc-950 font-bold" : "bg-black text-zinc-400 hover:text-zinc-200 border border-white/5"}`}
               >
-                <Sparkles size={14} /> Pro
+                <Sparkles size={14} /> Image Pro
               </button>
             </div>
             <p className="text-[10px] text-zinc-500">
-              O modelo Flash é ideal para respostas rápidas de texto. O Pro Image possui melhor capacidade de raciocínio.
+              O modelo Pro 3.1 é ideal para chat avançado e raciocínio. O Image Pro é otimizado para lidar com imagens e visão.
             </p>
           </div>
         )}
@@ -963,24 +978,48 @@ export default function App() {
       if (backupAllStr) backupAllMap = JSON.parse(backupAllStr);
     } catch (e) {}
 
-    return remoteClients.map((c) => {
-      if (!c.roteirosChat || c.roteirosChat.length === 0) {
-        try {
-          const localH = localStorage.getItem(`zion_roteiros_history_${c.id}`);
-          if (localH) {
-            const parsed = JSON.parse(localH);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              return { ...c, roteirosChat: parsed };
-            }
+    const merged = remoteClients.map((c) => {
+      let bestChat = Array.isArray(c.roteirosChat) ? c.roteirosChat : [];
+      try {
+        const localH = localStorage.getItem(`zion_roteiros_history_${c.id}`);
+        if (localH) {
+          const parsed = JSON.parse(localH);
+          if (Array.isArray(parsed) && parsed.length > bestChat.length) {
+            bestChat = parsed;
           }
-        } catch (e) {}
-
-        if (backupAllMap[c.id] && Array.isArray(backupAllMap[c.id]) && backupAllMap[c.id].length > 0) {
-          return { ...c, roteirosChat: backupAllMap[c.id] };
         }
+      } catch (e) {}
+
+      if (backupAllMap[c.id] && Array.isArray(backupAllMap[c.id]) && backupAllMap[c.id].length > bestChat.length) {
+        bestChat = backupAllMap[c.id];
       }
-      return c;
+
+      return { ...c, roteirosChat: bestChat };
     });
+
+    // Ensure client 999 (Equipe Zion / Geral) history is never lost if present in local backup or storage
+    const has999 = merged.some((c) => c.id === 999);
+    if (!has999) {
+      try {
+        const local999 = localStorage.getItem("zion_roteiros_history_999");
+        let history999 = local999 ? JSON.parse(local999) : backupAllMap[999];
+        if (!Array.isArray(history999)) history999 = [];
+        
+        merged.unshift({
+          id: 999,
+          name: "Equipe Zion / Geral",
+          niche: "Marketing & Agência",
+          status: "Ativo",
+          contact: "Geral",
+          planValue: 0,
+          dueDate: "01",
+          paymentStatus: "Em dia",
+          roteirosChat: history999
+        });
+      } catch (e) {}
+    }
+
+    return merged;
   };
 
   // --- STATE WITH DURABLE OFFLINE PERSISTENCE & PROFESSIONAL MOCK DATA ---
@@ -2453,7 +2492,7 @@ ${textContent}`
         });
 
         const response = await aiClient.models.generateContent({
-          model: "gemini-3.6-flash",
+          model: "gemini-3.1-pro-preview",
           config: {
             responseMimeType: "application/json",
           },
@@ -3099,7 +3138,7 @@ ${textContent}`
 
       let response;
       response = await ai.models.generateContent({
-        model: "gemini-3.6-flash",
+        model: "gemini-3.1-pro-preview",
         contents: prompt,
       });
 
@@ -3478,6 +3517,24 @@ ${textContent}`
                 onClick={() => setActiveTab("ai-tools")}
               />
               <SidebarItem
+                icon={<Tv size={16} />}
+                label="Gerador de GCs"
+                active={activeTab === "gc-tv"}
+                onClick={() => setActiveTab("gc-tv")}
+              />
+              <SidebarItem
+                icon={<Music size={16} />}
+                label="Áudio & Efeitos"
+                active={activeTab === "audio"}
+                onClick={() => setActiveTab("audio")}
+              />
+              <SidebarItem
+                icon={<Film size={16} />}
+                label="Gerador Omni Flash"
+                active={activeTab === "omni-flash"}
+                onClick={() => setActiveTab("omni-flash")}
+              />
+              <SidebarItem
                 icon={<ImageIcon size={16} />}
                 label="Galeria de Fotos"
                 active={activeTab === "gallery"}
@@ -3706,6 +3763,33 @@ ${textContent}`
                     }}
                   />
                   <SidebarItem
+                    icon={<Tv size={16} />}
+                    label="Gerador de GCs"
+                    active={activeTab === "gc-tv"}
+                    onClick={() => {
+                      setActiveTab("gc-tv");
+                      setIsMobileSidebarOpen(false);
+                    }}
+                  />
+                  <SidebarItem
+                    icon={<Music size={16} />}
+                    label="Áudio & Efeitos"
+                    active={activeTab === "audio"}
+                    onClick={() => {
+                      setActiveTab("audio");
+                      setIsMobileSidebarOpen(false);
+                    }}
+                  />
+                  <SidebarItem
+                    icon={<Film size={16} />}
+                    label="Gerador Omni Flash"
+                    active={activeTab === "omni-flash"}
+                    onClick={() => {
+                      setActiveTab("omni-flash");
+                      setIsMobileSidebarOpen(false);
+                    }}
+                  />
+                  <SidebarItem
                     icon={<ImageIcon size={16} />}
                     label="Galeria de Fotos"
                     active={activeTab === "gallery"}
@@ -3861,7 +3945,7 @@ ${textContent}`
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-full overflow-hidden bg-black">
         {/* Scrollable Content Area */}
-        <div className={`flex-1 flex flex-col ${activeTab === "ai-tools" || activeTab === "roteiros" ? "p-0 h-full overflow-hidden" : "p-4 sm:p-8 pt-6 sm:pt-10 overflow-y-auto"}`}>
+        <div className={`flex-1 flex flex-col ${activeTab === "ai-tools" || activeTab === "roteiros" || activeTab === "audio" ? "p-0 h-full overflow-hidden" : "p-4 sm:p-8 pt-6 sm:pt-10 overflow-y-auto"}`}>
               {/* View: Notes & Docs */}
           {activeTab === "notes" && (
             <motion.div
@@ -4273,11 +4357,35 @@ ${textContent}`
             </motion.div>
           )}
 
+          
+          {activeTab === "audio" && (
+            <div className="h-full w-full bg-[#111] flex flex-col min-h-0">
+              <AudioStudio />
+            </div>
+          )}
+          {activeTab === "omni-flash" && (
+            <div className="h-full w-full bg-[#09090b] flex flex-col min-h-0 overflow-hidden">
+              <GeradorOmniFlash customApiKey={getActiveApiKey()} />
+            </div>
+          )}
           {activeTab === "ai-tools" && (
             <DesignBuilder
               customApiKey={getActiveApiKey()}
               myProfile={myProfile}
             />
+          )}
+
+          {activeTab === "gc-tv" && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="w-full h-full p-0 flex flex-col flex-1 overflow-hidden"
+            >
+              <GeradorGcTv
+                customApiKey={getActiveApiKey()}
+              />
+            </motion.div>
           )}
 
           {/* View: Tasks */}
@@ -5222,7 +5330,7 @@ ${textContent}`
                       {
                         name: "Freelancers & Produção",
                         key: "Freelancers",
-                        color: "bg-purple-500",
+                        color: "bg-[#c5a880]",
                       },
                       {
                         name: "Tráfego Pago (Meta/Google)",
@@ -5661,7 +5769,7 @@ ${textContent}`
                                         ? "bg-[#c5a880]/15 text-[#c5a880]"
                                         : e.type === "reuniao"
                                           ? "bg-blue-500/15 text-blue-400"
-                                          : "bg-purple-500/15 text-purple-400"
+                                          : "bg-[#c5a880]/15 text-[#c5a880]"
                                     }`}
                                     title={`${e.title} (${e.clientName})`}
                                   >
@@ -5711,7 +5819,7 @@ ${textContent}`
                                         ? "bg-[#c5a880]/10 text-[#c5a880]"
                                         : e.type === "reuniao"
                                           ? "bg-blue-500/10 text-blue-400"
-                                          : "bg-purple-500/10 text-purple-400"
+                                          : "bg-[#c5a880]/10 text-[#c5a880]"
                                     }`}
                                   >
                                     {e.type === "post"
@@ -5752,7 +5860,7 @@ ${textContent}`
                             Reunião
                           </span>
                           <span className="flex items-center gap-1">
-                            <span className="w-2 h-2 rounded bg-purple-500" />{" "}
+                            <span className="w-2 h-2 rounded bg-[#c5a880]" />{" "}
                             Entrega
                           </span>
                         </div>

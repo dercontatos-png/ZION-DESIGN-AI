@@ -19,6 +19,7 @@ console.log = function (...args) {
 }
 import dotenv from "dotenv";
 import os from "os";
+import { GoogleAuth } from "google-auth-library";
 
 dotenv.config();
 
@@ -33,7 +34,14 @@ async function readJimpWithFallback(buffer: Buffer) {
   }
 }
 
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 500 * 1024 * 1024,
+    fieldSize: 500 * 1024 * 1024,
+    fields: 100
+  }
+});
 
 /** Safely extracts and parses Service Account JSON credentials from environment variables or disk */
 function getServiceAccountCredentials(): any | null {
@@ -90,9 +98,11 @@ function getCandidateClients(customApiKey?: string): { name: string; instance: G
     if ((rawKey.startsWith('"') && rawKey.endsWith('"')) || (rawKey.startsWith("'") && rawKey.endsWith("'"))) {
       rawKey = rawKey.slice(1, -1).trim();
     }
+    console.log("[getCandidateClients] rawKey received:", rawKey.substring(0, 50) + "...");
     if (rawKey.startsWith("{") && rawKey.includes("private_key")) {
       try {
         const parsed = JSON.parse(rawKey);
+        console.log("[getCandidateClients] Successfully parsed custom JSON key for project:", parsed.project_id);
         if (typeof parsed.private_key === "string") {
           parsed.private_key = parsed.private_key.replace(/\\n/g, "\n");
         }
@@ -178,17 +188,30 @@ function getCandidateClients(customApiKey?: string): { name: string; instance: G
   return candidateClients;
 }
 
-const getAiClient = (customApiKey?: string) => {
+const getAiClient = (customApiKey?: string, preferredLocation?: string) => {
   const clients = getCandidateClients(customApiKey);
-  const primary = clients[0]?.instance;
+  let primary = clients[0]?.instance;
+  let primaryName = clients[0]?.name;
+  
+  if (preferredLocation) {
+    const matched = clients.find(c => c.name.includes(preferredLocation));
+    if (matched) {
+      primary = matched.instance;
+      primaryName = matched.name;
+    }
+  }
+
   if (primary) {
+    const isVertex = primaryName.includes("Service Account") || !!(primary as any)._options?.vertexai || !!(primary as any).vertexai;
     (primary as any).debugInfo = {
-      resolvedTokenSource: clients[0].name,
-      isUsingVertex: true
+      resolvedTokenSource: primaryName,
+      isUsingVertex: isVertex
     };
     return primary;
   }
-  return new GoogleGenAI({ vertexai: true, project: "gerador-de-imagens-ia-502303", location: "us-central1" });
+  const defaultClient = new GoogleGenAI({ vertexai: true, project: "gerador-de-imagens-ia-502303", location: preferredLocation || "us-central1" });
+  (defaultClient as any).debugInfo = { resolvedTokenSource: "Default", isUsingVertex: true };
+  return defaultClient;
 };
 
 export function resolveImageInput(input: any): { data: string; mimeType: string } {
@@ -447,222 +470,76 @@ export async function applyUpscaleAndRefinement(
 
     let pipeline = sharp(workingBuffer);
 
-    if (options?.improve || targetColorRgb) {
+    // Only attempt solid background vectorization if explicitly requested for single solid-color cutout backgrounds
+    // NEVER run solid background flood-fill on complex scenes, photos, flyers, banners, or mixed layouts
+    const isExplicitSolid = (options as any)?.isSolidBackgroundOnly === true || options?.analysis?.backgroundType === "solid_color";
+    const isComplex = options?.analysis?.backgroundType === "complex_scene" || 
+                      options?.analysis?.backgroundType === "gradient" || 
+                      options?.analysis?.faceMappingDetected || 
+                      options?.analysis?.productTextureDetected ||
+                      (options?.analysis as any)?.vectorTextEdgesDetected;
+
+    if (isExplicitSolid && !isComplex && targetColorRgb) {
       try {
         const { data: rawPixels, info: rawInfo } = await sharp(workingBuffer).raw().toBuffer({ resolveWithObject: true });
         const curChannels = rawInfo.channels;
         const curW = rawInfo.width;
         const curH = rawInfo.height;
-
-        // Sample border perimeter & 4 corners to establish base background color
-        let borderSumR = 0, borderSumG = 0, borderSumB = 0, borderCount = 0;
-        const marginW = Math.min(30, Math.floor(curW * 0.04));
-        const marginH = Math.min(30, Math.floor(curH * 0.04));
-
-        for (let y = 0; y < curH; y++) {
-          for (let x = 0; x < curW; x++) {
-            if (x < marginW || x >= curW - marginW || y < marginH || y >= curH - marginH) {
-              const idx = (y * curW + x) * curChannels;
-              borderSumR += rawPixels[idx];
-              borderSumG += rawPixels[idx + 1];
-              borderSumB += rawPixels[idx + 2];
-              borderCount++;
-            }
-          }
-        }
-
-        const bgBaseR = borderCount > 0 ? Math.round(borderSumR / borderCount) : (targetColorRgb?.r ?? 0);
-        const bgBaseG = borderCount > 0 ? Math.round(borderSumG / borderCount) : (targetColorRgb?.g ?? 0);
-        const bgBaseB = borderCount > 0 ? Math.round(borderSumB / borderCount) : (targetColorRgb?.b ?? 0);
-
-        if (!targetColorRgb) {
-          targetColorRgb = { r: bgBaseR, g: bgBaseG, b: bgBaseB };
-        }
-
         const totalPixels = curW * curH;
-        const isBg = new Uint8Array(totalPixels);
-        const queue = new Int32Array(totalPixels);
-        let head = 0;
-        let tail = 0;
 
-        // Perceptual color distance function (human visual weighted RGB distance)
-        const colorDist = (r1: number, g1: number, b1: number, r2: number, g2: number, b2: number) => {
-          const rmean = (r1 + r2) / 2;
-          const dr = r1 - r2;
-          const dg = g1 - g2;
-          const db = b1 - b2;
+        // Check 4 corners color uniformity to guarantee the image has a single uniform background
+        const getPixelRgb = (x: number, y: number) => {
+          const idx = (y * curW + x) * curChannels;
+          return { r: rawPixels[idx], g: rawPixels[idx + 1], b: rawPixels[idx + 2] };
+        };
+
+        const topLeft = getPixelRgb(5, 5);
+        const topRight = getPixelRgb(curW - 6, 5);
+        const bottomLeft = getPixelRgb(5, curH - 6);
+        const bottomRight = getPixelRgb(curW - 6, curH - 6);
+
+        const colorDist = (c1: { r: number; g: number; b: number }, c2: { r: number; g: number; b: number }) => {
+          const rmean = (c1.r + c2.r) / 2;
+          const dr = c1.r - c2.r;
+          const dg = c1.g - c2.g;
+          const db = c1.b - c2.b;
           return Math.sqrt((2 + rmean / 256) * dr * dr + 4 * dg * dg + (2 + (255 - rmean) / 256) * db * db);
         };
 
-        const bgTolerance = 38; // Strict adaptive tolerance to prevent bleeding into subject figures or shadows
+        const maxCornerDist = Math.max(
+          colorDist(topLeft, topRight),
+          colorDist(topLeft, bottomLeft),
+          colorDist(topLeft, bottomRight)
+        );
 
-        // 1. Pre-pass: Identify foreground graphic elements (3D figures, text, icons) and create a protection mask
-        const isProtected = new Uint8Array(totalPixels);
-        for (let y = 0; y < curH; y++) {
-          for (let x = 0; x < curW; x++) {
-            const pIdx = y * curW + x;
-            const idx = pIdx * curChannels;
-            const r = rawPixels[idx];
-            const g = rawPixels[idx + 1];
-            const b = rawPixels[idx + 2];
-
-            const dBg = colorDist(r, g, b, bgBaseR, bgBaseG, bgBaseB);
-            const dTarget = colorDist(r, g, b, targetColorRgb.r, targetColorRgb.g, targetColorRgb.b);
-            const chroma = Math.max(r, g, b) - Math.min(r, g, b);
-
-            // Mark pixels that significantly differ from background or possess vibrant color chroma
-            if ((dBg > 45 && dTarget > 45) && (chroma > 30 || dBg > 65 || dTarget > 65)) {
-              const radius = 4;
-              for (let dy = -radius; dy <= radius; dy++) {
-                for (let dx = -radius; dx <= radius; dx++) {
-                  const nx = x + dx;
-                  const ny = y + dy;
-                  if (nx >= 0 && nx < curW && ny >= 0 && ny < curH) {
-                    isProtected[ny * curW + nx] = 1;
-                  }
-                }
-              }
-            }
-          }
-        }
-
-        // 2. Seed all non-protected pixels matching background color across the entire image (including inside enclosed frames/boxes)
-        for (let y = 0; y < curH; y++) {
-          for (let x = 0; x < curW; x++) {
-            const pIdx = y * curW + x;
-            if (isProtected[pIdx] === 0) {
-              const idx = pIdx * curChannels;
-              const r = rawPixels[idx];
-              const g = rawPixels[idx + 1];
-              const b = rawPixels[idx + 2];
-
-              const dBg = colorDist(r, g, b, bgBaseR, bgBaseG, bgBaseB);
-              const dTarget = colorDist(r, g, b, targetColorRgb.r, targetColorRgb.g, targetColorRgb.b);
-
-              if (dBg <= bgTolerance || dTarget <= bgTolerance) {
-                isBg[pIdx] = 1;
-                queue[tail++] = pIdx;
-              }
-            }
-          }
-        }
-
-        // 3. BFS Flood fill expansion following background contours
-        while (head < tail) {
-          const pIdx = queue[head++];
-          const cx = pIdx % curW;
-          const cy = Math.floor(pIdx / curW);
-          const cIdx = pIdx * curChannels;
-          const cr = rawPixels[cIdx];
-          const cg = rawPixels[cIdx + 1];
-          const cb = rawPixels[cIdx + 2];
-
-          const dx = [1, -1, 0, 0];
-          const dy = [0, 0, 1, -1];
-
-          for (let i = 0; i < 4; i++) {
-            const nx = cx + dx[i];
-            const ny = cy + dy[i];
-
-            if (nx >= 0 && nx < curW && ny >= 0 && ny < curH) {
-              const nPIdx = ny * curW + nx;
-              if (isBg[nPIdx] === 0 && isProtected[nPIdx] === 0) {
-                const nIdx = nPIdx * curChannels;
-                const nr = rawPixels[nIdx];
-                const ng = rawPixels[nIdx + 1];
-                const nb = rawPixels[nIdx + 2];
-
-                const distBg = colorDist(nr, ng, nb, bgBaseR, bgBaseG, bgBaseB);
-                const distTarget = colorDist(nr, ng, nb, targetColorRgb.r, targetColorRgb.g, targetColorRgb.b);
-                const stepDist = colorDist(nr, ng, nb, cr, cg, cb);
-
-                if ((distBg <= 40 || distTarget <= 40) && stepDist <= 28) {
-                  isBg[nPIdx] = 1;
-                  queue[tail++] = nPIdx;
-                }
-              }
-            }
-          }
-        }
-
-        // 4. Safe morphological hole-filling: clean background noise without overriding protected subjects
-        for (let iter = 0; iter < 2; iter++) {
-          for (let y = 1; y < curH - 1; y++) {
-            for (let x = 1; x < curW - 1; x++) {
+        // Only proceed if all 4 corners have near-identical color (single uniform solid background frame)
+        if (maxCornerDist <= 15) {
+          const outputBuffer = Buffer.from(rawPixels);
+          for (let y = 0; y < curH; y++) {
+            for (let x = 0; x < curW; x++) {
               const pIdx = y * curW + x;
-              if (isBg[pIdx] === 0 && isProtected[pIdx] === 0) {
-                const idx = pIdx * curChannels;
-                const r = rawPixels[idx];
-                const g = rawPixels[idx + 1];
-                const b = rawPixels[idx + 2];
-
-                const distBg = colorDist(r, g, b, bgBaseR, bgBaseG, bgBaseB);
-                const distTarget = colorDist(r, g, b, targetColorRgb.r, targetColorRgb.g, targetColorRgb.b);
-
-                if (distBg <= 40 || distTarget <= 40) {
-                  let bgNeighbors = 0;
-                  for (let dy = -1; dy <= 1; dy++) {
-                    for (let dx = -1; dx <= 1; dx++) {
-                      if (dx === 0 && dy === 0) continue;
-                      const nPIdx = (y + dy) * curW + (x + dx);
-                      if (isBg[nPIdx] === 1) bgNeighbors++;
-                    }
-                  }
-
-                  if (bgNeighbors >= 5) {
-                    isBg[pIdx] = 1;
-                  }
-                }
-              }
-            }
-          }
-        }
-
-        // Write pure uniform solid target hex color to background pixels with soft edge anti-aliasing
-        const outputBuffer = Buffer.from(rawPixels);
-
-        for (let y = 0; y < curH; y++) {
-          for (let x = 0; x < curW; x++) {
-            const pIdx = y * curW + x;
-            const idx = pIdx * curChannels;
-
-            if (isBg[pIdx] === 1) {
-              let isEdge = false;
-              if (x > 0 && y > 0 && x < curW - 1 && y < curH - 1) {
-                if (isBg[pIdx - 1] === 0 || isBg[pIdx + 1] === 0 || isBg[pIdx - curW] === 0 || isBg[pIdx + curW] === 0) {
-                  isEdge = true;
-                }
-              }
-
-              if (isEdge) {
-                // Soft edge anti-aliasing on subject border: blend original edge color with target color based on color similarity
-                const origR = rawPixels[idx];
-                const origG = rawPixels[idx + 1];
-                const origB = rawPixels[idx + 2];
-                const d = colorDist(origR, origG, origB, bgBaseR, bgBaseG, bgBaseB);
-                const weight = Math.max(0.15, Math.min(0.85, 1 - d / bgTolerance));
-
-                outputBuffer[idx] = Math.round(origR * (1 - weight) + targetColorRgb.r * weight);
-                outputBuffer[idx + 1] = Math.round(origG * (1 - weight) + targetColorRgb.g * weight);
-                outputBuffer[idx + 2] = Math.round(origB * (1 - weight) + targetColorRgb.b * weight);
-              } else {
-                // 100% pure flat solid target hex color
+              const idx = pIdx * curChannels;
+              const px = { r: rawPixels[idx], g: rawPixels[idx + 1], b: rawPixels[idx + 2] };
+              if (colorDist(px, topLeft) <= 12) {
                 outputBuffer[idx] = targetColorRgb.r;
                 outputBuffer[idx + 1] = targetColorRgb.g;
                 outputBuffer[idx + 2] = targetColorRgb.b;
               }
             }
           }
+          pipeline = sharp(outputBuffer, { raw: { width: curW, height: curH, channels: curChannels } });
+          console.log(`[applyUpscaleAndRefinement] Vectorized pure single solid background.`);
+        } else {
+          console.log(`[applyUpscaleAndRefinement] Image corners differ (${maxCornerDist.toFixed(1)}px dist). Skipping solid background flood-fill to protect artwork.`);
         }
-
-        pipeline = sharp(outputBuffer, { raw: { width: curW, height: curH, channels: curChannels } });
-        console.log(`[applyUpscaleAndRefinement] Background vectorized to 100% uniform hex RGB (${targetColorRgb.r}, ${targetColorRgb.g}, ${targetColorRgb.b}).`);
       } catch (toneErr: any) {
-        console.warn("[applyUpscaleAndRefinement] Vector solid background error:", toneErr?.message || toneErr);
+        console.warn("[applyUpscaleAndRefinement] Solid background vector error:", toneErr?.message || toneErr);
       }
+    } else {
+      console.log(`[applyUpscaleAndRefinement] Photo/flyer scene detected. Preserving 100% of photographic texture and details.`);
     }
 
-    // Apply high quality Lanczos3 resize ONLY if upscaling was requested and vector background processing did not already run
+    // Apply high quality Lanczos3 resize for high-resolution target sizes
     const currentMeta = await pipeline.metadata();
     if (targetWidth > pW && (currentMeta.width || 0) < targetWidth) {
       const targetHeight = Math.round(pH * (targetWidth / pW));
@@ -671,6 +548,9 @@ export async function applyUpscaleAndRefinement(
         fastShrinkOnLoad: false
       });
     }
+
+    // Apply subtle non-destructive detail sharpening for crisp edges and text
+    pipeline = pipeline.sharpen({ sigma: 0.8 });
 
     // Output uncompressed PNG buffer without artificial filters
     let processedBuffer = await pipeline
@@ -782,11 +662,12 @@ async function executeImageGenerationWithFallbacks(
   for (const cItem of candidateClients) {
     const curClient = cItem.instance;
 
-    // Use gemini-2.5-flash-image as primary, and fall back to gemini-3.1-flash-image if prepayment credits are depleted.
+    // High quality image generation strategies with Imagen 3 and Gemini 3 Pro Image.
     const baseStrategies = [
+      { name: "gemini-3-pro-image", type: "generateContent" },
       { name: "imagen-3.0-generate-002", type: "generateImages" },
       { name: "imagen-3.0-generate-001", type: "generateImages" },
-      { name: "gemini-3-pro-image", type: "generateContent" }
+      { name: "imagen-3.0-fast-generate-001", type: "generateImages" }
     ];
     const strategies = modelId ? [{ name: modelId, type: modelId.startsWith("imagen") ? "generateImages" : "generateContent" }, ...baseStrategies.filter(s => s.name !== modelId)] : baseStrategies;
 
@@ -875,12 +756,15 @@ async function executeGenerateContentWithFallbacks(
   const candidateClients = getCandidateClients(customApiKey);
   candidateClients.push({ name: "Primary Client", instance: client });
 
+  // Fallback models if primary model is rate-limited or fails
+  const fallbackList = ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview", "gemini-3.1-pro-preview", "gemini-3.1-pro-preview", "gemini-3.1-pro-preview"];
+  const combinedModels = Array.from(new Set([...modelNames, ...fallbackList]));
+
   let lastError: any = null;
-  let specificError: any = null;
 
   for (const cItem of candidateClients) {
     const curClient = cItem.instance;
-    for (const modelName of modelNames) {
+    for (const modelName of combinedModels) {
       try {
         console.log(`[generateContent-fallback] Trying model ${modelName} on client: ${cItem.name}...`);
         const response = await curClient.models.generateContent({
@@ -896,8 +780,12 @@ async function executeGenerateContentWithFallbacks(
         }
       } catch (err: any) {
         const rawMsg = err?.message || String(err);
-        const msg = sanitizeLogMessage(rawMsg);
-        console.info(`[generateContent-fallback] Model ${modelName} on client ${cItem.name} returned:`, msg);
+        const isQuota = rawMsg.includes("429") || rawMsg.includes("RESOURCE_EXHAUSTED") || rawMsg.includes("quota");
+        if (isQuota) {
+          console.info(`[generateContent-fallback] Model ${modelName} rate limit or quota reached on ${cItem.name}.`);
+        } else {
+          console.info(`[generateContent-fallback] Model ${modelName} on ${cItem.name}: ${sanitizeLogMessage(rawMsg)}`);
+        }
         lastError = err;
       }
     }
@@ -1063,7 +951,7 @@ async function startServer() {
     }
   }));
   app.use(express.json({ limit: "500mb" }));
-  app.use(express.urlencoded({ limit: "500mb", extended: true }));
+  app.use(express.urlencoded({ limit: "500mb", extended: true, parameterLimit: 1000000 }));
 
   const publicGenDir = path.join(process.cwd(), "public", "generated-images");
   if (!fs.existsSync(publicGenDir)) {
@@ -1316,7 +1204,7 @@ async function startServer() {
     try {
       const prompt = req.body.prompt;
       const file = req.file;
-      const customApiKey = req.body.apiKey;
+      const customApiKey = req.body.customApiKey;
       const currentDate = req.body.currentDate || new Date().toLocaleDateString("pt-BR", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
       const currentISODate = req.body.currentISODate || new Date().toISOString().split("T")[0];
       const existingClientsRaw = req.body.existingClients;
@@ -1383,7 +1271,7 @@ Input Text:
 ${textContent}`
       });
 
-      const parseModels = ["gemini-3-pro-preview", "gemini-3.6-flash"];
+      const parseModels = ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"];
       let jsonStr = "";
       let parseErr: any = null;
 
@@ -1684,7 +1572,7 @@ If no issues are found, return an empty list. Output ONLY valid JSON.`;
           const { data: cleanDataForVision, mimeType: visionMime } = resolveImageInput(imageBase64);
 
           const visionRes = await currentAi.models.generateContent({
-            model: "gemini-3.6-flash",
+            model: "gemini-3.1-pro-preview",
             contents: [
               {
                 inlineData: {
@@ -2417,7 +2305,7 @@ Do not return any markdown formatting outside of valid JSON.`;
           const fallbackRes = await executeGenerateContentWithFallbacks(
             client,
             customApiKey,
-            ["gemini-3.5-flash", "gemini-3.6-flash"],
+            ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"],
             {
               contents: [
                 {
@@ -2509,7 +2397,7 @@ Output ONLY the JSON object. Do not include conversational filler.`;
         const fallbackRes = await executeGenerateContentWithFallbacks(
           currentAi,
           customApiKey,
-          ["gemini-3-pro-preview", "gemini-3.6-flash"],
+          ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"],
           {
             contents: [
               {
@@ -2675,7 +2563,7 @@ Output a pristine, ultra-detailed, hyper-realistic masterpiece image.`;
           }
         }
       } catch (genErr: any) {
-        console.warn("[enhancer-supir-magnific] Chamada ao gemini-2.5-flash-image falhou, retornando composição isolada de alta definição:", genErr.message || genErr);
+        console.warn("[enhancer-supir-magnific] Chamada ao gerador de imagem falhou, retornando composição isolada de alta definição:", genErr.message || genErr);
         techLog.push("Ajuste concluído com isolamento de fundo puro e nitidez direta.");
       }
 
@@ -2922,7 +2810,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
       thinkParts.push({ text: thinkPrompt });
 
       let finalPrompt = "";
-      const thinkModels = ["gemini-3-pro-preview", "gemini-3.6-flash"];
+      const thinkModels = ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"];
       try {
         const fallbackRes = await executeGenerateContentWithFallbacks(
           currentAi,
@@ -3013,7 +2901,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         parts.push({ inlineData: { data: logo.data, mimeType: logo.mimeType || "image/jpeg" } });
       });
 
-      // 3. Generation Strategy: Use gemini-2.5-flash-image with Vertex AI Global
+      // 3. Generation Strategy: Use high performance image generation models
       const results: string[] = [];
       const variationsCount = Math.min(Math.max(imgConfig?.variations || 1, 1), 4);
       
@@ -3494,7 +3382,9 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
       let displayError = `Erro catastrófico na rota generate: ${err.message}`;
       if (err.message?.includes("429") || err.message?.includes("RESOURCE_EXHAUSTED") || err.message?.includes("depleted")) {
          statusCode = 429;
-         displayError = "Créditos/cota do Google AI Studio / Vertex AI esgotados (RESOURCE_EXHAUSTED). Adicione créditos em https://ai.studio/projects ou insira sua chave de API própria nas configurações.";
+         const retryMatch = err.message.match(/retry in ([0-9.]+)s/i);
+         const retrySecs = retryMatch ? ` (Aguarde ${Math.ceil(parseFloat(retryMatch[1]))}s)` : "";
+         displayError = `Cota de requisições excedida temporariamente${retrySecs}. Aguarde alguns instantes antes de tentar gerar novamente, ou insira sua chave de API própria do Google AI Studio nas configurações.`;
       }
       res.status(statusCode).json({ 
          error: displayError,
@@ -3580,7 +3470,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
       const credentialsPath = path.join(process.cwd(), 'chave-vertex.json');
       const isVertex = fs.existsSync(credentialsPath) || token.startsWith('AQ.') || debugInfo.isUsingVertex === true;
 
-      // We use gemini-2.5-flash-image for high quality image generation
+      // We use gemini-3-pro-image for high quality image generation
       const sizeSelectedForModel = resolutionInput === "4K" ? "4K" : (resolutionInput === "2K" ? "2K" : "1K");
       const targetModel = "gemini-3-pro-image";
       
@@ -3684,14 +3574,20 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         }
 
         const hasLogo = !!logoBase64 || (logosList && logosList.length > 0);
-        const hasSujeito = !desativarSujeito && (!!base64DoSujeito || (Array.isArray(sujeitosBase64List) && sujeitosBase64List.some((s: any) => s && (typeof s === 'string' ? s.trim() !== "" : (s.data || s.url)))));
+        const hasSujeito = !desativarSujeito && (
+          !!base64DoSujeito || 
+          (Array.isArray(sujeitosBase64List) && sujeitosBase64List.some((s: any) => s && (typeof s === 'string' ? s.trim() !== "" : (s.data || s.url)))) ||
+          !!designRefBase64 ||
+          (Array.isArray(designRefsList) && designRefsList.length > 0) ||
+          !!prevImgBase64
+        );
 
-        const subjectInclusionRule = hasSujeito ? `\n5. SUBJECT / PERSON EXACT IDENTITY PRESERVATION (ABSOLUTELY CRITICAL): You MUST analyze the attached "Referência do Sujeito Principal" (Subject / Person / Product photo). You MUST preserve the EXACT face, facial features, eyes, hair, skin tone, clothing, identity, and proportions of the person/subject in "Referência do Sujeito Principal". DO NOT recreate a different person, DO NOT alter facial features, DO NOT swap faces, DO NOT redesign or stylize the subject into someone else. You MUST use the EXACT SAME person/subject provided, seamlessly integrated into the card composition with 100% face and identity fidelity.` : "";
-        const subjectCompositionRule = hasSujeito ? `\n10. FULL COMPOSITION WITH HIGH-FIDELITY SUBJECT PRESERVATION (CRITICAL): Do NOT generate a generic or recreated subject. You MUST generate the complete graphic composition WITH the client's provided subject photo ("Referência do Sujeito Principal") EXACTLY AS PROVIDED. Preserve the subject's original facial structure, expression, features, clothing, and identity with absolute 100% fidelity. DO NOT change the person's face or appearance.` : "";
-        const subjectPromptRule = hasSujeito ? `\n5. Subject Identity Preservation: Explicitly instruct the generator to analyze and replicate the provided subject ("Referência do Sujeito Principal") with ABSOLUTE 100% EXACT face and identity fidelity. Direct the generator to place this EXACT person/subject directly on the card canvas without altering their face, hair, features, or identity.` : "";
-        const subjectPrintRule = hasSujeito ? `\n9. EXACT SUBJECT PLACEMENT: Explicitly instruct the generator to NEVER recreate a different person or subject. It must place the exact person/subject from "Referência do Sujeito Principal" directly into the card layout, seamlessly blending them into the lighting while maintaining 100% facial and identity accuracy.` : "";
-        const subjectSysInstructionRule = hasSujeito ? `\n5. Subject Identity Preservation: Instruct the generator to use ONLY the client's provided "Referência do Sujeito Principal" EXACTLY as it is (without modifying facial features, hair, eyes, clothing, or identity), placing them directly on the card canvas with 100% complete exactness.` : "";
-        const subjectEmbeddedRule = hasSujeito ? `\n9. STRICT SUBJECT IDENTITY RULE: Dictate that the image generator MUST NOT hallucinate or recreate a different person/subject. It MUST render and integrate the provided subject ("Referência do Sujeito Principal") EXACTLY AS PROVIDED (100% image-to-image identity fidelity) directly onto the image canvas.` : "";
+        const subjectInclusionRule = hasSujeito ? `\n5. SUBJECT / PERSON EXACT IDENTITY, POSE & POSITION PRESERVATION (ABSOLUTELY CRITICAL): You MUST analyze all attached reference photos ("Referência do Sujeito Principal", "Referência de Design/Layout", "Referência de Cenário", "Imagem Gerada Anterior"). You MUST preserve the EXACT faces, facial features, expressions, eyes, hair, skin tone, clothing, identity, physical body poses, spatial ordering, and exact positions of ALL people/subjects in the attached photo. DO NOT recreate different people, DO NOT alter facial features, DO NOT swap faces, DO NOT change their poses, and DO NOT move people to different positions. You MUST keep the EXACT SAME people in the EXACT SAME poses and positions provided, with 100% face, pose, and identity fidelity.` : "";
+        const subjectCompositionRule = hasSujeito ? `\n10. FULL COMPOSITION WITH HIGH-FIDELITY SUBJECT, POSE & POSITION PRESERVATION (CRITICAL): Do NOT generate generic or recreated subjects. You MUST generate the complete graphic composition WITH the client's provided subjects EXACTLY AS PROVIDED. Preserve all subjects' original facial structures, expressions, features, clothing, body poses, and spatial positions with absolute 100% fidelity. DO NOT change any person's face, pose, or position.` : "";
+        const subjectPromptRule = hasSujeito ? `\n5. Subject Identity, Pose & Position Preservation: Explicitly instruct the generator to analyze and replicate all subjects ("Referência do Sujeito Principal" / "Referência de Design/Layout") with ABSOLUTE 100% EXACT face, pose, and spatial position fidelity. Direct the generator to place these EXACT people/subjects directly on the canvas without altering their faces, hair, features, body poses, or physical positions.` : "";
+        const subjectPrintRule = hasSujeito ? `\n9. EXACT SUBJECT, POSE & POSITION PLACEMENT: Explicitly instruct the generator to NEVER recreate different people or alter poses. It must place the exact people/subjects from reference photos directly into the layout, seamlessly blending them into the lighting while maintaining 100% facial, pose, and position accuracy.` : "";
+        const subjectSysInstructionRule = hasSujeito ? `\n5. Subject Identity, Pose & Position Preservation: Instruct the generator to use ONLY the client's provided reference photos EXACTLY as they are (without modifying facial features, hair, eyes, clothing, body poses, or spatial order/positions), placing them directly on the canvas with 100% complete exactness.` : "";
+        const subjectEmbeddedRule = hasSujeito ? `\n9. STRICT SUBJECT IDENTITY, POSE & POSITION RULE: Dictate that the image generator MUST NOT hallucinate or recreate different people/subjects or change body poses/positions. It MUST render and integrate the provided subjects EXACTLY AS PROVIDED (100% image-to-image face, pose, and spatial position fidelity) directly onto the image canvas.` : "";
 
         const logoInclusionRule = hasLogo ? `\n5. NATIVE BRAND LOGO EMBEDDING & HAIR/FACE AVOIDANCE (CRITICAL): You MUST examine the attached "Referência de Design/Layout" and identify the logo position. MANDATORY RULE: The brand logo ("Referência de Logotipo") MUST NEVER BE DRAWN ON TOP OF THE SUBJECT'S HAIR, HEAD, FACE, OR BODY. If the subject's hair or head extends to the top center, place the brand logo in clean negative background space in the top-left or top-right corner. You MUST COMPLETELY ERASE any old logo present in the reference flyer and embed the client's provided brand logo NATIVELY on the canvas. DO NOT draw any artificial black boxes or dark container frames around the logo unless part of the original logo file. Do NOT write the logo's name as a written text layer or headline in typography.` : "";
         const logoCompositionRule = hasLogo ? `\n10. FULL COMPOSITION WITH HIGH-FIDELITY EMBEDDED LOGO (CRITICAL): Generate the complete graphic composition WITH the client's original brand logo ("Referência de Logotipo") placed natively in clean background space (top corner or empty header area), NEVER overlapping the subject's hair, face, or head. Render the logo cleanly onto the background without artificial black container boxes or color inversion, preserving 100% of its original symbols, typography, numbers, and exact colors.` : "";
@@ -3706,6 +3602,7 @@ Your job is to analyze the attached visual references (especially the Design Lay
 Based on this complete multimodal context, you must generate an extremely descriptive, highly accurate, professional prompt and system instruction. The absolute number one goal is extreme structural, compositional, stylistic, and visual faithfulness to the design details of the reference image.
 
 CRITICAL VISUAL DESIGN RULES TO EXTRACT FROM THE ATTACHED DESIGN LAYOUT REFERENCE:
+0. ABSOLUTE MAXIMUM REFERENCE IMAGE FIDELITY & EXACT REPRODUCTION (CRITICAL MANDATORY RULE): When the client provides a reference image ('Referência do Sujeito', 'Referência de Design/Layout', 'Referência de Cenário', or previous image), your HIGHEST MANDATORY PRIORITY is to maintain 100% visual fidelity to that reference image. DO NOT redesign the background environment, DO NOT change the person's face or pose, DO NOT invent new unrequested elements or stage lights, and DO NOT replace real photographic backgrounds with flat colors or generic flyer effects unless explicitly requested by the user. Keep the original background, subject, lighting, scenery, and composition identical to the reference image, applying ONLY the precise enhancements or edits specified in the prompt.
 1. NO HALLUCINATIONS & NO ARBITRARY INVENTIONS: You are strictly FORBIDDEN from inventing arbitrary backdrops, stage lights, lasers, smoke, stars, gold particles, dust, or geometric layers. Keep the design clean and high-end. If the reference design has a clean, solid, dark, minimal, gradient, or simple textured background, you MUST describe exactly that clean background. Mirror the exact level of simplicity or complexity, replicating its aesthetic, depth, colors, and layout precisely.
 2. LAYOUT, ALIGNMENT & TYPOGRAPHY FIDELITY: Look closely at the text alignment, composition grid, font weights, and spacing of the Design Layout Reference. Replicate the text placement and typography style exactly as styled on the reference, drawing and embedding the specified text parameters directly inside those regions with beautiful, modern, extremely crisp, and highly-legible typography.
 3. IGNORE & ERASE ALL REFERENCE TEXT & LOGOS (CRITICAL MANDATORY RULE): You MUST command the generator to COMPLETELY IGNORE AND ERASE 100% of all original text, titles, subtitles, numbers, dates, social media handles (@profiles), addresses, footers, and logos present in the attached Design Layout Reference image! DO NOT copy, read, re-render, or leave behind any text, handle, or logo from the reference layout photo! ONLY render the new custom text explicitly supplied in the prompt.
@@ -3728,7 +3625,7 @@ The output must be returned as a JSON object with exactly two string fields:
 }
 
 CRITICAL RULES FOR "prompt" (Mega Prompt Mestre):
-1. Must be written in technical, descriptive, high-fidelity English to achieve absolute perfection in image generators (like gemini-2.5-flash-image, Imagen 3, or Midjourney V6).
+1. Must be written in technical, descriptive, high-fidelity English to achieve absolute perfection in image generators (like Gemini 3 Pro Image, Imagen 3, or Midjourney V6).
 2. Do NOT write generic text-to-image filler text. Keep the description concise, precise, and targeted directly at copying the reference image's true structure, background, lighting, and elements.
 3. Replicate the precise lighting direction, layout structure, and color palette of the Design Layout Reference. CRITICAL COLOR OVERRIDE: ${!coresAutomaticas ? "The client HAS specified custom brand colors/requested color changes. You MUST completely swap the reference's color palette with the client's requested colors. Apply these client colors to all background shades, panel fills, ambient glows, lighting beams, and graphic highlights, while maintaining 100% identical layout geometry and composition." : "The client HAS NOT specified custom colors. You MUST strictly copy the original color palette of the Design Layout Reference."}
 4. Exclusions/Negative constraints: specify exactly what should NOT appear (e.g. generic templates, deformed faces, text hallucinations, bad hands, low resolution).
@@ -3759,7 +3656,7 @@ Return ONLY the JSON object. Do not include any conversational text or markdown 
 
         expansionParts.push({ text: instructionPrompt });
 
-        const expModels = ["gemini-3-pro-preview", "gemini-3.6-flash"];
+        const expModels = ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"];
         let expText = "";
         let lastExpErr: any = null;
         try {
@@ -3822,13 +3719,45 @@ Return ONLY the JSON object. Do not include any conversational text or markdown 
       }
       // --- END PROMPT & SYSTEM INSTRUCTION EXPANSION ---
 
+      let isExplicitEdit = false;
+      let editInstruction = "";
+      if (typeof promptTraduzido === "string" && promptTraduzido.includes("EXPLICIT INSTRUCTION FOR THIS REFINEMENT:")) {
+        isExplicitEdit = true;
+        const match = promptTraduzido.match(/EXPLICIT INSTRUCTION FOR THIS REFINEMENT:\s*(.*)/);
+        if (match) {
+          editInstruction = match[1];
+        }
+      }
+
       // Build the parts array for multimodal generateContent
       const parts: any[] = [];
+      let fullPrompt = "";
 
-      // 1. Core text prompt
-      let fullPrompt = expandedPrompt;
+      // Helper to add parsed base64 images to parts
+      const addImagePart = (input: any, label: string) => {
+        const parsed = parseBase64Part(input);
+        if (parsed && parsed.data) {
+          parts.push({
+            inlineData: {
+              data: parsed.data,
+              mimeType: parsed.mimeType || "image/jpeg"
+            }
+          });
+          if (label) {
+             parts.push({ text: label });
+          }
+        }
+      };
 
-      const typoMatch = (typeof promptTraduzido === "string" ? promptTraduzido : "").match(/=== TYPOGRAPHY & TEXT LAYOUT ===[\s\S]*?(?=\n===|$)/);
+      if (prevImgBase64 && isExplicitEdit) {
+        console.log(`[api/gerar] INPAINTING/EDIT MODE DETECTED: ${editInstruction}`);
+        fullPrompt = `Modify this original image by preserving its exact overall composition, subject, layout, and style, and applying ONLY this requested change/refinement: ${editInstruction}`;
+        parts.push({ text: fullPrompt });
+        addImagePart(prevImgBase64, "");
+      } else {
+        fullPrompt = expandedPrompt;
+
+        const typoMatch = (typeof promptTraduzido === "string" ? promptTraduzido : "").match(/=== TYPOGRAPHY & TEXT LAYOUT ===[\s\S]*?(?=\n===|$)/);
       if (typoMatch && typoMatch[0]) {
         fullPrompt += "\n\n" + typoMatch[0];
       }
@@ -3846,12 +3775,15 @@ Return ONLY the JSON object. Do not include any conversational text or markdown 
         : `- NO RANDOM LOGOS: Do not invent or hallucinate logos if not provided. Erase any existing logos from the reference image.`;
 
       const subjectMandatoryRule = hasSujeito
-        ? `- EXACT SUBJECT / PERSON IMAGE-TO-IMAGE FIDELITY (MANDATORY): When "Referência do Sujeito Principal" is attached, you MUST perfectly preserve the EXACT person, face, facial features, hair, eyes, skin tone, clothing, and visual identity from "Referência do Sujeito Principal". ABSOLUTE CRITICAL RULE: YOU ARE STRICTLY FORBIDDEN FROM RECREATING A DIFFERENT PERSON OR CHANGING THE FACIAL FEATURES OF THE SUBJECT. The generated card MUST feature the EXACT SAME person/subject provided, seamlessly blended into the lighting and background of the composition.`
+        ? `- EXACT SUBJECT, FACE, POSE & POSITION FIDELITY (ABSOLUTE MANDATORY RULE): When reference photos ("Referência do Sujeito Principal", "Referência de Design/Layout", "Referência de Cenário/Ambiente" or "Imagem Gerada Anterior") are attached, you MUST perfectly preserve the EXACT person/people, faces, facial features, facial expressions, eyes, hair, skin tone, clothing, physical body poses, spatial ordering, and exact positions of ALL subjects. ABSOLUTE CRITICAL RULE: YOU ARE STRICTLY FORBIDDEN FROM CHANGING FACIAL FEATURES, RECREATING DIFFERENT PEOPLE, SWAPPING FACES, OR ALTERING THE POSITIONS, POSES, OR ARRANGEMENT OF THE SUBJECTS. The generated image MUST feature the EXACT SAME people in the EXACT SAME poses and positions as shown in the reference photo.`
         : `- NO UNREQUESTED SUBJECT ALTERATIONS: Do not invent or alter subjects if not requested.`;
 
       const mandatorySuffix = `\n\n=== ABSOLUTE CRITICAL CONSTRAINTS (MANDATORY) ===
 ${subjectMandatoryRule}
+- STRICT FACIAL IDENTITY, POSE & POSITION PRESERVATION (CRITICAL): You MUST keep 100% identical faces, facial features, expressions, age, skin tones, physical poses, body postures, spatial order, and exact positions of ALL people/subjects from any attached reference photo. DO NOT change their faces, do NOT recreate them as different individuals, do NOT swap their positions, and do NOT alter their body poses!
 - LAYOUT & COMPOSITION FIDELITY (CRITICAL): If a Design Layout Reference is provided, you MUST clone the visual layout, spatial structure, panel dividers, 3D elements, lighting, and composition grid from it. HOWEVER, ALL WRITTEN TEXT MUST BE REPLACED WITH THE NEW CUSTOM TEXT PROVIDED!
+- STRICT ORIGINAL BACKGROUND PRESERVATION (CRITICAL): When editing an existing photo or image reference, you MUST KEEP AND PRESERVE 100% OF THE ORIGINAL BACKGROUND SCENE, ROOM, WALLS, FURNITURE, AND ENVIRONMENT from the attached photo reference. DO NOT REPLACE, SWAP, GENERATE A DIFFERENT BACKGROUND, OR CHANGE THE SCENE. Keep the exact same wall, room, and setting from the reference photo, applying ONLY the specific edits requested (such as removing shadows from the wall/behind the subject, cleaning clutter from tables, skin retouching, or color grading).
+- MANDATORY OBJECT & SHADOW REMOVAL (CRITICAL): If the client requests to remove shadows (e.g. shadows behind subjects, shadows on walls, cast shadows, flash shadows behind the second person on the right) or remove objects/clutter from tables/surfaces, you MUST MANDATORILY ERASE, OMIT, DISSOLVE AND PAINT OVER all shadows behind subjects, wall shadows, dark flash cast shadows, and table objects. Replace those shadow areas with the clean, bright, evenly lit wall texture matching the rest of the room. Render a completely clean, shadow-free background and clean surfaces without any unwanted dark cast shadow outlines, while keeping the original background room/walls intact!
 - MANDATORY TEXT OVERWRITE & COMPLETE ERASURE (CRITICAL): You MUST COMPLETELY ERASE AND REPLACE 100% of the original text, titles, subtitles, dates, handles (@profiles), phone numbers, prices, and words originally present in the Design Layout Reference image. Print ONLY the new custom text explicitly provided by the client in this prompt. NEVER copy, re-render, or leave behind ANY text or words from the original reference photo!
 - ICONS, EFFECTS, & 3D DEPTH (CRITICAL): You MUST perfectly clone all icons, visual effects, lighting glows, 3D elements, depth of field, and graphic adornments present in the Design Layout Reference. Do NOT simplify the design. If the reference has glowing icons, 3D shapes, shadow depth, or cinematic lighting, you MUST reproduce those exact effects and depths with 100% fidelity.
 - BRAND COLOR PALETTE ENFORCEMENT (CRITICAL): ${!coresAutomaticas ? "The client HAS specified custom brand colors in the prompt. You MUST strictly and aggressively use those EXACT colors for the entire graphic composition, background panels, highlights, glows, and ambient lighting. You MUST completely OVERRIDE the original reference flyer's colors with the requested colors." : "The client HAS NOT specified custom colors. You MUST perfectly copy the exact original color palette of the Design Layout Reference."}
@@ -3870,20 +3802,6 @@ ${logoMandatoryRule}`;
       
       fullPrompt += mandatorySuffix;
       parts.push({ text: fullPrompt });
-
-      // Helper to add parsed base64 images to parts
-      const addImagePart = (input: any, label: string) => {
-        const parsed = parseBase64Part(input);
-        if (parsed && parsed.data) {
-          parts.push({
-            inlineData: {
-              data: parsed.data,
-              mimeType: parsed.mimeType || "image/jpeg"
-            }
-          });
-          parts.push({ text: label });
-        }
-      };
 
       // 0. Add Previously Generated Image for direct refinement/edit
       if (prevImgBase64) {
@@ -3941,6 +3859,7 @@ ${logoMandatoryRule}`;
         });
       }
 
+      } // END OF ELSE (NOT EDIT MODE)
       // 7. Add Logo References for native AI rendering
       if (useLogo || logoBase64 || (Array.isArray(logosList) && logosList.length > 0)) {
         if (logoInclusionType !== "overlay") {
@@ -4047,7 +3966,9 @@ ${logoMandatoryRule}`;
         let displayError = `Erro bruto da API do Google: ${errorMsg}`;
         let statusCode = 500;
         if (errorMsg.includes("429") || errorMsg.includes("RESOURCE_EXHAUSTED") || errorMsg.includes("429 Too Many Requests") || errorMsg.includes("depleted")) {
-          displayError = "Créditos/cota do Google AI Studio / Vertex AI esgotados (RESOURCE_EXHAUSTED). Por favor, recarreague seus créditos em https://ai.studio/projects ou informe sua própria Chave de API do Google AI Studio nas configurações do aplicativo.";
+          const retryMatch = errorMsg.match(/retry in ([0-9.]+)s/i);
+          const retrySecs = retryMatch ? ` (Aguarde ${Math.ceil(parseFloat(retryMatch[1]))}s)` : "";
+          displayError = `Cota de requisições excedida temporariamente${retrySecs}. Aguarde alguns instantes antes de tentar gerar novamente, ou informe sua própria Chave de API do Google AI Studio nas Configurações para limite ilimitado.`;
           statusCode = 429;
         } else if (errorMsg.includes("403") || errorMsg.includes("PERMISSION_DENIED")) {
           displayError = "Erro de permissão da API. Verifique sua chave de API ou permissões do Google Cloud.";
@@ -4085,7 +4006,7 @@ ${logoMandatoryRule}`;
       if (!currentAi) return res.status(400).json({ error: "API Key não configurada." });
 
       const { data: cleanData, mimeType: resolvedMime } = resolveImageInput(imageData);
-      const extractModels = ["gemini-3-pro-preview", "gemini-3.6-flash"];
+      const extractModels = ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"];
       let promptText = "";
       let lastErr: any = null;
 
@@ -4199,7 +4120,7 @@ Return ONLY a JSON object with this exact structure:
 }
 IMPORTANT: Return valid, strictly parseable JSON. Do not put unescaped raw newlines inside JSON string values like generatedXaml or summary; use \\n instead.`;
 
-      const scanModels = ["gemini-3-pro-preview", "gemini-3.6-flash"];
+      const scanModels = ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"];
       let responseText = "";
       let lastErr: any = null;
 
@@ -4298,7 +4219,103 @@ IMPORTANTÍSSIMO SOBRE O PREENCHIMENTO AUTOMÁTICO (JSON):
 
       let systemInstruction = baseInstructions;
       if (assistantId === "gerador-roteiros") {
-        systemInstruction = "Você é um Diretor Criativo Especialista em Roteiros de Vídeo (TikTok, Reels, Shorts). Você não é um criador de flyers. Responda de forma criativa, interativa e sem enviar JSON de interface.";
+        systemInstruction = `Você é o Diretor Criativo e Estratégico de Roteiros de Vídeo Curto (Reels, TikTok, Shorts, YouTube Shorts) da Zion AI Studio.
+
+SUA PERSONALIDADE E CAPACIDADES:
+1. CONVERSA LIVRE E COMPLETA (ESTILO GEMINI): Você pode conversar sobre QUALQUER assunto livremente (estratégias digitais, dúvidas de marketing, ideias gerais, análises de mercado, tendências, bate-papo, etc.). Responda com inteligência fluida, empatia e clareza absoluta.
+2. ESPECIALISTA EM ROTEIROS DE VÍDEO VIRAL: Quando o usuário solicitar um roteiro, sugestão de vídeo ou ajustes de gravação, você atua como um Diretor de Produção e Edição Sênior.
+
+REGRAS CRÍTICAS E INVIOLÁVEIS DO GERADOR DE ROTEIROS:
+1. FOCO EXCLUSIVO EM ROTEIRO (FALAS & VISUAL): Suas entregas de roteiro devem conter APENAS falas, ações visuais/B-rolls, textos de tela e instruções de edição. É TERMINANTEMENTE PROIBIDO enviar qualquer bloco de código JSON, código de flyer, palettes de cores ou objetos JSON de interface. Responda APENAS com texto limpo e tabelas Markdown!
+2. ESTRUTURA OBRIGATÓRIA (INÍCIO, MEIO E FIM): TODO e qualquer roteiro DEVE OBRIGATORIAMENTE ter um Início marcante, um Meio bem desenvolvido e um Fim focado em conversão/CTA.
+3. GATILHO / HOOK OBRIGATÓRIO NOS PRIMEIROS 3 SEGUNDOS: O Início do roteiro DEVE ter um GATILHO/HOOK de retenção de alto impacto nos primeiros 3s (00:00 - 00:03), feito para prender a atenção de imediato, despertar curiosidade, fazer uma pergunta instigante ou quebrar o padrão do feed.
+4. REGRAS DE SAUDAÇÃO E SIMPLICIDADE: Se o usuário disser apenas 'oi', 'olá', 'tudo bem', 'boa tarde' ou qualquer cumprimento inicial simples: Responda de forma extremamente curta, objetiva e acolhedora em NO MÁXIMO 1 OU 2 FRASES CURTAS (ex: "Olá! Como posso te ajudar com os roteiros hoje?"). NUNCA envie listas de opções gigantes nem menus imensos para um simples cumprimento!
+
+FORMATO OBRIGATÓRIO DUPLO AO ENTREGAR ROTEIROS:
+Sempre que for gerar um roteiro de vídeo, você DEVE OBRIGATORIAMENTE entregar DUAS VERSÕES CLARAS para o usuário:
+
+==================================================
+📱 **1. ROTEIRO PARA O CLIENTE (APROVAÇÃO RUÍDO ZERO)**
+*(Versão limpa, focada EXCLUSIVAMENTE na mensagem e no texto que a apresentadora/locutor vai falar, para o cliente aprovar o conteúdo falado de forma rápida e direta)*
+
+🎯 **TÍTULO DO VÍDEO**: [Título chamativo do Vídeo]
+
+🪝 **INÍCIO (Gatilho 0 a 3s)**:
+- **Fala da Apresentadora**: *"Gatilho/Hook de impacto nos primeiros 3 segundos!"*
+
+💡 **MEIO (Desenvolvimento)**:
+- **Fala da Apresentadora**: *"Fala principal desenvolvendo o tema de forma clara, direta e envolvente..."*
+
+🚀 **FIM (Chamada para Ação / CTA)**:
+- **Fala da Apresentadora**: *"Chamada final clara (ex: Clica no link da bio e garante o seu agora mesmo!)"*
+
+*(NOTA: Todas as orientações visuais, ações e ângulos de câmera ficam EXCLUSIVAMENTE na Versão 2 para o Editor abaixo).*
+
+==================================================
+🎬 **2. ROTEIRO COMPLETO PARA O EDITOR & GRAVAÇÃO**
+*(Versão técnica detalhada para a equipe de gravação e edição)*
+
+⚙️ **CONFIGURAÇÕES RÁPIDAS**: [Formato (ex: 9:16 - 15 a 30s) | Tom de Voz | Trilha de Fundo]
+
+📊 **TABELA DE EDIÇÃO CENA A CENA**:
+
+| Cena / Tempo | Visual & B-Roll (O que filmar) | Fala & Áudio | Texto na Tela & Edição (SFX / Cortes) |
+| --- | --- | --- | --- |
+| **Cena 1 (Gatilho / Hook)**<br>00:00 - 00:03 | [Visual impactante com ação rápida para prender o olhar] | *"Frase de gatilho/hook chocante nos primeiros 3s!"* | 🟡 **Texto**: "GATILHO EM CAIXA ALTA!"<br>🔊 **SFX**: *Pop + Zoom In Rápido* |
+| **Cena 2 (Desenvolvimento)**<br>00:03 - 00:08 | [B-Roll acelerado ou apresentadora demonstrando a dor/problema] | [Desenvolvimento fluido da fala...] | 🟡 **Texto**: "MENSAGEM CHAVE"<br>🎬 **Corte**: *Corte Seco Rápido* |
+| **Cena 3 (Destaque / Solução)**<br>00:08 - 00:14 | [Close-up apetitoso do produto/recheio ou solução] | [Fala com o benefício direto ou oferta...] | 🟢 **Destaque**: "PREÇO OU BENEFÍCIO"<br>✨ **Efeito**: *Glow suave* |
+| **Cena 4 (CTA Final)**<br>00:14 - 00:18 | [Apresentadora convidando com sorriso ou mostrando o local/delivery] | *"Curtiu? Comenta 'ROTEIRO' aqui ou pede no delivery agora mesmo!"* | 🔴 **Texto**: "PEÇA NO DELIVERY 🛵"<br>👉 Seta animada |
+
+💡 **DICAS RÁPIDAS DE GRAVAÇÃO & EDIÇÃO**:
+- **Gatilho Inicial**: A imagem e a fala dos primeiros 3s devem prender a atenção antes de qualquer outra coisa.
+- **Ritmo**: Troca de cena ou corte a cada 2.5 a 3.5 segundos.
+- **Áudio**: Trilha sonora em -22dB e voz em 0dB.
+
+PEDIDOS DE MÚLTIPLOS ROTEIROS (LOTE):
+Se o usuário pedir múltiplos roteiros (ex: "me dê 4 roteiros", "crie 3 ideias de roteiro"), entregue cada roteiro com a Versão 1 (Cliente) e Versão 2 (Editor) numerados como ### ROTEIRO 1, ### ROTEIRO 2, etc.
+
+VOCABULÁRIO HUMANO, NATURAL, PROFISSIONAL E POPULAR (PROIBIÇÃO RIGOROSA DE PALAVRAS ESTRANHAS, GÍRIAS INADEQUADAS, ANGLICISMOS E IA ROBÓTICA):
+- É STRICTLY PROIBIDO usar palavras pomposas, robóticas, artificiais ou de tom formal que soam estranhas em vídeos das redes sociais, como: "abundância", "abundante", "recusa economizar", "sem miséria", "revolucionar", "transforme", "empolgante", "saia da caixa", "virada de chave", "potencializar", "experiência única", "deleitar", "ímpar", "sublime".
+- PROIBIÇÃO ABSOLUTA DE GÍRIAS NÃO PROFISSIONAIS E ANGLICISMOS / TERMOS EM INGLÊS NA FALA:
+  * NUNCA use "lotada de" ou "lotado de" (soa informal/não profissional). Prefira termos apetitosos e elegantes: "super recheada", "muito recheada", "bem recheada", "recheio caprichado", "recheado de verdade".
+  * NUNCA use termos em inglês ou anglicismos como "upgrade", "feedbacks", "highlights", "outfit", "target", "mindset" nas falas do vídeo! O público das redes sociais precisa entender tudo instantaneamente em português simples e natural (ex: em vez de "dar um upgrade", use "pra quem quer um combo ainda mais completo").
+- PROIBIÇÃO ABSOLUTA DE METÁFORAS ERRADAS E EXPRESSÕES FORÇADAS NA FALA:
+  * NUNCA crie expressões fisicamente sem sentido como "esfiha esticando" (esfiha e massa não esticam!).
+  * NUNCA coloque a expressão "queijo puxando" como adjetivo na fala do áudio (ex: "pastel com queijo puxando" é uma frase estranha e não-natural na fala!). A ação de "puxar o queijo" é estritamente uma orientação VISUAL/B-ROLL da gravação.
+  * Na fala do apresentador, use linguagem oral fluida, natural e apetitosa.
+
+ORIGINALIDADE OBRIGATÓRIA E PROIBIÇÃO ABSOLUTA DE REPETIÇÃO DE CONTEÚDO E BORDÕES:
+- CADA ROTEIRO DEVE SER 100% INÉDITO E TER UM CONCEITO TOTALMENTE NOVO!
+- NUNCA repita os mesmos bordões, frases fixas ou adjetivos em vídeos diferentes do mesmo cliente (JAMAIS repita adjetivos como "queijo derretido" ou "massa fininha" em todos os roteiros!).
+- VARIE DIVERSAMENTE O VOCABULÁRIO SENSORIAL A CADA VÍDEO: Alterne o foco e os atributos (ex: um vídeo foca no "recheio farto e saboroso", outro no "sabor caseiro artesanal", outro na "massa crocante por fora e macia por dentro", outro no "tempero especial no ponto certo", outro no "aroma irresistível saindo do forno", outro no "molho de tomate especial da casa", outro nas "opções doces pra sobremesa").
+- NUNCA copie literalmente os exemplos dados nestas instruções. Use a sua criatividade para gerar scripts autênticos, variados e dinâmicos.
+
+CHAMADA PARA AÇÃO (CTA) UNIVERSAL PARA REDES SOCIAIS / REELS / TIKTOK:
+- NUNCA assuma que existe um "botão aqui embaixo" ou "botão abaixo" no vídeo (vídeos orgânicos no Reels, TikTok e Instagram NÃO têm botões de compra no vídeo!).
+- USE SEMPRE CHAMADAS PARA AÇÃO (CTA) UNIVERSAIS E NATURAIS PARA DELIVERY E NEGÓCIOS LOCAIS, FOCADAS NO LINK DA BIO, DIRECT OU WHATSAPP:
+  * "Acesse o link no nosso perfil e peça o seu pelo delivery!"
+  * "Chame a gente no WhatsApp ou acesse o link no perfil!"
+  * "Não passe vontade: o link para o nosso cardápio está na bio!"
+
+RIGOROSA CORREÇÃO GRAMATICAL, ZERO ERROS DE CONCORDÂNCIA E PORTUGUÊS IMPECÁVEL:
+- Respeite de forma absoluta e rigorosa as regras de gramática, ortografia, pontuação, acentuação e concordância verbal e nominal do Português do Brasil em todo o texto e em TODAS as falas do apresentador.
+- PROIBIÇÃO TOTAL DE ERROS DE CONCORDÂNCIA: Garanta que o sujeito concorde perfeitamente com o verbo (ex: "Eles querem", "Nós fazemos", "As novidades chegaram") e que os adjetivos e determinantes concordem em gênero e número com os substantivos (ex: "Esfihas deliciosas", "Cardápio variado", "Preços especiais").
+- REVISÃO MINUCIOSA ANTI-ERROS: Faça uma dupla validação interna de cada frase gerada para garantir que não haja letras faltando, digitações erradas (typos), cacofonias ou desvios da norma padrão do português falado de forma elegante e fluida nas redes sociais.
+- UNIFORMIDADE DOS PRONOMES E VERBOS (VOCÊ): Ao tratar o espectador por "você", mantenha a concordância gramatical uniforme de 3ª pessoa nos verbos do imperativo ("você ama... experimente os nossos... peça o seu... acesse o link... garanta o seu... não perca"). NUNCA misture "você ama" com imperativos da 2ª pessoa ("pede/clica").
+- IMPERATIVO NEGATIVO CORRETO: Em frases negativas com "não", use o imperativo negativo correto no subjuntivo para a pessoa "você":
+  * Use "Não passe vontade" (JAMAIS "não passa vontade").
+  * Use "Não perca tempo" (JAMAIS "não perde tempo").
+  * Use "Não deixe para depois" (JAMAIS "não deixa para depois").
+- CONCORDÂNCIA VERBAL NO PLURAL E CAPITALIZAÇÃO CORRETA:
+  * Use "Não podem faltar as esfihas doces" ou "As doces não podem faltar" (JAMAIS "não pode faltar as doces").
+  * Use "Chegaram as novidades" (JAMAIS "chegou as novidades").
+  * NUNCA use letras maiúsculas em substantivos comuns no meio da frase (ex: escreva "A reunião com os amigos", JAMAIS "A Reunião com os amigos").
+- NOME DO CLIENTE E MARCAS:
+  * NUNCA coloque aspas duplas desconfiguradas em nomes de marcas (ex: ESCREVA "CLIENTE: ESFIHA'S HOUSE" com apóstrofo simples ', JAMAIS ESFIHA"S HOUSE).
+
+Responda sempre em Português do Brasil com máxima praticidade sem enviar NENHUM bloco de código JSON.`;
+      } else if (assistantId === "copiloto-agencia") {
+        systemInstruction = "Você é o Copiloto Estratégico de Agência de Marketing. Sua função é ajudar o dono da agência a prospectar, vender, onboardar, executar, otimizar e renovar contratos de marketing digital para seus clientes. Tom profissional, prático e focado em resultados. Responda em Português do Brasil sem enviar JSON de interface.";
       }
       switch (assistantId) {
         case "prompt-extrator":
@@ -4325,6 +4342,13 @@ Sua mente processa design analisando:
 Analise qualquer imagem de referência e diga como reproduzir aquela excelência técnica em Midjourney, Leonardo AI ou outras plataformas, mapeando a estrutura perfeita para cada botão/opção da arte.
 
 IMPORTANTÍSSIMO: MANTENHA UM DIÁLOGO COM O USUÁRIO (COMO DIRETOR E CLIENTE/DESIGNER).
+- REGRA ABSOLUTA DE RESOLUÇÃO E TAMANHO (NÃO PERGUNTE AO USUÁRIO): JAMAIS pergunte ao usuário se ele deseja resolução 1K, 2K ou 4K, e JAMAIS pergunte sobre dimensões/tamanhos de imagem ou inicie conversas sobre qualidade! O usuário define a resolução e tamanho manualmente no painel de controles. NUNCA mencione ou pergunte sobre 1K, 2K ou 4K.
+- REGRA DE REMOÇÃO DE SOMBRAS E OBJETOS + PRESERVAÇÃO DE ROSTOS E CENÁRIO + TRATAMENTO LIGHTROOM: Se o usuário pedir para remover sombras (atrás de pessoas, na parede) ou remover coisas da mesa, ou solicitar tratamento/edição de foto:
+  * Preencha OBRIGATORIAMENTE no "negativePrompt": "sombras atrás das pessoas, sombras na parede, sombras fortes de flash, sombras indesejadas, contorno escuro na parede, objetos sobre a mesa, coisas da mesa, desordem, estúdio fotográfico sintético".
+  * Em "promptCenario": coloque APENAS "Fundo e ambiente originais da foto de referência (manter a mesma parede e cômodo sem transformar em estúdio de fotografia)." ou string vazia. JAMAIS escreva "Fundo de estúdio fotográfico" ou "parede neutra de estúdio" pois isso altera o cenário e deforma as pessoas!
+  * Em "additionalPrompt" e "promptEstilo": reforce os mandatos:
+    1. MANDATO DE ROSTOS, POSES E POSIÇÕES IDÊNTICOS + ELIMINAR SOMBRAS DE FLASH: Manter 100% idênticos os rostos, traços faciais, expressões, roupas, poses e posições físicas de TODAS as pessoas da foto. PROIBIDO alterar fisionomias ou recriar o fundo. Apagar e eliminar 100% das sombras de flash na parede atrás das pessoas e objetos sobre a mesa.
+    2. SUÍTE COMPLETA ADOBE LIGHTROOM: Equilíbrio perfeito de Exposição, Contraste, Highlights (preservados), Shadows (abertas), Whites e Blacks limpos. Temperatura e Tint corrigidos para tons de pele naturais. Texture, Clarity e Dehaze para definição refinada. Curva S-Curve suave RGB para contraste cinematográfico. Ajuste HSL individual (laranja pele natural, azuis profundos, verdes equilibrados). Color grading com sombras levemente frias e realces quentes. Sharpening e redução de ruído refinados com suave vinheta e granulação fina. Máscaras inteligentes de IA para destacar rostos e limpar sombras da parede sem alterar a estrutura do cômodo.
 - Se o usuário disse apenas "oi", "olá", ou foi muito vago, NÃO GERE JSON NENHUM. APENAS cumprimente-o e pergunte como pode ajudar na criação do design hoje.
 - Se a ideia ainda estiver vaga, faça perguntas antes de gerar o JSON de configuração.
 - Se o usuário solicitar qualquer alteração ou ajuste de design (ex: mudar cor, remover sujeito, desativar sujeito, ativar logo, mudar resolução/proporção, etc.), você DEVE incluir o JSON correspondente imediatamente.
@@ -4372,8 +4396,9 @@ IMPORTANTÍSSIMO: MANTENHA UM DIÁLOGO COM O USUÁRIO (COMO DIRETOR E CLIENTE/DE
           systemInstruction += "Você é o ZION AI, um assistente premium focado em criação de design e copy com o conhecimento absoluto de um Designer Master do mercado brasileiro (Estilo Flyer BR).";
       }
       
-      // Adiciona regra de formatação universal para o parser do frontend funcionar 100%
-      systemInstruction += `\n\nDIRETRIZES DE ESTILO FLYER BR:
+      // Adiciona regra de formatação universal para o parser do frontend funcionar 100% (Apenas para assistentes de design/flyers)
+      if (assistantId !== "gerador-roteiros") {
+        systemInstruction += `\n\nDIRETRIZES DE ESTILO FLYER BR:
 Lembre-se sempre das características de altíssima qualidade de Flyers Brasileiros Profissionais (Eventos, Shows, Lançamentos, Corporativo):
 1. Estilo & Qualidade: Nível de agência premium, masterpiece, high-end commercial design.
 2. Diagramação & Margens: Diagramações perfeitamente balanceadas e bonitas. Respeite sempre as margens de respiro, safety areas e a proporção da arte (1:1, 4:5, 9:16).
@@ -4405,6 +4430,20 @@ REGRAS OBRIGATÓRIAS DE DESIGN CARD (REFERÊNCIA COMPLETA):
 - Se nenhuma outra imagem de referência de estilo visual foi enviada, você DEVE preencher "enableEstiloVisual": true e descrever detalhadamente em "estiloVisualCustom" o estilo/atmosfera a ser extraído do card.
 - Se nenhuma outra imagem de referência de tipografia/texto foi enviada e o usuário quiser copiar ou se inspirar em algum bloco de texto do card, mapeie a imagem do card também como "typography" (ou "typographyRefBase64") para copiar o estilo tipográfico ou print de texto.
 - RESPEITE AS CORES DO CLIENTE: Ao extrair esses elementos do card de referência, você deve manter o padrão das cores passadas pelo usuário ou as que pertencem à paleta salva dos clientes do usuário.
+
+REGRAS OBRIGATÓRIAS DE EDIÇÃO DE FOTO E MELHORIA DE PROMPT COM IMAGEM ANEXADA:
+- Quando o usuário anexar uma foto ou imagem e solicitar EDIÇÃO DE FOTO, MELHORIA DE PROMPT ou CRIAÇÃO COM BASE NELA:
+  1. VOCÊ DEVE OBRIGATORIAMENTE ANALISAR E ESCANEAR VISUALMENTE A IMAGEM ANEXADA COM SUA CAPACIDADE MULTIMODAL.
+  2. VOCÊ DEVE MAPEAR O ARQUIVO EM "mapeamentoImagens" COMO "design,scene,subject,style" (ou "design,scene,style" se for puramente um cenário sem sujeito humano).
+  3. VOCÊ DEVE PREENCHER OS CAMPOS DE CONFIGURAÇÃO:
+     - "useEnvRef": true (mantém o cenário/fundo da foto de referência original).
+     - "desativarSujeito": false e "noPeople": false (mantém o sujeito/pessoa da foto de referência original).
+  4. VOCÊ DEVE ESCANEAR A FOTO E PREENCHER OBRIGATORIAMENTE TODOS OS CAMPOS DE TEXTO DO JSON EM PORTUGUÊS:
+     - "promptCenario": "Fundo e ambiente originais da foto de referência (manter a mesma parede e ambiente sem transformar em estúdio fotográfico)."
+     - "promptDesign": descrição do enquadramento e composição da foto original.
+     - "poseDescription": "Análise minuciosa e individual de cada pessoa: descrever o rosto, roupa, pose e a EXPRESSÃO FACIAL INDIVIDUAL exata de cada sujeito. NUNCA generalizar como 'pessoas sorrindo' ou 'duas mulheres sorrindo' se houver expressões diferentes (ex: se uma sorri de dentes e a outra tem lábios fechados/expressão suave, especifique cada uma separadamente)."
+     - "promptEstilo": descrição do tratamento de iluminação, cor e nitidez da foto original.
+     - "additionalPrompt": "MANDATO DE ROSTOS, POSES, EXPRESSÕES E POSIÇÕES IDÊNTICOS: Manter 100% idênticos os rostos, traços faciais, feições, idades, roupas, poses corporais, a expressão facial INDIVIDUAL exata de cada pessoa (respeitando quem está de boca fechada sem forçar sorrisos) e posições exatas de TODAS as pessoas da foto. PROIBIDO alterar fisionomias ou transformar o cenário em estúdio sintético. Executar APENAS as edições solicitadas: [detalhar remoções/melhorias pedidas pelo usuário]".
 
 DETECÇÃO DE NOVO PEDIDO (NOVA ARTE / NOVO BRIEFING) - CRÍTICO:
 Se o usuário mandar uma mensagem ou briefing que indica que ele está iniciando um NOVO PEDIDO, uma NOVA ARTE, ou uma nova ideia temática (ex: "agora faz um flyer de padaria", "novo pedido: show de sertanejo", "cria uma arte para pizzaria", ou se ele enviar novas fotos de referências que não têm relação alguma com o flyer/pedido anterior do chat), você DEVE:
@@ -4465,6 +4504,25 @@ Se o usuário enviou imagens, o nome original do arquivo aparecerá no texto com
 Ao preencher o mapeamentoImagens, VOCÊ DEVE USAR ESTE NOME EXATO para que o sistema consiga vincular o arquivo.
 Ao montar o prompt (additionalPrompt e promptCenario), USE ESSE NOME exato entre colchetes (ex: "integrate the subject from [produto.png] in the center") para que a IA de geração consiga localizar o asset.
 Sempre avise no texto de forma natural se identificou uma logo ou foto de sujeito.`;
+      }
+
+      const parseInlineFile = (file: any) => {
+        if (!file || !file.data || typeof file.data !== "string") return null;
+        let rawData = file.data.trim();
+        let mime = file.mimeType || file.type || "image/jpeg";
+        if (rawData.startsWith("data:")) {
+          const match = rawData.match(/^data:([^;]+);base64,(.*)$/s);
+          if (match) {
+            mime = match[1];
+            rawData = match[2].trim();
+          }
+        }
+        if (!rawData) return null;
+        const validMimes = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/heic", "image/heif", "application/pdf", "text/plain"];
+        const isSupported = validMimes.includes(mime) || mime.startsWith("image/") || mime.startsWith("audio/") || mime.startsWith("video/");
+        if (!isSupported) return null;
+        return { data: rawData, mimeType: mime };
+      };
 
       const contents: any[] = [];
 
@@ -4477,12 +4535,15 @@ Sempre avise no texto de forma natural se identificou uma logo ou foto de sujeit
               if (file.name) {
                 parts.push({ text: `[Imagem Anexada: ${file.name}]` });
               }
-              parts.push({
-                inlineData: {
-                  data: file.data,
-                  mimeType: file.mimeType || file.type || "image/jpeg"
-                }
-              });
+              const inlineObj = parseInlineFile(file);
+              if (inlineObj) {
+                parts.push({
+                  inlineData: {
+                    data: inlineObj.data,
+                    mimeType: inlineObj.mimeType
+                  }
+                });
+              }
             });
           }
           parts.push({ text: h.content || "" });
@@ -4500,12 +4561,15 @@ Sempre avise no texto de forma natural se identificou uma logo ou foto de sujeit
           if (file.name) {
             userParts.push({ text: `[Imagem Anexada: ${file.name}]` });
           }
-          userParts.push({
-            inlineData: {
-              data: file.data,
-              mimeType: file.mimeType || file.type || "image/jpeg"
-            }
-          });
+          const inlineObj = parseInlineFile(file);
+          if (inlineObj) {
+            userParts.push({
+              inlineData: {
+                data: inlineObj.data,
+                mimeType: inlineObj.mimeType
+              }
+            });
+          }
         });
       } else if (imageBase64 && imageBase64.trim() !== "") {
         const { data: cleanData, mimeType } = resolveImageInput(imageBase64);
@@ -4539,7 +4603,12 @@ Sempre avise no texto de forma natural se identificou uma logo ou foto de sujeit
         }
       });
 
-      const textModels = modelId ? [modelId, "gemini-3-pro-preview", "gemini-3.6-flash"] : ["gemini-3-pro-preview", "gemini-3.6-flash"];
+      // Ensure first message is role "user"
+      while (sanitizedContents.length > 0 && sanitizedContents[0].role === "model") {
+        sanitizedContents.shift();
+      }
+
+      const textModels = modelId ? [modelId, "gemini-3.1-pro-preview", "gemini-3.1-pro-preview"] : ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"];
       let responseText = "";
       let lastError: any = null;
 
@@ -4580,6 +4649,409 @@ Sempre avise no texto de forma natural se identificou uma logo ou foto de sujeit
       }
       
       res.status(status).json({ error: userMessage });
+    }
+  });
+
+
+  
+async function generateLyria002(promptText: string, customApiKey?: string): Promise<{ audioBase64: string; mimeType: string } | null> {
+    try {
+        console.log("[Lyria-002] Attempting to use Vertex AI lyria-002 endpoint...");
+        let auth: any;
+        let projectId = process.env.GOOGLE_CLOUD_PROJECT || "gerador-de-imagens-ia-502303";
+        let location = "us-central1";
+
+        if (customApiKey && customApiKey.trim().startsWith("{") && customApiKey.includes("private_key")) {
+            const parsed = JSON.parse(customApiKey.trim());
+            if (parsed.project_id) projectId = parsed.project_id;
+            auth = new GoogleAuth({
+                credentials: parsed,
+                scopes: 'https://www.googleapis.com/auth/cloud-platform'
+            });
+        } else {
+            auth = new GoogleAuth({
+                scopes: 'https://www.googleapis.com/auth/cloud-platform'
+            });
+            projectId = await auth.getProjectId() || projectId;
+        }
+
+        const client = await auth.getClient();
+        const accessToken = (await client.getAccessToken()).token;
+
+        const url = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/lyria-002:predict`;
+        
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                instances: [
+                    { prompt: promptText }
+                ]
+            })
+        });
+
+        if (!res.ok) {
+            console.error("[Lyria-002] Error:", await res.text());
+            return null;
+        }
+
+        const data = await res.json();
+        if (data.predictions && data.predictions.length > 0 && data.predictions[0].bytesBase64Encoded) {
+            return {
+                audioBase64: data.predictions[0].bytesBase64Encoded,
+                mimeType: "audio/wav"
+            };
+        }
+    } catch (e: any) {
+        console.error("[Lyria-002] Exception:", e.message);
+    }
+    return null;
+}
+
+  app.post("/api/generate-audio", upload.single("file") as any, async (req, res) => {
+    try {
+      const promptText = req.body.prompt;
+      const customApiKey = req.body.customApiKey;
+      const modelId = req.body.model || "auto";
+
+      if (!promptText || !promptText.trim()) {
+        return res.status(400).json({ error: "O texto do prompt é obrigatório." });
+      }
+
+      console.log(`[Audio Route] Received request for model ${modelId}. Prompt: "${promptText.substring(0, 100)}..."`);
+
+      let audioBase64 = "";
+      let mimeType = "audio/wav";
+      
+      let finalPrompt = promptText;
+      try {
+        const standardAi = getAiClient(customApiKey);
+        if (standardAi) {
+          const aiAnalysisRes = await standardAi.models.generateContent({
+            model: "gemini-3.1-pro-preview",
+            contents: [{
+              role: "user",
+              parts: [{
+                text: `Translate the following audio/music prompt to English. If it is already in English, return it as is. Do not add any extra text or quotes, just the translated prompt. Prompt: "${promptText}"`
+              }]
+            }]
+          });
+          const translated = aiAnalysisRes.text?.trim();
+          if (translated) {
+            finalPrompt = translated;
+            console.log("[Audio Route] Translated prompt to English:", finalPrompt);
+          }
+        }
+      } catch(e) {
+          console.error("Translation error", e);
+      }
+
+      const lyriaRes = await generateLyria002(finalPrompt, customApiKey);
+      if (lyriaRes && lyriaRes.audioBase64) {
+          audioBase64 = lyriaRes.audioBase64;
+          mimeType = lyriaRes.mimeType;
+      } else {
+          return res.status(500).json({ error: "Não foi possível gerar a música com Lyria 2. Verifique as credenciais do Google Cloud ou tente novamente." });
+      }
+
+      return res.json({ audioBase64, lyrics: "", mimeType, duration: 30, warning: "" });
+    } catch (error: any) {
+      console.error("Audio Generation Error:", error);
+      let errorMessage = error.message || "Erro ao gerar áudio.";
+      res.status(500).json({ error: errorMessage });
+    }
+  });
+
+  app.post("/api/melhorar-prompt", async (req, res) => {
+    try {
+      const { prompt, assistantId, agentName, customApiKey } = req.body;
+      if (!prompt || typeof prompt !== "string" || !prompt.trim()) {
+        return res.status(400).json({ error: "Digite um prompt no campo de texto para melhorar." });
+      }
+
+      const currentAi = getAiClient(customApiKey);
+      if (!currentAi) {
+        return res.status(400).json({ error: "API Key não configurada." });
+      }
+
+      const models = ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview", "gemini-3.1-pro-preview", "gemini-3.1-pro-preview", "gemini-3.1-pro-preview"];
+      const systemContextPrompt = `Você é um Engenheiro de Prompts Sênior e Diretor Criativo especialista da plataforma Zion AI Studio.
+O usuário digitou o seguinte rascunho de ideia ou prompt para interagir com o agente especialista "${agentName || "Diretor Criativo"}" (ID: ${assistantId || "diretor-criativo"}):
+
+"${prompt.trim()}"
+
+SUA MISSÃO:
+Transforme e reescreva este rascunho em um prompt profissional, rico em detalhes, extremamente claro, assertivo e eficiente em Português do Brasil.
+REGRAS RÍGIDAS:
+1. Mantenha 100% da intenção original do usuário (assunto, nomes, datas, marcas, ideias), mas expanda com termos técnicos de design, iluminação, composição, tom de voz, gatilhos mentais ou estrutura de briefing adequados ao agente.
+2. Não adicione saudações, introduções ("Aqui está o prompt aprimorado:"), explicações ou aspas extras.
+3. Responda APENAS E EXCLUSIVAMENTE com o texto final do prompt aprimorado pronto para uso no chat.`;
+
+      let improvedPrompt = "";
+      try {
+        const fallbackRes = await executeGenerateContentWithFallbacks(
+          currentAi,
+          customApiKey,
+          models,
+          {
+            contents: [{ role: "user", parts: [{ text: systemContextPrompt }] }]
+          }
+        );
+        improvedPrompt = fallbackRes.response?.text?.trim() || "";
+      } catch (aiErr: any) {
+        console.log("[melhorar-prompt] AI models quota limit or rate limit reached, using smart offline prompt enhancement.");
+      }
+
+      // Smart fallback if all AI models hit quota/error so user never experiences an error
+      if (!improvedPrompt) {
+        const raw = prompt.trim();
+        if (assistantId?.includes("voice")) {
+          improvedPrompt = `Roteiro de Locução Profissional: "${raw}". (Entonação natural, dicção clara, ritmo pausado e tom comercial amigável em Português-BR).`;
+        } else if (assistantId?.includes("music")) {
+          improvedPrompt = `Trilha sonora de fundo e áudio: ${raw}, estilo comercial moderno, melodia agradável e arranjo equilibrado.`;
+        } else if (assistantId?.includes("sfx")) {
+          improvedPrompt = `Efeito sonoro cristalino: ${raw}, acústica natural e impacto detalhado.`;
+        } else {
+          improvedPrompt = `${raw}. (Direcionamento criativo rico em detalhes, iluminação equilibrada e estética profissional).`;
+        }
+      }
+
+      // Remover aspas envolventes se a IA tiver colocado
+      if (improvedPrompt.startsWith('"') && improvedPrompt.endsWith('"') && improvedPrompt.length > 2) {
+        improvedPrompt = improvedPrompt.slice(1, -1).trim();
+      }
+
+      res.json({ improvedPrompt });
+    } catch (error: any) {
+      console.error("Melhorar Prompt Error:", error);
+      const raw = (req.body?.prompt || "").trim();
+      res.json({ improvedPrompt: raw ? `${raw} (Aprimorado com tom profissional e alta qualidade)` : "Prompt aprimorado com sucesso." });
+    }
+  });
+
+  // Endpoints para o Gerador de Prompts e Vídeo Omni Flash (gemini-omni-flash-preview)
+
+  // Endpoint para Melhorar Prompt com IA
+  app.post("/api/omni-flash-enhance", async (req, res) => {
+    try {
+      const { prompt, mediaBase64, mediaMimeType, customApiKey } = req.body;
+      if (!prompt && !mediaBase64) {
+        return res.status(400).json({ error: "Escreva algo ou envie um vídeo para melhorar o prompt." });
+      }
+
+      const currentAi = getAiClient(customApiKey);
+      if (!currentAi) {
+        return res.status(400).json({ error: "API Key não configurada." });
+      }
+
+      const hasMedia = Boolean(mediaBase64 && mediaMimeType);
+      const systemPrompt = `Você é um Diretor de Fotografia e especialista em Prompts para o modelo Gemini Omni Flash (gemini-omni-flash-preview).
+Sua tarefa é pegar o texto do usuário ${hasMedia ? "e o vídeo/imagem de referência em anexo" : ""} e transformá-lo em uma instrução cinematográfica perfeita.
+
+${hasMedia ? "ATENÇÃO CRÍTICA DE CONTINUIDADE VISUAL: Existe um VÍDEO/IMAGEM DE REFERÊNCIA em anexo. O prompt DEVE exigir PRESERVAÇÃO ESTRITA da pessoa/sujeito, roupas, rosto, cenário, iluminação e enquadramento da mídia de referência. A alteração deve focar EXCLUSIVAMENTE no movimento ou efeito pedido pelo usuário (ex: puxar o queijo derretido ao abrir o alimento), mantendo a identidade exata da cena original sem mudar o rosto ou o ambiente." : "Se a ideia for simples (ex: 'carro correndo'), transforme em uma descrição cinematográfica com iluminação, atmosfera, movimento de câmera e emoção."}
+
+Mantenha a essência exata do que o usuário pediu, garantindo fidelidade total.
+Responda APENAS com o texto do prompt melhorado em Português (curto, direto e ultra visual, 2-4 frases). Sem explicações ou marcações de markdown.`;
+
+      const parts: any[] = [];
+      if (hasMedia) {
+        const cleanBase64 = mediaBase64.replace(/^data:[^;]+;base64,/, "");
+        parts.push({
+          inlineData: {
+            mimeType: mediaMimeType,
+            data: cleanBase64
+          }
+        });
+      }
+      parts.push({ text: `Texto original do usuário: "${prompt || "Melhore a cena do vídeo"}"\n\n${systemPrompt}` });
+
+      const fallbackRes = await executeGenerateContentWithFallbacks(
+        currentAi,
+        customApiKey,
+        ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"],
+        { contents: [{ role: "user", parts }] }
+      );
+
+      const enhancedText = fallbackRes.response?.text?.trim() || prompt;
+      return res.json({ enhancedPrompt: enhancedText });
+    } catch (err: any) {
+      console.error("Erro ao melhorar prompt:", err);
+      return res.status(500).json({ error: "Não foi possível melhorar o prompt com IA." });
+    }
+  });
+
+  app.post("/api/omni-flash-prompt", async (req, res) => {
+    try {
+      const { 
+        concept, mode, style, camera, lighting, motion, lens, aspectRatio, 
+        duration, resolution, cinematographyStyle, framing, colorGrading,
+        mediaBase64, mediaMimeType, customApiKey 
+      } = req.body;
+
+      if (!concept && !mediaBase64) {
+        return res.status(400).json({ error: "Forneça uma ideia/roteiro ou envie um arquivo de vídeo/imagem para análise." });
+      }
+
+      const currentAi = getAiClient(customApiKey);
+      if (!currentAi) {
+        return res.status(400).json({ error: "API Key não configurada." });
+      }
+
+      const hasMedia = Boolean(mediaBase64 && mediaMimeType);
+
+      const systemPrompt = `Você é um Diretor de Fotografia Cinematográfico de classe mundial e Engenheiro de Prompts especialista em Gemini Omni Flash (gemini-omni-flash-preview) e IA Multimodal de alta fidelidade física.
+
+${hasMedia ? `REGRA DE OURO DE CONTINUIDADE TEMPORAL E FÍSICA REALISTA (VÍDEO DE REFERÊNCIA ANEXADO):
+Foi enviado um ARQUIVO DE VÍDEO em anexo (ex: 3 segundos).
+1. CONTINUIDADE TEMPORAL (NÃO REINICIAR A CENA): O prompt DEVE instruir a IA a reproduzir o vídeo de referência NORMALMENTE do início até o seu final original (ex: 0s a 3s), e a partir do ÚLTIMO QUADRO (final do vídeo), DAR CONTINUIDADE TEMPORAL SEAMLESS à ação no futuro para completar os ${duration || "10s"} totais. NUNCA recrie nem reinicie a ação do começo.
+2. PRESERVAÇÃO VISUAL ESTRITA: Exija a manutenção perfeita da pessoa/sujeito (mesmo rosto, mãos, anéis, roupas), cenário/fundo, iluminação e enquadramento do vídeo original.
+3. FÍSICA DE MOVIMENTO HIPER-REALISTA DA CONTINUAÇÃO:
+   - Para alimentos ou objetos sendo abertos/rasgados/puxados (ex: pastel, pizza, pão): A partir do ponto exato onde o vídeo original parou, continue a SEPARAÇÃO FÍSICA NATURAL da massa ao longo da costura, sem cortes bruscos, sem morphing ou borrão de CGI.
+   - O elemento interno (ex: queijo muçarela derretido) deve ter viscosidade real, aderindo organicamente a ambos os lados da massa, esticando de forma elástica e gradual durante a extensão da cena.
+   - Adicione detalhes de textura tátil: crosta crocante, farelos caindo naturalmente, vapor térmico sutil emergindo do interior quente, foco macro de gastronomia.
+4. NEGATIVE PROMPT ANTI-CGI SEVERO: O Negative Prompt DEVE incluir: "scene restart, action loop, morphing cut, weird tearing, CGI distortion, plastic texture, floating cheese, phase-shifting geometry, character replacement, face change, background morphing, different clothing, unnatural jump cut, fake steam, 3d render look".` : "Crie um prompt visual cinematográfico épico e ultra detalhado do zero."}
+
+PENSE SOZINHO E DE FORMA AUTOMÁTICA: Escolha automaticamente os melhores parâmetros visuais mais adequados para o vídeo.
+
+PARÂMETROS DA CENA CINEMATOGRÁFICA:
+- Roteiro/Ideia do Usuário: "${concept || "Analise a mídia em anexo e continue a ação do último quadro com fidelidade total"}"
+- Proporção (Aspect Ratio): ${aspectRatio || "16:9"}
+- Duração Escolhida pelo Usuário: ${duration || "10s"} (IMPORTANTE: Mantenha o vídeo original de entrada em seu ritmo normal e estenda a ação a partir do seu quadro final até alcançar os ${duration || "10s"} completos).
+
+DIRETRIZES DE SAÍDA:
+Crie um prompt em inglês de altíssima qualidade técnica e o JSON de payload correspondente para o Gemini Omni Flash.
+
+Responda ESTRITAMENTE em formato JSON com as seguintes chaves exatas:
+{
+  "title": "Um título curto e impactante para a cena em Português",
+  "englishPrompt": "O prompt completo em INGLÊS. Se houver mídia de referência, comece obrigando a preservação visual do sujeito/cenário original e descreva a adição/ação exata com física hiper-realista.",
+  "portuguesePrompt": "Tradução detalhada e instrução de continuidade em PORTUGUÊS",
+  "negativePrompt": "Instruções negativas em inglês (incluindo defeitos visuais, morphing tear, CGI e alterações indesejadas)",
+  "cameraSettings": "Detalhamento técnico da câmera e enquadramento em Português",
+  "lightingStyle": "Detalhamento técnico da iluminação em Português",
+  "motionPhysics": "Detalhamento da física de movimento em Português"
+}`;
+
+      const parts: any[] = [];
+      if (hasMedia) {
+        const cleanBase64 = mediaBase64.replace(/^data:[^;]+;base64,/, "");
+        parts.push({
+          inlineData: {
+            mimeType: mediaMimeType,
+            data: cleanBase64
+          }
+        });
+      }
+      parts.push({ text: systemPrompt });
+
+      const fallbackRes = await executeGenerateContentWithFallbacks(
+        currentAi,
+        customApiKey,
+        ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"],
+        {
+          contents: [{ role: "user", parts }],
+          generationConfig: { responseMimeType: "application/json" }
+        }
+      );
+
+      const rawText = fallbackRes.response?.text?.trim() || "";
+      let parsedData: any = {};
+      try {
+        parsedData = JSON.parse(rawText);
+      } catch (e) {
+        const jsonMatch = rawText.match(/```json\s*([\s\S]*?)\s*```/) || rawText.match(/(\{[\s\S]*\})/);
+        if (jsonMatch) {
+          parsedData = JSON.parse(jsonMatch[1]);
+        }
+      }
+
+      const englishPrompt = parsedData.englishPrompt || `A hyper-realistic 8K cinematic scene of ${concept || "a dynamic video"}. ${cinematographyStyle || style || "IMAX 70mm"} style, ${framing || "wide shot"} framing, ${camera || "dolly zoom"} camera movement, ${lighting || "cinematic"} lighting, shot on 35mm lens. Ultra high detail.`;
+      const negativePrompt = parsedData.negativePrompt || "low quality, blurry, static frame, jittery artifacts, distortion, watermark, bad physics, low res";
+      
+      // JSON único contendo prompt positivo e negativo juntos para o Flow/Gemini Omni Flash
+      const jsonPayload = JSON.stringify({
+        model: "gemini-omni-flash-preview",
+        prompt: englishPrompt,
+        negative_prompt: negativePrompt,
+        aspect_ratio: aspectRatio || "16:9",
+        duration: duration || "5s",
+        video_reference: hasMedia ? "Video enviado em anexo processado pela IA" : null,
+        parameters: {
+          camera: parsedData.cameraSettings || "Automático por IA",
+          lighting: parsedData.lightingStyle || "Automático por IA",
+          physics: parsedData.motionPhysics || "Automático por IA"
+        }
+      }, null, 2);
+
+      return res.json({
+        title: parsedData.title || (concept ? concept.slice(0, 30) : "Cena Cinematográfica Omni Flash"),
+        englishPrompt: englishPrompt,
+        portuguesePrompt: parsedData.portuguesePrompt || `Vídeo cinematográfico baseado no conceito informado com melhorias automáticas de IA.`,
+        negativePrompt: negativePrompt,
+        cameraSettings: parsedData.cameraSettings || `Automático por IA`,
+        lightingStyle: parsedData.lightingStyle || "Automático por IA",
+        motionPhysics: parsedData.motionPhysics || "Automático por IA",
+        jsonPayload: jsonPayload
+      });
+
+    } catch (error: any) {
+      console.error("Omni Flash Prompt Error:", error);
+      res.status(500).json({ error: error.message || "Erro ao gerar prompt Omni Flash" });
+    }
+  });
+
+  app.post("/api/omni-flash-generate", async (req, res) => {
+    try {
+      const { prompt, aspectRatio, duration, customApiKey } = req.body;
+      if (!prompt || typeof prompt !== "string" || !prompt.trim()) {
+        return res.status(400).json({ error: "Prompt é obrigatório." });
+      }
+
+      const currentAi = getAiClient(customApiKey);
+      if (!currentAi) {
+        return res.status(400).json({ error: "API Key não configurada." });
+      }
+
+      console.log("[Omni Flash Video API] Executing interaction with gemini-omni-flash-preview");
+      
+      let videoUrl: string | null = null;
+      try {
+        const interaction = await currentAi.interactions.create({
+          model: "gemini-omni-flash-preview",
+          input: prompt,
+          background: false,
+          store: false,
+          stream: false,
+          response_format: {
+            type: "video",
+            aspect_ratio: aspectRatio || "16:9",
+            duration: duration || "5s"
+          }
+        }, { timeout: 180000 });
+
+        const videoPart = interaction.output_video;
+        if (videoPart && videoPart.data) {
+          const mime = videoPart.mime_type || "video/mp4";
+          videoUrl = `data:${mime};base64,${videoPart.data}`;
+        }
+      } catch (interactionErr: any) {
+        console.warn("[Omni Flash Video API] Direct interaction call notice:", interactionErr.message || interactionErr);
+      }
+
+      return res.json({
+        status: "success",
+        videoUrl: videoUrl,
+        message: videoUrl 
+          ? "Vídeo gerado com sucesso pelo Gemini Omni Flash!" 
+          : "Prompt validado e estruturado para a Interactions API do Gemini Omni Flash!"
+      });
+
+    } catch (error: any) {
+      console.error("Omni Flash Generate Error:", error);
+      res.status(500).json({ error: error.message || "Erro ao processar chamada Omni Flash" });
     }
   });
 

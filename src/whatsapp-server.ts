@@ -218,7 +218,7 @@ Escreva a resposta final estritamente no formato JSON, sem marcações markdown 
   }
 
   const response = await ai.models.generateContent({
-    model: "gemini-3.6-flash",
+    model: "gemini-3.1-pro-preview",
     config: {
       responseMimeType: "application/json",
     },

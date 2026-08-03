@@ -23,6 +23,7 @@
     "duckduckgo-images-api": "^1.0.5",
     "express": "^4.18.2",
     "g-i-s": "^2.1.7",
+    "google-auth-library": "^11.0.0",
     "googlethis": "^1.8.0",
     "html2canvas": "^1.4.1",
     "idb-keyval": "^6.3.0",
@@ -37,6 +38,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
     "sharp": "^0.35.3",
     "upscaler": "^1.0.0",
     "zustand": "^4.5.2"

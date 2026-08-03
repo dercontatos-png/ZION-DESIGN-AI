@@ -95,13 +95,14 @@ export interface GcScanData {
 export function updateXamlWithState(xamlString: string, data: GcScanData): string {
   if (!xamlString) return "";
   try {
+    const repaired = repairXamlXml(xamlString);
     const parser = new DOMParser();
-    const doc = parser.parseFromString(xamlString, "application/xml");
+    const doc = parser.parseFromString(repaired, "application/xml");
     
     // Check for parse error
     const parserError = doc.querySelector("parsererror");
     if (parserError) {
-      return xamlString;
+      throw new Error(`XAML Parse Error: ${parserError.textContent || "Invalid XML"}`);
     }
 
     const findNodeByName = (name: string, tagNames?: string[]): Element | null => {
@@ -620,6 +621,26 @@ export function sanitizeFontFamily(family: string): string {
   return "Arial";
 }
 
+export function repairXamlXml(xaml: string): string {
+  if (!xaml) return "";
+  let repaired = xaml.trim();
+
+  // Strip leading/trailing non-XML garbage if any (e.g. LLM introductory text)
+  const firstCanvasIdx = repaired.indexOf("<Canvas");
+  if (firstCanvasIdx !== -1) {
+    repaired = repaired.substring(firstCanvasIdx);
+  }
+  const lastCanvasIdx = repaired.lastIndexOf("</Canvas>");
+  if (lastCanvasIdx !== -1) {
+    repaired = repaired.substring(0, lastCanvasIdx + 9);
+  }
+
+  // 1. Repair unescaped ampersands: match '&' not followed by an XML entity and a semicolon
+  repaired = repaired.replace(/&(?!(amp|lt|gt|quot|apos|#[0-9]+|#x[0-9a-fA-F]+);)/g, "&amp;");
+
+  return repaired;
+}
+
 export function sanitizeXaml(xaml: string): string {
   if (!xaml) return "";
   let clean = xaml.trim();
@@ -662,6 +683,29 @@ export function sanitizeXaml(xaml: string): string {
   clean = clean.replace(/\s*(?:[a-zA-Z0-9_:]+\.)?FontFamily\s*=\s*"([^"]*)"/gi, (_, fontVal) => {
     const safeFont = sanitizeFontFamily(fontVal);
     return ` FontFamily="${safeFont}"`;
+  });
+
+  // 9. Sanitize x:Name and Name attributes to be fully WPF-compliant variable names
+  // (alphanumeric and underscores only, must start with a letter/underscore)
+  clean = clean.replace(/\s*(?:x:)?Name\s*=\s*"([^"]*)"/gi, (match, nameVal) => {
+    // Keep only letters, digits, and underscores
+    let safeName = nameVal.replace(/[^a-zA-Z0-9_]/g, "");
+    // Ensure it starts with a letter or underscore
+    if (safeName && /^[0-9]/.test(safeName)) {
+      safeName = "n" + safeName;
+    }
+    if (!safeName) {
+      safeName = "Element_" + Math.floor(Math.random() * 10000);
+    }
+    const isXName = match.toLowerCase().includes("x:name");
+    return ` ${isXName ? 'x:Name' : 'Name'}="${safeName}"`;
+  });
+
+  // 10. Strip 'px' or '%' units from standard WPF numeric attributes
+  const attrsWithNumbers = ["Width", "Height", "Canvas\\.Left", "Canvas\\.Top", "FontSize", "CornerRadius", "RadiusX", "RadiusY", "StrokeThickness"];
+  attrsWithNumbers.forEach(attr => {
+    const regex = new RegExp(`\\s*(?:[a-zA-Z0-9_:]+\\.)?${attr}\\s*=\\s*"([0-9.]+)\\s*(?:px|%)"`, "gi");
+    clean = clean.replace(regex, ` ${attr}="$1"`);
   });
 
   return clean;
@@ -826,7 +870,11 @@ export function wpfToGtXml(wpfXaml: string): string {
 
 export function generateVmixXamlCode(data: GcScanData): string {
   if (data.generatedXaml) {
-    return sanitizeXaml(updateXamlWithState(data.generatedXaml, data));
+    try {
+      return sanitizeXaml(updateXamlWithState(data.generatedXaml, data));
+    } catch (e) {
+      console.warn("Failed to generate XAML from generatedXaml, falling back to local template:", e);
+    }
   }
 
   // Convert hex color to WPF ARGB format (e.g. #0284c7 -> #FF0284C7)

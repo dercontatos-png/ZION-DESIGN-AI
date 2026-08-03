@@ -1,12 +1,98 @@
 const fs = require('fs');
-let code = fs.readFileSync('server.ts', 'utf8');
+let content = fs.readFileSync('server.ts', 'utf8');
 
-code = code.replace(/const logoInclusionRule =.*?(?=const instructionPrompt)/s, `const logoInclusionRule = logoBase64 ? \`\\n5. BRAND LOGO EMBEDDING (CRITICAL): You MUST look for the brand logo region in the reference. You MUST COMPLETELY ERASE any generic logo present in the reference flyer. You MUST command the generator to DRAW, PAINT, and BAKE the client's provided brand logo ("Referência de Logotipo") directly into the image canvas. The logo must be perfectly integrated into the design. You are strictly forbidden from cutting, cropping, warping, deforming, or omitting any part of the logo. Replicate all elements, letters, shapes, symbols, and emblems of the logo with 100% exact fidelity.\` : "";
-        const logoCompositionRule = logoBase64 ? \`\\n10. FULL COMPOSITION WITH HIGH-FIDELITY EMBEDDED TYPOGRAPHY AND LOGOS (CRITICAL): Do NOT generate just a blank background. You MUST generate the complete graphic composition, including all layouts, panel cards, curved borders, divided sections, background textures, lighting setups, and the beautifully stylized subject photo, WITH all text layers and the client's original brand logo ("Referência de Logotipo") professionally rendered, printed, and embedded directly inside their corresponding visual sectors as beautiful, crisp, un-deformed elements, preserving the logo's original symbols, texts, and exact branding with 100% fidelity.\` : "";
-        const logoPromptRule = logoBase64 ? \`\\n5. Text & Logo Integration: Explicitly instruct the generator to analyze and replicate the provided brand logo ("Referência de Logotipo") with 100% exact fidelity. Direct the generator to print, draw, and bake this logo directly on the card canvas, replacing any old logo from the reference. Also instruct it to ONLY use the text provided in the prompt, replacing any text from the reference.\` : "";
-        const logoPrintRule = logoBase64 ? \`\\n9. EXACT TEXT & LOGO REPLACEMENT: Explicitly instruct the generator to NEVER copy text or logos from the Design Reference. It must print all specified titles, social handles, event details, and the brand logo reference directly on the flyer, ensuring old text/logos from the reference are completely erased and replaced by the new ones requested.\` : "";
-        const logoSysInstructionRule = logoBase64 ? \`\\n5. Logo & Text Replacement: Instruct the generator to completely ignore any text, names, handles, or brand logos found in the background design reference. It must use ONLY the client's provided "Referência de Logotipo" and the explicitly requested text, drawing and printing them directly on the card canvas with 100% complete exactness.\` : "";
-        const logoEmbeddedRule = logoBase64 ? \`\\n9. STRICT TYPOGRAPHY & LOGO REPLACEMENT RULE: Dictate that the image generator MUST NOT hallucinate or copy old text/logos. It MUST print, write, embed, and render ONLY the provided texts, titles, words, acronyms, letters, numbers, and the provided brand logo ("Referência de Logotipo") directly onto the image canvas.\` : "";
-        `);
+const startStr = `                  const audioPart = step.model_output.parts.find((part: any) => part.type === 'audio' || part.inline_data || (part.inlin`;
+const endStr = `          } catch (candErr: any) {`;
 
-fs.writeFileSync('server.ts', code);
+const targetStart = content.indexOf(startStr);
+const targetEnd = content.indexOf(endStr, targetStart);
+
+if (targetStart === -1 || targetEnd === -1) {
+    console.log("NOT FOUND");
+    process.exit(1);
+}
+
+const newContent = `                  const audioPart = step.model_output.parts.find((part: any) => part.type === 'audio' || part.inline_data || (part.inlineData && part.inlineData.data));
+                  if (audioPart) {
+                    const rawData = audioPart.inline_data ? audioPart.inline_data.data : (audioPart.inlineData ? audioPart.inlineData.data : audioPart.data);
+                    if (rawData) {
+                       audioBase64 = rawData;
+                       if (audioPart.mime_type || audioPart.mimeType) {
+                           mimeType = audioPart.mime_type || audioPart.mimeType;
+                       }
+                       lyriaSuccess = true;
+                       break;
+                    }
+                  }
+                }
+              }
+              if (lyriaSuccess) {
+                  console.log(\`[Lyria API] Success via Interactions API for model \${currentModel}! Output audio length: \${audioBase64.length}\`);
+                  break;
+              }
+            } catch (err: any) {
+              console.warn(\`[Lyria API] Direct Interactions API failed for \${currentModel}:\`, err.message);
+              lastLyriaErr = err.message;
+            }
+        }
+
+        if (lyriaSuccess) break;
+
+        for (const cand of lyriaCandidatesToTry) {
+          try {
+            console.log(\`[Lyria API] Invoking model \${currentModel} via generateContentStream on candidate '\${cand.name}'...\`);
+            
+            try {
+              const audioBase64_arr: Buffer[] = [];
+              const lyriaStream = await cand.instance.models.generateContentStream({
+                model: currentModel,
+                contents: lyriaContentsParts
+              });
+
+              for await (const chunk of lyriaStream) {
+                const parts = chunk.candidates?.[0]?.content?.parts;
+                if (!parts) continue;
+
+                for (const part of parts) {
+                  if (part.inlineData?.data) {
+                    if (!mimeType || mimeType === "audio/wav") {
+                      mimeType = part.inlineData.mimeType || "audio/wav";
+                    }
+                    audioBase64_arr.push(Buffer.from(part.inlineData.data, "base64"));
+                  }
+                  if (part.text && !lyrics) {
+                    lyrics = part.text;
+                  }
+                }
+              }
+              if (audioBase64_arr.length > 0) audioBase64 = Buffer.concat(audioBase64_arr).toString("base64");
+            } catch (streamErr: any) {
+              console.warn(\`[Lyria Stream Error on \${cand.name}]:\`, streamErr?.message || streamErr, "- Trying generateContent direct...");
+                
+              const audioBase64_arr2: Buffer[] = [];
+              const lyriaDirect = await cand.instance.models.generateContent({
+                model: currentModel,
+                contents: lyriaContentsParts
+              });
+
+              const parts = lyriaDirect.candidates?.[0]?.content?.parts || [];
+              for (const part of parts) {
+                if (part.inlineData?.data) {
+                  audioBase64_arr2.push(Buffer.from(part.inlineData.data, "base64"));
+                  if (part.inlineData.mimeType) mimeType = part.inlineData.mimeType;
+                }
+                if (part.text && !lyrics) lyrics = part.text;
+              }
+              if (audioBase64_arr2.length > 0) audioBase64 = Buffer.concat(audioBase64_arr2).toString("base64");
+            }
+
+            if (audioBase64 && audioBase64.length > 100) {
+              lyriaSuccess = true;
+              console.log(\`[Lyria API] Success on '\${cand.name}' with model \${currentModel}! Output audio length: \${audioBase64.length}\`);
+              break;
+            }
+`;
+
+content = content.substring(0, targetStart) + newContent + content.substring(targetEnd);
+fs.writeFileSync('server.ts', content);
+console.log("Replaced!");

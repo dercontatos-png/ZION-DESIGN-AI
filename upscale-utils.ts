@@ -27,15 +27,10 @@ export async function applyUpscaleAndRefinement(base64Image: string, targetSize:
     return base64Image;
   }
 
-  // Sharp process:
-  // 1. Resize using lanczos3 (high quality interpolation)
-  // 2. mild median filter to remove color bugs / pixelation
-  // 3. sharpen to bring back details (simulating RealESRGAN detail recovery)
-  
+  // Sharp process: high quality Lanczos3 resize with clean, non-destructive sharpening
   const processedBuffer = await sharp(buffer)
     .resize({ width: targetWidth, kernel: sharp.kernel.lanczos3 })
-    .median(3) // removes pixel artifacts and color noise
-    .sharpen({ sigma: 1.5, m1: 1.2, m2: 0.8, x1: 2.0, y2: 10.0, y3: 20.0 }) // strong unsharp mask for details
+    .sharpen({ sigma: 0.8 }) // clean, subtle sharpening preserving text and edges
     .toBuffer();
 
   return `data:${mimeType};base64,${processedBuffer.toString("base64")}`;

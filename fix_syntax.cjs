@@ -1,20 +1,22 @@
 const fs = require('fs');
+let code = fs.readFileSync('server.ts', 'utf8');
 
-let code = fs.readFileSync('src/components/DesignBuilder.tsx', 'utf-8');
+const oldCode = `        if (out.type === "text" && out.text) {
+          // It could be lyrics or description, append both or just lyrics
+          lyrics += out.text + "\\n\\n";
+        }
+      }
+      }
 
-// I'll extract everything up to `endMarker`, then append the closing divs.
-const em = code.indexOf('{/* 9. MODAL GRANDE DE PREVIEW DE ESTILO VISUAL */}');
-const beforeEm = code.substring(0, em);
+      res.json({ audioBase64, lyrics, mimeType });`;
 
-// Let's count open divs in `beforeEm`
-const startReturn = code.indexOf('return (');
-const jsxChunk = beforeEm.substring(startReturn);
+const newCode = `        if (out.type === "text" && out.text) {
+          // It could be lyrics or description, append both or just lyrics
+          lyrics += out.text + "\\n\\n";
+        }
+      }
 
-let depth = 0;
-for (let i = 0; i < jsxChunk.length; i++) {
-   if (jsxChunk.startsWith('<div', i)) depth++;
-   if (jsxChunk.startsWith('</div', i)) depth--;
-}
-console.log("Unclosed divs before Modal:", depth);
+      res.json({ audioBase64, lyrics, mimeType });`;
 
-// I'll just write a script that auto-closes all open divs!
+code = code.replace(oldCode, newCode);
+fs.writeFileSync('server.ts', code);

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion } from "motion/react";
-import { Search, Filter, Play, Zap, FileText, Layout, PenTool, Image as ImageIcon, Code, MessageSquare, BrainCircuit, BarChart3 } from "lucide-react";
+import { Search, Filter, Play, Zap, FileText, Layout, PenTool, Image as ImageIcon, Code, MessageSquare, BrainCircuit, BarChart3, Music, Volume2, Mic, Sliders } from "lucide-react";
 import { useProjectStore } from "../store/useProjectStore";
 
 const getIcon = (id: string, category: string) => {
@@ -8,6 +8,7 @@ const getIcon = (id: string, category: string) => {
     case "Copy": return <PenTool size={24} />;
     case "Design": return <ImageIcon size={24} />;
     case "Layout": return <Layout size={24} />;
+    case "Áudio": return <Music size={24} />;
     default: return <Zap size={24} />;
   }
 };
@@ -16,14 +17,14 @@ export const Agentes: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState("Todas ferramentas");
   const { setChatActiveAssistantId, setChatDrawerOpen } = useProjectStore();
 
-  const filters = ["Todas ferramentas", "Copy", "Layout", "Design"];
+  const filters = ["Todas ferramentas", "Copy", "Layout", "Design", "Áudio"];
 
   const agents = [
     { id: "analise-estrategica", title: "Análise Estratégica", description: "Investigue seu lead a fundo, descubra dores reais e entre com vantagem estratégica.", category: "Copy" },
     { id: "icp", title: "ICP e Posicionamento", description: "Fortaleça seu posicionamento, transmita autoridade e atraia clientes prontos para comprar.", category: "Copy" },
     { id: "atendimento", title: "Atendimento e Negociação", description: "Feche mais projetos com conversas estratégicas que geram confiança e conduzem ao sim.", category: "Copy" },
-    { id: "copy-builder-carrossel", title: "Copy Builder [Carrossel]", description: "Crie carrosséis N3 que prendem, aprofundam a consciência e transformam atenção em ação.", category: "Copy" },
-    { id: "copy-builder-ads", title: "Copy Builder [Ads]", description: "Crie anúncios estáticos que param o scroll, ativam dor e puxam o clique.", category: "Copy" },
+    { id: "copy-carroseis", title: "Copy Builder [Carrossel]", description: "Crie carrosséis N3 que prendem, aprofundam a consciência e transformam atenção em ação.", category: "Copy" },
+    { id: "copy-ads", title: "Copy Builder [Ads]", description: "Crie anúncios estáticos que param o scroll, ativam dor e puxam o clique.", category: "Copy" },
     { id: "webson-vendedor", title: "Webson Vendedor", description: "Envie sua mensagem ou histórico da conversa que eu vou te ajudar a fechar a venda.", category: "Copy" },
     { id: "estrutura-sites", title: "Estrutura Sites [IA]", description: "Esse agente entende o seu briefing e cria a estrutura do site como um mestre.", category: "Layout" },
     { id: "easy-copy", title: "Easy Copy", description: "Crie copys de alta conversão para sites/lps de qualquer nicho com alta qualidade.", category: "Copy" },
@@ -31,6 +32,11 @@ export const Agentes: React.FC = () => {
     { id: "easy-image", title: "Easy Image", description: "Gere imagens e extraia prompts com uma maior nível de detalhes e assertividade.", category: "Design" },
     { id: "easy-coder", title: "Easy Coder", description: "Crie e faça alteração nos códigos dos seus projetos de maneira fácil e otimizada.", category: "Layout" },
     { id: "analisador-paginas", title: "Analisador de Páginas", description: "Receba opiniões profissionais de uma IA treinada pra extrair seu melhor.", category: "Layout" },
+    { id: "engenheiro-som", title: "Engenheiro de Som (SFX)", description: "Gere efeitos sonoros imersivos, foleys realistas e ambiências com máxima definição.", category: "Áudio" },
+    { id: "diretor-musical", title: "Diretor Musical (Lyria)", description: "Produza trilhas cinematográficas, comerciais ou instrumentais com foco em progressão e emoção.", category: "Áudio" },
+    { id: "locucao-tts", title: "Especialista em Voz / Locução & TTS", description: "Configure parâmetros de locução, narração corporativa e suporte a 32 idiomas.", category: "Áudio" },
+    { id: "produtor-vinhetas", title: "Produtor de Vinhetas & Jingles", description: "Crie vinhetas marcantes de 15 a 30s para rádio, TV, podcasts e aberturas.", category: "Áudio" },
+    { id: "diretor-video-omni", title: "Diretor de Vídeo (Omni Flash)", description: "Crie comandos cinematográficos, movimentos de câmera e iluminação otimizados para o Gemini Omni Flash.", category: "Design" },
     { id: "deep-work", title: "Deep Work", description: "Playlist para você trabalhar para aumentar sua produtividade e criatividade.", category: "Layout" }
   ];
 

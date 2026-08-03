@@ -1,33 +1,93 @@
 const fs = require('fs');
-let code = fs.readFileSync('src/App.tsx', 'utf-8');
+let code = fs.readFileSync('src/App.tsx', 'utf8');
 
-if (!code.includes('import Agentes from "./components/Agentes";')) {
-  code = code.replace(
-    'import DesignBuilder from "./components/DesignBuilder";',
-    'import DesignBuilder from "./components/DesignBuilder";\nimport Agentes from "./components/Agentes";'
-  );
-}
+// Import
+code = code.replace(
+  'import PhotoEditor from "./components/PhotoEditor";',
+  'import PhotoEditor from "./components/PhotoEditor";\nimport AudioStudio from "./components/AudioStudio";'
+);
 
-if (!code.includes('<SidebarItemMini icon={<Layers size={20} />} active={activeTab === "agents"} onClick={() => setActiveTab("agents")} tooltip="Agentes" />')) {
-  code = code.replace(
-    '<SidebarItemMini icon={<Sparkles size={20} />} active={activeTab === "ai-tools"} onClick={() => { setActiveTab("ai-tools"); setActiveAiTab("image"); }} tooltip="Criar" />',
-    '<SidebarItemMini icon={<Layers size={20} />} active={activeTab === "agents"} onClick={() => setActiveTab("agents")} tooltip="Agentes" />\n            <SidebarItemMini icon={<Sparkles size={20} />} active={activeTab === "ai-tools"} onClick={() => { setActiveTab("ai-tools"); setActiveAiTab("image"); }} tooltip="Criar" />'
-  );
-}
+// Sidebar icon
+const sidebarAudio = `              <SidebarItem
+                icon={<Tv size={18} />}
+                label="GC TV / Tarjas"
+                active={activeTab === "gc-tv"}
+                onClick={() => {
+                  setActiveTab("gc-tv");
+                  setIsMobileSidebarOpen(false);
+                }}
+              />
+              <SidebarItem
+                icon={<Music size={18} />}
+                label="Áudio & Efeitos"
+                active={activeTab === "audio"}
+                onClick={() => {
+                  setActiveTab("audio");
+                  setIsMobileSidebarOpen(false);
+                }}
+              />`;
 
-if (!code.includes('active={activeTab === "agents"}')) {
-  // Mobile sidebar 
-  code = code.replace(
-    '<SidebarItem icon={<Sparkles size={20} />} label="Criar" active={activeTab === "ai-tools"} onClick={() => { setActiveTab("ai-tools"); setActiveAiTab("image"); setIsMobileMenuOpen(false); }} />',
-    '<SidebarItem icon={<Layers size={20} />} label="Agentes" active={activeTab === "agents"} onClick={() => { setActiveTab("agents"); setIsMobileMenuOpen(false); }} />\n                <SidebarItem icon={<Sparkles size={20} />} label="Criar" active={activeTab === "ai-tools"} onClick={() => { setActiveTab("ai-tools"); setActiveAiTab("image"); setIsMobileMenuOpen(false); }} />'
-  );
-}
+code = code.replace(
+  `              <SidebarItem
+                icon={<Tv size={18} />}
+                label="GC TV / Tarjas"
+                active={activeTab === "gc-tv"}
+                onClick={() => {
+                  setActiveTab("gc-tv");
+                  setIsMobileSidebarOpen(false);
+                }}
+              />`,
+  sidebarAudio
+);
 
-if (!code.includes('activeTab === "agents" && (')) {
-  code = code.replace(
-    '{activeTab === "ai-tools" && (',
-    '{activeTab === "agents" && (\n            <Agentes />\n          )}\n\n          {activeTab === "ai-tools" && ('
-  );
-}
+const miniSidebarAudio = `                  <SidebarItemMini
+                    icon={<Tv size={20} />}
+                    active={activeTab === "gc-tv"}
+                    onClick={() => setActiveTab("gc-tv")}
+                    tooltip="GC TV / Tarjas"
+                  />
+                  <SidebarItemMini
+                    icon={<Music size={20} />}
+                    active={activeTab === "audio"}
+                    onClick={() => setActiveTab("audio")}
+                    tooltip="Áudio & Efeitos"
+                  />`;
+
+code = code.replace(
+  `                  <SidebarItemMini
+                    icon={<Tv size={20} />}
+                    active={activeTab === "gc-tv"}
+                    onClick={() => setActiveTab("gc-tv")}
+                    tooltip="GC TV / Tarjas"
+                  />`,
+  miniSidebarAudio
+);
+
+// Add missing icon import
+code = code.replace(
+  'Tv,',
+  'Tv, Music,'
+);
+
+// Route render
+const tabRender = `          {activeTab === "photo-editor" && (
+            <PhotoEditor />
+          )}
+          {activeTab === "audio" && (
+            <AudioStudio />
+          )}`;
+
+code = code.replace(
+  `          {activeTab === "photo-editor" && (
+            <PhotoEditor />
+          )}`,
+  tabRender
+);
+
+// Fix flex container classes
+code = code.replace(
+  'activeTab === "ai-tools" || activeTab === "roteiros" || activeTab === "photo-editor" ?',
+  'activeTab === "ai-tools" || activeTab === "roteiros" || activeTab === "photo-editor" || activeTab === "audio" ?'
+);
 
 fs.writeFileSync('src/App.tsx', code);

@@ -682,7 +682,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
                   onClick={() => setPlatform("instagram")}
                   className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-all ${
                     platform === "instagram"
-                    ? "bg-gradient-to-br from-purple-950/20 via-[#ad8330]/10 to-[#ad8330]/15 border-[#ad8330] text-[#ad8330]"
+                    ? "bg-gradient-to-br from-[#c5a880]/20 via-[#ad8330]/10 to-[#ad8330]/15 border-[#ad8330] text-[#ad8330]"
                     : "bg-black/50 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200"
                   }`}
                 >
@@ -928,14 +928,14 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
 
                 {/* Gemini Vision Diagnostics */}
                 {metadata.detectedIssues && metadata.detectedIssues.length > 0 && (
-                  <div className="mb-2 p-2 bg-purple-950/20 border border-purple-500/30 rounded-lg space-y-1">
-                    <span className="text-[8px] font-black text-purple-400 uppercase tracking-wider block">Diagnóstico Gemini Vision</span>
+                  <div className="mb-2 p-2 bg-[#c5a880]/20 border border-[#c5a880]/30 rounded-lg space-y-1">
+                    <span className="text-[8px] font-black text-[#c5a880] uppercase tracking-wider block">Diagnóstico Gemini Vision</span>
                     <div className="space-y-1 max-h-[80px] overflow-y-auto">
                       {metadata.detectedIssues.map((issue: any, idx: number) => (
                         <div key={idx} className="flex items-start gap-1 text-[8px] text-zinc-300 font-medium">
-                          <span className="inline-block w-1 h-1 rounded-full bg-purple-400 mt-1 flex-shrink-0" />
+                          <span className="inline-block w-1 h-1 rounded-full bg-[#c5a880] mt-1 flex-shrink-0" />
                           <span>
-                            <strong className="text-purple-300 uppercase">{issue.label}</strong>: {issue.desc} (Corrigido Localmente)
+                            <strong className="text-[#c5a880] uppercase">{issue.label}</strong>: {issue.desc} (Corrigido Localmente)
                           </span>
                         </div>
                       ))}

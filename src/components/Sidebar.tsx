@@ -195,7 +195,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           { name: "Copiloto da Agência", active: activeMenuTab === "Copiloto da Agência" },
           { name: "Inspiração", active: activeMenuTab === "Inspiração" },
           { name: "Comunidade", active: activeMenuTab === "Comunidade" },
-          { name: "Minha Galeria", active: activeMenuTab === "Minha Galeria" }
+          { name: "Minha Galeria", active: activeMenuTab === "Minha Galeria" },
         ].map(tab => (
           <button
             key={tab.name}

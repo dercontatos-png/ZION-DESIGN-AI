@@ -263,48 +263,28 @@ export const CopilotoAgencia: React.FC<CopilotoAgenciaProps> = ({
 
     try {
       const apiKey = getEffectiveApiKey();
-      if (!apiKey) {
-        throw new Error("Chave de API do Gemini não configurada. Configure em Perfil/Configurações.");
-      }
 
-      const ai = new GoogleGenAI({ apiKey });
-      const systemInstruction = `Você é o "Copiloto Estratégico de Agência de Marketing". Sua função é ajudar o dono da agência a prospectar, vender, onboardar, executar, otimizar e renovar contratos de marketing digital para seus clientes.
-
-Princípios fundamentais que você DEVE incorporar:
-1. Etapas da Agência:
-   - 1. Prospecção e Vendas (Atração, Abordagem, Reunião de Diagnóstico, Proposta Comercial, Fechamento).
-   - 2. Onboarding e Planejamento (Briefing, Acessos, Alinhamento de KPIs).
-   - 3. Execução e Produção (Criativos no Zion, Copywriting, Subida de campanhas).
-   - 4. Otimização e Monitoramento (Testes A/B, Ajuste de CTR, CPL, CPA, ROAS).
-   - 5. Relatórios e Renovação (Demostrativo de ROI, Upsell de serviços).
-
-2. Níveis de Consciência de Eugene Schwartz (Foco nos Níveis 3 e 4):
-   - Nível 3 (Consciente da Solução): O cliente sabe que precisa de tráfego/design/redes sociais para vender mais, mas não sabe qual parceiro escolher.
-   - Nível 4 (Consciente do Produto/Serviço): O cliente conhece os serviços da sua agência e precisa do impulso para fechar agora (propostas irrecusáveis, garantias, prova social, escopo claro).
-
-3. Tom de voz: Profissional, consultivo, pragmático, direto e orientado a resultados financeiros reais da agência.
-Forneça sempre exemplos práticos de scripts, modelos de mensagem para WhatsApp, listas de tópicos para reuniões e ideias concretas de conteúdo.`;
-
-      const contents = [
-        {
-          role: "user",
-          parts: [
-            {
-              text: `${systemInstruction}\n\nHistórico recente:\n${messages
-                .slice(-4)
-                .map((m) => `${m.sender === "user" ? "Usuário" : "Assistente"}: ${m.text}`)
-                .join("\n")}\n\nUsuário: ${text}`
-            }
-          ]
-        }
-      ];
-
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents
+      const res = await fetch("/api/chat-agentes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          assistantId: "copiloto-agencia",
+          message: text,
+          customApiKey: apiKey,
+          history: messages.slice(-6).map((m) => ({
+            role: m.sender === "user" ? "user" : "model",
+            content: m.text
+          }))
+        })
       });
 
-      const aiReply = response.text || "Desculpe, não consegui gerar a resposta.";
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || "Erro ao se comunicar com o servidor.");
+      }
+
+      const data = await res.json();
+      const aiReply = data.response || data.text || "Desculpe, não consegui gerar a resposta.";
 
       setMessages((prev) => [
         ...prev,
@@ -341,9 +321,6 @@ Forneça sempre exemplos práticos de scripts, modelos de mensagem para WhatsApp
     setIsAiFilling(true);
     try {
       const apiKey = getEffectiveApiKey();
-      if (!apiKey) throw new Error("Chave de API do Gemini não configurada.");
-
-      const ai = new GoogleGenAI({ apiKey });
       const prompt = `Você é um diretor comercial sênior de agência de marketing digital.
 Gere uma proposta comercial persuasiva para o seguinte cliente:
 - Cliente / Empresa: ${orcamento.clienteNome} (${orcamento.clienteEmpresa || "Empresa"})
@@ -358,14 +335,25 @@ Retorne um JSON estrito com o seguinte formato:
   "termosLegais": "Termos de contrato, propriedade intelectual dos arquivos e condições de rescisão amigável"
 }`;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        config: { responseMimeType: "application/json" },
-        contents: [{ role: "user", parts: [{ text: prompt }] }]
+      const res = await fetch("/api/chat-agentes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          assistantId: "copiloto-agencia",
+          message: prompt,
+          customApiKey: apiKey
+        })
       });
 
-      const resultText = response.text || "{}";
-      const data = JSON.parse(resultText);
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || "Erro ao se comunicar com o servidor.");
+      }
+
+      const resData = await res.json();
+      const resultText = resData.response || resData.text || "{}";
+      const cleaned = resultText.replace(/```json/g, "").replace(/```/g, "").trim();
+      const data = JSON.parse(cleaned);
 
       setOrcamento((prev) => ({
         ...prev,

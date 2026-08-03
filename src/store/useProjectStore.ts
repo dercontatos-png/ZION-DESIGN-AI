@@ -245,12 +245,13 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
 
   // Referências de estilo
   addReferenciaEstilo: (url, data, descricao = "") => {
-    const current = get().referenciasEstilo;
+    const current = get().referenciasEstilo || [];
+    const finalData = (typeof data === "string" && data.length > 500) ? data : (url || "");
     const finalDesc = descricao || (typeof data === "string" && data.length < 500 ? data : "");
     const newRef: EstiloReferencia = {
-      id: `ref_${Date.now()}`,
-      url,
-      data: typeof data === "string" && data.length < 500 ? "" : data,
+      id: `ref_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+      url: url || finalData,
+      data: finalData,
       descricao: finalDesc
     };
     get().updateConfig({ referenciasEstilo: [...current, newRef] });

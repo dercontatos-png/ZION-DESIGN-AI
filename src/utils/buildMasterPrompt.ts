@@ -52,12 +52,17 @@ export const buildMasterPrompt = (config: ProjectConfig): string => {
     promptParts.push("Focus: Background atmosphere, typography, atmospheric elements.");
   } else {
     const poseText = config.poseDescription?.trim() ? `, ${config.poseDescription.trim()}` : "";
-    promptParts.push(`Central subject${poseText}: The exact person/subject from 'Referência do Sujeito Principal'. Preserve 100% of the exact face, facial features, eyes, hair, skin tone, clothing, and visual identity of the subject provided in 'Referência do Sujeito Principal' without altering, redesigning, or recreating them into a different person or changing their appearance.`);
+    promptParts.push(`Central subject / People in Photo${poseText}: The exact person/people/subjects from the attached reference photo(s) ('Referência do Sujeito Principal' / 'Referência de Design/Layout'). ABSOLUTE CRITICAL FACIAL IDENTITY, INDIVIDUAL EXPRESSION & POSE PRESERVATION MANDATE: Preserve 100% of the EXACT faces, facial features, expressions, eyes, nose, mouth posture, individual smile state (do NOT force a smile or teeth on any individual with a closed-mouth or subtle expression), hair, skin tone, clothing, physical body poses, spatial ordering, and exact positions of ALL people/subjects in the reference photo. YOU ARE STRICTLY FORBIDDEN from altering, redesigning, changing facial features, changing individual facial expressions, swapping faces, recreating different individuals, changing poses, or moving people to different positions! Each person MUST maintain their exact individual facial expression and mouth appearance as shown in the reference photo.`);
   }
 
   // 5. SCENARIO / BACKGROUND ENVIRONMENT
+  const hasRefImage = !!(config.designRefBase64 || config.useEnvRef || config.cenarioBase64 || (config.designRefsList && config.designRefsList.length > 0) || (config.cenariosBase64List && config.cenariosBase64List.length > 0));
+
   if (isLogo) {
     promptParts.push("Background: Solid white, clean and minimalist.");
+  } else if (hasRefImage) {
+    const cenarioText = config.promptCenario?.trim() ? ` Additional background details: ${config.promptCenario.trim()}.` : "";
+    promptParts.push(`Background & Environment: STRICT ORIGINAL BACKGROUND & ROOM PRESERVATION MANDATE: Preserve 100% of the exact original background scene, room, walls, architecture, furniture, textures, and lighting from the attached reference photo ('Referência de Design/Layout' / 'Referência de Cenário'). Do NOT replace, change, redesign, or substitute the background with a new generated room, studio set, or different backdrop! Keep the exact same room, walls, and setting from the reference photo, applying ONLY the specific edits requested (such as erasing cast shadows from the wall/behind subjects, removing clutter/objects from tables, or adjusting exposure/blur).${cenarioText}`);
   } else if (config.promptCenario?.trim()) {
     promptParts.push(`Background: ${config.promptCenario.trim()}.`);
   } else {
@@ -96,14 +101,34 @@ Draw and embed the client's provided brand logo ("Referência de Logotipo") nati
 - FIDELITY & NO DUPLICATE TEXT: Replicate 100% of the original logo's shapes, symbols, numbers, typography, and original colors without inverting or distorting any details. Do NOT print the logo's name as a separate text layer or headline in typography.`);
   }
 
-  if (config.designRefBase64 || config.designRefsList?.length) {
-    promptParts.push("Layout: Replicate composition structure, spatial positioning, and layout grid from reference.");
+  if (config.designRefBase64 || config.designRefsList?.length || config.useEnvRef || config.cenarioBase64) {
+    promptParts.push("Layout & Reference Fidelity: Maintain 100% fidelity to the original photo's composition, background setting, room, furniture, spatial positioning, faces, and body poses of all subjects. Do NOT remove, erase, or replace the background environment. Do NOT alter facial features, do NOT change poses, and do NOT swap people's positions. Keep the exact same room/background setting and exact same people/poses from the reference photo.");
+    promptParts.push("LIGHTROOM PHOTO RETOUCHING & SHADOW ERASURE ENGINE: Completely erase and dissolve all harsh camera flash cast shadows on walls behind people, dark shadow outlines, and unwanted shadows on background surfaces. Apply full Adobe Lightroom treatment: balanced exposure/highlights/shadows, natural temperature/tint, vibrant skin tones, Texture/Clarity/Dehaze definition, fine S-curve tone curve, HSL color balance, subtle split-toning color grading, sharpening with luminance noise reduction, subtle vignette, and AI subject/face masking for crisp, professional, clean cinematic clarity.");
   }
 
-  // 11. ADDITIONAL USER INSTRUCTIONS
-  if (config.additionalPrompt?.trim()) {
-    promptParts.push(`Client notes: ${config.additionalPrompt.trim()}`);
+  // 10. VISUAL STYLE & PHOTOGRAPHY TREATMENT
+  if (config.promptEstilo?.trim()) {
+    promptParts.push(`Visual Style & Photography Treatment: ${config.promptEstilo.trim()}.`);
+  } else if (config.estiloVisualCustom?.trim()) {
+    promptParts.push(`Visual Style & Atmosphere: ${config.estiloVisualCustom.trim()}.`);
   }
+  if (config.referenciasEstilo && config.referenciasEstilo.length > 0) {
+    const styleDescs = config.referenciasEstilo.map(r => r.descricao).filter(Boolean);
+    if (styleDescs.length > 0) {
+      promptParts.push(`Style Reference Notes: ${styleDescs.join("; ")}.`);
+    }
+  }
+
+  // 11. ADDITIONAL USER INSTRUCTIONS & MANDATORY PHOTO EDITING DIRECTIVES
+  if (config.additionalPrompt?.trim()) {
+    promptParts.push(`\n=== CRITICAL USER PHOTO EDITING & MODIFICATION DIRECTIVES (HIGH PRIORITY) ===\n${config.additionalPrompt.trim()}\nEXPLICIT MANDATE: Execute EVERY SINGLE edit, object removal, lighting fix, color correction, skin retouch, background blur, shadow removal, and table/surface cleanup listed above with 100% precision.`);
+  }
+
+  if (config.negativePrompt?.trim()) {
+    promptParts.push(`\n=== STRICT UNWANTED ELEMENTS & NEGATIVE CONSTRAINTS (MUST REMOVE / DO NOT RENDER) ===\n${config.negativePrompt.trim()}\nEXPLICIT NEGATIVE DIRECTIVE: Do NOT include, render, or keep any of the unwanted items listed above. You must completely erase and dissolve all dark cast shadows on walls, specifically the dark shadow outline behind the second person on the right. HOWEVER, DO NOT REMOVE THE ORIGINAL BACKGROUND AND DO NOT MAKE THE BACKGROUND WHITE! Replace all shadow areas strictly by cloning the clean, flat wall texture/color matching the rest of the illuminated wall in the reference.`);
+  }
+
+  promptParts.push(`\n=== FINAL EXPLICIT MANDATE ===\n1. FACES, EXPRESSIONS AND POSES MUST REMAIN 100% IDENTICAL TO THE REFERENCE PHOTO.\n2. STRICT BACKGROUND PRESERVATION: DO NOT MAKE THE BACKGROUND WHITE. YOU MUST PRESERVE THE EXACT ORIGINAL WALL TEXTURE AND COLOR FROM THE REFERENCE. ALL SHADOWS ON THE WALL (ESPECIALLY THE DARK CAST SHADOW BEHIND THE SECOND PERSON ON THE RIGHT) MUST BE COMPLETELY PAINTED OVER USING THE SAME ORIGINAL WALL COLOR, BLENDING SEAMLESSLY. DO NOT RENDER ANY SHADOWS BEHIND THE PEOPLE.`);
 
   let masterPrompt = promptParts.join(" ");
   return masterPrompt;

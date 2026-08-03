@@ -45,7 +45,7 @@ export const useGenerateImage = (
     }
 
     const currentActiveImg = store.galeriaImages?.[store.activeImageIndex] || "";
-    const rawPreviousImage = options?.previousImageBase64 || (options?.isRefinement ? currentActiveImg : (store.additionalPrompt && store.additionalPrompt.trim() !== "" ? currentActiveImg : ""));
+    const rawPreviousImage = options?.previousImageBase64 || (options?.isRefinement ? currentActiveImg : "");
 
     // Otimiza/comprime imagens base64 cliente-side para prevenir erro HTTP 413 (Payload Too Large)
     const [

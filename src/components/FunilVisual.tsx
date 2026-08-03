@@ -1210,7 +1210,7 @@ export const FunilVisual: React.FC = () => {
                         </div>
                       </div>
                       {/* Card 2 */}
-                      <div className="rounded overflow-hidden h-[34px] relative bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-1 flex flex-col justify-between shadow-xs">
+                      <div className="rounded overflow-hidden h-[34px] relative bg-gradient-to-br from-[#c5a880] via-[#d5b890] to-[#e5c8a0] p-1 flex flex-col justify-between shadow-xs">
                         <div className="text-[4px] font-black text-white leading-none uppercase bg-black/40 px-1 py-0.5 rounded-xs w-fit">
                           Web N3
                         </div>
