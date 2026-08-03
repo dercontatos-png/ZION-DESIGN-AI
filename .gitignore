@@ -7,3 +7,5 @@ coverage/
 .env*
 !.env.example
 chave-vertex.json
+whatsapp-sessions
+whatsapp-sessions/*

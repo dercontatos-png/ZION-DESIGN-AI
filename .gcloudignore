@@ -1,0 +1,12 @@
+node_modules
+.git
+dist
+whatsapp-sessions
+whatsapp-sessions/*
+*.log
+.env
+*.mp4
+*.jpg
+*.png
+lyria_res.json
+pws_data.json
