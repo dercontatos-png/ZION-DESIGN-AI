@@ -73,7 +73,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
   // Local Project List
   const [visualProjects, setVisualProjects] = useState([
     { id: "alpha", name: "Projeto Alpha" },
-    { id: "medium", name: "Medium shot of..." },
+    { id: "medium", name: "Plano médio de..." },
     { id: "web", name: "Web Builder" },
     { id: "new", name: "Novo Projeto" },
     { id: "dentist", name: "Dentista espec..." }
@@ -428,7 +428,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
                     
                     <label className="border border-dashed border-white/20 hover:border-amber-500/50 rounded-lg flex flex-col items-center justify-center aspect-square cursor-pointer transition-colors bg-black/20">
                       <Plus size={16} className="text-zinc-500" />
-                      <span className="text-[8px] text-zinc-500 mt-1 font-bold">Add</span>
+                      <span className="text-[8px] text-zinc-500 mt-1 font-bold">Adicionar</span>
                       <input
                         type="file"
                         accept="image/*"
@@ -524,7 +524,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
 
                 {/* Luz Complementar */}
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold tracking-wider text-zinc-500 uppercase">Luz Comp.</label>
+                  <label className="text-[10px] font-bold tracking-wider text-zinc-500 uppercase">Luz Complementar</label>
                   <select
                     value={imgConfig.compLight}
                     onChange={(e) => updateImgConfig({ compLight: e.target.value, enableCompLight: e.target.value !== "Nenhuma" })}
@@ -558,7 +558,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
                     
                     <label className="border border-dashed border-white/20 hover:border-amber-500/50 rounded-lg flex flex-col items-center justify-center aspect-square cursor-pointer transition-colors bg-black/20">
                       <Plus size={16} className="text-zinc-500" />
-                      <span className="text-[8px] text-zinc-500 mt-1 font-bold">Add</span>
+                      <span className="text-[8px] text-zinc-500 mt-1 font-bold">Adicionar</span>
                       <input
                         type="file"
                         accept="image/*"
@@ -571,7 +571,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
 
                 {/* Extrair estilo tipográfico */}
                 <div className="flex items-center justify-between pt-1">
-                  <span className="text-xs font-bold text-zinc-400">Extrair estilo tipográfico</span>
+                  <span className="text-xs font-bold text-zinc-400">Extrair Estilo Tipográfico</span>
                   <button
                     onClick={() => updateImgConfig({ extractTypography: !imgConfig.extractTypography })}
                     className={`w-9 h-5 rounded-full transition-colors relative p-0.5 ${imgConfig.extractTypography ? "bg-amber-500" : "bg-[#111]"}`}
@@ -598,7 +598,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
                     
                     <label className="border border-dashed border-white/20 hover:border-amber-500/50 rounded-lg flex flex-col items-center justify-center aspect-square cursor-pointer transition-colors bg-black/20">
                       <Plus size={16} className="text-zinc-500" />
-                      <span className="text-[8px] text-zinc-500 mt-1 font-bold">Add</span>
+                      <span className="text-[8px] text-zinc-500 mt-1 font-bold">Adicionar</span>
                       <input
                         type="file"
                         accept="image/*"
@@ -628,8 +628,8 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
                 {/* Sobriedade Slider */}
                 <div className="space-y-1">
                   <div className="flex justify-between items-center text-[10px] font-bold text-zinc-400">
-                    <span>Criativo / Vibrante</span>
                     <span>Sóbrio / Profissional</span>
+                    <span>Criativo / Vibrante</span>
                   </div>
                   <input
                     type="range"
@@ -1033,7 +1033,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
           <div className="bg-black border border-white/5 rounded-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden shadow-2xl">
             <div className="p-4 border-b border-white/5 bg-black/40 flex items-center justify-between">
               <span className="text-xs font-black tracking-wider text-zinc-300 uppercase">
-                Template Renderizado (HTML/Tailwind)
+                Modelo Renderizado (HTML/Tailwind)
               </span>
               <button
                 onClick={() => setShowCodeModal(false)}

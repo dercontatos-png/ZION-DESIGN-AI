@@ -5,30 +5,22 @@
 export async function optimizeBase64Image(
   base64Str: string,
   maxDimension: number = 1024,
-  quality: number = 0.8
+  quality: number = 0.8,
+  keepAlpha: boolean = false
 ): Promise<string> {
   if (!base64Str || typeof base64Str !== "string") return "";
-  
-  // If string length is small (< 350KB), no need to compress
-  if (base64Str.length < 350 * 1024) {
-    return base64Str;
-  }
+
+  const isUrl = base64Str.startsWith("http://") || base64Str.startsWith("https://") || base64Str.startsWith("/") || base64Str.startsWith("./");
+  const src = base64Str.startsWith("data:")
+    ? base64Str
+    : (isUrl ? base64Str : `data:image/jpeg;base64,${base64Str}`);
 
   return new Promise((resolve) => {
     const img = new Image();
-    const src = base64Str.startsWith("data:")
-      ? base64Str
-      : `data:image/jpeg;base64,${base64Str}`;
-
     img.crossOrigin = "anonymous";
     img.onload = () => {
       let width = img.width;
       let height = img.height;
-
-      if (width <= maxDimension && height <= maxDimension && base64Str.length < 800 * 1024) {
-        resolve(base64Str);
-        return;
-      }
 
       if (width > height) {
         if (width > maxDimension) {
@@ -54,8 +46,10 @@ export async function optimizeBase64Image(
 
       ctx.drawImage(img, 0, 0, width, height);
 
-      // Export as compressed JPEG base64
-      const compressedDataUrl = canvas.toDataURL("image/jpeg", quality);
+      const exportPng = keepAlpha && src.startsWith("data:image/png");
+      const compressedDataUrl = exportPng
+        ? canvas.toDataURL("image/png")
+        : canvas.toDataURL("image/jpeg", quality);
       resolve(compressedDataUrl);
     };
 
@@ -70,8 +64,11 @@ export async function optimizeBase64Image(
 export async function optimizeBase64List(
   list: string[] = [],
   maxDimension: number = 1024,
-  quality: number = 0.8
+  quality: number = 0.8,
+  keepAlpha: boolean = false
 ): Promise<string[]> {
   if (!Array.isArray(list) || list.length === 0) return [];
-  return Promise.all(list.map((item) => optimizeBase64Image(item, maxDimension, quality)));
+  return Promise.all(
+    list.map((item) => optimizeBase64Image(item, maxDimension, quality, keepAlpha))
+  );
 }

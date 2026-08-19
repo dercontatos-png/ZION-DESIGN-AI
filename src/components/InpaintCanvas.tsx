@@ -137,7 +137,7 @@ export const InpaintCanvas: React.FC<InpaintCanvasProps> = ({
         <img
           ref={imageRef}
           src={imageUrl}
-          alt="Inpainting editor"
+          alt="Editor de Inpaint"
           className="max-h-[400px] object-contain pointer-events-none"
           onLoad={updateDimensions}
         />

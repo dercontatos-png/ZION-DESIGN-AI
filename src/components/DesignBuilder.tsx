@@ -3,18 +3,19 @@ import { useProjectStore } from "../store/useProjectStore";
 import { useGenerateImage } from "../hooks/useGenerateImage";
 import { buildMasterPrompt } from "../utils/buildMasterPrompt";
 import { downloadImage } from "../utils/downloadImage";
+import { checkAdminOrOpenPlan, getAuthHeaders } from "../utils/userAuth";
 import { ImageUploader } from "./ImageUploader";
 import { StyleSelector } from "./StyleSelector";
 import { MasonryGallery } from "./MasonryGallery";
 import { ChatAssistente } from "./ChatAssistente";
 import { MaskPainter } from "./MaskPainter";
-import { ExportModal } from "./ExportModal";
 import { SocialExportModal } from "./SocialExportModal";
 import { CompareSlider } from "./CompareSlider";
 import MotorGenerativoMagnific from "./MotorGenerativoMagnific";
 import { VmixXamlModal } from "./VmixXamlModal";
+import { getCooldownRemainingSeconds, getUsageStats, getQuotaGuideInfo } from "../utils/apiUsageManager";
 import {
-  Sparkles, Zap, Bot,
+  Sparkles, Zap, Bot, Banana, Clock,
   Terminal,
   User,
   Image as ImageIcon,
@@ -63,8 +64,10 @@ import {
   Wand2,
   Tv,
   Instagram,
+  MessageCircle,
   Upload,
 } from "lucide-react";
+import { t } from "../utils/i18n";
 
 const DEFAULT_SYSTEM_INSTRUCTION = `You are an absolute master generative AI image prompt engineer, art director, and elite graphic designer specializing in High-End Brazilian Flyers (Flyer BR Style / "Design de Eventos e Shows brasileiro"). Your mission is to generate ultra-realistic, premium, and impactful visual compositions that serve as high-end backgrounds or complete layouts for shows, concerts, nightlife, and festivals.
 
@@ -665,31 +668,45 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
 
   const handleRefine = () => {
     if (!refineQuery.trim()) {
-      showToast("Por favor, digite uma instrução de ajuste.", "warning");
+      showToast("Por favor, digite a instrução de correção desejada.", "warning");
       return;
     }
     const activeImg = store.galeriaImages?.[store.activeImageIndex] || "";
 
-    const lowerQuery = refineQuery.toLowerCase();
-    const isRemoval = lowerQuery.includes("remov") || lowerQuery.includes("tir") || lowerQuery.includes("apag") || lowerQuery.includes("sem");
+    const q = refineQuery.trim();
+    const lowerQuery = q.toLowerCase();
+    const isRemoval = /remov|tir|apag|sem|excluir|delet|limp|não adici|nao adici|mesma quantid|sem extra|sem adici|igual a referencia|mude todas/i.test(lowerQuery);
+    const isCountReduction = /deixar um|deixar 1|apenas 1|apenas uma|remover uma imagem|remover 1 foto|remover um card|tirar uma foto|tirar um card|uma só|uma unica|uma única|deixar só uma|deixar so uma|uma imagem só|uma imagem so/i.test(lowerQuery);
     
-    // Adiciona o ajuste ao prompt adicional e gera
+    let explicitInstruction = `EXPLICIT INSTRUCTION FOR THIS REFINEMENT: ${q}. PRESERVE 100% OF THE COMPOSITION, LAYOUT, TEXTS, LOGO, FACES, AND ALL OTHER UNMENTIONED IMAGES FROM THE PREVIOUS GENERATED IMAGE EXACTLY AS THEY ARE. DO NOT ADD EXTRA IMAGES, PANELS, OR UNREQUESTED OBJECTS. KEEP THE EXACT SAME NUMBER OF IMAGES. DO NOT ALTER OR CHANGE UNRELATED IMAGES ON THE CANVAS.`;
+
+    if (isCountReduction) {
+      explicitInstruction = `EXPLICIT INSTRUCTION FOR THIS REFINEMENT: ${q}. ABSOLUTE MANDATE: REDUCE THE LAYOUT FROM MULTIPLE IMAGES TO EXACTLY ONE (1) SINGLE MAIN IMAGE/SUBJECT PANEL. You MUST REMOVE AND ERASE THE SECONDARY IMAGE/CARD PANEL COMPLETELY. RENDER ONLY ONE (1) MAIN IMAGE PANEL ON THE ENTIRE CANVAS. DO NOT RENDER MULTIPLE IMAGES OR EXTRA CARDS.`;
+      
+      // Also prune stored subject photos list to 1 if user had multiple
+      if (store.sujeitosBase64List && store.sujeitosBase64List.length > 1) {
+        store.updateConfig({ sujeitosBase64List: store.sujeitosBase64List.slice(0, 1) });
+      }
+    }
+
+    const newNegative = (isRemoval || isCountReduction)
+      ? (store.negativePrompt ? `${store.negativePrompt}, ${q}, extra images, extra panels, unwanted objects, duplicate cards, multiple photo panels` : `${q}, extra images, extra panels, unwanted objects, duplicate cards, multiple photo panels`)
+      : store.negativePrompt;
+
     store.updateConfig({
       additionalPrompt: store.additionalPrompt 
-        ? `${store.additionalPrompt}. EXPLICIT INSTRUCTION FOR THIS REFINEMENT: ${refineQuery}` 
-        : `EXPLICIT INSTRUCTION FOR THIS REFINEMENT: ${refineQuery}`,
-      negativePrompt: isRemoval 
-        ? (store.negativePrompt ? `${store.negativePrompt}, ${refineQuery}` : refineQuery)
-        : store.negativePrompt
+        ? `${store.additionalPrompt}. ${explicitInstruction}` 
+        : explicitInstruction,
+      negativePrompt: newNegative
     });
-    const adjustmentText = refineQuery;
+    const adjustmentText = q;
     setRefineQuery("");
-    showToast(`Ajuste "${adjustmentText}" adicionado! Iniciando refinamento da imagem...`, "success");
+    showToast(`🎯 Aplicando correção: "${adjustmentText}"...`, "success");
     generatePremiumImage({ isRefinement: true, previousImageBase64: activeImg });
   };
 
   const activeProject = store.projectsList.find((p) => p.id === store.activeProjectId);
-  const activeProjectName = activeProject?.name || "Projeto Alpha";
+  const activeProjectName = activeProject?.name || "Novo Projeto";
 
   const handleTestToken = () => {
     setIsTesting(true);
@@ -716,25 +733,27 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
   const [activeImageDims, setActiveImageDims] = useState<{ width: number; height: number } | null>(null);
   const [enableEstiloVisual, setEnableEstiloVisual] = useState(true);
   const [exportFormat, setExportFormat] = useState<"AVIF" | "PNG" | "JPEG" | "WEBP">("PNG");
-  const [showExportMenu, setShowExportMenu] = useState(false);
   const [showImageOptions, setShowImageOptions] = useState(false);
   const [showMaskPainter, setShowMaskPainter] = useState(false);
   const [isInpainting, setIsInpainting] = useState(false);
   const [isSocialExportModalOpen, setIsSocialExportModalOpen] = useState(false);
+  const [mobileWorkspaceTab, setMobileWorkspaceTab] = useState<'config' | 'preview'>('config');
+  const [builderSectionTab, setBuilderSectionTab] = useState<'all' | 'subject' | 'style' | 'layout' | 'typography' | 'ai'>('all');
 
   const handleInpaintConfirm = async (maskBase64: string, inpaintPrompt: string) => {
+    const effectiveApiKey = localStorage.getItem('custom_gemini_api_key') || "";
+    if (!checkAdminOrOpenPlan(effectiveApiKey)) return;
     if (!activeImage) {
       showToast("Nenhuma imagem selecionada para editar.", "error");
       return;
     }
     setIsInpainting(true);
     try {
-      const effectiveApiKey = localStorage.getItem('custom_gemini_api_key') || "";
       showToast("Enviando área pintada e instrução para IA...", "info");
       
       const response = await fetch("/api/inpaint-image", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders(effectiveApiKey) },
         body: JSON.stringify({
           image: activeImage,
           mask: maskBase64,
@@ -785,10 +804,11 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
   // Estado para modal grande da imagem de referência de estilo
   const [modalImageRefUrl, setModalImageRefUrl] = useState<string | null>(null);
 
-  // Estados locais para a Barra de Progresso Realista & Mensagens Dinâmicas
+  // Estados locais para a Barra de Progresso Realista & Cronômetro em Tempo Real
   const [progressPercent, setProgressPercent] = useState<number>(0);
   const [progressMessage, setProgressMessage] = useState<string>("Iniciando conexão...");
-  const [countdown, setCountdown] = useState<number>(0);
+  const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
+  const [estimatedSeconds, setEstimatedSeconds] = useState<number>(15);
   const [genStatus, setGenStatus] = useState<"idle" | "generating" | "success" | "error">("idle");
   const [genError, setGenError] = useState<string | null>(null);
   const [isRefining, setIsRefining] = useState<boolean>(false);
@@ -798,72 +818,63 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
     store.initProjectsList();
   }, []);
 
-  // Simulação de Barra de Progresso dinâmica e contador regressivo
+  // Cronômetro em Tempo Real e Progresso Dinâmico baseado no tempo decorrido
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    let countdownInterval: NodeJS.Timeout;
+    let timerInterval: NodeJS.Timeout;
 
-    if (store.isGenerating) {
-      setProgressPercent(0);
-      setProgressMessage("Conectando ao Vertex AI...");
-      
+    if (store.isGenerating && store.activeProjectId) {
       const is4K = store.resolucao === "4K";
       const is2K = store.resolucao === "2K";
-      
-      // Estabelece tempos estimados baseados na resolução
-      const estimatedSeconds = is4K ? 45 : (is2K ? 25 : 15);
-      setCountdown(estimatedSeconds);
+      const estSec = is4K ? 45 : (is2K ? 25 : 15);
 
-      // Decrementa o countdown a cada segundo
-      countdownInterval = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            return 1; // Mantém no último segundo até a imagem ser retornada do backend
-          }
-          return prev - 1;
-        });
-      }, 1000);
+      setEstimatedSeconds(estSec);
 
-      const baseTickDelay = 400; // 400ms por tick
+      const updateProgress = () => {
+        const startTime = (store as any).projectGenerationStartTimes?.[store.activeProjectId!] || Date.now();
+        const elapsed = Math.max(0, (Date.now() - startTime) / 1000);
+        setElapsedSeconds(elapsed);
 
-      interval = setInterval(() => {
-        setProgressPercent((prev) => {
-          // Incrementos muito menores para resoluções altas
-          const maxInc = is4K ? 2 : (is2K ? 4 : 8);
-          const next = prev + Math.random() * maxInc + 0.5; // avança bem devagar
-          
-          if (next >= 98) {
-            clearInterval(interval);
-            setProgressMessage("Quase lá! Finalizando o render (Super Resolução em andamento)...");
-            return 98; // segura em 98% para o final realista
-          }
+        // Cálculo de progresso proporcional fluido baseado no tempo decorrido real
+        let calcProgress = 0;
+        if (elapsed < estSec) {
+          calcProgress = (elapsed / estSec) * 95;
+        } else {
+          const extra = elapsed - estSec;
+          calcProgress = 95 + (1 - Math.exp(-extra / 8)) * 4; // avança suavemente entre 95% e 99%
+        }
 
-          // Roteamento de mensagens dinâmicas com base na porcentagem de progresso
-          if (next < 20) {
-            setProgressMessage("Analisando fotos de referência do sujeito/produto...");
-          } else if (next < 40) {
-            setProgressMessage("Extraindo pesos e grid da Referência de Design Obrigatória...");
-          } else if (next < 65) {
-            setProgressMessage("Injetando paleta de cores dominante e iluminação comercial...");
-          } else if (next < 85) {
-            setProgressMessage("Escrevendo tipografia automática de alta definição...");
-          } else {
-            setProgressMessage(is4K ? "Aprimorando nitidez para resolução máxima 4K (Ultra HD)... Isso leva alguns segundos." : "Aprimorando nitidez e otimizando canais de cores...");
-          }
+        const currentPct = Math.min(99, Math.floor(calcProgress));
+        setProgressPercent(currentPct);
 
-          return Math.floor(next);
-        });
-      }, baseTickDelay * (is4K ? 2 : 1)); // Se for 4K, o tick a cada 800ms
+        // Atualização dinâmica de mensagens de status baseada no tempo real decorrido
+        if (elapsed < 3) {
+          setProgressMessage("Iniciando conexão com os servidores de IA...");
+        } else if (elapsed < 7) {
+          setProgressMessage("Analisando fotos de referência do sujeito e layout...");
+        } else if (elapsed < 12) {
+          setProgressMessage("Sintetizando iluminação, profundidade 3D e texturas...");
+        } else if (elapsed < 18) {
+          setProgressMessage("Escrevendo tipografia de alta definição e degradês...");
+        } else {
+          setProgressMessage(
+            is4K
+              ? "Aprimorando nitidez para resolução máxima 4K (Ultra HD)..."
+              : "Finalizando renderização e otimizando canais de cor..."
+          );
+        }
+      };
+
+      updateProgress();
+      timerInterval = setInterval(updateProgress, 100);
     } else {
+      setElapsedSeconds(0);
       setProgressPercent(0);
-      setCountdown(0);
     }
 
     return () => {
-      clearInterval(interval);
-      clearInterval(countdownInterval);
+      clearInterval(timerInterval);
     };
-  }, [store.isGenerating]);
+  }, [store.isGenerating, store.activeProjectId, store.resolucao, (store as any).projectGenerationStartTimes]);
 
   const activeImage = store.galeriaImages[store.activeImageIndex] || null;
 
@@ -935,6 +946,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
     () => {
       setGenStatus("generating");
       setGenError(null);
+      setMobileWorkspaceTab("preview");
     },
     () => {
       setGenStatus("success");
@@ -948,11 +960,20 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
     }
   );
 
+  // Cooldown timer for API rate-limit guidance
+  const [cooldownSec, setCooldownSec] = useState(0);
+  useEffect(() => {
+    const tick = setInterval(() => {
+      setCooldownSec(getCooldownRemainingSeconds());
+    }, 1000);
+    return () => clearInterval(tick);
+  }, []);
+
   const handleDownloadActiveImage = async (targetRes?: "16MP" | "4K" | "2K" | "1K" | "ORIGINAL" | number) => {
     if (!activeImage) return;
     try {
       const resToUse = targetRes || "ORIGINAL";
-      const labelMsg = resToUse === "ORIGINAL" ? "Resolução Nativa da API" : resToUse;
+      const labelMsg = resToUse === "ORIGINAL" ? "Resolução Original" : resToUse === 16 ? "WhatsApp HD" : resToUse;
       showToast(`Iniciando download (${labelMsg})...`, "success");
 
       // Extract subject/title from active text layers or project name
@@ -1005,13 +1026,13 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
   };
 
   const handleApplyRefinements = async () => {
+    const effectiveApiKey = localStorage.getItem('custom_gemini_api_key') || "";
+    if (!checkAdminOrOpenPlan(effectiveApiKey)) return;
     if (!activeImage) return;
     const originalImg = activeImage;
     setIsRefining(true);
     showToast("Analisando imagem & aplicando correções de cor e ruído...", "info");
     try {
-      const effectiveApiKey = localStorage.getItem('custom_gemini_api_key') || "";
-
       const configuredPalette = new Set<string>();
       if (store.corDominante) configuredPalette.add(store.corDominante);
       if (store.cores?.ambiente) configuredPalette.add(store.cores.ambiente);
@@ -1022,7 +1043,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
 
       const response = await fetch("/api/apply-refinements", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders(effectiveApiKey) },
         body: JSON.stringify({
           imageBase64: originalImg,
           size: store.resolucao || "1K",
@@ -1235,7 +1256,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                           showToast(`Projeto "${proj.name}" duplicado!`, "success");
                         }}
                         className="text-zinc-600 hover:text-[#c5a880] transition-colors p-0.5 rounded opacity-0 group-hover:opacity-100"
-                        title="Duplicar esta conversa/projeto"
+                        title="Duplicar este projeto"
                       >
                         <Copy size={10} />
                       </button>
@@ -1278,11 +1299,37 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
             </div>
           </div>
 
+          {/* Mobile Segmented View Switcher (Visible only on mobile/small tablets) */}
+          <div className="md:hidden flex items-center justify-center p-2 bg-black border-b border-white/5 gap-2 shrink-0 z-20">
+            <button
+              onClick={() => setMobileWorkspaceTab("config")}
+              className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                mobileWorkspaceTab === "config"
+                  ? "bg-[#c5a880] text-black shadow-md font-extrabold"
+                  : "bg-[#111] text-zinc-400 hover:text-white"
+              }`}
+            >
+              <SlidersHorizontal size={13} />
+              <span>Painel de Criação</span>
+            </button>
+            <button
+              onClick={() => setMobileWorkspaceTab("preview")}
+              className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                mobileWorkspaceTab === "preview"
+                  ? "bg-[#c5a880] text-black shadow-md font-extrabold"
+                  : "bg-[#111] text-zinc-400 hover:text-white"
+              }`}
+            >
+              <ImageIcon size={13} />
+              <span>Visualização & Arte</span>
+            </button>
+          </div>
+
           {/* DOIS PAINEIS DO WORKSPACE */}
           <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
             
             {/* COLUNA ESQUERDA: CONFIGURAÇÕES */}
-            <div className="w-full md:w-[360px] lg:w-[420px] 2xl:w-[480px] bg-black border-b md:border-b-0 md:border-r border-white/5 flex flex-col h-[45vh] md:h-full shrink-0 overflow-hidden">
+            <div className={`${mobileWorkspaceTab === 'config' ? 'flex' : 'hidden'} md:flex w-full md:w-[360px] lg:w-[420px] 2xl:w-[480px] bg-black border-b md:border-b-0 md:border-r border-white/5 flex-col h-full shrink-0 overflow-hidden`}>
               
               {/* TOPBAR MENU MOVED TO LEFT COLUMN */}
               <div className="flex flex-col border-b border-white/5 bg-black/90 shrink-0">
@@ -1299,7 +1346,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                       }`}
                     >
                       <Sparkles size={12} className="shrink-0" />
-                      <span>Criar</span>
+                      <span>{t("criar")}</span>
                     </button>
                     <button
                       onClick={() => setActiveMenuTab("Inspiração")}
@@ -1310,7 +1357,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                       }`}
                     >
                       <Compass size={12} className="shrink-0" />
-                      <span>Explorar</span>
+                      <span>{t("explorar")}</span>
                     </button>
                     <button
                       onClick={() => setActiveMenuTab("Minha Galeria")}
@@ -1321,46 +1368,48 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                       }`}
                     >
                       <ImageIcon size={12} className="shrink-0" />
-                      <span>Galeria</span>
+                      <span>{t("galeria")}</span>
                     </button>
                     <button
-                      onClick={() => setActiveMenuTab("Ref Builder")}
+                      onClick={() => setActiveMenuTab("Engenharia de Prompt")}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
-                        activeMenuTab === "Ref Builder"
+                        activeMenuTab === "Engenharia de Prompt"
                           ? "bg-[#c5a880] text-black font-extrabold shadow-sm"
                           : "text-zinc-400 hover:text-zinc-200 hover:bg-[#111]/60"
                       }`}
                     >
-                      <SlidersHorizontal size={12} className="shrink-0" />
-                      <span>Ref Builder</span>
+                      <PenTool size={12} className="shrink-0" />
+                      <span>{t("ref_builder")}</span>
                     </button>
                   </div>
                 </div>
 
-                {/* 2. SELETOR DE MÓDULO (DESIGNER | PRODUCT | LOGO | GC TV) */}
+                {/* 2. SELETOR DE MÓDULO (DESIGNER | PRODUCT | LOGO | FOTO | GC TV) */}
                 <div className="p-2.5 border-b border-white/5 bg-black/60 space-y-1.5">
                   <div className="flex items-center justify-between px-1">
                     <span className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 flex items-center gap-1.5">
                       <span className="w-1.5 h-1.5 rounded-full bg-[#c5a880] animate-pulse" />
-                      Módulo: <span className="text-[#c5a880] font-black">{store.tipoPainel === "GC_TV" ? "GC TV" : store.tipoPainel}</span>
+                      Módulo: <span className="text-[#c5a880] font-black">{store.tipoPainel === "GC_TV" ? "Tarja de TV" : store.tipoPainel === "FOTO" ? "Foto (Edição)" : store.tipoPainel === "DESIGNER" ? "Designer" : store.tipoPainel === "PRODUCT" ? "Produto" : store.tipoPainel === "LOGO" ? "Logotipo" : store.tipoPainel}</span>
                     </span>
                   </div>
-                  <div className="grid grid-cols-3 gap-1 p-1 bg-black rounded-xl border border-white/5">
+                  <div className="grid grid-cols-4 gap-1 p-1 bg-black rounded-xl border border-white/5">
                     {[
-                      { label: "DESIGNER", value: "DESIGNER" },
-                      { label: "PRODUCT", value: "PRODUCT" },
-                      { label: "LOGO", value: "LOGO" }
+                      { label: "Designer", value: "DESIGNER" },
+                      { label: "Produto", value: "PRODUCT" },
+                      { label: "Logo", value: "LOGO" },
+                      { label: "Foto", value: "FOTO" }
                     ].map((pnl) => {
                       const isSel = store.tipoPainel === pnl.value;
                       return (
                         <button
                           key={pnl.value}
                           onClick={() => store.updateConfig({ tipoPainel: pnl.value as any })}
-                          className={`py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer text-center truncate ${
+                          className={`py-1.5 text-[9px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer text-center truncate ${
                             isSel
                               ? "bg-[#c5a880] text-black font-extrabold shadow-sm"
                               : "text-zinc-400 hover:text-white hover:bg-[#111]/50"
                           }`}
+                          title={pnl.value === "FOTO" ? "Módulo Foto — Edição de fotos de pessoas, alimentos, retratos e retoque realista" : pnl.label}
                         >
                           {pnl.label}
                         </button>
@@ -1369,13 +1418,23 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                   </div>
                 </div>
 
-                {/* 3. BARRA DE REFINAMENTO */}
-                <div className="p-2.5 bg-black/30">
-                  <div className="flex items-center gap-1.5 bg-black border border-white/5 rounded-xl px-2.5 py-1 focus-within:border-[#c5a880]/50 transition-colors">
-                    <Wand2 size={12} className="text-[#c5a880] shrink-0" />
+                {/* 3. BARRA DE REFINAMENTO / CORREÇÃO PONTUAL */}
+                <div className="p-3 bg-black/50 border-t border-b border-white/5 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-300">
+                      <Wand2 size={13} className="text-[#c5a880]" />
+                      <span>Correção da Imagem</span>
+                    </div>
+                    {store.galeriaImages && store.galeriaImages.length > 0 && (
+                      <span className="text-[9px] font-black uppercase bg-[#c5a880]/15 text-[#c5a880] border border-[#c5a880]/30 px-2 py-0.5 rounded-full">
+                        Arte Ativa
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 bg-black border border-white/10 rounded-xl px-3 py-1.5 focus-within:border-[#c5a880] transition-colors shadow-inner">
                     <input
                       type="text"
-                      placeholder="Refinar prompt..."
+                      placeholder='Ex: "Mude a cor da camisa para azul mantendo todo o resto igual"'
                       value={refineQuery}
                       onChange={(e) => setRefineQuery(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && handleRefine()}
@@ -1383,9 +1442,9 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                     />
                     <button
                       onClick={handleRefine}
-                      className="px-2 py-0.5 bg-[#c5a880] hover:bg-[#b39873] text-black text-[10px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer shrink-0 shadow-sm"
+                      className="px-3 py-1 bg-[#c5a880] hover:bg-[#b39873] text-black text-[11px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer shrink-0 shadow-md active:scale-95"
                     >
-                      Refinar
+                      Corrigir
                     </button>
                   </div>
                 </div>
@@ -1397,181 +1456,212 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
           
           {activeMenuTab === "Design Builder" && (
             <>
-              {/* Sujeito / Produto */}
-          <div className="bg-black/50 border border-white/5 p-5 rounded-xl space-y-5 shadow-sm hover:border-white/5 transition-colors">
-            <div className="flex items-center gap-2.5 border-l-2 border-[#c5a880] pl-3">
-              <span className="text-sm font-semibold text-white tracking-tight">
-                {isLogo ? "Marca / Logo" : (isProduct ? "Produto Principal" : "Sujeito Principal")}
-              </span>
-            </div>
-
-            {/* Toggle Desativar Sujeito */}
-            <div className="flex items-center justify-between p-3 bg-black/40 rounded-xl border border-white/5">
-              <div className="flex flex-col">
-                <span className="text-xs font-bold text-zinc-300 uppercase tracking-wider">Desativar Sujeito Principal?</span>
-                <span className="text-xs text-zinc-500 tracking-wide mt-0.5">Ignore pessoas ou produtos no criativo, focando apenas no cenário e texto</span>
+              {/* Category Segmented Tabs for Clean Studio Organization */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar shrink-0 bg-black/60 p-2 rounded-xl border border-white/5">
+                {[
+                  { id: "all", label: "Todos", icon: <Layers size={11} /> },
+                  { id: "subject", label: "👤 Sujeito", icon: <User size={11} /> },
+                  { id: "style", label: "🎨 Estilo & Luz", icon: <Palette size={11} /> },
+                  { id: "layout", label: "📐 Formato & Fundo", icon: <Layout size={11} /> },
+                  { id: "typography", label: "✍️ Texto & Logo", icon: <Type size={11} /> },
+                  { id: "ai", label: "⚡ IA & Qualidade", icon: <Zap size={11} /> }
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setBuilderSectionTab(tab.id as any)}
+                    className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
+                      builderSectionTab === tab.id
+                        ? "bg-[#c5a880] text-zinc-950 font-extrabold shadow-sm"
+                        : "bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10"
+                    }`}
+                  >
+                    <span>{tab.icon}</span>
+                    <span>{tab.label}</span>
+                  </button>
+                ))}
               </div>
-              <button
-                onClick={() => store.updateConfig({ desativarSujeito: !store.desativarSujeito })}
-                className="w-11 h-6 rounded-full p-0.5 relative transition-colors duration-200 cursor-pointer"
-                style={{ backgroundColor: store.desativarSujeito ? "#c5a880" : "#27272a" }}
-              >
-                <div
-                  className="w-5 h-5 bg-white rounded-full transition-transform duration-200 shadow-sm"
-                  style={{ transform: store.desativarSujeito ? "translateX(20px)" : "translateX(0)" }}
-                />
-              </button>
-            </div>
+
+              {/* Sujeito / Produto */}
+              {(builderSectionTab === "all" || builderSectionTab === "subject") && (
+              <div className="bg-[#0c0c10]/95 border border-white/10 hover:border-[#c5a880]/30 rounded-2xl p-5 shadow-xl space-y-4 transition-all duration-300 animate-in fade-in duration-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#c5a880]/20 to-[#c5a880]/5 border border-[#c5a880]/30 text-[#c5a880] flex items-center justify-center shrink-0 shadow-sm">
+                      {isProduct ? <Layers size={16} /> : <User size={16} />}
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-white tracking-tight">
+                        {isLogo ? "Logotipo da Marca" : (isProduct ? "Produto Principal" : t("sujeito_principal"))}
+                      </h3>
+                      <p className="text-[11px] text-zinc-400">Defina o foco central da sua arte</p>
+                    </div>
+                  </div>
+
+                  {/* Toggle Desativar Sujeito */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                      {store.desativarSujeito ? "Inativo" : "Ativo"}
+                    </span>
+                    <button
+                      onClick={() => store.updateConfig({ desativarSujeito: !store.desativarSujeito })}
+                      className="w-11 h-6 rounded-full p-0.5 relative transition-colors duration-200 cursor-pointer shrink-0"
+                      style={{ backgroundColor: store.desativarSujeito ? "#27272a" : "#c5a880" }}
+                      title="Ativar/Desativar inclusão de sujeito ou produto"
+                    >
+                      <div
+                        className="w-5 h-5 bg-white rounded-full transition-transform duration-200 shadow-sm"
+                        style={{ transform: store.desativarSujeito ? "translateX(0)" : "translateX(20px)" }}
+                      />
+                    </button>
+                  </div>
+                </div>
 
             {!store.desativarSujeito && (
-              <div className="space-y-5 animate-in fade-in duration-200">
+              <div className="space-y-4 pt-1 animate-in fade-in duration-200">
                 {/* Componente Modular ImageUploader */}
                 <ImageUploader
                   type={isLogo ? "logo" : (isProduct ? "product" : "person")}
                   label={isLogo ? "Referências de Logo" : (isProduct ? "Fotos do Produto" : "Fotos do Sujeito")}
-                  icon={isProduct ? <Layers size={20} className="text-[#c5a880]" /> : <User size={20} className="text-[#c5a880]" />}
+                  icon={isProduct ? <Layers size={18} className="text-[#c5a880]" /> : <User size={18} className="text-[#c5a880]" />}
                   base64s={store.sujeitosBase64List || []}
                   onUpdateBase64s={store.setSujeitoBase64List}
                   showToast={showToast}
                 />
 
-                <div className="space-y-4">
-                  {/* Gênero ou Posicionamento (Oculto se for produto) */}
+                <div className="space-y-3.5">
+                  {/* Gênero ou Posicionamento */}
                   {!isProduct && !isLogo ? (
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
-                        <label className="block text-xs font-medium text-zinc-400">Gênero</label>
-                        <label className="flex items-center gap-1.5 text-xs text-zinc-500 cursor-pointer">
+                        <label className="text-xs font-bold text-zinc-300 uppercase tracking-wider">{t("genero")}</label>
+                        <label className="flex items-center gap-1.5 text-xs text-zinc-400 cursor-pointer hover:text-white transition-colors">
                           <input
                             type="checkbox"
                             checked={store.multiplesPersons || false}
                             onChange={(e) => store.updateConfig({ multiplesPersons: e.target.checked })}
-                            className="rounded bg-black border-white/5 text-[#c5a880] focus:ring-0 focus:ring-offset-0 w-3.5 h-3.5 cursor-pointer accent-[#c5a880]"
+                            className="rounded bg-black border-white/10 text-[#c5a880] focus:ring-0 focus:ring-offset-0 w-3.5 h-3.5 cursor-pointer accent-[#c5a880]"
                           />
-                          <span>Mais de 1 pessoa na foto?</span>
+                          <span>{t("mais_de_uma_pessoa")}</span>
                         </label>
                       </div>
                       
                       {!store.multiplesPersons ? (
-                        <div className="flex gap-1 bg-black p-1.5 rounded-lg border border-white/5">
-                          {["Masculino", "Feminino", "Outros"].map((gen) => {
-                            const isSelected = store.gender === gen;
+                        <div className="flex gap-1.5 p-1 bg-[#111116] rounded-xl border border-white/5">
+                          {[
+                            { key: "Masculino", label: t("masculino") },
+                            { key: "Feminino", label: t("feminino") },
+                            { key: "Outros", label: t("outros") }
+                          ].map((gen) => {
+                            const isSelected = store.gender === gen.key;
                             return (
                               <button
-                                key={gen}
-                                onClick={() => store.updateConfig({ gender: gen })}
-                                className={`flex-1 py-1.5 rounded text-xs font-black transition-all cursor-pointer ${
-                                  isSelected ? "bg-[#c5a880] text-black font-semibold" : "text-zinc-400 hover:text-white"
+                                key={gen.key}
+                                onClick={() => store.updateConfig({ gender: gen.key })}
+                                className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                  isSelected ? "bg-[#c5a880] text-zinc-950 shadow-sm" : "text-zinc-400 hover:text-white"
                                 }`}
                               >
-                                {gen}
+                                {gen.label}
                               </button>
                             );
                           })}
                         </div>
                       ) : (
-                        <div className="space-y-1.5">
-                          <textarea
-                            value={store.gendersDescription || ""}
-                            onChange={(e) => store.updateConfig({ gendersDescription: e.target.value })}
-                            placeholder="Descreva o gênero de cada pessoa da foto (Ex: Um homem de barba e duas mulheres ao fundo...)"
-                            rows={2}
-                            className="w-full bg-black/60 border border-white/5 rounded-lg p-2.5 text-xs text-zinc-200 placeholder-zinc-700 focus:outline-none focus:border-[#c5a880]/40 tracking-wide resize-none"
-                          />
-                          <span className="text-xs text-zinc-500 uppercase tracking-wider block">O Diretor Criativo descreve automaticamente ao analisar múltiplas pessoas na imagem.</span>
-                        </div>
+                        <textarea
+                          value={store.gendersDescription || ""}
+                          onChange={(e) => store.updateConfig({ gendersDescription: e.target.value })}
+                          placeholder="Descreva as pessoas da foto..."
+                          rows={2}
+                          className="w-full bg-[#131318] border border-white/10 rounded-xl p-3 text-xs text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-[#c5a880] resize-none"
+                        />
                       )}
                     </div>
-                  ) : (
-                    <div>
-                      <label className="block text-xs font-medium text-zinc-400 mb-1.5">Posicionamento</label>
-                      <div className="flex gap-1 bg-black p-1.5 rounded-lg border border-white/5">
-                        {["Centro", "Esquerda", "Direita"].map((pos) => {
-                          const isSelected = store.positioning === pos;
-                          return (
-                            <button
-                              key={pos}
-                              onClick={() => store.updateConfig({ positioning: pos })}
-                              className={`flex-1 py-1.5 rounded text-xs font-black transition-all cursor-pointer ${
-                                isSelected ? "bg-[#c5a880] text-black font-semibold" : "text-zinc-400 hover:text-white"
-                              }`}
-                            >
-                              {pos}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                  ) : null}
 
-                {/* Descrição da pose ou roupa / Detalhes do produto */}
-                <div>
-                  <label className="block text-xs font-medium text-zinc-400 mb-1.5">
-                    {isProduct ? "Características do Produto (opcional)" : "Descrição da pose ou roupa (opcional)"}
-                  </label>
-                  <input
-                    type="text"
-                    value={store.poseDescription || ""}
-                    onChange={(e) => store.updateConfig({ poseDescription: e.target.value })}
-                    placeholder={isProduct ? "Ex: Frasco de vidro fosco, tampa dourada, reflexo metálico..." : "Ex: Em pé de braços cruzados, vestindo blazer preto..."}
-                    className="w-full bg-black border border-white/5 rounded-lg px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-700 focus:outline-none focus:border-[#c5a880]/50 font-medium"
-                  />
-                </div>
-
-                {/* Posição do Sujeito (Oculto se for produto para não repetir seletor) */}
-                {!isProduct && (
+                  {/* Posição do Sujeito */}
                   <div>
-                    <label className="block text-xs font-medium text-zinc-400 mb-1.5">Posição do Sujeito</label>
-                    <div className="flex gap-1 bg-black p-1.5 rounded-lg border border-white/5">
-                      {["Esquerda", "Centro", "Direita"].map((pos) => {
-                        const isSelected = store.positioning === pos;
+                    <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-1.5">{t("posicao_sujeito")}</label>
+                    <div className="flex gap-1.5 p-1 bg-[#111116] rounded-xl border border-white/5">
+                      {[
+                        { key: "Esquerda", label: "⬅️ " + t("esquerda") },
+                        { key: "Centro", label: "⏺️ " + t("centro") },
+                        { key: "Direita", label: "➡️ " + t("direita") }
+                      ].map((pos) => {
+                        const isSelected = store.positioning === pos.key;
                         return (
                           <button
-                            key={pos}
-                            onClick={() => store.updateConfig({ positioning: pos })}
-                            className={`flex-1 py-1.5 rounded text-xs font-black transition-all cursor-pointer ${
-                              isSelected ? "bg-[#c5a880] text-black font-semibold" : "text-zinc-400 hover:text-white"
+                            key={pos.key}
+                            onClick={() => store.updateConfig({ positioning: pos.key })}
+                            className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                              isSelected ? "bg-[#c5a880] text-zinc-950 shadow-sm" : "text-zinc-400 hover:text-white"
                             }`}
                           >
-                            {pos}
+                            {pos.label}
                           </button>
                         );
                       })}
                     </div>
                   </div>
-                )}
+
+                  {/* Descrição da pose ou roupa / Detalhes do produto */}
+                  <div>
+                    <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-1.5">
+                      {isProduct ? "Características do Produto" : t("desc_pose")}
+                    </label>
+                    <input
+                      type="text"
+                      value={store.poseDescription || ""}
+                      onChange={(e) => store.updateConfig({ poseDescription: e.target.value })}
+                      placeholder={isProduct ? "Ex: Frasco de vidro fosco, tampa dourada..." : t("placeholder_pose")}
+                      className="w-full bg-[#131318] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-[#c5a880]"
+                    />
+                  </div>
+                </div>
               </div>
             )}
           </div>
+          )}
 
           {/* Dimensões com ícones visuais representativos */}
-          <div className="bg-black/50 border border-white/5 p-5 rounded-xl space-y-4 shadow-sm hover:border-white/5 transition-colors">
-            <div className="flex flex-col gap-1.5 border-l-2 border-[#c5a880] pl-3">
-              <span className="text-sm font-semibold text-white tracking-tight">Dimensões</span>
-              <span className="text-xs text-zinc-400 tracking-wide">Selecione o formato ideal para as redes sociais ou desktop</span>
+          {(builderSectionTab === "all" || builderSectionTab === "layout") && (
+          <div className="bg-[#0c0c10]/95 border border-white/10 hover:border-[#c5a880]/30 rounded-2xl p-5 shadow-xl space-y-4 transition-all duration-300 animate-in fade-in duration-200">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#c5a880]/20 to-[#c5a880]/5 border border-[#c5a880]/30 text-[#c5a880] flex items-center justify-center shrink-0 shadow-sm">
+                <Layout size={16} />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white tracking-tight">{t("dimensoes")}</h3>
+                <p className="text-[11px] text-zinc-400">{t("selecione_formato")}</p>
+              </div>
             </div>
-            <div className="grid grid-cols-4 gap-2 py-1">
+
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1">
               {[
                 { 
-                  label: "Feed (1080x1080)", 
+                  label: "Automático (Foto)", 
+                  value: "AUTO",
+                  icon: <Sparkles size={14} className="text-[#c5a880]" />
+                },
+                { 
+                  label: "1:1 Feed", 
                   value: "1:1",
-                  icon: <div className="w-3.5 h-3.5 border-2 border-current rounded mx-auto mb-1 shrink-0" />
+                  icon: <div className="w-3.5 h-3.5 border-2 border-current rounded" />
                 },
                 { 
-                  label: "Retrato (1080x1440)", 
+                  label: "3:4 Retrato", 
                   value: "3:4",
-                  icon: <div className="w-3.5 h-[18px] border-2 border-current rounded mx-auto mb-1 shrink-0" />
+                  icon: <div className="w-3 h-4 border-2 border-current rounded" />
                 },
                 { 
-                  label: "Story (1080x1920)", 
+                  label: "9:16 Story", 
                   value: "9:16",
-                  icon: <div className="w-2.5 h-5 border-2 border-current rounded mx-auto mb-1 shrink-0" />
+                  icon: <div className="w-2.5 h-4.5 border-2 border-current rounded" />
                 },
                 { 
-                  label: "Desktop (1920x1080)", 
+                  label: "16:9 Banner", 
                   value: "16:9",
-                  icon: <div className="w-5 h-3 border-2 border-current rounded mx-auto mb-1 shrink-0" />
+                  icon: <div className="w-4.5 h-2.5 border-2 border-current rounded" />
                 }
               ].map((dim) => {
                 const isSelected = store.dimensao === dim.value;
@@ -1579,33 +1669,44 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                   <button
                     key={dim.value}
                     onClick={() => store.updateConfig({ dimensao: dim.value })}
-                    className={`py-3 rounded-lg border text-[11px] font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer flex flex-col items-center justify-center text-center px-1 min-h-[64px] ${
+                    className={`py-3 px-2 rounded-xl border text-xs font-bold transition-all duration-200 cursor-pointer flex flex-col items-center justify-center gap-1.5 ${
                       isSelected
-                        ? "bg-[#c5a880] border-[#c5a880] text-zinc-950 shadow-md shadow-amber-500/10"
-                        : "bg-black/40 border-white/5 text-zinc-400 hover:text-white hover:border-[#c5a880]/40"
+                        ? "bg-gradient-to-br from-[#c5a880] to-[#b08e58] border-[#c5a880] text-zinc-950 shadow-lg shadow-[#c5a880]/20 font-extrabold"
+                        : "bg-[#131318] border-white/5 text-zinc-400 hover:text-white hover:border-[#c5a880]/40"
                     }`}
                   >
                     {dim.icon}
-                    <span>{dim.label}</span>
+                    <span className="text-[10px] tracking-wide">{dim.label}</span>
                   </button>
                 );
               })}
             </div>
           </div>
+          )}
 
           {/* Tipografia (Camadas de textos configuráveis) */}
-          <div className="bg-black/50 border border-white/5 p-5 rounded-xl space-y-5 shadow-sm hover:border-white/5 transition-colors">
-            <div className="flex flex-col gap-1.5 border-l-2 border-[#c5a880] pl-3">
-              <span className="text-sm font-semibold text-white tracking-tight">Tipografia (Camadas)</span>
-              <span className="text-xs text-zinc-400 tracking-wide">Crie e configure camadas dinâmicas de textos com fontes premium</span>
-            </div>
-
+          {(builderSectionTab === "all" || builderSectionTab === "typography") && (
+          <div className="bg-[#0c0c10]/95 border border-white/10 hover:border-[#c5a880]/30 rounded-2xl p-5 shadow-xl space-y-4 transition-all duration-300 animate-in fade-in duration-200">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Adicionar Texto</span>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#c5a880]/20 to-[#c5a880]/5 border border-[#c5a880]/30 text-[#c5a880] flex items-center justify-center shrink-0 shadow-sm">
+                  <Type size={16} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white tracking-tight">{t("tipografia_camadas")}</h3>
+                  <p className="text-[11px] text-zinc-400">{t("crie_camadas")}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                  {store.enableTypography ? "Ativo" : "Inativo"}
+                </span>
                 <button
                   onClick={() => store.updateConfig({ enableTypography: !store.enableTypography })}
-                  className="w-11 h-6 rounded-full p-0.5 relative transition-colors duration-200 cursor-pointer"
+                  className="w-11 h-6 rounded-full p-0.5 relative transition-colors duration-200 cursor-pointer shrink-0"
                   style={{ backgroundColor: store.enableTypography ? "#c5a880" : "#27272a" }}
+                  title="Ativar/Desativar tipografia"
                 >
                   <div
                     className="w-5 h-5 bg-white rounded-full transition-transform duration-200 shadow-sm"
@@ -1613,186 +1714,204 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                   />
                 </button>
               </div>
+            </div>
 
-              {store.enableTypography && (
-                <div className="space-y-5 pt-1">
-                  
-                  {/* Referência de Tipografia por Imagem */}
-                  <div className="p-3 bg-black rounded-lg border border-white/5 space-y-2.5">
-                    <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider block">Copiar Tipografia por Referência (Imagem)</span>
-                    <ImageUploader
-                      type="env"
-                      label="Enviar Print da Tipografia"
-                      icon={<ImageIcon size={16} className="text-[#c5a880]" />}
-                      base64s={store.tipografiaRefsList || []}
-                      onUpdateBase64s={store.setTipografiaRefsList}
-                      showToast={showToast}
-                    />
-
-                    <div className="space-y-1">
-                      <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block">O que deseja extrair/copiar desta tipografia/texto?</span>
-                      <textarea
-                        value={store.promptTipografia || ""}
-                        onChange={(e) => store.updateConfig({ promptTipografia: e.target.value })}
-                        placeholder="Ex: Copiar exatamente o texto principal 'ZION' usando a mesma fonte sans-serif moderna, peso ultra-bold e posições..."
-                        rows={2}
-                        className="w-full bg-black/40 border border-white/5 rounded-lg p-2 text-xs text-zinc-200 placeholder-zinc-700 focus:outline-none focus:border-[#c5a880]/40 tracking-wide resize-none"
-                      />
-                    </div>
+            {store.enableTypography && (
+              <div className="space-y-4 pt-1 animate-in fade-in duration-200">
+                {/* Referência de Tipografia por Imagem */}
+                <div className="p-4 bg-[#111116] rounded-xl border border-white/5 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <ImageIcon size={14} className="text-[#c5a880]" />
+                    <span className="text-xs font-bold text-zinc-300 uppercase tracking-wider">Copiar Tipografia por Imagem</span>
                   </div>
+                  <ImageUploader
+                    type="env"
+                    label="Captura da Tipografia"
+                    icon={<ImageIcon size={16} className="text-[#c5a880]" />}
+                    base64s={store.tipografiaRefsList || []}
+                    onUpdateBase64s={store.setTipografiaRefsList}
+                    showToast={showToast}
+                  />
+                  <textarea
+                    value={store.promptTipografia || ""}
+                    onChange={(e) => store.updateConfig({ promptTipografia: e.target.value })}
+                    placeholder="Ex: Copiar exatamente o texto 'ZION' com a mesma fonte sans-serif e peso..."
+                    rows={2}
+                    className="w-full bg-[#14141a] border border-white/10 rounded-xl p-3 text-xs text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-[#c5a880] resize-none"
+                  />
+                </div>
 
-                  {/* Lista de Camadas de Texto */}
-                  <div className="space-y-3.5">
-                    {store.camadasTexto.map((layer, index) => (
-                      <div key={layer.id} className="p-4 bg-black rounded-xl border border-white/5 space-y-3 relative group">
-                        
-                        {/* Controles de ordem */}
-                        <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                {/* Lista de Camadas de Texto */}
+                <div className="space-y-3">
+                  {store.camadasTexto.map((layer, index) => (
+                    <div key={layer.id} className="p-4 bg-[#111116] rounded-xl border border-white/5 space-y-3 relative group hover:border-white/10 transition-colors">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-extrabold text-[#c5a880] bg-[#c5a880]/10 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                          Camada #{index + 1}
+                        </span>
+
+                        <div className="flex items-center gap-1">
                           <button
                             onClick={() => store.moverCamadaTexto(layer.id, "cima")}
                             disabled={index === 0}
-                            className="p-1 hover:bg-[#111] rounded disabled:opacity-30 cursor-pointer text-zinc-400 hover:text-white"
+                            className="p-1 hover:bg-white/10 rounded disabled:opacity-20 cursor-pointer text-zinc-400 hover:text-white transition-colors"
+                            title="Mover para cima"
                           >
-                            <ArrowUp size={10} />
+                            <ArrowUp size={12} />
                           </button>
                           <button
                             onClick={() => store.moverCamadaTexto(layer.id, "baixo")}
                             disabled={index === store.camadasTexto.length - 1}
-                            className="p-1 hover:bg-[#111] rounded disabled:opacity-30 cursor-pointer text-zinc-400 hover:text-white"
+                            className="p-1 hover:bg-white/10 rounded disabled:opacity-20 cursor-pointer text-zinc-400 hover:text-white transition-colors"
+                            title="Mover para baixo"
                           >
-                            <ArrowDown size={10} />
+                            <ArrowDown size={12} />
                           </button>
                           <button
                             onClick={() => store.removeCamadaTexto(layer.id)}
-                            className="p-1 hover:bg-red-955/45 text-zinc-550 hover:text-red-500 rounded cursor-pointer transition-colors"
+                            className="p-1 hover:bg-rose-950/50 text-zinc-400 hover:text-rose-400 rounded cursor-pointer transition-colors ml-1"
+                            title="Excluir camada"
                           >
-                            <Trash2 size={10} />
+                            <Trash2 size={12} />
                           </button>
                         </div>
+                      </div>
 
-                        <div className="pr-16">
-                          <span className="text-xs font-black text-[#c5a880] uppercase tracking-widest block mb-1">CAMADA #{index + 1}</span>
-                        </div>
+                      {/* Conteúdo frase */}
+                      <div>
+                        <label className="block text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1">Texto da Camada</label>
+                        <input
+                          type="text"
+                          value={layer.conteudo}
+                          onChange={(e) => store.updateCamadaTexto(layer.id, { conteudo: e.target.value })}
+                          placeholder="Digite o texto da arte..."
+                          className="w-full bg-[#16161d] border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#c5a880] font-medium"
+                        />
+                      </div>
 
-                        {/* Conteúdo frase */}
+                      {/* Função & Cor */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                         <div>
-                          <label className="block text-xs font-medium text-zinc-400 mb-1">Frase</label>
-                          <input
-                            type="text"
-                            value={layer.conteudo}
-                            onChange={(e) => store.updateCamadaTexto(layer.id, { conteudo: e.target.value })}
-                            placeholder="Frase ou texto..."
-                            className="w-full bg-[#111] border border-white/5 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#c5a880]/50 font-medium"
-                          />
-                        </div>
-
-                        {/* Função Corpo / Descrição */}
-                        <div>
-                          <label className="block text-xs font-medium text-zinc-400 mb-1">Função</label>
+                          <label className="block text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1">Função / Papel</label>
                           <select
                             value={layer.funcao}
                             onChange={(e) => store.updateCamadaTexto(layer.id, { funcao: e.target.value as any })}
-                            className="w-full bg-[#111] border border-white/5 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 font-bold uppercase tracking-wide cursor-pointer"
+                            className="w-full bg-[#16161d] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#c5a880] font-bold cursor-pointer"
                           >
-                            <option value="Headline Principal">Headline Principal</option>
-                            <option value="Subheadline Secundário">Subheadline Secundário</option>
-                            <option value="CTA Botão">CTA Botão</option>
+                            <option value="Headline Principal">Título Principal</option>
+                            <option value="Subheadline Secundário">Subtítulo Secundário</option>
+                            <option value="CTA Botão">Botão (CTA)</option>
                             <option value="Corpo Descrição">Corpo Descrição</option>
                             <option value="Legenda / Detalhe">Legenda / Detalhe</option>
-                            <option value="Badge / Selo">Badge / Selo</option>
+                            <option value="Badge / Selo">Selo</option>
                             <option value="Preço / Valor">Preço / Valor</option>
                             <option value="Data / Horário">Data / Horário</option>
                           </select>
                         </div>
 
-                        {/* Dropdown de Escolha de Fontes e Cor */}
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <label className="block text-xs font-medium text-zinc-400 mb-1">Escolha a Fonte</label>
-                            <select
-                              value={layer.fonte}
-                              onChange={(e) => store.updateCamadaTexto(layer.id, { fonte: e.target.value })}
-                              className="w-full bg-[#111] border border-white/5 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 font-bold uppercase tracking-wide cursor-pointer"
-                            >
-                              <option value="Montserrat">Montserrat</option>
-                              <option value="Poppins">Poppins</option>
-                              <option value="Outfit">Outfit</option>
-                              <option value="Inter">Inter</option>
-                              <option value="Playfair Display">Playfair Display</option>
-                              <option value="Cinzel">Cinzel</option>
-                              <option value="Unbounded">Unbounded</option>
-                            </select>
-                          </div>
-
-                          <div>
-                            <label className="block text-xs font-medium text-zinc-400 mb-1">Cor do Texto</label>
-                            <div className="flex items-center gap-1.5">
-                              <input
-                                type="color"
-                                value={layer.cor}
-                                onChange={(e) => store.updateCamadaTexto(layer.id, { cor: e.target.value })}
-                                className="w-7 h-7 rounded border-0 cursor-pointer overflow-hidden bg-transparent p-0 shrink-0"
-                              />
-                              <input
-                                type="text"
-                                value={layer.cor}
-                                onChange={(e) => store.updateCamadaTexto(layer.id, { cor: e.target.value })}
-                                placeholder="#ffffff"
-                                className="w-full bg-[#111] border border-white/5 rounded px-1.5 py-1 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 font-bold uppercase"
-                              />
-                            </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1">Cor do Texto</label>
+                          <div className="flex items-center gap-2 bg-[#16161d] border border-white/10 rounded-xl px-2 py-1">
+                            <input
+                              type="color"
+                              value={layer.cor}
+                              onChange={(e) => store.updateCamadaTexto(layer.id, { cor: e.target.value })}
+                              className="w-6 h-6 rounded-lg border-0 cursor-pointer overflow-hidden bg-transparent p-0 shrink-0"
+                            />
+                            <input
+                              type="text"
+                              value={layer.cor}
+                              onChange={(e) => store.updateCamadaTexto(layer.id, { cor: e.target.value })}
+                              className="w-full bg-transparent text-xs text-white focus:outline-none font-mono uppercase"
+                            />
                           </div>
                         </div>
-
                       </div>
-                    ))}
-                  </div>
 
-                  <button
-                    onClick={() => store.addCamadaTexto()}
-                    className="w-full py-2.5 bg-black hover:bg-[#111] border border-white/5 text-xs font-black uppercase tracking-widest text-[#c5a880] hover:text-[#c5a880] rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <Plus size={12} />
-                    <span>Adicionar Bloco de Texto</span>
-                  </button>
+                      {/* Escolha da Fonte */}
+                      <div>
+                        <label className="block text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1.5">Família da Fonte</label>
+                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
+                          {["Montserrat", "Poppins", "Outfit", "Inter", "Playfair Display", "Cinzel", "Unbounded"].map((font) => (
+                            <button
+                              key={font}
+                              type="button"
+                              onClick={() => store.updateCamadaTexto(layer.id, { fonte: font })}
+                              className={`py-1.5 px-2 rounded-lg text-[10px] font-bold transition-all text-center truncate ${
+                                layer.fonte === font
+                                  ? "bg-[#c5a880] text-zinc-950 shadow-sm"
+                                  : "bg-[#181820] text-zinc-400 hover:text-white hover:bg-white/5"
+                              }`}
+                            >
+                              {font}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
 
-                  {/* Posição Global */}
-                  <div>
-                    <label className="block text-xs font-medium text-zinc-400 mb-1.5">Posição Global do Texto</label>
-                    <div className="flex gap-1.5 bg-black p-1.5 rounded-lg border border-white/5">
-                      {(["ESQUERDA", "CENTRO", "DIREITA"] as const).map((pos) => {
-                        const isSel = store.typographyPosition === pos;
-                        return (
-                          <button
-                            key={pos}
-                            onClick={() => store.updateConfig({ typographyPosition: pos })}
-                            className={`flex-1 py-1.5 rounded text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
-                              isSel ? "bg-[#c5a880] text-black font-semibold" : "text-zinc-400 hover:text-white"
-                            }`}
-                          >
-                            {pos}
-                          </button>
-                        );
-                      })}
                     </div>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => store.addCamadaTexto()}
+                  className="w-full py-3 bg-[#131318] hover:bg-[#181820] border border-dashed border-[#c5a880]/30 hover:border-[#c5a880] text-xs font-bold uppercase tracking-wider text-[#c5a880] rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                >
+                  <Plus size={14} />
+                  <span>Adicionar Bloco de Texto</span>
+                </button>
+
+                {/* Posição Global */}
+                <div>
+                  <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-1.5">Alinhamento Global</label>
+                  <div className="flex gap-1.5 p-1 bg-[#111116] rounded-xl border border-white/5">
+                    {(["ESQUERDA", "CENTRO", "DIREITA"] as const).map((pos) => {
+                      const isSel = store.typographyPosition === pos;
+                      return (
+                        <button
+                          key={pos}
+                          type="button"
+                          onClick={() => store.updateConfig({ typographyPosition: pos })}
+                          className={`flex-1 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                            isSel ? "bg-[#c5a880] text-zinc-950 shadow-sm" : "text-zinc-400 hover:text-white"
+                          }`}
+                        >
+                          {pos}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+          </div>
+          )}
 
           {/* Cenário Customizado & Prompt Adicional Cenário */}
-          <div className="bg-black/50 border border-white/5 p-5 rounded-xl space-y-5 shadow-sm hover:border-white/5 transition-colors">
-            <div className="flex flex-col gap-1 border-l-2 border-[#c5a880] pl-3">
-              <span className="text-sm font-semibold text-white tracking-tight">Cenário</span>
-              <span className="text-[10px] text-zinc-500 tracking-wide">Descreva ou envie imagens do plano de fundo/ambiente do criativo</span>
-            </div>
-            
+          {(builderSectionTab === "all" || builderSectionTab === "layout") && (
+          <div className="bg-[#0c0c10]/95 border border-white/10 hover:border-[#c5a880]/30 rounded-2xl p-5 shadow-xl space-y-4 transition-all duration-300 animate-in fade-in duration-200">
             <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Usar fotos de cenário?</span>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#c5a880]/20 to-[#c5a880]/5 border border-[#c5a880]/30 text-[#c5a880] flex items-center justify-center shrink-0 shadow-sm">
+                  <ImageIcon size={16} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white tracking-tight">Cenário & Ambiente</h3>
+                  <p className="text-[11px] text-zinc-400">Personalize o plano de fundo do criativo</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                  {store.useEnvRef ? "Ativo" : "Inativo"}
+                </span>
                 <button
+                  type="button"
                   onClick={() => store.updateConfig({ useEnvRef: !store.useEnvRef })}
-                  className="w-11 h-6 rounded-full p-0.5 relative transition-colors duration-200 cursor-pointer"
+                  className="w-11 h-6 rounded-full p-0.5 relative transition-colors duration-200 cursor-pointer shrink-0"
                   style={{ backgroundColor: store.useEnvRef ? "#c5a880" : "#27272a" }}
+                  title="Ativar fotos de cenário"
                 >
                   <div
                     className="w-5 h-5 bg-white rounded-full transition-transform duration-200 shadow-sm"
@@ -1800,121 +1919,162 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                   />
                 </button>
               </div>
+            </div>
 
-              {store.useEnvRef && (
-                <ImageUploader
-                  type="env"
-                  label="Fotos de Cenário"
-                  icon={<ImageIcon size={20} className="text-[#c5a880]" />}
-                  base64s={store.cenariosBase64List || []}
-                  onUpdateBase64s={store.setCenarioBase64List}
-                  showToast={showToast}
-                />
-              )}
+            {store.useEnvRef && (
+              <ImageUploader
+                type="env"
+                label="Fotos de Cenário"
+                icon={<ImageIcon size={18} className="text-[#c5a880]" />}
+                base64s={store.cenariosBase64List || []}
+                onUpdateBase64s={store.setCenarioBase64List}
+                showToast={showToast}
+              />
+            )}
 
-              {/* Prompt Adicional Cenário */}
-              <div className="pt-2">
-                <label className="block text-xs font-medium text-zinc-400 mb-1.5">Prompt Adicional Cenário</label>
-                <input
-                  type="text"
-                  value={store.promptCenario}
-                  onChange={(e) => store.updateConfig({ promptCenario: e.target.value })}
-                  placeholder="Ex: Sala executiva com luz solar, janelas de vidro amplas..."
-                  className="w-full bg-black border border-white/5 rounded-lg px-4 py-3 text-xs text-zinc-200 placeholder:text-zinc-700 focus:outline-none focus:border-[#c5a880]/50 font-medium"
-                />
+            {/* Prompt Adicional Cenário */}
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider">Descrição do Cenário</label>
+              <input
+                type="text"
+                value={store.promptCenario}
+                onChange={(e) => store.updateConfig({ promptCenario: e.target.value })}
+                placeholder="Ex: Balcão bar de luxo, iluminação quente, ambiente sofisticado..."
+                className="w-full bg-[#131318] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-[#c5a880]"
+              />
+              {/* Preset Chips */}
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {[
+                  "🍸 Bar de Luxo",
+                  "🎤 Palco com Luzes & Fumaça",
+                  "🏢 Escritório Moderno",
+                  "🌴 Pôr do Sol Tropical",
+                  "✨ Estúdio Minimalista Escuro"
+                ].map((chip) => (
+                  <button
+                    key={chip}
+                    type="button"
+                    onClick={() => store.updateConfig({ promptCenario: chip.replace(/^.+?\s/, "") })}
+                    className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-[#16161c] hover:bg-white/10 text-zinc-400 hover:text-white border border-white/5 transition-colors cursor-pointer"
+                  >
+                    {chip}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          )}
+
+          {/* Referência de Design Obrigatório */}
+          {(builderSectionTab === "all" || builderSectionTab === "layout") && (
+          <div className="bg-[#0c0c10]/95 border border-white/10 hover:border-[#c5a880]/30 rounded-2xl p-5 shadow-xl space-y-4 transition-all duration-300 animate-in fade-in duration-200">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#c5a880]/20 to-[#c5a880]/5 border border-[#c5a880]/30 text-[#c5a880] flex items-center justify-center shrink-0 shadow-sm">
+                <Layout size={16} />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white tracking-tight">Layout Obrigatório</h3>
+                <p className="text-[11px] text-zinc-400">Guie o layout e a composição por imagem</p>
               </div>
             </div>
 
-          {/* Referência de Design Obrigatório */}
-          <div className="bg-black/50 border border-white/5 p-5 rounded-xl space-y-5 shadow-sm hover:border-white/5 transition-colors">
-            <div className="flex flex-col gap-1 border-l-2 border-[#c5a880] pl-3">
-              <span className="text-sm font-semibold text-white tracking-tight">Design Obrigatório</span>
-              <span className="text-[10px] text-zinc-500 tracking-wide">Importe uma imagem com o layout ou posicionamento estrutural desejado</span>
-            </div>
-
-            <div className="flex items-start gap-3 text-[#c5a880] bg-[#c5a880]/5 border border-[#c5a880]/10 p-3.5 rounded-xl animate-in fade-in">
-              <Info size={16} className="shrink-0 mt-0.5 text-[#c5a880]" />
-              <div className="text-xs font-medium leading-relaxed text-zinc-300 space-y-1">
-                <p className="font-bold text-[#c5a880]">COMO A IA USA A REFERÊNCIA DE DESIGN:</p>
-                <p>
-                  A IA analisa a estrutura visual, o grid de composição e a iluminação. <strong className="text-white font-bold">TODOS os textos, números, telefones, redes sociais, datas e logos antigos da foto de referência serão 100% APAGADOS e IGNORADOS.</strong> Apenas os seus novos textos preenchidos serão impressos na arte.
-                </p>
+            <div className="flex items-start gap-3 bg-[#c5a880]/10 border border-[#c5a880]/20 p-3.5 rounded-xl text-xs text-zinc-300 leading-relaxed">
+              <Info size={16} className="text-[#c5a880] shrink-0 mt-0.5" />
+              <div>
+                <strong className="text-[#c5a880] block font-bold mb-0.5">COMO A IA USA A REFERÊNCIA:</strong>
+                A IA replica o grid e enquadramento. Textos, datas e contatos antigos da imagem de referência são 100% descartados e substituídos pelos seus.
               </div>
             </div>
 
             <ImageUploader
               type="env"
-              label="Referência de Design Obrigatório"
-              icon={<Layout size={20} className="text-[#c5a880]" />}
+              label="Referência de Layout"
+              icon={<Layout size={18} className="text-[#c5a880]" />}
               base64s={store.designRefsList || []}
               onUpdateBase64s={store.setDesignRefsList}
               showToast={showToast}
             />
 
-            <div className="space-y-1.5 pt-1">
-              <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider block">O que deseja extrair/copiar deste layout/design?</span>
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider">O que absorver deste layout?</label>
               <textarea
                 value={store.promptDesign || ""}
                 onChange={(e) => store.updateConfig({ promptDesign: e.target.value })}
-                placeholder="Ex: Copiar a estrutura do flyer de referência, mantendo o sujeito principal centralizado com elementos gráficos atrás de sua silhueta..."
+                placeholder="Ex: Manter sujeito no centro e elementos geométricos atrás..."
                 rows={2}
-                className="w-full bg-black/60 border border-white/5 rounded-lg p-2.5 text-xs text-zinc-200 placeholder-zinc-700 focus:outline-none focus:border-[#c5a880]/40 tracking-wide resize-none"
+                className="w-full bg-[#131318] border border-white/10 rounded-xl p-3 text-xs text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-[#c5a880] resize-none"
               />
             </div>
           </div>
+          )}
 
           {/* Logotipo da Marca */}
-          <div className="bg-black/50 border border-white/5 p-5 rounded-xl space-y-5 shadow-sm hover:border-white/5 transition-colors">
-            <div className="flex flex-col gap-1 border-l-2 border-[#c5a880] pl-3">
-              <span className="text-sm font-semibold text-white tracking-tight">Logotipo da Marca</span>
-              <span className="text-xs text-zinc-400 tracking-wide">Importe o logotipo da sua marca para estampar no criativo</span>
-            </div>
-
+          {(builderSectionTab === "all" || builderSectionTab === "typography") && (
+          <div className="bg-[#0c0c10]/95 border border-white/10 hover:border-[#c5a880]/30 rounded-2xl p-5 shadow-xl space-y-4 transition-all duration-300 animate-in fade-in duration-200">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-zinc-300 uppercase tracking-wider">Estampar Logotipo?</span>
-              <button
-                onClick={() => store.updateConfig({ useLogo: !store.useLogo })}
-                className="w-11 h-6 rounded-full p-0.5 relative transition-colors duration-200 cursor-pointer"
-                style={{ backgroundColor: store.useLogo ? "#c5a880" : "#27272a" }}
-              >
-                <div
-                  className="w-5 h-5 bg-white rounded-full transition-transform duration-200 shadow-sm"
-                  style={{ transform: store.useLogo ? "translateX(20px)" : "translateX(0)" }}
-                />
-              </button>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#c5a880]/20 to-[#c5a880]/5 border border-[#c5a880]/30 text-[#c5a880] flex items-center justify-center shrink-0 shadow-sm">
+                  <Layers size={16} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white tracking-tight">Logotipo da Marca</h3>
+                  <p className="text-[11px] text-zinc-400">Insira a identidade visual no criativo</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                  {store.useLogo ? "Ativo" : "Inativo"}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => store.updateConfig({ useLogo: !store.useLogo })}
+                  className="w-11 h-6 rounded-full p-0.5 relative transition-colors duration-200 cursor-pointer shrink-0"
+                  style={{ backgroundColor: store.useLogo ? "#c5a880" : "#27272a" }}
+                  title="Ativar/Desativar logo"
+                >
+                  <div
+                    className="w-5 h-5 bg-white rounded-full transition-transform duration-200 shadow-sm"
+                    style={{ transform: store.useLogo ? "translateX(20px)" : "translateX(0)" }}
+                  />
+                </button>
+              </div>
             </div>
 
             {store.useLogo && (
-              <div className="animate-in fade-in duration-200 space-y-4">
+              <div className="animate-in fade-in duration-200 space-y-3">
                 <ImageUploader
                   type="env"
-                  label="Logotipo da Marca (PNG/SVG)"
-                  icon={<Layers size={20} className="text-[#c5a880]" />}
+                  label="Logotipo (imagem com fundo transparente)"
+                  icon={<Layers size={18} className="text-[#c5a880]" />}
                   base64s={store.logosList || []}
                   onUpdateBase64s={store.setLogosList}
                   showToast={showToast}
                   maxUploads={1}
                 />
-                <div className="p-3.5 bg-[#c5a880]/5 border border-[#c5a880]/10 rounded-xl text-xs font-medium leading-relaxed text-zinc-300 space-y-1">
-                  <p className="font-bold text-[#c5a880] uppercase tracking-wider">REGRAS DE REFUGO E POSICIONAMENTO DA LOGO:</p>
-                  <p>
-                    • A logo será estampada nativamente no canto superior, <strong className="text-white font-bold">JAMAIS por cima do cabelo, rosto ou corpo do sujeito</strong>.<br/>
-                    • O nome do arquivo (ex: "10 anos") <strong className="text-white font-bold">NÃO será escrito como título ou texto</strong> na imagem.<br/>
-                    • O símbolo e formato originais serão preservados com 100% de fidelidade.
-                  </p>
-                </div>
+                <p className="text-[11px] text-zinc-400 italic">
+                  O logotipo é aplicado com fidelidade no topo da arte, sem cobrir o sujeito.
+                </p>
               </div>
             )}
           </div>
+          )}
 
           {/* Referências de Estilos Individuais com Descrição */}
-          <div className="bg-black/50 border border-white/5 p-5 rounded-xl space-y-5 shadow-sm hover:border-white/5 transition-colors">
-            <div className="flex justify-between items-start border-l-2 border-[#c5a880] pl-3">
-              <div className="flex flex-col gap-1">
-                <span className="text-sm font-semibold text-white tracking-tight">Referências de Estilo</span>
-                <span className="text-[10px] text-zinc-500 tracking-wide">Importe referências estéticas e descreva o estilo a ser absorvido</span>
+          {(builderSectionTab === "all" || builderSectionTab === "style") && (
+          <div className="bg-[#0c0c10]/95 border border-white/10 hover:border-[#c5a880]/30 rounded-2xl p-5 shadow-xl space-y-4 transition-all duration-300 animate-in fade-in duration-200">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#c5a880]/20 to-[#c5a880]/5 border border-[#c5a880]/30 text-[#c5a880] flex items-center justify-center shrink-0 shadow-sm">
+                  <Palette size={16} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white tracking-tight">Referências de Estilo</h3>
+                  <p className="text-[11px] text-zinc-400">Guie a atmosfera visual e a paleta</p>
+                </div>
               </div>
-              <div className="relative overflow-hidden shrink-0 mt-1">
+
+              <div className="relative overflow-hidden shrink-0">
                 <input
                   type="file"
                   accept="image/*"
@@ -1922,156 +2082,135 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                   onChange={handleStyleImageUpload}
                   className="absolute inset-0 opacity-0 cursor-pointer w-24"
                 />
-                <button className="px-3.5 py-1.5 bg-[#111] border border-white/5 hover:border-[#c5a880]/30 rounded-lg text-xs font-black uppercase tracking-widest text-[#c5a880] cursor-pointer">
+                <button type="button" className="px-3 py-1.5 bg-[#181820] hover:bg-[#20202a] border border-white/10 hover:border-[#c5a880]/40 rounded-xl text-xs font-bold text-[#c5a880] cursor-pointer transition-all">
                   + Adicionar
                 </button>
               </div>
             </div>
 
             {store.referenciasEstilo.length > 0 ? (
-              <div className="space-y-3.5">
+              <div className="space-y-3">
                 {store.referenciasEstilo.map((ref) => (
-                  <div key={ref.id} className="p-3 bg-black rounded-xl border border-white/5 flex gap-3 relative group">
-                    
+                  <div key={ref.id} className="p-3 bg-[#111116] rounded-xl border border-white/5 flex gap-3 relative group">
                     <button
+                      type="button"
                       onClick={() => store.removeReferenciaEstilo(ref.id)}
-                      className="absolute top-2 right-2 p-1 bg-black/85 hover:bg-red-500 rounded text-zinc-450 hover:text-white transition-all cursor-pointer"
+                      className="absolute top-2 right-2 p-1 bg-black/80 hover:bg-rose-500 rounded-lg text-zinc-400 hover:text-white transition-all cursor-pointer"
+                      title="Remover referência"
                     >
-                      <X size={10} />
+                      <X size={12} />
                     </button>
  
                     <div
                       onClick={() => setModalImageRefUrl(ref.url)}
-                      className="w-14 h-14 rounded-lg overflow-hidden shrink-0 border border-white/5 bg-zinc-905 cursor-zoom-in relative"
-                      title="Ver tamanho grande"
+                      className="w-14 h-14 rounded-lg overflow-hidden shrink-0 border border-white/10 bg-zinc-900 cursor-zoom-in relative group/img"
+                      title="Ver ampliado"
                     >
                       <img src={ref.url} className="w-full h-full object-cover" alt="Estilo Ref" />
-                      <div className="absolute inset-0 bg-black/30 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <Maximize2 size={10} className="text-white" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
+                        <Maximize2 size={12} className="text-white" />
                       </div>
                     </div>
 
-                    <div className="flex-1 flex flex-col justify-between">
-                      <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest block">Descrição do Estilo Visual</span>
+                    <div className="flex-1 flex flex-col justify-center pr-6">
+                      <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">O que copiar do estilo?</span>
                       <input
                         type="text"
                         value={ref.descricao}
                         onChange={(e) => store.updateReferenciaEstilo(ref.id, e.target.value)}
-                        placeholder="Ex: Copiar tons de dourado..."
-                        className="w-[90%] bg-[#111] border border-white/5 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#c5a880]/50 font-medium"
+                        placeholder="Ex: Tons dourados, iluminação suave de cinema..."
+                        className="w-full bg-[#16161d] border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#c5a880]"
                       />
                     </div>
-
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="py-5 text-center border border-dashed border-white/5 rounded-xl bg-black/20">
-                <span className="text-[11px] font-bold text-zinc-600 uppercase tracking-wider">Suba imagens de estilo para imitar</span>
+              <div className="py-4 text-center border border-dashed border-white/10 rounded-xl bg-[#111116]">
+                <span className="text-[11px] font-medium text-zinc-500">Nenhuma referência de estilo adicionada ainda</span>
               </div>
             )}
           </div>
+          )}
 
           {/* Cores & Iluminação */}
-          <div className="bg-black/50 border border-white/5 p-5 rounded-xl space-y-5 shadow-sm hover:border-white/5 transition-colors">
-            <div className="flex flex-col gap-1 border-l-2 border-[#c5a880] pl-3">
-              <span className="text-sm font-semibold text-white tracking-tight">Cores & Iluminação</span>
-              <span className="text-[10px] text-zinc-500 tracking-wide">Configure as cores de iluminação de estúdio do seu criativo</span>
-            </div>
-
+          {(builderSectionTab === "all" || builderSectionTab === "style") && (
+          <div className="bg-[#0c0c10]/95 border border-white/10 hover:border-[#c5a880]/30 rounded-2xl p-5 shadow-xl space-y-4 transition-all duration-300 animate-in fade-in duration-200">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Automático (Harmônico)?</span>
-              <button
-                onClick={() => store.updateConfig({ coresAutomaticas: !store.coresAutomaticas })}
-                className="w-11 h-6 rounded-full p-0.5 relative transition-colors duration-200 cursor-pointer"
-                style={{ backgroundColor: store.coresAutomaticas ? "#c5a880" : "#27272a" }}
-              >
-                <div
-                  className="w-5 h-5 bg-white rounded-full transition-transform duration-200 shadow-sm"
-                  style={{ transform: store.coresAutomaticas ? "translateX(20px)" : "translateX(0)" }}
-                />
-              </button>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#c5a880]/20 to-[#c5a880]/5 border border-[#c5a880]/30 text-[#c5a880] flex items-center justify-center shrink-0 shadow-sm">
+                  <Sparkles size={16} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white tracking-tight">Cores & Iluminação de Estúdio</h3>
+                  <p className="text-[11px] text-zinc-400">Ajuste os tons de luz e atmosfera</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                  {store.coresAutomaticas ? "Automático" : "Manual"}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => store.updateConfig({ coresAutomaticas: !store.coresAutomaticas })}
+                  className="w-11 h-6 rounded-full p-0.5 relative transition-colors duration-200 cursor-pointer shrink-0"
+                  style={{ backgroundColor: store.coresAutomaticas ? "#c5a880" : "#27272a" }}
+                  title="Ativar cores automáticas harmônicas"
+                >
+                  <div
+                    className="w-5 h-5 bg-white rounded-full transition-transform duration-200 shadow-sm"
+                    style={{ transform: store.coresAutomaticas ? "translateX(20px)" : "translateX(0)" }}
+                  />
+                </button>
+              </div>
             </div>
 
             {!store.coresAutomaticas && (
               <div className="space-y-3 pt-1 animate-in fade-in duration-300">
-                <div className="grid grid-cols-3 gap-3.5">
-                  <div className="p-3 bg-black/40 border border-white/5 flex flex-col gap-2 hover:border-[#c5a880]/30 transition-all rounded-lg">
-                    <span className="text-xs font-bold text-zinc-550 uppercase tracking-widest">Ambiente</span>
-                    <div className="flex items-center gap-1.5">
-                      <input
-                        type="color"
-                        value={store.cores.ambiente || "#000000"}
-                        onChange={(e) => store.updateConfig({
-                          cores: { ...store.cores, ambiente: e.target.value }
-                        })}
-                        className="w-6 h-6 rounded border-0 cursor-pointer overflow-hidden bg-transparent p-0 shrink-0"
-                      />
-                      <input
-                        type="text"
-                        value={store.cores.ambiente || "#000000"}
-                        onChange={(e) => store.updateConfig({
-                          cores: { ...store.cores, ambiente: e.target.value }
-                        })}
-                        className="w-full bg-[#111] border border-white/5 rounded px-1.5 py-0.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 font-bold uppercase"
-                      />
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {[
+                    { key: "ambiente", label: "Ambiente", defaultVal: "#000000" },
+                    { key: "recorte", label: "Recorte", defaultVal: "#ffffff" },
+                    { key: "complementar", label: "Complementar", defaultVal: "#c5a880" }
+                  ].map(({ key, label, defaultVal }) => (
+                    <div key={key} className="p-3 bg-[#111116] border border-white/5 rounded-xl flex flex-col gap-2 hover:border-[#c5a880]/30 transition-all">
+                      <span className="text-[11px] font-bold text-zinc-300 uppercase tracking-wider">{label}</span>
+                      <div className="flex items-center gap-2 bg-[#16161d] border border-white/10 rounded-lg px-2 py-1">
+                        <input
+                          type="color"
+                          value={(store.cores as any)?.[key] || defaultVal}
+                          onChange={(e) => store.updateConfig({
+                            cores: { ...store.cores, [key]: e.target.value }
+                          })}
+                          className="w-6 h-6 rounded-md border-0 cursor-pointer overflow-hidden bg-transparent p-0 shrink-0"
+                        />
+                        <input
+                          type="text"
+                          value={(store.cores as any)?.[key] || defaultVal}
+                          onChange={(e) => store.updateConfig({
+                            cores: { ...store.cores, [key]: e.target.value }
+                          })}
+                          className="w-full bg-transparent text-xs text-white focus:outline-none font-mono uppercase"
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <div className="p-3 bg-black/40 border border-white/5 flex flex-col gap-2 hover:border-[#c5a880]/30 transition-all rounded-lg">
-                    <span className="text-xs font-bold text-zinc-550 uppercase tracking-widest">Recorte</span>
-                    <div className="flex items-center gap-1.5">
-                      <input
-                        type="color"
-                        value={store.cores.recorte || "#ffffff"}
-                        onChange={(e) => store.updateConfig({
-                          cores: { ...store.cores, recorte: e.target.value }
-                        })}
-                        className="w-6 h-6 rounded border-0 cursor-pointer overflow-hidden bg-transparent p-0 shrink-0"
-                      />
-                      <input
-                        type="text"
-                        value={store.cores.recorte || "#ffffff"}
-                        onChange={(e) => store.updateConfig({
-                          cores: { ...store.cores, recorte: e.target.value }
-                        })}
-                        className="w-full bg-[#111] border border-white/5 rounded px-1.5 py-0.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 font-bold uppercase"
-                      />
-                    </div>
-                  </div>
-                  <div className="p-3 bg-black/40 border border-white/5 flex flex-col gap-2 hover:border-[#c5a880]/30 transition-all rounded-lg">
-                    <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Complementar</span>
-                    <div className="flex items-center gap-1.5">
-                      <input
-                        type="color"
-                        value={store.cores.complementar || "#c5a880"}
-                        onChange={(e) => store.updateConfig({
-                          cores: { ...store.cores, complementar: e.target.value }
-                        })}
-                        className="w-6 h-6 rounded border-0 cursor-pointer overflow-hidden bg-transparent p-0 shrink-0"
-                      />
-                      <input
-                        type="text"
-                        value={store.cores.complementar || "#c5a880"}
-                        onChange={(e) => store.updateConfig({
-                          cores: { ...store.cores, complementar: e.target.value }
-                        })}
-                        className="w-full bg-[#111] border border-white/5 rounded px-1.5 py-0.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 font-bold uppercase"
-                      />
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </div>
             )}
+
             {/* Cor Dominante e Degradê Leitura */}
-            <div className="space-y-3.5 pt-3.5 border-t border-white/5">
+            <div className="space-y-3 pt-3 border-t border-white/5">
               <div className="flex items-center justify-between">
-                <div className="flex flex-col">
-                  <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Usar Cor Dominante?</span>
-                  <span className="text-[10px] text-zinc-500 tracking-wide mt-0.5">Ativa cor da marca no criativo</span>
+                <div>
+                  <span className="text-xs font-bold text-zinc-300 uppercase tracking-wider block">Cor Dominante da Marca</span>
+                  <span className="text-[11px] text-zinc-500">Injeta a cor de assinatura nos elementos</span>
                 </div>
                 <button
+                  type="button"
                   onClick={() => store.updateConfig({ useCorDominante: !store.useCorDominante })}
-                  className="w-11 h-6 rounded-full p-0.5 relative transition-colors duration-200 cursor-pointer"
+                  className="w-11 h-6 rounded-full p-0.5 relative transition-colors duration-200 cursor-pointer shrink-0"
                   style={{ backgroundColor: store.useCorDominante ? "#c5a880" : "#27272a" }}
                 >
                   <div
@@ -2082,30 +2221,34 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
               </div>
 
               {store.useCorDominante && (
-                <div className="flex items-center justify-between p-2.5 bg-black/60 rounded-xl border border-white/5 animate-in slide-in-from-top-2 duration-200">
-                  <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Cor Dominante</span>
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between p-3 bg-[#111116] rounded-xl border border-white/5 animate-in slide-in-from-top-2 duration-200">
+                  <span className="text-xs font-bold text-zinc-300 uppercase tracking-wider">Tom Escolhido</span>
+                  <div className="flex items-center gap-2 bg-[#16161d] border border-white/10 rounded-lg px-2 py-1">
                     <input
                       type="color"
                       value={store.corDominante}
                       onChange={(e) => store.updateConfig({ corDominante: e.target.value })}
-                      className="w-6 h-6 rounded border border-zinc-805 cursor-pointer overflow-hidden bg-transparent p-0 shrink-0"
+                      className="w-6 h-6 rounded-md border-0 cursor-pointer overflow-hidden bg-transparent p-0 shrink-0"
                     />
                     <input
                       type="text"
                       value={store.corDominante}
                       onChange={(e) => store.updateConfig({ corDominante: e.target.value })}
-                      className="w-16 bg-[#111] border border-white/5 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 font-bold uppercase"
+                      className="w-20 bg-transparent text-xs text-white focus:outline-none font-mono uppercase"
                     />
                   </div>
                 </div>
               )}
 
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-zinc-450 uppercase tracking-widest">Degradê Leitura?</span>
+                <div>
+                  <span className="text-xs font-bold text-zinc-300 uppercase tracking-wider block">Degradê de Leitura</span>
+                  <span className="text-[11px] text-zinc-500">Aumenta o contraste para leitura perfeita dos textos</span>
+                </div>
                 <button
+                  type="button"
                   onClick={() => store.updateConfig({ degradeLeitura: !store.degradeLeitura })}
-                  className="w-11 h-6 rounded-full p-0.5 relative transition-colors duration-200 cursor-pointer"
+                  className="w-11 h-6 rounded-full p-0.5 relative transition-colors duration-200 cursor-pointer shrink-0"
                   style={{ backgroundColor: store.degradeLeitura ? "#c5a880" : "#27272a" }}
                 >
                   <div
@@ -2116,125 +2259,135 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
               </div>
             </div>
           </div>
+          )}
 
           {/* Composição */}
-          <div className="bg-black/50 border border-white/5 p-5 rounded-xl space-y-4 shadow-sm hover:border-white/5 transition-colors">
-            <div className="flex items-center gap-2.5 border-l-2 border-[#c5a880] pl-3">
-              <span className="text-sm font-semibold text-white tracking-tight">Composição</span>
+          {(builderSectionTab === "all" || builderSectionTab === "style") && (
+          <div className="bg-[#0c0c10]/95 border border-white/10 hover:border-[#c5a880]/30 rounded-2xl p-5 shadow-xl space-y-4 transition-all duration-300 animate-in fade-in duration-200">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#c5a880]/20 to-[#c5a880]/5 border border-[#c5a880]/30 text-[#c5a880] flex items-center justify-center shrink-0 shadow-sm">
+                <User size={16} />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white tracking-tight">Composição & Enquadramento</h3>
+                <p className="text-[11px] text-zinc-400">Escolha o plano e objetos de profundidade</p>
+              </div>
             </div>
 
-            <div className="space-y-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               {[
-                { name: "Close-up (Rosto)", desc: "Foco no enquadramento ideal" },
-                { name: "Plano Médio (Busto)", desc: "Foco no enquadramento ideal" },
-                { name: "Plano Americano", desc: "Foco no enquadramento ideal" }
+                { name: "Close-up (Rosto)", desc: "Foco no rosto e expressão" },
+                { name: "Plano Médio (Busto)", desc: "Da cintura para cima" },
+                { name: "Plano Americano", desc: "Do joelho para cima" }
               ].map((framingItem) => {
                 const isSelected = store.composicao === framingItem.name;
                 return (
                   <div
                     key={framingItem.name}
                     onClick={() => store.updateConfig({ composicao: framingItem.name })}
-                    className={`flex items-center gap-3.5 p-3 rounded-lg border cursor-pointer transition-all duration-200 ${
+                    className={`p-3 rounded-xl border cursor-pointer transition-all duration-200 flex flex-col justify-between ${
                       isSelected
-                        ? "bg-[#c5a880]/15 border-[#c5a880] text-white shadow-sm shadow-amber-500/10"
-                        : "bg-black/40 border-white/5 text-zinc-400 hover:text-white hover:border-[#c5a880]/30"
+                        ? "bg-gradient-to-br from-[#c5a880]/20 to-[#c5a880]/5 border-[#c5a880] text-white shadow-md shadow-[#c5a880]/10"
+                        : "bg-[#111116] border-white/5 text-zinc-400 hover:text-white hover:border-[#c5a880]/30"
                     }`}
                   >
-                    <div className={`w-6 h-6 rounded flex items-center justify-center shrink-0 ${isSelected ? 'bg-[#c5a880] text-zinc-950' : 'bg-black text-zinc-500'}`}>
-                      <User size={12} />
-                    </div>
-                    <div className="flex flex-col">
-                      <span className={`text-[11px] font-bold uppercase tracking-wider ${isSelected ? 'text-[#c5a880]' : 'text-zinc-300'}`}>{framingItem.name}</span>
-                      <span className="text-[11px] text-zinc-500 lowercase tracking-wider mt-0.5">{framingItem.desc}</span>
-                    </div>
+                    <span className={`text-xs font-bold ${isSelected ? 'text-[#c5a880]' : 'text-zinc-300'}`}>{framingItem.name}</span>
+                    <span className="text-[10px] text-zinc-500 mt-1">{framingItem.desc}</span>
                   </div>
                 );
               })}
+            </div>
 
-              {/* Campo livre de Composição */}
-              <div className="pt-2">
-                <label className="block text-xs font-medium text-zinc-400 mb-1.5">Composição Personalizada (opcional)</label>
-                <input
-                  type="text"
-                  value={store.composicaoCustom || ""}
-                  onChange={(e) => store.updateConfig({ composicaoCustom: e.target.value })}
-                  placeholder="Ex: Sujeito desfocado fundo centralizado..."
-                  className="w-full bg-black border border-white/5 rounded-lg px-4 py-3 text-xs text-zinc-200 placeholder:text-zinc-700 focus:outline-none focus:border-[#c5a880]/50 font-medium"
-                />
+            {/* Campo livre de Composição */}
+            <div>
+              <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-1.5">Composição Livre (Opcional)</label>
+              <input
+                type="text"
+                value={store.composicaoCustom || ""}
+                onChange={(e) => store.updateConfig({ composicaoCustom: e.target.value })}
+                placeholder="Ex: Sujeito levemente inclinado à esquerda com espaço negativo à direita..."
+                className="w-full bg-[#131318] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-[#c5a880]"
+              />
+            </div>
+
+            {/* Elementos Flutuantes Avançados */}
+            <div className="space-y-3 pt-3 border-t border-white/5">
+              <div>
+                <span className="text-xs font-bold text-zinc-300 uppercase tracking-wider block">Elementos Flutuantes</span>
+                <span className="text-[11px] text-zinc-500">Partículas e objetos suspensos para profundidade 3D</span>
+              </div>
+              
+              <div className="grid grid-cols-3 gap-1.5 p-1 bg-[#111116] rounded-xl border border-white/5">
+                {[
+                  { label: "Desligar", value: "off" },
+                  { label: "Automático", value: "auto" },
+                  { label: "Descrever", value: "custom" }
+                ].map((opt) => {
+                  const isSelected = store.floatingElementsMode === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => store.updateConfig({ floatingElementsMode: opt.value as any })}
+                      className={`py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        isSelected 
+                          ? "bg-[#c5a880] text-zinc-950 shadow-sm" 
+                          : "text-zinc-400 hover:text-zinc-200"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
               </div>
 
-              {/* Elementos Flutuantes Avançados */}
-              <div className="space-y-3 pt-3.5 border-t border-white/5 mt-3">
-                <div className="flex flex-col gap-1">
-                  <span className="text-xs font-bold text-zinc-350 uppercase tracking-wider">Elementos Flutuantes</span>
-                  <span className="text-xs text-zinc-500 tracking-wide">Configure partículas ou objetos suspensos para dar profundidade</span>
+              {store.floatingElementsMode === "custom" && (
+                <div className="animate-in slide-in-from-top-2 duration-200">
+                  <input
+                    type="text"
+                    value={store.floatingElementsCustom || ""}
+                    onChange={(e) => store.updateConfig({ floatingElementsCustom: e.target.value })}
+                    placeholder="Ex: Gotas de água cristalina, faíscas douradas desfocadas..."
+                    className="w-full bg-[#131318] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-[#c5a880]"
+                  />
                 </div>
-                
-                <div className="grid grid-cols-3 gap-1.5 bg-black p-1 rounded-xl border border-white/5">
-                  {[
-                    { label: "Desligar", value: "off" },
-                    { label: "Auto", value: "auto" },
-                    { label: "Descrever", value: "custom" }
-                  ].map((opt) => {
-                    const isSelected = store.floatingElementsMode === opt.value;
-                    return (
-                      <button
-                        key={opt.value}
-                        onClick={() => store.updateConfig({ floatingElementsMode: opt.value as any })}
-                        className={`py-2.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
-                          isSelected 
-                            ? "bg-[#c5a880] text-black font-semibold" 
-                            : "text-zinc-550 hover:text-zinc-200"
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {store.floatingElementsMode === "custom" && (
-                  <div className="pt-1.5 animate-in slide-in-from-top-2 duration-200">
-                    <input
-                      type="text"
-                      value={store.floatingElementsCustom || ""}
-                      onChange={(e) => store.updateConfig({ floatingElementsCustom: e.target.value })}
-                      placeholder="Ex: Folhas douradas de outono caindo desfocadas..."
-                      className="w-full bg-black border border-white/5 rounded-lg px-4 py-3 text-xs text-zinc-200 placeholder:text-zinc-700 focus:outline-none focus:border-[#c5a880]/50 font-medium"
-                    />
-                  </div>
-                )}
-              </div>
+              )}
             </div>
           </div>
+          )}
 
           {/* Atributos Visuais & Estilo */}
-          <div className="bg-[#0d0d11]/85 border border-white/5 p-5 rounded-2xl space-y-5 shadow-lg hover:border-white/5 transition-colors">
-            <div className="flex items-center gap-2.5 border-l-2 border-[#c5a880] pl-3">
-              <span className="text-sm font-semibold text-white tracking-tight">Atributos Visuais & Estilo</span>
+          {(builderSectionTab === "all" || builderSectionTab === "style") && (
+          <div className="bg-[#0c0c10]/95 border border-white/10 hover:border-[#c5a880]/30 rounded-2xl p-5 shadow-xl space-y-4 transition-all duration-300 animate-in fade-in duration-200">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#c5a880]/20 to-[#c5a880]/5 border border-[#c5a880]/30 text-[#c5a880] flex items-center justify-center shrink-0 shadow-sm">
+                <SlidersHorizontal size={16} />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white tracking-tight">Atributos Visuais & Estilo</h3>
+                <p className="text-[11px] text-zinc-400">Intensidade criativa e filtros estéticos</p>
+              </div>
             </div>
 
             {/* Slider de Sobriedade com Porcentagem Dinâmica */}
-            <div className="bg-[#121216] border border-white/5 p-5 rounded-xl space-y-3 shadow-md">
-              <div className="flex justify-between items-center text-xs font-black uppercase tracking-wider text-zinc-400">
-                <span>Sobriedade</span>
-                <span className="text-[#c5a880] font-black">
+            <div className="bg-[#111116] border border-white/5 p-4 rounded-xl space-y-2.5">
+              <div className="flex justify-between items-center text-xs font-bold text-zinc-300">
+                <span className="uppercase tracking-wider">Nível Criativo da IA</span>
+                <span className="text-[#c5a880] font-extrabold bg-[#c5a880]/10 px-2 py-0.5 rounded-md">
                   {store.nivelCriativo}% — {getCreativeSliderLabel(store.nivelCriativo)}
                 </span>
               </div>
-              <div className="relative pt-1">
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={store.nivelCriativo}
-                  onChange={(e) => store.updateConfig({ nivelCriativo: parseInt(e.target.value) })}
-                  className="w-full h-1.5 bg-[#111] rounded-lg appearance-none cursor-pointer accent-[#c5a880] focus:outline-none"
-                />
-              </div>
-              <div className="flex justify-between text-[10px] font-extrabold text-zinc-600 uppercase tracking-widest pt-1">
-                <span>Criativo</span>
-                <span>Profissional</span>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={store.nivelCriativo}
+                onChange={(e) => store.updateConfig({ nivelCriativo: parseInt(e.target.value) })}
+                className="w-full h-2 bg-[#181820] rounded-lg appearance-none cursor-pointer accent-[#c5a880] focus:outline-none"
+              />
+              <div className="flex justify-between text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
+                <span>Minimalista / Fiel</span>
+                <span>Ultra Artístico</span>
               </div>
             </div>
 
@@ -2245,15 +2398,16 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
             />
 
             {/* Toggles extras */}
-            <div className="space-y-3 border-t border-white/5 pt-5">
-              <div className="flex items-center justify-between py-1">
-                <div className="flex flex-col">
-                  <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Usar Desfoque (Blur)?</span>
-                  <span className="text-[11px] text-zinc-600">Aplica profundidade de campo suave</span>
+            <div className="space-y-3 border-t border-white/5 pt-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold text-zinc-300 uppercase tracking-wider block">Desfoque de Fundo (Profundidade de Campo)</span>
+                  <span className="text-[11px] text-zinc-500">Aplica profundidade de campo cinematográfica</span>
                 </div>
                 <button
+                  type="button"
                   onClick={() => store.updateConfig({ enableBlur: !store.enableBlur })}
-                  className="w-11 h-6 rounded-full p-0.5 relative transition-colors duration-250 cursor-pointer"
+                  className="w-11 h-6 rounded-full p-0.5 relative transition-colors duration-250 cursor-pointer shrink-0"
                   style={{ backgroundColor: store.enableBlur ? "#c5a880" : "#27272a" }}
                 >
                   <div
@@ -2263,14 +2417,15 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                 </button>
               </div>
 
-              <div className="flex items-center justify-between py-1">
-                <div className="flex flex-col">
-                  <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Usar Degradê Lateral?</span>
-                  <span className="text-[11px] text-zinc-600">Insere sombras laterais sutis para contraste</span>
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold text-zinc-300 uppercase tracking-wider block">Degradê Lateral</span>
+                  <span className="text-[11px] text-zinc-500">Vinheta lateral para contraste em layouts</span>
                 </div>
                 <button
+                  type="button"
                   onClick={() => store.updateConfig({ lateralGradient: !store.lateralGradient })}
-                  className="w-11 h-6 rounded-full p-0.5 relative transition-colors duration-250 cursor-pointer"
+                  className="w-11 h-6 rounded-full p-0.5 relative transition-colors duration-250 cursor-pointer shrink-0"
                   style={{ backgroundColor: store.lateralGradient ? "#c5a880" : "#27272a" }}
                 >
                   <div
@@ -2281,149 +2436,169 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
               </div>
             </div>
           </div>
+          )}
 
           {/* Entradas Manuais */}
-          <div className="bg-black/50 border border-white/5 p-5 rounded-xl space-y-5 shadow-sm hover:border-white/5 transition-colors">
-            <div className="flex items-center gap-2.5 border-l-2 border-[#c5a880] pl-3">
-              <span className="text-sm font-semibold text-white tracking-tight">Entradas Manuais</span>
+          {(builderSectionTab === "all" || builderSectionTab === "style" || builderSectionTab === "ai") && (
+          <div className="bg-[#0c0c10]/95 border border-white/10 hover:border-[#c5a880]/30 rounded-2xl p-5 shadow-xl space-y-4 transition-all duration-300 animate-in fade-in duration-200">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#c5a880]/20 to-[#c5a880]/5 border border-[#c5a880]/30 text-[#c5a880] flex items-center justify-center shrink-0 shadow-sm">
+                <Terminal size={16} />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white tracking-tight">Instruções Manuais</h3>
+                <p className="text-[11px] text-zinc-400">Adicione comandos livres e restrições</p>
+              </div>
             </div>
 
             <div>
-              <label className="block text-xs uppercase tracking-widest font-black text-zinc-550 mb-1.5">Prompt Adicional</label>
+              <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-1.5">Instrução Adicional Livre</label>
               <textarea
                 value={store.additionalPrompt}
                 onChange={(e) => store.updateConfig({ additionalPrompt: e.target.value })}
-                placeholder="Escreva detalhes estéticos adicionais..."
-                rows={3}
-                className="w-full bg-black border border-white/5 rounded-lg px-4 py-3 text-xs text-zinc-300 placeholder:text-zinc-700 focus:outline-none focus:border-[#c5a880]/50 resize-none font-medium"
+                placeholder="Ex: Incluir iluminação volumétrica dourada ao fundo, sensação premium..."
+                rows={2}
+                className="w-full bg-[#131318] border border-white/10 rounded-xl p-3 text-xs text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-[#c5a880] resize-none"
               />
             </div>
 
             <div>
-              <label className="block text-xs uppercase tracking-widest font-black text-zinc-550 mb-1.5">Prompt Negativo</label>
+              <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-1.5">O que evitar na imagem</label>
               <textarea
                 value={store.negativePrompt}
                 onChange={(e) => store.updateConfig({ negativePrompt: e.target.value })}
-                placeholder="Ex: óculos, água no avião, elements distorcidos, deformações, texto borrado..."
-                rows={3}
-                className="w-full bg-black border border-white/5 rounded-lg px-4 py-3 text-xs text-zinc-300 placeholder:text-zinc-700 focus:outline-none focus:border-[#c5a880]/50 resize-none font-medium"
+                placeholder="Ex: óculos, distorções, dedos extras, texto ilegível, baixa resolução..."
+                rows={2}
+                className="w-full bg-[#131318] border border-white/10 rounded-xl p-3 text-xs text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-[#c5a880] resize-none"
               />
             </div>
           </div>
+          )}
 
-          {/* Seleção de Modelo */}
-          <div className="bg-black/50 border border-white/5 p-5 rounded-xl space-y-4 shadow-sm hover:border-white/5 transition-colors">
-            <div className="flex items-center gap-2.5 border-l-2 border-[#c5a880] pl-3">
-              <span className="text-sm font-semibold text-white tracking-tight">Modelo Base de Geração</span>
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => store.updateConfig({ modelId: "gemini-3-pro-image" })}
-                className={`flex-1 flex flex-col items-center justify-center p-4 rounded-xl border transition-all ${(!store.modelId || store.modelId === "gemini-3-pro-image") ? "bg-[#ad8330]/20 border-[#ad8330]/50 text-[#d4af37]" : "bg-black border-white/5 text-zinc-400 hover:text-zinc-200"}`}
-              >
-                <Sparkles size={24} className="mb-2" />
-                <span className="font-bold text-sm">Gemini 3 Pro</span>
-                <span className="text-xs opacity-70">Alta Qualidade & Raciocínio</span>
-              </button>
-              
-              <button
-                onClick={() => store.updateConfig({ modelId: "imagen-3.0-generate-002" })}
-                className={`flex-1 flex flex-col items-center justify-center p-4 rounded-xl border transition-all ${store.modelId === "imagen-3.0-generate-002" ? "bg-[#ad8330]/20 border-[#ad8330]/50 text-[#d4af37]" : "bg-black border-white/5 text-zinc-400 hover:text-zinc-200"}`}
-              >
-                <Zap size={24} className="mb-2" />
-                <span className="font-bold text-sm">Imagen 3</span>
-                <span className="text-xs opacity-70">Velocidade & Criatividade</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Opções Avançadas */}
-          <div className="bg-black/50 border border-white/5 p-5 rounded-xl space-y-5 shadow-sm hover:border-white/5 transition-colors">
-            <div className="flex items-center gap-2.5 border-l-2 border-[#c5a880] pl-3">
-              <span className="text-sm font-semibold text-white tracking-tight">Opções Avançadas</span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              {/* Qualidade */}
+          {/* Seleção de Modelo & Render */}
+          {(builderSectionTab === "all" || builderSectionTab === "ai") && (
+          <div className="bg-[#0c0c10]/95 border border-white/10 hover:border-[#c5a880]/30 rounded-2xl p-5 shadow-xl space-y-4 transition-all duration-300 animate-in fade-in duration-200">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#c5a880]/20 to-[#c5a880]/5 border border-[#c5a880]/30 text-[#c5a880] flex items-center justify-center shrink-0 shadow-sm">
+                <Zap size={16} />
+              </div>
               <div>
-                <label className="block text-xs uppercase tracking-widest font-black text-zinc-500 mb-1.5">Qualidade de Renderização</label>
-                <div className="flex gap-1 bg-black p-1.5 rounded-lg border border-white/5">
-                  {[
-                    { q: "1K", model: "gemini-3-pro-image" },
-                    { q: "2K", model: "gemini-3-pro-image" },
-                    { q: "4K", model: "gemini-3-pro-image" }
-                  ].map(({ q, model }) => {
+                <h3 className="text-sm font-bold text-white tracking-tight">Modelo de IA & Qualidade</h3>
+                <p className="text-[11px] text-zinc-400">Escolha o modelo e a resolução</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              {[
+                { id: "nanobanana-pro", name: "Nano Banana Pro", desc: "Qualidade 4K", icon: <Banana size={18} /> },
+                { id: "nanobanana-2", name: "Nano Banana 2", desc: "Ultra Rápido", icon: <Banana size={18} /> },
+                { id: "gemini-3.6", name: "Gemini 3.6", desc: "Alta Precisão", icon: <Sparkles size={18} /> },
+                { id: "gemini-3.5-pro", name: "Gemini 3.5 Pro", desc: "Ultra Qualidade", icon: <Sparkles size={18} /> }
+              ].map((model) => {
+                const isSelected = (!store.modelId && model.id === "nanobanana-pro") || store.modelId === model.id;
+                return (
+                  <button
+                    key={model.id}
+                    type="button"
+                    onClick={() => store.updateConfig({ modelId: model.id })}
+                    className={`p-3 rounded-xl border text-left transition-all relative flex flex-col justify-between ${
+                      isSelected
+                        ? "bg-gradient-to-br from-[#c5a880]/20 to-[#c5a880]/5 border-[#c5a880] text-white shadow-md shadow-[#c5a880]/10"
+                        : "bg-[#111116] border-white/5 text-zinc-400 hover:text-white hover:border-[#c5a880]/30"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className={isSelected ? "text-[#c5a880]" : "text-zinc-500"}>
+                        {model.icon}
+                      </div>
+                      {isSelected && (
+                        <span className="w-2 h-2 rounded-full bg-[#c5a880] animate-pulse" />
+                      )}
+                    </div>
+                    <div>
+                      <span className={`text-xs font-bold block ${isSelected ? 'text-[#c5a880]' : 'text-zinc-200'}`}>
+                        {model.name}
+                      </span>
+                      <span className="text-[10px] text-zinc-500">{model.desc}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Qualidade e Variações */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+              <div>
+                <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-1.5">Resolução Máxima</label>
+                <div className="flex gap-1.5 p-1 bg-[#111116] rounded-xl border border-white/5">
+                  {["1K", "2K", "4K"].map((q) => {
                     const isSelected = store.resolucao === q;
                     return (
                       <button
                         key={q}
+                        type="button"
                         onClick={() => store.updateConfig({ resolucao: q })}
-                        title={`Modelo: ${model}`}
-                        className={`flex-1 py-1 rounded text-xs font-black transition-all cursor-pointer flex flex-col items-center leading-tight ${
-                          isSelected ? "bg-[#c5a880] text-black font-semibold" : "text-zinc-400 hover:text-white"
+                        className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          isSelected ? "bg-[#c5a880] text-zinc-950 shadow-sm font-extrabold" : "text-zinc-400 hover:text-white"
                         }`}
                       >
-                        <span>{q}</span>
-                        <span className="text-[7px] opacity-75 font-normal tracking-tight">Gemini</span>
+                        {q}
                       </button>
                     );
                   })}
                 </div>
               </div>
 
-              {/* Formato removed */}
+              <div>
+                <label className="block text-xs font-bold text-zinc-300 uppercase tracking-wider mb-1.5">Quantidade de Variações</label>
+                <div className="flex gap-1 p-1 bg-[#111116] rounded-xl border border-white/5">
+                  {[1, 2, 3, 4, 5].map((num) => {
+                    const isSelected = store.variations === num;
+                    return (
+                      <button
+                        key={num}
+                        type="button"
+                        onClick={() => store.updateConfig({ variations: num })}
+                        className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          isSelected ? "bg-[#c5a880] text-zinc-950 shadow-sm font-extrabold" : "text-zinc-400 hover:text-white"
+                        }`}
+                      >
+                        {num}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
             {/* Seed */}
             <div>
-              <label className="block text-xs uppercase tracking-widest font-black text-zinc-500 mb-1.5 flex items-center justify-between">
-                <span>Seed (Opcional)</span>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-bold text-zinc-300 uppercase tracking-wider">Semente (Opcional)</label>
                 {store.seedUsuario && (
                   <button
+                    type="button"
                     onClick={() => store.setSeedUsuario(null)}
-                    className="text-[9px] text-[#c5a880] hover:text-white"
+                    className="text-[10px] text-[#c5a880] hover:text-white font-bold"
                   >
                     LIMPAR
                   </button>
                 )}
-              </label>
-              <div className="bg-black p-1.5 rounded-lg border border-white/5">
-                <input
-                  type="number"
-                  placeholder="Aleatório (vazio)"
-                  value={store.seedUsuario || ""}
-                  onChange={(e) => store.setSeedUsuario(e.target.value ? e.target.value : null)}
-                  className="w-full bg-transparent text-xs text-white placeholder-zinc-600 outline-none px-2 py-1"
-                />
               </div>
-            </div>
-
-            {/* Quantidade de Cards a Gerar */}
-            <div>
-              <label className="block text-xs uppercase tracking-widest font-black text-zinc-500 mb-1.5">Quantidade de Cards a Gerar</label>
-              <div className="flex gap-1 bg-black p-1.5 rounded-lg border border-white/5">
-                {[1, 2, 3, 4, 5].map((num) => {
-                  const isSelected = store.variations === num;
-                  return (
-                    <button
-                      key={num}
-                      onClick={() => store.updateConfig({ variations: num })}
-                      className={`flex-1 py-1.5 rounded text-xs font-black transition-all cursor-pointer ${
-                        isSelected ? "bg-[#c5a880] text-black font-semibold" : "text-zinc-400 hover:text-white"
-                      }`}
-                    >
-                      {num}
-                    </button>
-                  );
-                })}
-              </div>
+              <input
+                type="number"
+                placeholder="Aleatório (Deixe vazio para gerar novo estilo a cada clique)"
+                value={store.seedUsuario || ""}
+                onChange={(e) => store.setSeedUsuario(e.target.value ? e.target.value : null)}
+                className="w-full bg-[#131318] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-[#c5a880]"
+              />
             </div>
 
             {/* Toggle Somente Prompt & Instrução */}
-            <div className="flex items-center justify-between p-3.5 bg-black/40 rounded-xl border border-white/5 mt-3">
-              <div className="flex flex-col pr-4">
-                <span className="text-xs font-bold text-zinc-300 uppercase tracking-wider">Desativar Geração de Imagem?</span>
-                <span className="text-xs text-zinc-500 tracking-wide mt-1 uppercase">Gera apenas o Prompt Mestre e a Instrução de Sistema, sem criar a imagem física no servidor.</span>
+            <div className="flex items-center justify-between p-3.5 bg-[#111116] rounded-xl border border-white/5 mt-2">
+              <div>
+                <span className="text-xs font-bold text-zinc-300 uppercase tracking-wider block">Modo Somente Prompt & Instrução</span>
+                <span className="text-[11px] text-zinc-500">Gera a engenharia de prompt sem debitar renderização</span>
               </div>
               <button
                 type="button"
@@ -2438,6 +2613,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
               </button>
             </div>
           </div>
+          )}
 
           <div className="pt-2 flex flex-col gap-3">
             <button
@@ -2449,7 +2625,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                 <>
                   <RefreshCw size={13} className="animate-spin text-black" />
                   <span className="text-black font-bold">
-                    {store.somentePrompt ? "Gerando Prompt & Instrução..." : "Gerando Background..."}
+                    {store.somentePrompt ? "Gerando Prompt & Instrução..." : "Gerando Arte..."}
                   </span>
                   <span className="absolute inset-0 bg-black/10 backdrop-blur-[0.5px]" />
                 </>
@@ -2457,7 +2633,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                 <>
                   <Sparkles size={13} className="text-black group-hover:scale-110 transition-transform" />
                   <span>
-                    {store.somentePrompt ? "Gerar Prompt & Instrução" : "Gerar Background"}
+                    {store.somentePrompt ? "Gerar Prompt & Instrução" : "Gerar Arte"}
                   </span>
                 </>
               )}
@@ -2470,7 +2646,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                 title="Abre um novo projeto duplicando todas as configurações e referências atuais"
               >
                 <Copy size={14} className="text-[#c5a880] group-hover:scale-110 transition-transform" />
-                <span>Duplicar Configuração</span>
+                <span>Duplicar Configurações</span>
               </button>
 
               <button
@@ -2488,12 +2664,12 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
           </>
           )}
 
-          {activeMenuTab === "Ref Builder" && (
+          {activeMenuTab === "Engenharia de Prompt" && (
             <div className="space-y-6 animate-in fade-in duration-300">
               {/* Ref Builder Header */}
               <div className="flex flex-col gap-1 pb-4 border-b border-white/5">
                 <span className="text-xs font-black text-[#c5a880] tracking-widest uppercase">Estúdio de Referências</span>
-                <h3 className="text-sm font-extrabold text-white uppercase tracking-wider">Ref Builder PRO</h3>
+                <h3 className="text-sm font-extrabold text-white uppercase tracking-wider">Engenharia de Prompt PRO</h3>
                 <p className="text-xs text-zinc-500 leading-relaxed uppercase tracking-wider">Ajuste os pesos das referências visuais para obter consistência máxima em seus criativos.</p>
               </div>
 
@@ -2501,12 +2677,12 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
               <div className="bg-black/50 border border-white/5 p-5 rounded-xl space-y-4 shadow-sm hover:border-white/5 transition-all">
                 <div className="flex items-center gap-2 border-l-2 border-[#c5a880] pl-3">
                   <User size={14} className="text-[#c5a880]" />
-                  <span className="text-sm font-semibold text-white tracking-tight">Referência de Personagem (IP-Adapter)</span>
+                  <span className="text-sm font-semibold text-white tracking-tight">Referência de Personagem (Identidade)</span>
                 </div>
                 <p className="text-xs text-zinc-500 uppercase tracking-wider">Garanta rostos e identidades idênticas em múltiplos criativos.</p>
                 <div className="border border-dashed border-white/5 bg-black/40 rounded-xl p-4 flex flex-col items-center justify-center text-center gap-2">
                   <User size={24} className="text-zinc-700" />
-                  <span className="text-xs font-bold text-zinc-400 uppercase tracking-wide">Arraste ou clique para subir face de referência</span>
+                  <span className="text-xs font-bold text-zinc-400 uppercase tracking-wide">Arraste ou clique para enviar o rosto de referência</span>
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between text-xs font-black text-zinc-500 uppercase tracking-widest">
@@ -2521,7 +2697,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
               <div className="bg-black/50 border border-white/5 p-5 rounded-xl space-y-4 shadow-sm hover:border-white/5 transition-all">
                 <div className="flex items-center gap-2 border-l-2 border-[#c5a880] pl-3">
                   <Palette size={14} className="text-[#c5a880]" />
-                  <span className="text-sm font-semibold text-white tracking-tight">Referência de Estilo (Style Transfer)</span>
+                  <span className="text-sm font-semibold text-white tracking-tight">Referência de Estilo (Transferência de Estilo)</span>
                 </div>
                 <p className="text-xs text-zinc-500 uppercase tracking-wider">Copie cores, pinceladas, iluminação de estúdio e texturas de uma imagem base.</p>
                 <div className="border border-dashed border-white/5 bg-black/40 rounded-xl p-4 flex flex-col items-center justify-center text-center gap-2">
@@ -2541,7 +2717,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
               <div className="bg-black/50 border border-white/5 p-5 rounded-xl space-y-4 shadow-sm hover:border-white/5 transition-all">
                 <div className="flex items-center gap-2 border-l-2 border-[#c5a880] pl-3">
                   <Layout size={14} className="text-[#c5a880]" />
-                  <span className="text-sm font-semibold text-white tracking-tight">Estrutura & Grid (ControlNet)</span>
+                  <span className="text-sm font-semibold text-white tracking-tight">Estrutura & Grade (Controle de Composição)</span>
                 </div>
                 <p className="text-xs text-zinc-500 uppercase tracking-wider">Preserve o layout original do flyer, posição dos elementos e profundidade.</p>
                 <div className="border border-dashed border-white/5 bg-black/40 rounded-xl p-4 flex flex-col items-center justify-center text-center gap-2">
@@ -2550,7 +2726,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between text-xs font-black text-zinc-500 uppercase tracking-widest">
-                    <span>Fidelidade do Grid</span>
+                    <span>Fidelidade da Estrutura</span>
                     <span className="text-[#c5a880]">0.90</span>
                   </div>
                   <input type="range" min="0" max="1" step="0.05" defaultValue="0.90" className="w-full accent-[#c5a880] bg-[#111] rounded-lg appearance-none h-1.5 cursor-pointer" />
@@ -2563,9 +2739,9 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
             <div className="space-y-6 animate-in fade-in duration-300">
               {/* Inspiração Header */}
               <div className="flex flex-col gap-1 pb-4 border-b border-white/5">
-                <span className="text-xs font-black text-[#c5a880] tracking-widest uppercase">Presets Premium</span>
+                <span className="text-xs font-black text-[#c5a880] tracking-widest uppercase">Modelos Premium</span>
                 <h3 className="text-sm font-extrabold text-white uppercase tracking-wider">Inspiradores Zion</h3>
-                <p className="text-xs text-zinc-500 leading-relaxed uppercase tracking-wider">Clique em um preset inspirado nos panfletos premium da Zion Company para configurar instantaneamente o designer.</p>
+                <p className="text-xs text-zinc-500 leading-relaxed uppercase tracking-wider">Clique em um modelo inspirado nos panfletos premium da Zion Company para configurar instantaneamente o designer.</p>
               </div>
 
               {/* Grid de Presets */}
@@ -2649,11 +2825,11 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                             });
 
                             setActiveMenuTab("Design Builder");
-                            showToast(`Preset "${template.name}" carregado com sucesso! Clique em "Gerar" na coluna direita.`, "success");
+                            showToast(`Modelo "${template.name}" carregado com sucesso! Clique em "Gerar" na coluna direita.`, "success");
                           }}
                           className="px-3 py-1 bg-[#111] border border-white/5 hover:border-[#c5a880]/40 group-hover:bg-[#c5a880] group-hover:text-black hover:scale-105 active:scale-95 transition-all text-[10px] font-black uppercase tracking-widest text-[#c5a880] rounded-lg"
                         >
-                          Aplicar Preset
+                          Aplicar Modelo
                         </button>
                       </div>
                     </div>
@@ -2692,7 +2868,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                     </div>
 
                     <div className="space-y-1 bg-black p-3 rounded-xl border border-white/5">
-                      <span className="text-[11px] font-extrabold text-[#c5a880] uppercase tracking-widest block">Prompt Utilizado</span>
+                      <span className="text-[11px] font-extrabold text-[#c5a880] uppercase tracking-widest block">Instrução Utilizada</span>
                       <p className="text-xs font-bold text-zinc-300 leading-relaxed font-mono select-all">
                         {item.prompt}
                       </p>
@@ -2722,7 +2898,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                         }}
                         className="px-3 py-1 bg-[#c5a880]/10 border border-[#c5a880]/20 hover:bg-[#c5a880] hover:text-black transition-all text-[10px] font-black uppercase tracking-widest text-[#c5a880] rounded-lg"
                       >
-                        Clonar Prompt
+                        Usar Instrução
                       </button>
                     </div>
                   </div>
@@ -2765,7 +2941,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                     />
                     <button className="flex items-center gap-1.5 px-3 py-1.5 bg-[#c5a880] hover:bg-[#b39873] text-zinc-950 rounded text-xs font-black tracking-widest uppercase transition-colors pointer-events-none">
                       <Upload size={12} />
-                      Fazer Upload
+                      Fazer Upload de Imagens
                     </button>
                   </div>
                 </div>
@@ -2774,7 +2950,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
 
               {/* Filtros da Galeria */}
               <div className="space-y-3">
-                <span className="text-xs font-black text-zinc-550 uppercase tracking-widest block">Filtros de Proporção</span>
+                <span className="text-xs font-black text-zinc-400 uppercase tracking-widest block">Filtros de Proporção</span>
                 <div className="flex flex-wrap gap-1 bg-black p-1 rounded-lg border border-white/5">
                   {["Todos", "1:1", "3:4", "9:16", "16:9"].map((dim) => {
                     const isSel = galleryFilterDimension === dim;
@@ -2862,7 +3038,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                             </button>
 
                             <div className="absolute bottom-1 right-1 bg-black/80 border border-white/5 rounded px-1 text-[6.5px] font-black text-zinc-400">
-                              IMG #{originalIdx + 1}
+                              ARTE #{originalIdx + 1}
                             </div>
                           </div>
                         );
@@ -2884,351 +3060,207 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
         </div>
       </div>
 
-      
-      
-      
-{/* COLUNA 3: VIEWPORT (MENSAGENS DE PROGRESSO REALISTA & ZOOM) E GALERIA MASONRY */}
-      <div className="w-full md:flex-1 bg-black flex flex-col md:flex-row h-[55vh] md:h-full overflow-hidden relative">
+      {/* COLUNA 2: VIEWPORT EXPANSIVO HERO STAGE COM BARRA FLUTUANTE E REEL INFERIOR */}
+      <div className={`${mobileWorkspaceTab === 'preview' ? 'flex' : 'hidden'} md:flex w-full md:flex-1 bg-[#070709] flex-col h-full overflow-hidden relative`}>
         
-        {/* Left Side: Image Preview & States */}
+        {/* Main Canvas Container */}
         <div className="flex-1 flex flex-col overflow-hidden relative min-h-0 min-w-0">
-          <div className="flex-1 flex flex-col relative overflow-hidden bg-black/50 min-h-[300px]">
-            
-            {/* Banner Orientação GC TV vMix */}
-            {isGcTv && (
-              <div className="bg-gradient-to-r from-sky-950/90 via-zinc-950 to-sky-950/90 border-b border-sky-500/30 px-4 py-2.5 flex items-center justify-between shrink-0 z-10 gap-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-sky-500/20 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0 font-bold">
-                    <Tv size={15} />
-                  </div>
-                  <div>
-                    <span className="text-xs font-black text-sky-400 uppercase tracking-widest block">PAINEL GC DE TV ATIVO</span>
-                    <span className="text-[11px] font-medium text-zinc-300">Gere a imagem de referência do seu GC e clique em "Aprovar GC" para escanear e criar o arquivo .XAML do vMix.</span>
-                  </div>
+          
+          {/* Banner Orientação GC TV vMix */}
+          {isGcTv && (
+            <div className="bg-gradient-to-r from-sky-950/90 via-zinc-950 to-sky-950/90 border-b border-sky-500/30 px-4 py-2.5 flex items-center justify-between shrink-0 z-10 gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-sky-500/20 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0 font-bold">
+                  <Tv size={15} />
                 </div>
-
-                {activeImage && (
-                  <button
-                    onClick={() => setShowVmixXamlModal(true)}
-                    className="px-3.5 py-1.5 bg-sky-500 hover:bg-sky-400 text-black text-[11px] font-black uppercase tracking-wider rounded-lg transition-all shadow-md shrink-0 flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <Sparkles size={12} />
-                    <span>Aprovar & Gerar XAML</span>
-                  </button>
-                )}
+                <div>
+                  <span className="text-xs font-black text-sky-400 uppercase tracking-widest block">PAINEL DE TARJA DE TV ATIVO</span>
+                  <span className="text-[11px] font-medium text-zinc-300">Gere a arte da sua tarja e clique em "Aprovar Tarja" para criar o arquivo de integração do vMix.</span>
+                </div>
               </div>
-            )}
 
-            <div className="flex-1 flex relative items-center justify-center overflow-hidden min-h-0 min-w-0">
-              {store.somentePrompt ? (
-                <div className="w-full h-full flex flex-col p-4 sm:p-5 bg-[#0a0a0c]/80 border border-white/5 overflow-hidden">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/5 shrink-0">
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-2">
-                        <Terminal size={14} className="text-[#c5a880]" />
-                        <span className="text-xs font-black text-[#c5a880] tracking-widest uppercase">Modo Somente Prompt & Instrução Ativo</span>
-                      </div>
-                      <p className="text-xs text-zinc-500 uppercase tracking-wider text-left">Copie o Prompt e a Instrução de Sistema estruturados lado a lado para alimentar geradores externos.</p>
-                    </div>
-                  </div>
-
-                  {!store.lastGeneratedPrompt ? (
-                    <div className="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-4">
-                      <div className="w-12 h-12 rounded-full bg-[#c5a880]/10 flex items-center justify-center border border-[#c5a880]/20 animate-pulse">
-                        <Sparkles size={20} className="text-[#c5a880]" />
-                      </div>
-                      <div className="space-y-1.5 max-w-sm">
-                        <h4 className="text-xs font-bold text-zinc-300 uppercase tracking-wider">Aguardando Planejamento</h4>
-                        <p className="text-xs text-zinc-500 uppercase tracking-wider leading-relaxed">
-                          O Diretor Criativo escaneará todas as referências visuais e configurações para planejar a composição, pensar e criar o Prompt Mestre e a Instrução de Sistema ideais.
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => generatePremiumImage()}
-                        disabled={isGenerating}
-                        className="px-6 py-2.5 bg-[#c5a880] hover:bg-[#b39873] border-none disabled:opacity-50 text-black font-black text-xs uppercase tracking-widest rounded-lg transition-all shadow-md active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2"
-                      >
-                        {isGenerating ? (
-                          <>
-                            <RefreshCw size={11} className="animate-spin text-black" />
-                            <span>Pensando e Estruturando...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles size={11} className="text-black" />
-                            <span>Gerar Prompt & Instrução</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex-1 flex flex-col min-h-0 mt-3">
-                      <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 min-h-0">
-                        
-                        {/* Mega Prompt Mestre Container */}
-                        <div className="bg-[#040406]/90 border border-white/5 p-4 rounded-xl space-y-2.5 flex flex-col min-h-0 h-full">
-                          <div className="flex justify-between items-center shrink-0 gap-2">
-                            <span className="text-xs font-extrabold text-white uppercase tracking-wider">Mega Prompt Mestre (Flyer BR)</span>
-                            
-                            {/* Copy Button */}
-                            <button
-                              onClick={() => {
-                                navigator.clipboard.writeText(store.lastGeneratedPrompt);
-                                showToast("Prompt copiado!", "success");
-                              }}
-                              className="px-3 py-1.5 bg-black border border-white/5 hover:bg-[#111] text-zinc-300 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
-                            >
-                              <Copy size={10} /> Copiar Prompt
-                            </button>
-                          </div>
-                          <div className="flex-1 bg-black/60 rounded-lg border border-white/5 p-3 overflow-y-auto custom-scrollbar relative">
-                            <p className="text-xs text-zinc-300 font-mono leading-relaxed select-all whitespace-pre-wrap">
-                              {store.lastGeneratedPrompt}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* System Instructions Container */}
-                        <div className="bg-[#040406]/90 border border-white/5 p-4 rounded-xl space-y-2.5 flex flex-col min-h-0 h-full">
-                          <div className="flex justify-between items-center shrink-0 gap-2">
-                            <span className="text-xs font-extrabold text-white uppercase tracking-wider">Instrução de Sistema</span>
-                            
-                            {/* Copy Button */}
-                            <button
-                              onClick={() => {
-                                navigator.clipboard.writeText(store.lastSystemInstruction);
-                                showToast("Instrução copiada!", "success");
-                              }}
-                              className="px-3 py-1.5 bg-black border border-white/5 hover:bg-[#111] text-zinc-300 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
-                            >
-                              <Copy size={10} /> Copiar Instrução
-                            </button>
-                          </div>
-                          <div className="flex-1 bg-black/60 rounded-lg border border-white/5 p-3 overflow-y-auto custom-scrollbar relative">
-                            <p className="text-xs text-zinc-300 font-mono leading-relaxed select-all whitespace-pre-wrap">
-                              {store.lastSystemInstruction}
-                            </p>
-                          </div>
-                        </div>
-
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : activeImage ? (
-                <div 
-                  className={`w-full h-full overflow-hidden relative min-h-0 min-w-0 ${zoomPercent > 100 ? (isDragging ? "cursor-grabbing" : "cursor-grab") : "cursor-default"}`}
-                  onWheel={handleWheel}
-                  onMouseDown={handleMouseDown}
-                  onMouseMove={handleMouseMove}
-                  onMouseUp={handleMouseUpOrLeave}
-                  onMouseLeave={handleMouseUpOrLeave}
-                  onTouchStart={handleTouchStart}
-                  onTouchMove={handleTouchMove}
-                  onTouchEnd={handleMouseUpOrLeave}
-                  onTouchCancel={handleMouseUpOrLeave}
-                  style={{ touchAction: zoomPercent > 100 ? "none" : "auto" }}
+              {activeImage && (
+                <button
+                  onClick={() => setShowVmixXamlModal(true)}
+                  className="px-3.5 py-1.5 bg-sky-500 hover:bg-sky-400 text-black text-[11px] font-black uppercase tracking-wider rounded-lg transition-all shadow-md shrink-0 flex items-center gap-1.5 cursor-pointer"
                 >
-                  <div
-                    className="absolute inset-0 flex items-center justify-center"
-                    style={{
-                      transform: `scale(${zoomPercent / 100}) translate(${panOffset.x}px, ${panOffset.y}px)`,
-                      transformOrigin: "center center",
-                      transition: "transform 0.05s ease-out"
-                    }}
-                  >
-                    <img
-                      src={activeImage}
-                      alt="Visualização da Arte Gerada"
-                      draggable={false}
-                      className="absolute inset-0 w-full h-full object-contain pointer-events-none"
-                    />
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center gap-3.5 text-center p-6">
-                  <div className="w-10 h-10 rounded-full bg-[#111] border border-white/5 flex items-center justify-center text-zinc-500 mb-1.5">
-                    <Sparkles size={16} />
-                  </div>
-                  <p className="text-[11px] font-black text-zinc-400 uppercase tracking-widest">Aguardando Criação</p>
-                  <p className="text-xs text-zinc-600 max-w-xs leading-relaxed mt-1 mb-4">Monte os parâmetros no formulário central e inicie a geração da imagem.</p>
-                  
-                  <div className="relative inline-flex">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          const reader = new FileReader();
-                          reader.onloadend = () => {
-                            if (reader.result) {
-                              store.setGaleriaImages((prev: string[]) => {
-                                const next = [reader.result as string, ...prev];
-                                store.setActiveImageIndex(0);
-                                return next;
-                              });
-                              showToast("Imagem adicionada à galeria", "success");
-                            }
-                          };
-                          reader.readAsDataURL(file);
-                        }
-                        e.target.value = "";
-                      }}
-                    />
-                    <button className="flex items-center gap-2 px-6 py-2.5 bg-[#c5a880] hover:bg-[#b39873] text-zinc-950 rounded-lg text-xs font-black tracking-widest uppercase transition-colors pointer-events-none shadow-md">
-                      <Upload size={14} />
-                      Enviar Arquivo Existente
-                    </button>
-                  </div>
-                </div>
+                  <Sparkles size={12} />
+                  <span>Aprovar & Gerar Arquivo vMix</span>
+                </button>
               )}
             </div>
-            
-            {/* Gallery at the bottom of the Viewport */}
-            
-            {/* Progress Overlay */}
+          )}
 
-              {/* PROGRESS OVERLAY AND STATE FEEDBACK */}
-              {isGenerating && (
-                <div className="absolute inset-0 bg-black/85 backdrop-blur-md z-30 flex flex-col items-center justify-center p-6 animate-in fade-in duration-300">
-                  <div className="max-w-md w-full bg-black border border-[#c5a880]/20 rounded-2xl p-6 shadow-2xl space-y-6 text-center">
-                    
-                    {/* Circular/Rotating glowing loader */}
-                    <div className="relative w-20 h-20 mx-auto">
-                      {/* Ring background */}
-                      <div className="absolute inset-0 rounded-full border-4 border-zinc-900" />
-                      {/* Glowing rotating ring */}
-                      <div className="absolute inset-0 rounded-full border-4 border-t-[#c5a880] border-r-[#c5a880]/30 border-b-transparent border-l-transparent animate-spin" />
-                      {/* Inner percentage indicator */}
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-lg font-black text-white">{progressPercent}%</span>
-                      </div>
-                    </div>
-
-                    {/* Title & Phase Indicator */}
-                    <div className="space-y-2">
-                      <h3 className="text-xs font-black uppercase text-[#c5a880] tracking-widest animate-pulse">
-                        Processando com Inteligência Artificial
-                      </h3>
-                      <p className="text-[11px] text-zinc-300 font-medium min-h-[32px] flex items-center justify-center px-4 leading-relaxed transition-all duration-300">
-                        {progressMessage}
-                      </p>
-                    </div>
-
-                    {/* Horizontal visual progress bar */}
-                    <div className="space-y-1.5">
-                      <div className="h-1.5 w-full bg-black rounded-full overflow-hidden border border-white/5">
-                        <div 
-                          className="h-full bg-gradient-to-r from-[#c5a880] to-[#e6cfb3] transition-all duration-300 ease-out shadow-[0_0_8px_rgba(197,168,128,0.5)]" 
-                          style={{ width: `${progressPercent}%` }}
-                        />
-                      </div>
-                      <div className="flex justify-between text-xs font-bold text-zinc-500 uppercase tracking-wider">
-                        <span>Progresso</span>
-                        <span>{progressPercent}% / 100%</span>
-                      </div>
-                    </div>
-
-                    {/* Countdown Remaining */}
-                    {countdown > 0 && (
-                      <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-black/60 border border-white/5 rounded-full text-xs font-bold text-zinc-400 uppercase tracking-wider">
-                        <span className="relative flex h-1.5 w-1.5">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#c5a880] opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#c5a880]"></span>
-                        </span>
-                        Tempo restante estimado: <span className="text-[#c5a880] font-black">{countdown}s</span>
-                      </div>
-                    )}
-
+          {/* Central Image Viewport */}
+          <div className="flex-1 flex relative items-center justify-center overflow-hidden min-h-0 min-w-0 bg-[#060608]">
+            {store.somentePrompt ? (
+              <div className="w-full h-full flex flex-col p-4 sm:p-6 bg-[#0a0a0c]/80 border border-white/5 overflow-hidden">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/5 shrink-0">
+                  <div className="flex items-center gap-2">
+                    <Terminal size={16} className="text-[#c5a880]" />
+                    <span className="text-xs font-black text-[#c5a880] tracking-widest uppercase">Modo Somente Prompt & Instrução Ativo</span>
                   </div>
                 </div>
-              )}
 
-              {genStatus === "success" && (
-                <div className="absolute inset-0 bg-black/80 backdrop-blur-sm z-30 flex flex-col items-center justify-center p-6 animate-in fade-in zoom-in-95 duration-300">
-                  <div className="max-w-sm w-full bg-black border border-emerald-500/30 rounded-2xl p-6 shadow-2xl space-y-4 text-center">
-                    <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto text-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
-                      <CheckCircle size={24} className="stroke-[2.5px]" />
+                {!store.lastGeneratedPrompt ? (
+                  <div className="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-4">
+                    <div className="w-14 h-14 rounded-2xl bg-[#c5a880]/10 flex items-center justify-center border border-[#c5a880]/20 animate-pulse">
+                      <Sparkles size={24} className="text-[#c5a880]" />
                     </div>
-                    <div className="space-y-1">
-                      <h3 className="text-xs font-black uppercase text-emerald-500 tracking-widest">
-                        Geração Concluída!
-                      </h3>
-                      <p className="text-xs text-zinc-400 uppercase tracking-wider leading-relaxed">
-                        Sua imagem premium foi criada com sucesso e adicionada à galeria.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {genStatus === "error" && (
-                <div className="absolute inset-0 bg-black/85 backdrop-blur-md z-30 flex flex-col items-center justify-center p-6 animate-in fade-in zoom-in-95 duration-300">
-                  <div className="max-w-md w-full bg-black border border-rose-500/30 rounded-2xl p-6 shadow-2xl space-y-5 text-center">
-                    <div className="w-12 h-12 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mx-auto text-rose-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]">
-                      <XCircle size={24} className="stroke-[2.5px]" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <h3 className="text-xs font-black uppercase text-rose-500 tracking-widest">
-                        Falha na Geração
-                      </h3>
-                      <p className="text-[11px] text-zinc-300 font-medium px-4 leading-relaxed bg-black/60 border border-white/5 p-3 rounded-lg text-left font-mono break-all max-h-[120px] overflow-y-auto custom-scrollbar">
-                        {genError || "Ocorreu um erro inesperado ao conectar à API de geração do Vertex."}
+                    <div className="space-y-1.5 max-w-sm">
+                      <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wider">Aguardando Planejamento</h4>
+                      <p className="text-xs text-zinc-500 uppercase tracking-wider leading-relaxed">
+                        O Diretor Criativo escaneará todas as referências visuais e configurações para planejar a composição e gerar o Prompt Mestre.
                       </p>
                     </div>
                     <button
-                      onClick={() => setGenStatus("idle")}
-                      className="w-full py-2.5 bg-rose-500 hover:bg-rose-600 border-none text-white text-xs font-black uppercase tracking-wider rounded-lg transition-colors cursor-pointer"
+                      onClick={() => generatePremiumImage()}
+                      disabled={isGenerating}
+                      className="px-6 py-2.5 bg-[#c5a880] hover:bg-[#b39873] border-none disabled:opacity-50 text-black font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-md active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2"
                     >
-                      Fechar e Tentar Novamente
+                      {isGenerating ? (
+                        <>
+                          <RefreshCw size={12} className="animate-spin text-black" />
+                          <span>Pensando e Estruturando...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles size={12} className="text-black" />
+                          <span>Gerar Prompt & Instrução</span>
+                        </>
+                      )}
                     </button>
                   </div>
+                ) : (
+                  <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 min-h-0 mt-4">
+                    {/* Prompt Box */}
+                    <div className="bg-black/80 border border-white/5 p-4 rounded-xl space-y-2.5 flex flex-col min-h-0 h-full">
+                      <div className="flex justify-between items-center shrink-0">
+                        <span className="text-xs font-bold text-white uppercase tracking-wider">Prompt Mestre</span>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(store.lastGeneratedPrompt);
+                            showToast("Prompt copiado!", "success");
+                          }}
+                          className="px-3 py-1 bg-white/5 hover:bg-white/10 text-zinc-300 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <Copy size={11} /> Copiar
+                        </button>
+                      </div>
+                      <div className="flex-1 bg-black/60 rounded-lg border border-white/5 p-3 overflow-y-auto custom-scrollbar">
+                        <p className="text-xs text-zinc-300 font-mono leading-relaxed select-all whitespace-pre-wrap">
+                          {store.lastGeneratedPrompt}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Instruction Box */}
+                    <div className="bg-black/80 border border-white/5 p-4 rounded-xl space-y-2.5 flex flex-col min-h-0 h-full">
+                      <div className="flex justify-between items-center shrink-0">
+                        <span className="text-xs font-bold text-white uppercase tracking-wider">Instrução da IA</span>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(store.lastSystemInstruction);
+                            showToast("Instrução copiada!", "success");
+                          }}
+                          className="px-3 py-1 bg-white/5 hover:bg-white/10 text-zinc-300 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <Copy size={11} /> Copiar
+                        </button>
+                      </div>
+                      <div className="flex-1 bg-black/60 rounded-lg border border-white/5 p-3 overflow-y-auto custom-scrollbar">
+                        <p className="text-xs text-zinc-300 font-mono leading-relaxed select-all whitespace-pre-wrap">
+                          {store.lastSystemInstruction}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : activeImage ? (
+              <div 
+                className={`w-full h-full overflow-hidden relative min-h-0 min-w-0 ${zoomPercent > 100 ? (isDragging ? "cursor-grabbing" : "cursor-grab") : "cursor-default"}`}
+                onWheel={handleWheel}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUpOrLeave}
+                onMouseLeave={handleMouseUpOrLeave}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleMouseUpOrLeave}
+                onTouchCancel={handleMouseUpOrLeave}
+                style={{ touchAction: zoomPercent > 100 ? "none" : "auto" }}
+              >
+                <div
+                  className="absolute inset-0 flex items-center justify-center p-4 sm:p-8"
+                  style={{
+                    transform: `scale(${zoomPercent / 100}) translate(${panOffset.x}px, ${panOffset.y}px)`,
+                    transformOrigin: "center center",
+                    transition: isDragging ? "none" : "transform 0.05s ease-out"
+                  }}
+                >
+                  <img
+                    src={activeImage}
+                    alt="Visualização da Arte Gerada"
+                    draggable={false}
+                    className="max-h-full max-w-full object-contain rounded-xl shadow-2xl border border-white/5"
+                  />
                 </div>
-              )}
-            </div>
-          </div>
-        {/* Right Side: Options & Gallery */}
-        {activeImage && (
-          <div className="w-full md:w-[280px] xl:w-[320px] bg-black/50 border-t md:border-t-0 border-l-0 md:border-l border-white/5 flex flex-col shrink-0 overflow-y-auto custom-scrollbar relative z-20">
-            {/* Action Buttons */}
-            <div className="p-4 border-b border-white/5 space-y-3 shrink-0">
-              <h3 className="text-xs font-black uppercase text-zinc-500 tracking-widest">Ações Rápidas</h3>
-              <div className="flex flex-col gap-2">
-                <button
-                  onClick={() => handleDownloadActiveImage("ORIGINAL")}
-                  className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-white text-black text-xs font-black uppercase tracking-wider rounded-lg hover:bg-zinc-200 transition-all shadow-xl cursor-pointer"
-                >
-                  <Download size={14} className="stroke-[2.5px] shrink-0" />
-                  <span className="whitespace-nowrap">Download Nativo (API)</span>
-                </button>
-                
-                <button
-                  onClick={handleApplyRefinements}
-                  disabled={isRefining}
-                  className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-gradient-to-r from-amber-500 to-amber-600 border border-amber-400/40 text-black text-xs font-black uppercase tracking-wider rounded-lg hover:from-amber-400 hover:to-amber-500 disabled:opacity-50 transition-all shadow-xl cursor-pointer"
-                >
-                  <Sparkles size={14} className={`stroke-[2.5px] ${isRefining ? 'animate-spin' : ''}`} />
-                  <span>{isRefining ? "Melhorando..." : "Melhorar Imagem"}</span>
-                </button>
-                
-                <div className="grid grid-cols-2 gap-2 mt-1">
+
+                {/* Floating Glass Action Bar */}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 p-1.5 bg-black/85 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl max-w-[95%] overflow-x-auto no-scrollbar">
+                  
+                  {/* Download Direct */}
+                  <button
+                    onClick={() => handleDownloadActiveImage("ORIGINAL")}
+                    className="px-3 py-2 bg-gradient-to-r from-[#c5a880] to-[#b08e58] hover:from-[#d2b68c] hover:to-[#be9b62] text-zinc-950 text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-md flex items-center gap-1.5 cursor-pointer shrink-0 active:scale-95"
+                    title="Baixar imagem em resolução máxima"
+                  >
+                    <Download size={13} className="stroke-[2.5px]" />
+                    <span className="hidden sm:inline">Baixar</span> Original
+                  </button>
+
+                  {/* WhatsApp HD */}
+                  <button
+                    onClick={() => { handleDownloadActiveImage(16); showToast("Baixando em alta qualidade (WhatsApp HD)", "success"); }}
+                    className="px-2.5 py-2 bg-white/5 hover:bg-white/10 text-emerald-400 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shrink-0 border border-white/5"
+                    title="Baixar exatamente 16MB (WhatsApp HD)"
+                  >
+                    <MessageCircle size={13} />
+                    <span className="hidden sm:inline">WhatsApp HD</span>
+                  </button>
+
+                  {/* Social Export Modal */}
+                  <button
+                    onClick={() => setIsSocialExportModalOpen(true)}
+                    className="px-2.5 py-2 bg-white/5 hover:bg-white/10 text-pink-400 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shrink-0 border border-white/5"
+                    title="Baixar exatamente 30MB (Instagram)"
+                  >
+                    <Instagram size={13} />
+                    <span className="hidden sm:inline">Instagram</span>
+                  </button>
+
+                  <div className="w-[1px] h-5 bg-white/10 mx-0.5 shrink-0" />
+
+                  {/* Inpainting / Pintar */}
                   <button
                     onClick={() => setShowMaskPainter(true)}
-                    className="flex items-center justify-center gap-1.5 px-2 py-2 bg-black border border-white/5 text-white text-xs font-black uppercase tracking-wider rounded-lg hover:bg-[#111] transition-all cursor-pointer"
+                    className="px-2.5 py-2 bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shrink-0 border border-white/5"
+                    title="Retocar ou pintar sobre a imagem"
                   >
-                    <PenTool size={12} />
-                    <span>Pintar</span>
+                    <PenTool size={13} />
+                    <span className="hidden sm:inline">Pintar</span>
                   </button>
-                  
+
+                  {/* Remover Fundo */}
                   <button
                     onClick={async () => {
-                      showToast("Removendo fundo...", "success");
+                      if (!checkAdminOrOpenPlan()) return;
+                      showToast("Removendo fundo...", "info");
                       try {
                         const response = await fetch("/api/remove-bg", {
                           method: "POST",
-                          headers: { "Content-Type": "application/json" },
+                          headers: { "Content-Type": "application/json", ...getAuthHeaders() },
                           body: JSON.stringify({ imageBase64: activeImage })
                         });
                         if (!response.ok) throw new Error("Erro");
@@ -3245,95 +3277,194 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                         showToast("Erro ao remover fundo", "error");
                       }
                     }}
-                    className="flex items-center justify-center gap-1.5 px-2 py-2 bg-black border border-white/5 text-white text-xs font-black uppercase tracking-wider rounded-lg hover:bg-[#111] transition-all cursor-pointer"
+                    className="px-2.5 py-2 bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shrink-0 border border-white/5"
+                    title="Remover fundo da imagem atual"
                   >
-                    <Scissors size={12} />
-                    <span>Fundo</span>
+                    <Scissors size={13} />
+                    <span className="hidden sm:inline">Fundo</span>
                   </button>
-                </div>
-                
-                {isGcTv && (
-                  <button
-                    onClick={() => setShowVmixXamlModal(true)}
-                    className="w-full flex items-center justify-center gap-1.5 px-3 py-2 mt-1 bg-gradient-to-r from-sky-500 to-sky-600 border border-sky-400/40 text-white text-xs font-black uppercase tracking-wider rounded-lg hover:from-sky-400 hover:to-sky-500 transition-all cursor-pointer"
-                  >
-                    <Tv size={14} className="stroke-[2.5px]" />
-                    <span>Exportar vMix XAML</span>
-                  </button>
-                )}
-                
-                <button
-                  onClick={() => setIsFullscreen(true)}
-                  className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-black border border-white/5 text-zinc-300 text-xs font-black uppercase tracking-wider rounded-lg hover:bg-black transition-all cursor-pointer"
-                >
-                  <Maximize size={12} />
-                  <span>Tela Cheia</span>
-                </button>
-              </div>
-            </div>
 
-            {/* Export Settings */}
-            <div className="p-4 border-b border-white/5 space-y-4 shrink-0">
-              <div>
-                <h3 className="text-xs font-black uppercase text-zinc-500 tracking-widest mb-2">Formato de Arquivo</h3>
-                <div className="grid grid-cols-4 gap-1 bg-black p-1.5 rounded-lg border border-white/5">
-                  {["AVIF", "PNG", "JPEG", "WEBP"].map((fmt) => {
-                    const isSelected = exportFormat === fmt;
-                    return (
-                      <button
-                        key={fmt}
-                        onClick={() => {
-                          setExportFormat(fmt as any);
-                          store.updateConfig({ formatoExportacao: fmt as any });
-                        }}
-                        className={`py-1.5 rounded text-xs font-black transition-all cursor-pointer ${
-                          isSelected ? "bg-[#c5a880] text-black shadow-md" : "text-zinc-400 hover:text-white"
-                        }`}
-                      >
-                        {fmt}
-                      </button>
-                    );
-                  })}
+                  {/* Comparar */}
+                  {store.galeriaImages.length > 1 && (
+                    <button
+                      onClick={() => setComparingImages({ before: store.galeriaImages[0], after: store.galeriaImages[store.galeriaImages.length - 1] })}
+                      className="px-2.5 py-2 bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shrink-0 border border-white/5"
+                      title="Comparar com versão anterior"
+                    >
+                      <Sparkles size={13} className="text-[#c5a880]" />
+                      <span className="hidden sm:inline">Comparar</span>
+                    </button>
+                  )}
+
+                  {/* Fullscreen */}
+                  <button
+                    onClick={() => setIsFullscreen(true)}
+                    className="p-2 bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white rounded-xl transition-all cursor-pointer shrink-0"
+                    title="Expandir para Tela Cheia"
+                  >
+                    <Maximize size={14} />
+                  </button>
+
+                </div>
+
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-4 text-center p-8 max-w-md">
+                <div className="w-16 h-16 rounded-3xl bg-[#c5a880]/10 border border-[#c5a880]/20 flex items-center justify-center text-[#c5a880] shadow-lg shadow-[#c5a880]/5">
+                  <Sparkles size={28} />
+                </div>
+                <div className="space-y-1.5">
+                  <h3 className="text-base font-bold text-white tracking-tight">Estúdio Criativo Pronto</h3>
+                  <p className="text-xs text-zinc-400 leading-relaxed">Configure os parâmetros na barra lateral e clique em Gerar para sintetizar sua arte em ultra-definição.</p>
+                </div>
+                
+                <div className="relative inline-flex mt-2">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          if (reader.result) {
+                            store.setGaleriaImages((prev: string[]) => {
+                              const next = [reader.result as string, ...prev];
+                              store.setActiveImageIndex(0);
+                              return next;
+                            });
+                            showToast("Imagem adicionada ao estúdio", "success");
+                          }
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                      e.target.value = "";
+                    }}
+                  />
+                  <button className="flex items-center gap-2 px-5 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-200 rounded-xl text-xs font-bold uppercase tracking-wider transition-all pointer-events-none">
+                    <Upload size={14} className="text-[#c5a880]" />
+                    Carregar Imagem Existente
+                  </button>
                 </div>
               </div>
-              
-              <div>
-                <h3 className="text-xs font-black uppercase text-zinc-500 tracking-widest mb-2">Exportar Redes Sociais</h3>
+            )}
+          </div>
+
+          {/* Bottom Variation Reel / Thumbnail Strip */}
+          {store.galeriaImages.length > 0 && (
+            <div className="h-20 bg-black/90 border-t border-white/5 px-4 flex items-center gap-2.5 shrink-0 overflow-x-auto custom-scrollbar z-10">
+              <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 shrink-0 mr-1">
+                Gerações ({store.galeriaImages.length})
+              </span>
+              {store.galeriaImages.map((imgBase64, originalIdx) => {
+                const isSelected = store.activeImageIndex === originalIdx;
+                return (
+                  <div
+                    key={originalIdx}
+                    onClick={() => store.setActiveImageIndex(originalIdx)}
+                    className={`h-14 w-14 rounded-xl overflow-hidden border-2 cursor-pointer relative group transition-all shrink-0 bg-zinc-950 ${
+                      isSelected
+                        ? "border-[#c5a880] shadow-md shadow-[#c5a880]/20 scale-105"
+                        : "border-white/10 hover:border-white/30 opacity-70 hover:opacity-100"
+                    }`}
+                  >
+                    <img src={imgBase64} className="w-full h-full object-cover" alt="Thumb" />
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        store.setGaleriaImages((prev: string[]) => {
+                          const next = prev.filter((_, idx) => idx !== originalIdx);
+                          if (store.activeImageIndex >= next.length) {
+                            store.setActiveImageIndex(Math.max(0, next.length - 1));
+                          }
+                          return next;
+                        });
+                        showToast("Imagem excluída", "success");
+                      }}
+                      className="absolute top-0.5 right-0.5 p-1 bg-black/80 hover:bg-red-500 rounded text-zinc-400 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Trash2 size={9} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Progress Overlay */}
+          {isGenerating && (
+            <div className="absolute inset-0 bg-black/85 backdrop-blur-md z-30 flex flex-col items-center justify-center p-6 animate-in fade-in duration-300">
+              <div className="max-w-md w-full bg-black border border-[#c5a880]/20 rounded-2xl p-6 shadow-2xl space-y-6 text-center">
+                <div className="relative w-20 h-20 mx-auto">
+                  <div className="absolute inset-0 rounded-full border-4 border-zinc-900" />
+                  <div className="absolute inset-0 rounded-full border-4 border-t-[#c5a880] border-r-[#c5a880]/30 border-b-transparent border-l-transparent animate-spin" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-lg font-black text-white">{progressPercent}%</span>
+                  </div>
+                </div>
+
                 <div className="space-y-2">
-                  <button
-                    onClick={() => { handleDownloadActiveImage(16); showToast("Baixando arquivo cravado em 16MB (WhatsApp HD)", "success"); }}
-                    className="w-full flex items-center justify-between gap-2 px-3 py-2.5 bg-emerald-950/30 border border-emerald-500/20 text-emerald-400 text-xs font-black uppercase tracking-wider rounded-lg hover:bg-emerald-900/50 transition-all cursor-pointer"
-                  >
-                    <div className="flex items-center gap-2 whitespace-nowrap"><Download size={14} className="shrink-0" /> WhatsApp HD</div>
-                    <span className="text-[11px] bg-emerald-500/20 px-1.5 py-0.5 rounded font-bold whitespace-nowrap shrink-0">16MB</span>
-                  </button>
-                  <button
-                    onClick={() => { handleDownloadActiveImage("4K"); showToast("Baixando em Ultra HD 4K (Instagram)", "success"); }}
-                    className="w-full flex items-center justify-between gap-2 px-3 py-2.5 bg-pink-950/30 border border-pink-500/20 text-pink-400 text-xs font-black uppercase tracking-wider rounded-lg hover:bg-pink-900/50 transition-all cursor-pointer"
-                  >
-                    <div className="flex items-center gap-2 whitespace-nowrap"><Download size={14} className="shrink-0" /> Instagram 4K</div>
-                    <span className="text-[11px] bg-pink-500/20 px-1.5 py-0.5 rounded font-bold whitespace-nowrap shrink-0">4K Ultra</span>
-                  </button>
-                  <div className="p-2.5 bg-black/60 border border-white/5 rounded-lg text-[10px] text-zinc-400 leading-relaxed space-y-1">
-                    <p className="font-bold text-emerald-400 uppercase tracking-wider">💡 Dica WhatsApp HD:</p>
-                    <p>
-                      Ao enviar no WhatsApp, toque na opção <strong className="text-white font-bold">"HD"</strong> no topo da tela antes de enviar, ou envie como <strong className="text-white font-bold">"Documento"</strong> para preservar 100% dos 16 Megapixels sem compressão do aplicativo!
-                    </p>
+                  <h3 className="text-xs font-black uppercase text-[#c5a880] tracking-widest animate-pulse">
+                    Processando com Inteligência Artificial
+                  </h3>
+                  <p className="text-[11px] text-zinc-300 font-medium min-h-[32px] flex items-center justify-center px-4 leading-relaxed transition-all duration-300">
+                    {progressMessage}
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="h-1.5 w-full bg-black rounded-full overflow-hidden border border-white/5">
+                    <div 
+                      className="h-full bg-gradient-to-r from-[#c5a880] to-[#e6cfb3] transition-all duration-300 ease-out shadow-[0_0_8px_rgba(197,168,128,0.5)]" 
+                      style={{ width: `${progressPercent}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-xs font-bold text-zinc-500 uppercase tracking-wider">
+                    <span>Progresso</span>
+                    <span>{progressPercent}% / 100%</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-3 px-4 py-2 bg-black/70 border border-[#c5a880]/20 rounded-xl text-xs font-bold text-zinc-300 shadow-inner">
+                  <div className="flex items-center gap-2">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    <span>Tempo: <strong className="text-emerald-400 font-mono text-sm">{elapsedSeconds.toFixed(1)}s</strong></span>
+                  </div>
+                  <div className="text-zinc-400 text-[11px]">
+                    Estimativa: <span className="text-[#c5a880] font-semibold">~{estimatedSeconds}s</span>
                   </div>
                 </div>
               </div>
             </div>
-            
-            {/* Masonry Gallery */}
-            <div className="flex-1 p-4 min-h-[200px] flex flex-col shrink-0">
-              <MasonryGallery
-                exportFormat={exportFormat}
-                showToast={showToast}
-              />
+          )}
+
+          {genStatus === "error" && (
+            <div className="absolute inset-0 bg-black/85 backdrop-blur-md z-30 flex flex-col items-center justify-center p-6 animate-in fade-in zoom-in-95 duration-300">
+              <div className="max-w-md w-full bg-black border border-rose-500/30 rounded-2xl p-6 shadow-2xl space-y-5 text-center">
+                <div className="w-12 h-12 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mx-auto text-rose-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]">
+                  <XCircle size={24} className="stroke-[2.5px]" />
+                </div>
+                <div className="space-y-1.5">
+                  <h3 className="text-xs font-black uppercase text-rose-500 tracking-widest">
+                    Falha na Geração
+                  </h3>
+                  <p className="text-[11px] text-zinc-300 font-medium px-4 leading-relaxed bg-black/60 border border-white/5 p-3 rounded-lg text-left font-mono break-all max-h-[120px] overflow-y-auto custom-scrollbar">
+                    {genError || "Ocorreu um erro inesperado ao conectar ao servidor de geração."}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setGenStatus("idle")}
+                  className="w-full py-2.5 bg-rose-500 hover:bg-rose-600 border-none text-white text-xs font-black uppercase tracking-wider rounded-lg transition-colors cursor-pointer"
+                >
+                  Fechar e Tentar Novamente
+                </button>
+              </div>
             </div>
-          </div>
-        )}
-          
+          )}
 
         </div>
       </div>
@@ -3434,6 +3565,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
   <ChatAssistente
     customApiKey={customApiKey}
     showToast={showToast}
+    onGenerateImage={generatePremiumImage}
   />
 
   {comparingImages && (
@@ -3494,5 +3626,6 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
   )}
       </div>
     </div>
-  );
+  </div>
+);
 }

@@ -6,6 +6,8 @@ import {
   Sparkle, ArrowRight, Eye, Code, FileText, ChevronRight, Wand2,
   Clapperboard, Upload, X, FileVideo, Palette, Focus, Disc
 } from "lucide-react";
+import { t } from "../utils/i18n";
+import { checkAdminOrOpenPlan, getAuthHeaders } from "../utils/userAuth";
 
 interface GeradorOmniFlashProps {
   customApiKey?: string;
@@ -156,6 +158,7 @@ export const GeradorOmniFlash: React.FC<GeradorOmniFlashProps> = ({ customApiKey
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
 
   const handleEnhancePrompt = async () => {
+    if (!checkAdminOrOpenPlan(customApiKey)) return;
     if (!concept.trim() && !uploadedMediaBase64) {
       alert("Digite uma ideia básica ou envie um vídeo de referência para a IA melhorar seu prompt.");
       return;
@@ -165,7 +168,7 @@ export const GeradorOmniFlash: React.FC<GeradorOmniFlashProps> = ({ customApiKey
     try {
       const res = await fetch("/api/omni-flash-enhance", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders(customApiKey) },
         body: JSON.stringify({
           prompt: concept.trim(),
           mediaBase64: uploadedMediaBase64,
@@ -253,13 +256,14 @@ export const GeradorOmniFlash: React.FC<GeradorOmniFlashProps> = ({ customApiKey
       return;
     }
 
+    if (!checkAdminOrOpenPlan(customApiKey)) return;
     setIsGeneratingPrompt(true);
     setGeneratedResult(null);
 
     try {
       const res = await fetch("/api/omni-flash-prompt", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders(customApiKey) },
         body: JSON.stringify({
           concept: concept.trim(),
           mode: activeMode,
@@ -316,6 +320,7 @@ export const GeradorOmniFlash: React.FC<GeradorOmniFlashProps> = ({ customApiKey
   };
 
   const handleSimulateOmniFlashVideo = async () => {
+    if (!checkAdminOrOpenPlan(customApiKey)) return;
     if (!generatedResult) return;
     setIsSimulatingVideo(true);
     setVideoStatus("Enviando requisição para gemini-omni-flash-preview na Interactions API...");
@@ -324,7 +329,7 @@ export const GeradorOmniFlash: React.FC<GeradorOmniFlashProps> = ({ customApiKey
     try {
       const res = await fetch("/api/omni-flash-generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders(customApiKey) },
         body: JSON.stringify({
           prompt: generatedResult.englishPrompt,
           aspectRatio: aspectRatio,

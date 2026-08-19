@@ -11,10 +11,14 @@ import {
   Edit2,
   Check,
   Plus,
-  FolderOpen,
   Trash2,
   Loader2,
-  Copy
+  Copy,
+  Bot,
+  Compass,
+  Users,
+  Image as ImageIcon,
+  Layers
 } from "lucide-react";
 
 interface SidebarProps {
@@ -69,38 +73,43 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const handleDeleteProject = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     store.deleteProject(id);
-    showToast("Conversa deletada.", "success");
+    showToast("Conversa excluída.", "success");
     if (store.projectsList.length <= 1) {
       setShowProjectSelector(false);
     }
   };
 
   return (
-    <div className="w-[15%] bg-black border-r border-zinc-800/80 flex flex-col h-full shrink-0">
+    <div className="w-64 sm:w-72 lg:w-64 xl:w-72 max-w-[85vw] bg-black border-r border-[#c5a880]/15 flex flex-col h-full shrink-0 select-none">
       
       {/* Header da Sidebar com Nome do Projeto Editável e Badge */}
-      <div className="p-6 flex flex-col gap-3 border-b border-zinc-800 shrink-0 relative">
+      <div className="p-4 sm:p-5 flex flex-col gap-3 border-b border-[#c5a880]/15 shrink-0 relative bg-black/60 backdrop-blur-md">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded bg-[#ad8330] flex items-center justify-center font-bold text-black text-sm shrink-0">
-              DZ
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#c5a880] to-[#ad8330] flex items-center justify-center font-black text-black text-xs shadow-md shadow-[#c5a880]/15 shrink-0">
+              <Layers size={16} />
             </div>
-            <span className="font-extrabold text-xs uppercase tracking-widest text-[#ad8330]">
-              Designer Zion
-            </span>
+            <div className="flex flex-col">
+              <span className="font-extrabold text-xs uppercase tracking-wider text-white">
+                Designer Zion
+              </span>
+              <span className="text-[9px] text-[#c5a880] font-mono tracking-widest uppercase">
+                Estúdio Criativo
+              </span>
+            </div>
           </div>
           
           <button 
             onClick={handleNewProject}
-            className="w-7 h-7 rounded bg-[#ad8330]/10 hover:bg-[#ad8330]/20 flex items-center justify-center text-[#ad8330] transition-colors"
-            title="Nova Conversa (Zerar Configurações)"
+            className="w-7 h-7 rounded-lg bg-[#c5a880]/10 hover:bg-[#c5a880]/25 text-[#c5a880] flex items-center justify-center transition-all cursor-pointer hover:scale-105 active:scale-95"
+            title="Novo Projeto Limpo (Zerar Configurações)"
           >
             <Plus size={14} />
           </button>
         </div>
         
         {/* Nome do projeto editável */}
-        <div className="mt-1 flex items-center justify-between gap-1 bg-black/60 p-2 rounded-lg border border-zinc-900 group">
+        <div className="mt-0.5 flex items-center justify-between gap-1.5 bg-[#0a0a0a] p-2 rounded-xl border border-white/10 group hover:border-[#c5a880]/30 transition-colors">
           {isEditingName ? (
             <input
               type="text"
@@ -108,14 +117,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
               onChange={(e) => setTempProjectName(e.target.value)}
               onBlur={saveProjectName}
               onKeyDown={(e) => e.key === "Enter" && saveProjectName()}
-              className="bg-transparent border-0 text-[10px] text-white focus:outline-none focus:ring-0 w-full font-bold uppercase tracking-wider"
+              className="bg-transparent border-0 text-[11px] text-white focus:outline-none focus:ring-0 w-full font-bold uppercase tracking-wider"
               autoFocus
             />
           ) : (
             <span 
-              className="text-[10px] font-black uppercase tracking-wider text-zinc-300 truncate max-w-[80%] cursor-pointer hover:text-white"
+              className="text-[11px] font-bold uppercase tracking-wider text-zinc-300 truncate max-w-[85%] cursor-pointer hover:text-[#c5a880] transition-colors"
               onClick={() => setShowProjectSelector(!showProjectSelector)}
-              title="Trocar Conversa"
+              title="Clique para alternar projeto"
             >
               {activeProjectName}
             </span>
@@ -123,30 +132,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
           
           <button
             onClick={isEditingName ? saveProjectName : startEditingName}
-            className="text-zinc-550 hover:text-[#ad8330] transition-colors shrink-0"
+            className="text-zinc-500 hover:text-[#c5a880] transition-colors shrink-0 p-1 cursor-pointer"
           >
-            {isEditingName ? <Check size={10} /> : <Edit2 size={10} className="opacity-40 group-hover:opacity-100 transition-opacity" />}
+            {isEditingName ? <Check size={12} className="text-[#c5a880]" /> : <Edit2 size={11} className="opacity-60 group-hover:opacity-100 transition-opacity" />}
           </button>
         </div>
         
         {showProjectSelector && !isEditingName && (
-          <div className="absolute top-full left-6 right-6 mt-1 bg-black border border-zinc-800 rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto">
+          <div className="absolute top-full left-4 right-4 mt-1 bg-[#0a0a0a] border border-[#c5a880]/30 rounded-xl shadow-2xl z-50 max-h-56 overflow-y-auto custom-scrollbar animate-fade-in p-1">
             {store.projectsList.map((p) => {
               const isProjGenerating = !!store.generatingProjectIds?.[p.id];
+              const isCurrent = p.id === store.activeProjectId;
               return (
                 <div
                   key={p.id}
-                  className={`w-full flex items-center justify-between px-3 py-2 border-b border-zinc-800/50 hover:bg-[#111] transition-colors cursor-pointer ${
-                    p.id === store.activeProjectId ? "text-[#ad8330]" : "text-zinc-400"
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-all cursor-pointer ${
+                    isCurrent ? "bg-[#c5a880]/15 text-[#c5a880] font-extrabold" : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
                   }`}
                   onClick={() => {
                     store.loadProjectById(p.id);
                     setShowProjectSelector(false);
-                    showToast(`Conversa "${p.name}" carregada.`, "success");
+                    showToast(`Projeto "${p.name}" carregado.`, "success");
                   }}
                 >
                   <div className="flex items-center gap-2 truncate mr-2">
-                    {isProjGenerating && <Loader2 size={10} className="animate-spin text-[#ad8330] shrink-0" />}
+                    {isProjGenerating && <Loader2 size={11} className="animate-spin text-[#c5a880] shrink-0" />}
                     <span className="text-[10px] font-bold uppercase tracking-wider truncate">
                       {p.name}
                     </span>
@@ -162,18 +172,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         setShowProjectSelector(false);
                         showToast(`Projeto "${p.name}" duplicado!`, "success");
                       }}
-                      className="text-zinc-600 hover:text-[#ad8330] transition-colors p-1"
-                      title="Duplicar Conversa / Configuração"
+                      className="text-zinc-500 hover:text-[#c5a880] transition-colors p-1"
+                      title="Duplicar Projeto"
                     >
-                      <Copy size={10} />
+                      <Copy size={11} />
                     </button>
-                    <button
-                      onClick={(e) => handleDeleteProject(p.id, e)}
-                      className="text-zinc-600 hover:text-red-500 transition-colors p-1"
-                      title="Deletar Conversa"
-                    >
-                      <Trash2 size={10} />
-                    </button>
+                    {store.projectsList.length > 1 && (
+                      <button
+                        onClick={(e) => handleDeleteProject(p.id, e)}
+                        className="text-zinc-500 hover:text-red-400 transition-colors p-1"
+                        title="Excluir Projeto"
+                      >
+                        <Trash2 size={11} />
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -181,46 +193,52 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         )}
 
-        <div className="mt-0.5 flex justify-between items-center">
-          <span className="inline-block bg-[#ad8330]/20 border border-[#ad8330]/40 text-[#ad8330] text-[9.5px] font-black uppercase tracking-widest px-3 py-1 rounded-full truncate max-w-full">
-            CONVERSA ATIVA
+        <div className="flex justify-between items-center">
+          <span className="inline-flex items-center gap-1 bg-[#c5a880]/15 border border-[#c5a880]/30 text-[#c5a880] text-[9.5px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full truncate">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#c5a880] animate-pulse" />
+            Projeto Ativo
           </span>
         </div>
       </div>
 
       {/* Menu Principal (Abas de rotas simples SPA) */}
-      <div className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto custom-scrollbar">
+      <div className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto custom-scrollbar">
         {[
-          { name: "Designer Zion", active: activeMenuTab === "Design Builder" || activeMenuTab === "Designer Zion" },
-          { name: "Copiloto da Agência", active: activeMenuTab === "Copiloto da Agência" },
-          { name: "Inspiração", active: activeMenuTab === "Inspiração" },
-          { name: "Comunidade", active: activeMenuTab === "Comunidade" },
-          { name: "Minha Galeria", active: activeMenuTab === "Minha Galeria" },
+          { name: "Designer Zion", icon: <Sparkles size={14} />, active: activeMenuTab === "Design Builder" || activeMenuTab === "Designer Zion" },
+          { name: "Copiloto da Agência", icon: <Bot size={14} />, active: activeMenuTab === "Copiloto da Agência" },
+          { name: "Inspiração", icon: <Compass size={14} />, active: activeMenuTab === "Inspiração" },
+          { name: "Comunidade", icon: <Users size={14} />, active: activeMenuTab === "Comunidade" },
+          { name: "Minha Galeria", icon: <ImageIcon size={14} />, active: activeMenuTab === "Minha Galeria" },
         ].map(tab => (
           <button
             key={tab.name}
             onClick={() => setActiveMenuTab(tab.name === "Designer Zion" ? "Design Builder" : tab.name)}
-            className={`w-full flex items-center justify-between px-4 py-3.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
               tab.active || (activeMenuTab === tab.name)
-                ? "bg-[#ad8330]/10 text-[#ad8330] border border-[#ad8330]/20 ring-1 ring-[#ad8330]/10"
-                : "text-zinc-400 hover:text-zinc-200 hover:bg-black/40"
+                ? "bg-[#c5a880] text-black font-extrabold shadow-md shadow-[#c5a880]/20"
+                : "text-zinc-400 hover:text-white hover:bg-white/5"
             }`}
           >
-            <span>{tab.name}</span>
-            {(tab.active || activeMenuTab === tab.name) && <ChevronRight size={12} />}
+            <div className="flex items-center gap-2.5">
+              <span className={tab.active || (activeMenuTab === tab.name) ? "text-black" : "text-[#c5a880]"}>
+                {tab.icon}
+              </span>
+              <span>{tab.name}</span>
+            </div>
+            {(tab.active || activeMenuTab === tab.name) && <ChevronRight size={13} className="text-black" />}
           </button>
         ))}
 
         {/* Seção de Fontes Externas */}
-        <div className="pt-6 px-1">
-          <span className="text-[9.5px] font-black tracking-widest text-zinc-500 uppercase block mb-3.5">Fontes Externas</span>
-          <div className="space-y-1.5">
+        <div className="pt-5 px-1">
+          <span className="text-[9.5px] font-black tracking-widest text-[#c5a880]/70 uppercase block mb-2 px-2">Fontes Externas</span>
+          <div className="space-y-1">
             {["Todas as Fontes", "Pinterest", "Freepik", "Behance", "Comunidade"].map(source => (
               <a
                 key={source}
                 href="#"
                 onClick={(e) => { e.preventDefault(); showToast(`Importando referências de ${source}...`, "success"); }}
-                className="flex items-center justify-between py-2.5 text-[10.5px] font-bold text-zinc-400 hover:text-white uppercase tracking-wider transition-colors"
+                className="flex items-center justify-between px-2.5 py-2 text-[10px] font-bold text-zinc-400 hover:text-white hover:bg-white/5 rounded-lg uppercase tracking-wider transition-colors"
               >
                 <span>{source}</span>
                 <ExternalLink size={10} className="text-zinc-600" />
@@ -231,33 +249,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Painel de Status da API */}
-      <div className="p-5 border-t border-zinc-800 bg-black/15 shrink-0 space-y-3.5">
+      <div className="p-4 border-t border-[#c5a880]/15 bg-black/40 shrink-0 space-y-2.5">
         {/* Status Indicator */}
-        <div className="flex items-center justify-between px-3.5 py-3 rounded-lg bg-black/60 border border-zinc-800">
+        <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-[#0a0a0a] border border-white/10">
           <div className="flex items-center gap-2">
             <span className={`w-2 h-2 rounded-full ${store.apiStatus === "Online" ? "bg-emerald-500 animate-pulse" : "bg-red-500"} shrink-0`} />
-            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-450">
-              {store.apiStatus === "Online" ? "Status: Online" : "Erro API"}
+            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-300">
+              {store.apiStatus === "Online" ? "API: Online" : "Erro API"}
             </span>
           </div>
-          <Activity size={12} className={store.apiStatus === "Online" ? "text-emerald-500" : "text-red-500"} />
+          <Activity size={13} className={store.apiStatus === "Online" ? "text-emerald-400" : "text-red-400"} />
         </div>
 
         {/* Testar Token */}
         <button
           onClick={handleTestToken}
           disabled={isTesting}
-          className="w-full flex items-center justify-center gap-2 py-2.5 bg-black border border-zinc-800 hover:border-zinc-700 active:scale-95 disabled:opacity-50 text-[10px] font-extrabold uppercase tracking-widest text-zinc-300 rounded-lg transition-all cursor-pointer"
+          className="w-full flex items-center justify-center gap-2 py-2 bg-[#0a0a0a] hover:bg-white/5 border border-white/10 hover:border-[#c5a880]/40 active:scale-95 disabled:opacity-50 text-[10px] font-extrabold uppercase tracking-widest text-zinc-200 hover:text-[#c5a880] rounded-xl transition-all cursor-pointer"
         >
           {isTesting ? (
             <>
-              <RefreshCw size={11} className="animate-spin text-[#ad8330]" />
+              <RefreshCw size={11} className="animate-spin text-[#c5a880]" />
               <span>Testando...</span>
             </>
           ) : (
             <>
-              <Play size={11} className="text-[#ad8330]" />
-              <span>Testar Token</span>
+              <Play size={11} className="text-[#c5a880]" />
+              <span>Testar Conexão</span>
             </>
           )}
         </button>

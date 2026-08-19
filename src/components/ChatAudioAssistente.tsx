@@ -238,11 +238,11 @@ Seja muito solícito, técnico e direto ao ponto. Responda em Português do Bras
         title="Assistente de Áudio"
       >
         {isOpen ? <X size={20} className="text-[#c5a880]" /> : <MessageSquare size={20} className="text-[#c5a880]" />}
-        {!isOpen && <span className="absolute inset-0 rounded-full animate-ping opacity-20 bg-[#c5a880]" />}
+        {!isOpen && <span className="absolute inset-0 rounded-full animate-ping opacity-20 bg-[#c5a880]"></span>}
       </button>
 
       {isOpen && (
-        <div className={`border border-zinc-800 bg-black shadow-[0_25px_80px_rgba(0,0,0,0.95)] flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-300 transition-all fixed sm:absolute bottom-20 right-4 left-4 sm:left-auto sm:right-0 sm:bottom-[68px] rounded-2xl w-[calc(100vw-32px)] sm:w-[440px] h-[580px] max-h-[82vh]`}>
+        <div className={`border border-[#c5a880]/30 bg-[#07080a] shadow-[0_25px_80px_rgba(0,0,0,0.98)] flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-300 transition-all fixed sm:absolute bottom-20 right-4 left-4 sm:left-auto sm:right-0 sm:bottom-[68px] rounded-2xl sm:rounded-3xl w-[calc(100vw-32px)] sm:w-[460px] h-[580px] max-h-[84vh]`}>
           
           {/* Header */}
           <div className="flex items-center justify-between p-4 bg-zinc-950/80 backdrop-blur-xl border-b border-white/5 shrink-0">

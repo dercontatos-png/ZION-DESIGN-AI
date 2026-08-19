@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { checkAdminOrOpenPlan, getAuthHeaders } from "../utils/userAuth";
 import {
   Sparkles,
   Zap,
@@ -63,6 +64,7 @@ export default function MotorGenerativoMagnific({
   };
 
   const runTechnicalVisionAnalysis = async () => {
+    if (!checkAdminOrOpenPlan(customApiKey)) return;
     if (!currentImage) return;
     setIsAnalyzing(true);
     setAnalysisReport(null);
@@ -70,7 +72,7 @@ export default function MotorGenerativoMagnific({
     try {
       const res = await fetch("/api/analyze-image-tech", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders(customApiKey) },
         body: JSON.stringify({
           imageBase64: currentImage,
           customApiKey
@@ -103,6 +105,7 @@ export default function MotorGenerativoMagnific({
   };
 
   const runGenerativeEnhancement = async () => {
+    if (!checkAdminOrOpenPlan(customApiKey)) return;
     if (!currentImage) return;
     setIsProcessing(true);
     setTechLogs(["Iniciando pipeline do Motor Generativo (Sem Prompt)..."]);
@@ -110,7 +113,7 @@ export default function MotorGenerativoMagnific({
     try {
       const res = await fetch("/api/enhancer-supir-magnific", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders(customApiKey) },
         body: JSON.stringify({
           imageBase64: currentImage,
           mode: "solid_background_fix",

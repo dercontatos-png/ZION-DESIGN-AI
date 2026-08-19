@@ -5,6 +5,8 @@ import {
   Play, Pause, Trash2, Key, HelpCircle, CheckCircle2, History, AlertCircle, Clock 
 } from "lucide-react";
 import { ChatAudioAssistente } from "./ChatAudioAssistente";
+import { t } from "../utils/i18n";
+import { checkAdminOrOpenPlan, getAuthHeaders } from "../utils/userAuth";
 
 interface GeneratedAudioItem {
   id: string;
@@ -98,13 +100,14 @@ export default function AudioStudio() {
       return;
     }
 
+    if (!checkAdminOrOpenPlan(getActiveApiKey())) return;
     setIsImprovingPrompt(true);
     setError("");
 
     try {
       const res = await fetch("/api/melhorar-prompt", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders(getActiveApiKey()) },
         body: JSON.stringify({
           prompt: textToImprove,
           assistantId: creationMode === 'voice' ? "audio-voice-director" : creationMode === 'music' ? "audio-music-director" : "audio-sfx-director",
@@ -170,6 +173,7 @@ export default function AudioStudio() {
       }
     }
 
+    if (!checkAdminOrOpenPlan(getActiveApiKey())) return;
     setError("");
     setIsGenerating(true);
     setAudioUrl(null);
@@ -188,8 +192,14 @@ export default function AudioStudio() {
         formData.append("file", referenceFile);
       }
 
+      const authHdrs = getAuthHeaders(getActiveApiKey());
       const res = await fetch("/api/generate-audio", {
         method: "POST",
+        headers: {
+          "x-user-role": authHdrs["x-user-role"],
+          "x-user-email": authHdrs["x-user-email"],
+          ...(authHdrs["x-custom-api-key"] ? { "x-custom-api-key": authHdrs["x-custom-api-key"] } : {})
+        },
         body: formData,
       });
 
@@ -265,10 +275,10 @@ export default function AudioStudio() {
           </div>
           <div>
             <h1 className="text-xl font-bold text-white tracking-tight flex items-center gap-2.5">
-              Audio & Sound Studio
+              Estúdio de Áudio & Som
               <span className="text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-semibold px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                IA Inteligente Active
+                IA Inteligente Ativa
               </span>
             </h1>
             <p className="text-xs text-zinc-400 mt-0.5">
@@ -421,7 +431,7 @@ export default function AudioStudio() {
                 <div className="pt-2 border-t border-emerald-500/10 flex flex-col gap-2">
                   <label className="text-xs font-bold text-zinc-200 flex items-center justify-between">
                     <span>Escolha a Voz do Narrador / Locutor:</span>
-                    <span className="text-[10px] text-zinc-400 font-normal">Google Native Voice</span>
+                    <span className="text-[10px] text-zinc-400 font-normal">Voz Nativa do Google</span>
                   </label>
                   
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">

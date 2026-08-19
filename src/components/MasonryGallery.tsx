@@ -16,7 +16,7 @@ const MasonryGalleryComponent: React.FC<MasonryGalleryProps> = ({
   if (store.galeriaImages.length === 0) {
     return (
       <div className="py-5 text-center border border-dashed border-white/5 rounded-xl bg-black/20">
-        <span className="text-[9px] font-black text-zinc-650 uppercase tracking-widest">Nenhuma imagem gerada nesta sessão</span>
+        <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest">Nenhuma imagem gerada ainda</span>
       </div>
     );
   }
@@ -26,7 +26,7 @@ const MasonryGalleryComponent: React.FC<MasonryGalleryProps> = ({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Grid size={12} className="text-zinc-600" />
-          <span className="text-[10px] font-black tracking-widest text-zinc-500 uppercase">Galeria Masonry</span>
+          <span className="text-[10px] font-black tracking-widest text-zinc-500 uppercase">Galeria de Visualizações</span>
         </div>
         <button
           onClick={() => {
@@ -61,7 +61,10 @@ const MasonryGalleryComponent: React.FC<MasonryGalleryProps> = ({
               <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-2 p-1.5">
                 <a
                   href={img}
-                  download={`Zion_Galeria_Item_${index + 1}_${(store.dimensao || "1x1").replace(":", "x")}_${store.resolucao || "HD"}.${exportFormat.toLowerCase()}`}
+                  download={`Zion_Galeria_Item_${index + 1}_${(store.dimensao || "1x1").replace(":", "x")}_${store.resolucao || "HD"}.${(() => {
+                    const m = /^data:image\/(png|jpeg|webp|avif|gif)/.exec(img);
+                    return m ? (m[1] === "jpeg" ? "jpg" : m[1]) : exportFormat.toLowerCase();
+                  })()}`}
                   onClick={(e) => e.stopPropagation()}
                   className="p-2 bg-black/85 hover:bg-[#c99b3b] hover:text-black border border-white/5 hover:border-[#c99b3b] rounded-lg text-zinc-300 transition-all shadow-xl"
                   title={`Baixar em ${store.resolucao}`}

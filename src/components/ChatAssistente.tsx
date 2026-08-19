@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { set as idbSet, get as idbGet } from "idb-keyval";
 import { useProjectStore } from "../store/useProjectStore";
 import { useClientStore } from "../store/useClientStore";
+import { checkAdminOrOpenPlan, getAuthHeaders } from "../utils/userAuth";
 import {
   Image as ImageIcon,
   MessageSquare,
@@ -27,7 +28,9 @@ import {
   FolderOpen,
   Maximize2, Settings,
   Minimize2,
-  Loader2
+  Loader2,
+  Instagram,
+  Copy
 } from "lucide-react";
 
 interface ChatFile {
@@ -56,36 +59,88 @@ interface AssistantConfig {
 interface ChatAssistenteProps {
   customApiKey: string;
   showToast: (msg: string, type: "success" | "error" | "warning") => void;
+  onGenerateImage?: () => void;
 }
 
 
 const assistants: AssistantConfig[] = [
+  // Top Featured Agents
+  { id: "diretor-criativo", label: "Diretor Criativo IA", sublabel: "Direção de Arte & Marca", desc: "Avance além do bloqueio criativo com orientações estratégicas de design de alto impacto.", icon: <Eye size={14} />, color: "#ad8330" },
+  { id: "copy-legendas-instagram", label: "Especialista em Legendas Instagram", sublabel: "Legendas, Engajamento & Hashtags", desc: "Crie legendas altamente engajadoras para Instagram com emojis, chamadas para ação e hashtags de alto alcance prontas para copiar.", icon: <Instagram size={14} />, color: "#e1306c" },
+  
   // Designers / Creators
-  { id: "gc-tv-specialist", label: "Gerador de Tarjas & GCs (TV)", sublabel: "Especialista em Transmissão", desc: "Crie tarjas, lower-thirds e elementos visuais profissionais para programas, matérias e transmissões ao vivo.", icon: <Zap size={14} />, color: "#38bdf8" },
-  { id: "prompt-extrator", label: "Extrator de Prompts", sublabel: "Analista de Engenharia Visual", desc: "Decodifique a estrutura e os parâmetros técnicos de referências visuais para reprodução exata.", icon: <Code size={14} />, color: "#ad8330" },
+  { id: "gc-tv-specialist", label: "Gerador de Tarjas & Caracteres (TV)", sublabel: "Especialista em Transmissão", desc: "Crie tarjas, lower-thirds e elementos visuais profissionais para programas, matérias e transmissões ao vivo.", icon: <Zap size={14} />, color: "#38bdf8" },
+  { id: "prompt-extrator", label: "Extrator de Instruções", sublabel: "Analista de Instruções Visuais", desc: "Decodifique a estrutura e os parâmetros técnicos de referências visuais para reprodução exata.", icon: <Code size={14} />, color: "#ad8330" },
   { id: "creative-assistant", label: "Assistente de Composição", sublabel: "Consultor de Estilo & Iluminação", desc: "Receba direcionamentos conceituais de iluminação, paletas de cores, enquadramento e cenografia.", icon: <Sparkles size={14} />, color: "#d4af37" },
-  { id: "diretor-criativo", label: "Diretor Criativo IA", sublabel: "Direção de Arte & Branding", desc: "Avançe além do bloqueio criativo com orientações estratégicas de design de alto impacto.", icon: <Eye size={14} />, color: "#ad8330" },
-  { id: "analisador-paginas", label: "Analisador de Design", sublabel: "Auditoria Visual & UX", desc: "Submeta artes e layouts para diagnósticos profissionais de hierarquia, contraste e legibilidade.", icon: <Search size={14} />, color: "#ffffff" },
+  { id: "analisador-paginas", label: "Analisador de Design", sublabel: "Auditoria Visual & Usabilidade", desc: "Submeta artes e layouts para diagnósticos profissionais de hierarquia, contraste e legibilidade.", icon: <Search size={14} />, color: "#ffffff" },
   
   // Copywriters & Marketers
-  { id: "copy-ads", label: "Redator de Anúncios (Ads)", sublabel: "Especialista em Performance", desc: "Desenvolva textos de alta conversão estruturados com ganchos, quebra de objeções e chamadas para ação.", icon: <Megaphone size={14} />, color: "#ad8330" },
+  { id: "copy-ads", label: "Redator de Anúncios", sublabel: "Especialista em Performance", desc: "Desenvolva textos de alta conversão estruturados com ganchos, quebra de objeções e chamadas para ação.", icon: <Megaphone size={14} />, color: "#ad8330" },
   { id: "copy-carroseis", label: "Redator de Carrosséis", sublabel: "Engajamento & Conteúdo", desc: "Crie narrativas envolventes em carrosséis que retêm a atenção e conduzem o público até a conversão.", icon: <Layers size={14} />, color: "#d4af37" },
-  { id: "easy-copy", label: "Redator de Copywriting", sublabel: "Textos de Venda & LPs", desc: "Produza copys completas para landing pages, e-mails e páginas de vendas em qualquer segmento.", icon: <FileText size={14} />, color: "#ad8330" },
+  { id: "easy-copy", label: "Redator de Textos de Venda", sublabel: "Textos de Venda & Páginas", desc: "Produza copys completas para landing pages, e-mails e páginas de vendas em qualquer segmento.", icon: <FileText size={14} />, color: "#ad8330" },
   
   // Strategists
   { id: "analise-estrategica", label: "Análise Estratégica", sublabel: "Inteligência de Mercado", desc: "Mapeie dores reais do cliente, analise concorrentes e estruture propostas de valor irresistíveis.", icon: <Check size={14} />, color: "#4f46e5" },
-  { id: "icp", label: "ICP & Posicionamento", sublabel: "Estratégia de Marca", desc: "Defina o perfil de cliente ideal e consolide uma presença de marca com alta autoridade no mercado.", icon: <Check size={14} />, color: "#4f46e5" },
+  { id: "icp", label: "Cliente Ideal & Posicionamento", sublabel: "Estratégia de Marca", desc: "Defina o perfil de cliente ideal e consolide uma presença de marca com alta autoridade no mercado.", icon: <Check size={14} />, color: "#4f46e5" },
   
   // Sales
   { id: "atendimento", label: "Atendimento & Negociação", sublabel: "Gestão de Objeções", desc: "Conduza reuniões e diálogos comerciais com técnicas que aceleram a decisão do cliente.", icon: <Check size={14} />, color: "#10b981" },
-  { id: "webson-vendedor", label: "Consultor de Vendas IA", sublabel: "Fechamento Comercial", desc: "Analise conversas com leads e receba respostas prontas para superar travas de negociação.", icon: <Check size={14} />, color: "#10b981" },
+  { id: "webson-vendedor", label: "Consultor de Vendas IA", sublabel: "Fechamento Comercial", desc: "Analise conversas com clientes em potencial e receba respostas prontas para superar objeções de negociação.", icon: <Check size={14} />, color: "#10b981" },
   
   // Dev & Sites
-  { id: "estrutura-sites", label: "Arquiteto de Landing Pages", sublabel: "Arquitetura de Informação", desc: "Estruture wireframes e seções estratégicas otimizadas para taxa de conversão e navegabilidade.", icon: <Code size={14} />, color: "#3b82f6" },
-  { id: "easy-coder", label: "Assistente de Código Web", sublabel: "Desenvolvimento Front-end", desc: "Receba trechos de código limpo em HTML, CSS, JavaScript e React prontos para implementação.", icon: <Code size={14} />, color: "#3b82f6" },
+  { id: "estrutura-sites", label: "Arquiteto de Páginas de Venda", sublabel: "Arquitetura de Informação", desc: "Estruture wireframes e seções estratégicas otimizadas para taxa de conversão e navegabilidade.", icon: <Code size={14} />, color: "#3b82f6" },
+  { id: "easy-coder", label: "Assistente de Código para Sites", sublabel: "Desenvolvimento Front-end", desc: "Receba trechos de código limpo em HTML, CSS, JavaScript e React prontos para implementação.", icon: <Code size={14} />, color: "#3b82f6" },
   { id: "easy-image", label: "Gerador Visual de Imagens", sublabel: "Sintetizador Gráfico", desc: "Gere imagens realistas e ilustrações técnicas com alto nível de detalhamento descritivo.", icon: <ImageIcon size={14} />, color: "#ec4899" },
 ];
 
+const ASSISTANT_SUGGESTIONS: Record<string, string[]> = {
+  "diretor-criativo": [
+    "Como melhorar o contraste e a iluminação desta arte?",
+    "Sugira uma paleta de cores premium para marca de luxo",
+    "Crie uma ideia de composição minimalista para produto",
+    "Qual tipografia combina com design corporativo moderno?"
+  ],
+  "copy-legendas-instagram": [
+    "Crie uma legenda engajadora para carrossel sobre marketing",
+    "Escreva um post anunciando novidade com CTA forte",
+    "Gere 10 hashtags virais para designer gráfico / agência",
+    "Escreva uma bio de Instagram de alto impacto"
+  ],
+  "gc-tv-specialist": [
+    "Tarja de jornalismo urgente com cores vermelho e amarelo",
+    "Placar de futebol para transmissão ao vivo com escudos",
+    "Lower third minimalista para podcast de negócios",
+    "Tarja de entrevista exclusiva com nome e cargo"
+  ],
+  "prompt-extrator": [
+    "Como descrever esta iluminação cinematográfica em prompt?",
+    "Extraia os parâmetros de textura e render 3D desta arte",
+    "Prompt para estilo fotográfico editorial de alta costura"
+  ],
+  "creative-assistant": [
+    "Ideias de fundo futurista com néon suave",
+    "Como posicionar o sujeito em enquadramento regra dos terços",
+    "Sugira cenário luxuoso para ensaio fotográfico"
+  ],
+  "analisador-paginas": [
+    "Analise a hierarquia visual e legibilidade do meu layout",
+    "Como melhorar a taxa de conversão desta arte de anúncio?"
+  ],
+  "copy-ads": [
+    "Crie 3 opções de ganchos (hooks) fortes para anúncio em vídeo",
+    "Texto de alta conversão para oferta de Black Friday"
+  ],
+  "copy-carroseis": [
+    "Estruture um carrossel de 5 slides ensinando um passo a passo",
+    "Roteiro de carrossel para quebrar a principal objeção de preço"
+  ]
+};
+
+const DEFAULT_SUGGESTIONS = [
+  "Como você pode me ajudar a melhorar meus designs?",
+  "Sugira uma ideia criativa para o meu próximo post",
+  "Otimize meu prompt para ficar cinematográfico"
+];
 
 const formatMessage = (text: string) => {
   // Strip out JSON code blocks containing configurations or general JSON objects completely from visual output
@@ -105,7 +160,7 @@ const formatMessage = (text: string) => {
   cleanText = cleanText.trim();
 
   // If there's nothing left after stripping (e.g. it only returned JSON), say "Configurações preparadas."
-  const textToRender = cleanText || "*Diretor Criativo: Configurações do painel prontas para você! Clique em 'Gerar Background' para ver o resultado.*";
+  const textToRender = cleanText || "*Diretor Criativo: Configurações do painel prontas para você! Clique em 'Gerar Arte' para ver o resultado.*";
 
   const lines = textToRender.split("\n");
   
@@ -182,7 +237,7 @@ const compressImage = (base64Str: string, maxWidth = 1280, maxHeight = 1280, qua
 
 
 
-export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, showToast }) => {
+export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, showToast, onGenerateImage }) => {
   const store = useProjectStore();
   const { clients, activeClientId, setActiveClient, appendAiLearnings } = useClientStore();
   const { chatDrawerOpen, setChatDrawerOpen, chatActiveAssistantId, setChatActiveAssistantId } = useProjectStore();
@@ -199,6 +254,9 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
   }, [chatActiveAssistantId]);
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
+  const [agentCategoryFilter, setAgentCategoryFilter] = useState<'all' | 'design' | 'copy' | 'vendas' | 'dev'>('all');
+  const [agentSearch, setAgentSearch] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string>("gemini-3.1-pro-preview");
   const [showModelSettings, setShowModelSettings] = useState(false);
@@ -208,28 +266,76 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
   const [chats, setChats] = useState<Record<string, ChatMessage[]>>(() => {
     return Object.fromEntries(assistants.map((a) => [a.id, []]));
   });
+  const [copiedMsgIndex, setCopiedMsgIndex] = useState<number | null>(null);
+  const isCopyOrTextAssistant = 
+    activeAssistant.id === "copy-legendas-instagram" ||
+    activeAssistant.id.startsWith("copy-") ||
+    activeAssistant.id === "easy-copy" ||
+    activeAssistant.id === "webson-vendedor" ||
+    activeAssistant.id === "atendimento" ||
+    activeAssistant.id === "analise-estrategica" ||
+    activeAssistant.id === "icp";
+
+  const handleCopyMessageText = (index: number, text: string) => {
+    let clean = text.replace(/```json\n[\s\S]*?\n```/g, '').replace(/```json[\s\S]*?```/g, '').trim();
+    
+    // Extract caption text if enclosed in markdown separators (e.g. *** caption ***)
+    if (clean.includes("***")) {
+      const parts = clean.split("***").map(p => p.trim()).filter(Boolean);
+      const captionPart = parts.find(p => p.includes("#") || p.length > 50) || parts[0];
+      if (captionPart) {
+        clean = captionPart.trim();
+      }
+    }
+    
+    // Clean conversational intros if any leaked
+    clean = clean.replace(/^(Que arte espetacular|Aqui está a sua copy|Aqui está a legenda|Segue a legenda|Como Diretor de Arte|E já que a imagem está impecável)[^\n]*\n*/gi, '').trim();
+    
+    // Remove markdown asterisks (e.g. **texto** -> texto) since Instagram doesn't support markdown bold
+    clean = clean.replace(/\*\*/g, '').replace(/\*/g, '');
+
+    navigator.clipboard.writeText(clean || text);
+    setCopiedMsgIndex(index);
+    showToast("Texto copiado com sucesso!", "success");
+    setTimeout(() => setCopiedMsgIndex(null), 2500);
+  };
+
+  const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
+    setIsLoaded(false);
     const loadChats = async () => {
       try {
-        if (!store.activeProjectId) return;
-        let savedObj = await idbGet(`zion_assistant_chats_${store.activeProjectId}`);
+        const projId = store.activeProjectId || "default_project";
+        let savedObj = await idbGet(`zion_assistant_chats_${projId}`);
         if (!savedObj) {
-          const savedStr = localStorage.getItem(`zion_assistant_chats_${store.activeProjectId}`);
+          const savedStr = localStorage.getItem(`zion_assistant_chats_${projId}`);
           if (savedStr) savedObj = JSON.parse(savedStr);
+        }
+
+        // Recovery fallback to default key if current project has no history yet
+        if (!savedObj || (typeof savedObj === 'object' && Object.values(savedObj).every((arr: any) => Array.isArray(arr) && arr.length === 0))) {
+          const fallbackStr = localStorage.getItem("zion_assistant_chats_default") || localStorage.getItem("zion_assistant_chats_global");
+          if (fallbackStr) {
+            try { savedObj = JSON.parse(fallbackStr); } catch (e) {}
+          }
         }
         
         if (isMounted) {
-          if (savedObj) {
+          if (savedObj && typeof savedObj === 'object') {
             setChats(savedObj);
           } else {
             setChats(Object.fromEntries(assistants.map((a) => [a.id, []])));
           }
+          setIsLoaded(true);
         }
       } catch (e) {
         console.error("Error loading chat history:", e);
-        if (isMounted) setChats(Object.fromEntries(assistants.map((a) => [a.id, []])));
+        if (isMounted) {
+          setChats(Object.fromEntries(assistants.map((a) => [a.id, []])));
+          setIsLoaded(true);
+        }
       }
     };
     loadChats();
@@ -237,18 +343,22 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
   }, [store.activeProjectId]);
 
   useEffect(() => {
+    if (!isLoaded) return;
     try {
-      if (store.activeProjectId) {
-        idbSet(`zion_assistant_chats_${store.activeProjectId}`, chats).catch(e => console.error("Error saving chat history IDB:", e));
-      }
+      const projId = store.activeProjectId || "default_project";
+      idbSet(`zion_assistant_chats_${projId}`, chats).catch(e => console.error("Error saving chat history IDB:", e));
+      localStorage.setItem(`zion_assistant_chats_${projId}`, JSON.stringify(chats));
+      localStorage.setItem("zion_assistant_chats_default", JSON.stringify(chats));
     } catch (e) {
       console.error("Error saving chat history:", e);
     }
-  }, [chats, store.activeProjectId]);
+  }, [chats, store.activeProjectId, isLoaded]);
   const [inputText, setInputText] = useState("");
   const [attachedFiles, setAttachedFiles] = useState<ChatFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isImprovingPrompt, setIsImprovingPrompt] = useState(false);
+  // Estado para edição de mensagem enviada
+  const [editingMsgIndex, setEditingMsgIndex] = useState<number | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatPanelRef = useRef<HTMLDivElement>(null);
@@ -352,7 +462,7 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
 
       if (successfullyAttached.length > 0) {
         setAttachedFiles((prev) => [...prev, ...successfullyAttached]);
-        showToast(`${successfullyAttached.length} arquivo(s) anexado(s) com sucesso!`, "success");
+        showToast(`${successfullyAttached.length} ${successfullyAttached.length === 1 ? "arquivo anexado" : "arquivos anexados"} com sucesso!`, "success");
       }
     } finally {
       setIsUploading(false);
@@ -371,15 +481,16 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
 
   const handleImprovePrompt = async () => {
     if (!inputText.trim()) {
-      showToast("Escreva algo no campo de texto para a IA melhorar o prompt.", "warning");
+      showToast("Escreva algo no campo de texto para a IA melhorar a instrução.", "warning");
       return;
     }
 
+    if (!checkAdminOrOpenPlan(customApiKey)) return;
     setIsImprovingPrompt(true);
     try {
       const response = await fetch("/api/melhorar-prompt", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders(customApiKey) },
         body: JSON.stringify({
           prompt: inputText,
           assistantId: activeAssistant.id,
@@ -391,7 +502,7 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
       const data = await response.json();
       if (response.ok && data.improvedPrompt) {
         setInputText(data.improvedPrompt);
-        showToast("Prompt aprimorado com sucesso! Confira e aperte em enviar.", "success");
+        showToast("Instrução aprimorada com sucesso! Confira e clique em enviar.", "success");
         if (textareaRef.current) {
           setTimeout(() => {
             if (textareaRef.current) {
@@ -401,11 +512,11 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
           }, 50);
         }
       } else {
-        showToast(data.error || "Não foi possível aprimorar o prompt.", "error");
+        showToast(data.error || "Não foi possível aprimorar a instrução.", "error");
       }
     } catch (err: any) {
       console.error("Erro ao aprimorar prompt:", err);
-      showToast("Erro ao conectar ao serviço de aprimoramento de prompt.", "error");
+      showToast("Erro ao conectar ao serviço de aprimoramento de instrução.", "error");
     } finally {
       setIsImprovingPrompt(false);
     }
@@ -424,7 +535,16 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
     };
 
     const currentMessages = chats[activeAssistant.id] || [];
-    setChats((prev) => ({ ...prev, [activeAssistant.id]: [...currentMessages, userMsg] }));
+    
+    // Se estiver editando uma mensagem anterior, truncar o histórico naquele ponto
+    if (editingMsgIndex !== null && !overrideText) {
+      const truncatedMessages = currentMessages.slice(0, editingMsgIndex);
+      setChats((prev) => ({ ...prev, [activeAssistant.id]: [...truncatedMessages, userMsg] }));
+      setEditingMsgIndex(null);
+    } else {
+      setChats((prev) => ({ ...prev, [activeAssistant.id]: [...currentMessages, userMsg] }));
+    }
+    
     if (!overrideText) setInputText("");
     if (!overrideFiles) setAttachedFiles([]);
     if (textareaRef.current) textareaRef.current.style.height = "auto";
@@ -446,7 +566,7 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
     const activeClient = clients.find(c => c.id === currentActiveClientId);
     const clientContext = activeClient ? `\n\n[CONTEXTO DO CLIENTE ATUAL]:\nCliente: ${activeClient.name}\nNicho: ${activeClient.niche}\nPaleta de Cores: ${activeClient.paletaCores?.join(', ') || 'Nenhuma'}\nInfo Adicional: ${activeClient.infoExtra}\nHistórico IA: ${activeClient.bancoDeDadosIA}\n[IMPORTANTE]: Use essa paleta de cores e informações para guiar o design. Se aprender algo novo sobre o cliente, retorne no JSON no campo "aprendizado_cliente".` : "";
 
-    const configContext = `
+    const configContext = isCopyOrTextAssistant ? "" : `
 [ATENÇÃO DIRETOR CRIATIVO / ASSISTENTE]: Aja como um Diretor de Criação interagindo no bate-papo. Converse naturalmente com o usuário, tire dúvidas e dê opiniões como um humano. NÃO apenas vomite código.
 Quando o usuário pedir para alterar o design, ou enviar arquivos de referência, você deve conversar com ele E incluir um bloco JSON OCULTO no final da sua mensagem para automatizar a interface.
 IMPORTANTE: Você é um assistente. Você NÃO gera a imagem diretamente. Você apenas configura a interface. Sempre instrua o usuário a clicar no botão "GERAR IMAGEM" no painel principal após você preparar as configurações.
@@ -483,7 +603,8 @@ ${(store.camadasTexto || []).map((t, idx) => `  ${idx + 1}. [Função: "${t.func
 
 Regras de Automação do JSON (SEMPRE adicione no final se houver mudança de contexto):
 0. MAPEAMENTO E PREENCHIMENTO AUTOMÁTICO DE IMAGENS ANEXADAS (EDITAR FOTO / MELHORAR PROMPT / REFERÊNCIA):
-   - Sempre que o usuário anexar 1 ou mais fotos/imagens ao chat (ou pedir para editar uma foto, melhorar o prompt, ou criar uma arte com base em uma foto):
+   - IMPORTANTE (REGRA DE CORREÇÃO PONTUAL): Se o usuário pedir APENAS uma correção ou ajuste pontual (ex: "corrija o texto", "mude o valor para R$ 600", "aumente o título") e as imagens já estiverem configuradas no editor, NÃO refaça o mapeamento completo: retorne SOMENTE as chaves alteradas, JAMAIS "substituirConfig" nem "substituirImagens" (essas flags apagam as configurações e as referências de imagem existentes do editor) e JAMAIS "mapeamentoImagens". As referências já carregadas permanecem intactas.
+   - Quando o usuário anexar 1 ou mais fotos/imagens ao chat (ou pedir para editar uma foto, melhorar o prompt, ou criar uma arte com base em uma foto):
      * VOCÊ DEVE OBRIGATORIAMENTE ANALISAR E ESCANEAR VISUALMENTE A IMAGEM ANEXADA COM SUA CAPACIDADE MULTIMODAL GEMINI.
      * VOCÊ DEVE RETORNAR EM 'mapeamentoImagens' NO JSON O MAPEAMENTO DO ARQUIVO para: 'design,scene,subject,style' (se houver sujeito na foto), ou 'design,scene,style' (se não houver pessoa/sujeito humano), ou 'logo' (se for logotipo de marca).
      * OBRIGATÓRIO: ATIVE 'useEnvRef': true (para preservar o fundo/cenário original), 'desativarSujeito': false e 'noPeople': false (se houver pessoa/sujeito).
@@ -545,7 +666,7 @@ Regras de Automação do JSON (SEMPRE adicione no final se houver mudança de co
       * Preencha em "promptCenario": "MANTENHA A PAREDE, A COR DO FUNDO E O AMBIENTE EXATAMENTE ORIGINAIS DA FOTO. NÃO REMOVA O FUNDO E NÃO FAÇA FUNDO BRANCO. Apenas faça a parede atrás da segunda pessoa ficar clara, lisa e sem nenhuma sombra projetada pesada, mesclando e clonando a cor original da parede iluminada no lugar da sombra escura."
       * Preencha em "additionalPrompt" e "promptDesign": "MANDATO DE ABSOLUTA FIDELIDADE AOS ROSTOS, POSES E CENÁRIO + REMOÇÃO TOTAL DA SOMBRA DE FLASH: Manter 100% idênticos os rostos, traços faciais e poses das pessoas. Manter 100% o FUNDO ORIGINAL da foto. NUNCA DEIXE O FUNDO BRANCO OU REMOVA O CENÁRIO! ATENÇÃO MÁXIMA AO PEDIDO: VOCÊ DEVE APENAS PINTAR POR CIMA e DISSOLVER a sombra escura projetada na parede atrás da segunda pessoa (menina da direita). Substitua a sombra pintando a textura da própria parede (mesma cor da parede, sem fundo branco). NENHUMA sombra grossa deve restar atrás da segunda pessoa."
     - Se o usuário pedir para POSICIONAR OU COLOCAR A LOGO EM LUGAR MELHOR (ex: "coloque essa logo", "lugar melhor para a logo", "não coloque em cima do cabelo"):
-      * Defina "useLogo": true, "logoInclusionType": "embedded".
+      * Defina "useLogo": true, "logoInclusionType": "embedded" (a logo deve ser gerada JUNTO com a arte, substituindo a logo antiga da referência no mesmo local). NÃO use "overlay" a menos que o usuário peça explicitamente para colocar a logo por cima.
       * Preencha em "promptTipografia": "Posicionar o logotipo da marca no canto superior esquerdo ou superior direito em espaço limpo. REGRA CRÍTICA: O logotipo JAMAIS deve ficar em cima do cabelo, cabeça, rosto ou corpo do sujeito!"
     - Se o usuário pedir formato para Instagram retrato / post retrato / 4:5:
       * Defina "dimensao": "3:4".
@@ -575,6 +696,12 @@ Regras de Automação do JSON (SEMPRE adicione no final se houver mudança de co
         4. HSL / COR INDIVIDUAL: Laranja ajustado para tom de pele dourado e natural, azuis profundos e verdes equilibrados.
         5. COLOR GRADING CINEMATOGRÁFICO: Sombras levemente frias, realces quentes dourados, balanço profissional Teal & Orange.
         6. MÁSCARAS E REMOÇÃO DE ERROS (HEALING): Máscara inteligente no sujeito para luz e nitidez no rosto. Remoção completa e absoluta de sombras de flash na parede e desordem na mesa. Nitidez refinada com redução de ruído de iluminação e cor. Leve vinheta e granulação fina.
+16. REGRA ABSOLUTA DE EXTRAÇÃO TOTAL DE TEXTOS E CARDS (OCR DE ALTA PRECISÃO):
+    - Sempre que o usuário anexar uma imagem de referência de card, flyer, banner, documento ou cartaz contendo textos:
+      * VOCÊ DEVE OBRIGATORIAMENTE LER E EXTRAIR 100% DE TODOS OS TEXTOS VISÍVEIS na imagem do topo ao rodapé.
+      * Crie uma camada em "camadasTexto" para CADA frase, título, subtítulo, oferta, preço, telefone, data, endereço ou botão CTA encontrado.
+      * Ative OBRIGATORIAMENTE "enableTypography": true.
+      * NUNCA remova ou omita nenhum texto da imagem de referência, A MENOS QUE o usuário peça explicitamente em texto para remover ou alterar algum trecho específico.
 
 Exemplo OBRIGATÓRIO de JSON no final da sua resposta (use o bloco \`\`\`json):
 \`\`\`json
@@ -613,10 +740,11 @@ Exemplo OBRIGATÓRIO de JSON no final da sua resposta (use o bloco \`\`\`json):
 \`\`\`
 Lembre-se: converse como humano primeiro e só anexe o JSON no final se for necessário alterar a interface!`;
 
+    if (!checkAdminOrOpenPlan(customApiKey)) return;
     try {
       const res = await fetch("/api/chat-agentes", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders(customApiKey) },
         body: JSON.stringify({
           assistantId: activeAssistant.id,
           message: (userMsg.content || "Analise os arquivos enviados.") + clientContext + configContext,
@@ -671,7 +799,7 @@ Lembre-se: converse como humano primeiro e só anexe o JSON no final se for nece
         return false;
       };
 
-      if (data.response && (hasJsonBlock(data.response) || (userMsg.files && userMsg.files.length > 0))) {
+      if (data.response && activeAssistant.id !== "prompt-extrator" && (hasJsonBlock(data.response) || (userMsg.files && userMsg.files.length > 0))) {
         setTimeout(() => applyModelMessageToEditor(-1, data.response, userMsg.files), 100);
       }
     } catch (err: any) {
@@ -721,13 +849,14 @@ Siga rigorosamente estas orientações de preenchimento para CADA SEÇÃO do edi
 
 1. TIPO DE PAINEL (tipoPainel):
    - Se a solicitação for de GC (Gerador de Caracteres), Tarja de TV, Lower Third, informações para programa de TV, notícias, esportes ou podcast, defina OBRIGATORIAMENTE "tipoPainel": "GC_TV".
-   - Caso contrário, defina "tipoPainel": "DESIGNER" (ou "PRODUCT" para produtos, "LOGO" para logos).
+   - Se a solicitação for de Edição de Fotos, Retoque Fotográfico, Fotos de Pessoas/Modelos, Fotos de Comida/Restaurantes, Fotografia de Produtos com fundo real ou tratamento Lightroom, defina "tipoPainel": "FOTO".
+   - Caso contrário, defina "tipoPainel": "DESIGNER" (ou "PRODUCT" para produtos soltos, "LOGO" para logos).
 
 2. MAPEAMENTO DE IMAGENS (mapeamentoImagens):
    - "logo": Logotipos. Ative "useLogo": true.
    - "subject": Sujeitos principais/modelos/produtos. Ative o sujeito ("desativarSujeito": false, "noPeople": false).
    - "scene": Cenários/fundo. Ative "useEnvRef": true.
-   - "design": Imagem de Referência do Layout/Design.
+   - "design": Imagem de Referência do Layout/Design/Card.
    - "typography": Print/referência de texto/tipografia. Ative "enableTypography": true.
    - "style": Referências estéticas/visuais de estilo.
 
@@ -743,15 +872,18 @@ Siga rigorosamente estas orientações de preenchimento para CADA SEÇÃO do edi
 3. DIMENSÕES:
    - "dimensao": "1:1" (Feed) | "3:4" (Retrato) | "9:16" (Story) | "16:9" (Desktop)
 
-4. TIPOGRAFIA (CAMADAS DE TEXTO):
-   - "enableTypography": true
-   - "camadasTexto": Crie todas as camadas necessárias com:
-     - "funcao": "Headline Principal" | "Subheadline Secundário" | "CTA Botão" | "Corpo Descrição" | "Legenda / Detalhe" | "Badge / Selo" | "Preço / Valor" | "Data / Horário"
-     - "conteudo": O texto exato da frase.
-     - "fonte": Fonte identificada (ex: "Montserrat")
-     - "cor": HEX da cor
-   - "promptTipografia": Instruções completas de onde posicionar e extrair cada camada de texto, logo, botão e elemento.
-   - "typographyPosition": "ESQUERDA" | "CENTRO" | "DIREITA"
+4. TIPOGRAFIA E EXTRAÇÃO TOTAL DE TEXTO DE CARDS / REFERÊNCIAS (MANDATO CRÍTICO DE OCR E PRESERVAÇÃO):
+   - REGRA ABSOLUTA: Sempre que houver qualquer imagem de referência de card, flyer, post, cartaz ou documento anexado (ou texto no prompt):
+     * Você DEVE ESCANEAR E EXTRAIR 100% DE TODOS OS TEXTOS VISÍVEIS na imagem de referência, linha por linha (títulos, subtítulos, corpo de texto, preços, contatos, telefones, datas, endereço, botão CTA, selos e rodapé).
+     * NUNCA OMITA NENHUM TEXTO DO CARD ORIGINAL, a não ser que o usuário peça EXPLICITAMENTE em texto para remover ou alterar algum trecho específico!
+     * Ative OBRIGATORIAMENTE "enableTypography": true.
+     * Crie uma camada em "camadasTexto" para CADA bloco de texto encontrado:
+       - "funcao": "Headline Principal" | "Subheadline Secundário" | "CTA Botão" | "Corpo Descrição" | "Legenda / Detalhe" | "Badge / Selo" | "Preço / Valor" | "Data / Horário"
+       - "conteudo": O texto EXATO extraído da imagem ou prompt.
+       - "fonte": Fonte identificada (ex: "Montserrat", "Outfit", "Inter", "Impact")
+       - "cor": HEX da cor aproximada (ex: "#FFFFFF", "#FFD700")
+     * Preencha "promptTipografia" detalhando o posicionamento exato de cada camada de texto na tela.
+     * "typographyPosition": "ESQUERDA" | "CENTRO" | "DIREITA"
 
 5. CENÁRIO:
    - "useEnvRef": true se houver foto de fundo.
@@ -804,28 +936,33 @@ IMPORTANTE: Responda em português resumindo os pontos que você identificou e c
 Exemplo de JSON de saída:
 \`\`\`json
 {
-  "desativarSujeito": true,
-  "noPeople": true,
+  "tipoPainel": "DESIGNER",
+  "desativarSujeito": false,
+  "noPeople": false,
   "dimensao": "3:4",
-  "enableTypography": false,
-  "camadasTexto": [],
+  "enableTypography": true,
+  "camadasTexto": [
+    { "id": "text_1", "conteudo": "PROMOÇÃO DA SEMANA", "funcao": "Headline Principal", "fonte": "Montserrat", "cor": "#FFD700" },
+    { "id": "text_2", "conteudo": "Aproveite até 50% de desconto em todo o estoque", "funcao": "Subheadline Secundário", "fonte": "Outfit", "cor": "#FFFFFF" },
+    { "id": "text_3", "conteudo": "COMPRE AGORA NO SITE", "funcao": "CTA Botão", "fonte": "Inter", "cor": "#000000" }
+  ],
   "typographyPosition": "CENTRO",
-  "promptTipografia": "Instruções de posicionamento em português",
-  "promptDesign": "Tela plana e limpa de cor sólida.",
-  "promptCenario": "Fundo azul escuro sólido (#0b1c32), acabamento fosco, cor limpa e uniforme, sem pessoas, sem texto.",
-  "additionalPrompt": "Fundo totalmente limpo de cor sólida na cor #0b1c32",
-  "negativePrompt": "pessoas, modelos, texto, marcas, ruído",
-  "useLogo": false,
-  "useEnvRef": false,
-  "cores": { "ambiente": "#0b1c32", "recorte": "#0b1c32", "complementar": "#0b1c32" },
+  "promptTipografia": "Headline em destaque na parte superior em amarelo (#FFD700), subheadline logo abaixo em branco (#FFFFFF) e botão CTA preto no rodapé.",
+  "promptDesign": "Layout comercial moderno com grid limpo, contraste elevado e tipografia hierarquizada.",
+  "promptCenario": "Fundo com atmosfera elegante, iluminação cinemática e profundidade de campo.",
+  "additionalPrompt": "Design profissional de alta conversão, mantendo 100% dos textos originais extraídos do card.",
+  "negativePrompt": "textos cortados, erros de ortografia, fontes ilegíveis, desordem visual",
+  "useLogo": true,
+  "useEnvRef": true,
+  "cores": { "ambiente": "#111827", "recorte": "#FFD700", "complementar": "#3B82F6" },
   "coresAutomaticas": false,
-  "corDominante": "#0b1c32",
+  "corDominante": "#111827",
   "useCorDominante": true,
-  "degradeLeitura": false,
-  "sobriedade": 100,
-  "enableEstiloVisual": false,
-  "estilosVisuais": ["Clean"],
-  "estiloVisualCustom": "Clean e minimalista com fundo de cor sólida.",
+  "degradeLeitura": true,
+  "sobriedade": 80,
+  "enableEstiloVisual": true,
+  "estilosVisuais": ["Comercial", "Clean"],
+  "estiloVisualCustom": "Estilo comercial moderno de alta conversão.",
   "resolucao": "1K",
   "formatoExportacao": "PNG",
   "variations": 1,
@@ -836,10 +973,12 @@ Exemplo de JSON de saída:
 \`\`\`
 `;
 
+    const effectiveKey = localStorage.getItem("custom_gemini_api_key") || customApiKey || "";
+    if (!checkAdminOrOpenPlan(effectiveKey)) return;
     try {
       const res = await fetch("/api/chat-agentes", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders(effectiveKey) },
         body: JSON.stringify({
           assistantId: activeAssistant.id,
           message: autoFillPrompt + clientContext,
@@ -979,6 +1118,32 @@ Exemplo de JSON de saída:
       // useLogo
       const logo = getBool(["useLogo", "use_logo", "usarLogo", "usar_logo"]);
       if (logo !== undefined) result.useLogo = logo;
+
+      // logoPosOverlay — posição de sobreposição da logo na imagem final
+      const logoPosVal = getString(["logoPosOverlay", "logo_pos_overlay", "logoPosition", "logo_position", "posicaoLogo", "posicao_logo"]);
+      if (logoPosVal !== undefined) {
+        const posLower = logoPosVal.toLowerCase();
+        if (posLower.includes("top") && posLower.includes("left")) result.logoPosOverlay = "top_left";
+        else if (posLower.includes("top") && posLower.includes("right")) result.logoPosOverlay = "top_right";
+        else if (posLower.includes("bottom") && posLower.includes("left")) result.logoPosOverlay = "bottom_left";
+        else if (posLower.includes("bottom") && posLower.includes("right")) result.logoPosOverlay = "bottom_right";
+        else if (posLower.includes("bottom") && posLower.includes("center")) result.logoPosOverlay = "bottom_center";
+        else if (posLower.includes("center") || posLower.includes("centro") || posLower.includes("meio")) result.logoPosOverlay = "center";
+        else if (posLower.includes("top") || posLower.includes("topo") || posLower.includes("superior")) result.logoPosOverlay = "top_center";
+        else if (posLower.includes("bottom") || posLower.includes("rodapé") || posLower.includes("inferior")) result.logoPosOverlay = "bottom_center";
+      }
+
+      // logoSizeOverlay — tamanho percentual da logo na imagem final
+      const logoSizeVal = configJson.logoSizeOverlay ?? configJson.logo_size_overlay ?? configJson.logoSize ?? configJson.logo_size ?? configJson.tamanhoLogo ?? configJson.tamanho_logo;
+      if (logoSizeVal !== undefined && !isNaN(Number(logoSizeVal))) {
+        result.logoSizeOverlay = Math.max(5, Math.min(80, Number(logoSizeVal)));
+      }
+
+      // logoInclusionType
+      const logoType = getString(["logoInclusionType", "logo_inclusion_type", "tipoLogo", "tipo_logo"]);
+      if (logoType !== undefined) {
+        if (logoType === "overlay" || logoType === "embedded") result.logoInclusionType = logoType;
+      }
 
       // coresAutomaticas
       const coresAuto = getBool(["coresAutomaticas", "cores_automaticas", "autoCores", "auto_cores"]);
@@ -1320,7 +1485,23 @@ Exemplo de JSON de saída:
         if (configJson.camadasTexto && Array.isArray(configJson.camadasTexto)) {
           if (configJson.camadasTexto.length > 0) {
             updates.enableTypography = true;
-            const mappedNewLayers = configJson.camadasTexto.map((item, idx) => ({
+
+            // Sanitize placeholder content from AI-generated text layers
+            const isPlaceholder = (text: string): boolean => {
+              if (!text || !text.trim()) return true;
+              const t = text.trim();
+              // Bracket-enclosed placeholders
+              if (/^\[.*\]$/.test(t)) return true;
+              // Contains bracket placeholders
+              if (/\[(headline|subtítulo|subtitulo|chamada|texto|cta|inserir|rodapé|rodape|título|titulo|apoio|secundári[oa]|principal)[^\]]*\]/i.test(t)) return true;
+              // Pure placeholder phrases without brackets
+              if (/^(headline principal|chamada secund[áa]ria|texto de apoio|rodap[ée]|subt[ií]tulo|cta|call to action|seu t[ií]tulo|seu texto|inserir texto|your text here)$/i.test(t)) return true;
+              return false;
+            };
+
+            const mappedNewLayers = configJson.camadasTexto
+              .filter((item: any) => !isPlaceholder(item.conteudo))
+              .map((item: any, idx: number) => ({
                 id: item.id || `text_${Date.now()}_${idx}`,
                 conteudo: item.conteudo || "",
                 funcao: item.funcao || "Corpo Descrição",
@@ -1334,6 +1515,9 @@ Exemplo de JSON de saída:
             } else {
                const updatedLayers = [...(updates.camadasTexto || store.camadasTexto || [])];
                configJson.camadasTexto.forEach((item, itemIdx) => {
+                   // Skip placeholder items
+                   if (isPlaceholder(item.conteudo)) return;
+
                    let existingIdx = item.id ? updatedLayers.findIndex(l => l.id === item.id) : -1;
                    if (existingIdx === -1 && item.funcao) {
                      const matchingByFuncao = updatedLayers.filter(l => l.funcao === item.funcao);
@@ -1369,6 +1553,21 @@ Exemplo de JSON de saída:
           } else if (isReplaceMode || configJson.substituirCamadasTexto === true || configJson.enableTypography === false) {
             updates.camadasTexto = [];
             if (configJson.enableTypography === false) updates.enableTypography = false;
+          }
+        }
+
+        // LOGO PRESERVATION: If not in replace mode and the store already has a logo configured,
+        // preserve the existing logo mapping unless the user explicitly asked to change it
+        if (!isReplaceMode && jsonImageMap && store.useLogo && (store.logoBase64 || (store.logosList && store.logosList.length > 0))) {
+          // Check if the AI is trying to remap existing logo files to non-logo types
+          const existingLogoNames = (store.logosList || []).map((l: any) => l.name || l.fileName || "").filter(Boolean);
+          if (existingLogoNames.length > 0) {
+            existingLogoNames.forEach((logoName: string) => {
+              if (jsonImageMap[logoName] && jsonImageMap[logoName] !== "logo") {
+                // AI tried to remap a logo file — preserve it as logo
+                jsonImageMap[logoName] = "logo";
+              }
+            });
           }
         }
 
@@ -1598,17 +1797,19 @@ Exemplo de JSON de saída:
         const singleMappingVal = jsonMapKeys.length === 1 ? jsonImageMap[jsonMapKeys[0]] : null;
         const singleStyleDescVal = jsonStyleDescKeys.length === 1 ? jsonStyleDescMap[jsonStyleDescKeys[0]] : null;
 
+        const hasExplicitLogo = imagesOnly.some(img => img.category === "logo");
+
         imagesOnly.forEach(img => {
           let styleDescription = "Referência de estilo gerada pelo assistente.";
           let targetType = "style";
 
           const nameLower = (img.name || "").toLowerCase();
 
-          // 1. Categoria selecionada explicitamente pelo usuário no anexador (quando não é info ou auto)
+          // 1. Categoria selecionada explicitamente pelo usuário no anexador
           if (img.category && img.category !== "info" && (img.category as string) !== "auto") {
             targetType = img.category;
           } 
-          // 2. Mapeamento retornado pela IA no JSON (jsonImageMap ou imagemAnexadaTipo)
+          // 2. Mapeamento retornado pela IA no JSON para este arquivo específico
           else {
             let matchedKey = null;
             if (img.name && jsonImageMap[img.name]) {
@@ -1619,6 +1820,9 @@ Exemplo de JSON de saída:
 
             if (matchedKey && jsonImageMap[matchedKey]) {
               targetType = jsonImageMap[matchedKey];
+            } else if (hasExplicitLogo && img.category !== "logo") {
+              // Se outra imagem já foi marcada EXPLICITAMENTE como logo, esta imagem NUNCA deve ser logo!
+              targetType = "design,scene,subject,style";
             } else if (imagesOnly.length === 1 && singleMappingVal) {
               targetType = singleMappingVal;
             } else if (jsonImageMap["*"]) {
@@ -1626,21 +1830,20 @@ Exemplo de JSON de saída:
             } else if (parsedConfigJson?.imagemAnexadaTipo) {
               targetType = parsedConfigJson.imagemAnexadaTipo;
             }
-            // 3. Detecção por nome do arquivo ou palavras-chave
+            // 3. Detecção por nome do arquivo
             else if (nameLower.includes("logo") || nameLower.includes("marca") || nameLower.includes("logomarca") || nameLower.includes("logotipo") || nameLower.includes("10anos") || nameLower.includes("icon") || nameLower.includes("symbol")) {
               targetType = "logo";
             } else if (nameLower.includes("estilo") || nameLower.includes("style")) {
               targetType = "style";
             } else if (nameLower.includes("texto") || nameLower.includes("tipografia") || nameLower.includes("font")) {
               targetType = "typography";
-            } else if (textLower.includes("logo") || textLower.includes("marca") || textLower.includes("logomarca") || textLower.includes("logotipo")) {
+            } else if (!hasExplicitLogo && imagesOnly.length === 1 && (textLower.includes("logo") || textLower.includes("marca") || textLower.includes("logomarca") || textLower.includes("logotipo"))) {
+              // Apenas mapear por texto se houver APENAS UMA ÚNICA imagem enviada e nenhuma marcada como logo
               targetType = "logo";
             } else if (textLower.includes("estilo") || textLower.includes("style") || textLower.includes("vibe")) {
               targetType = "style";
             }
-            // 4. Mapeamento Multicampo Inteligente para Edição de Foto e Referência Completa:
-            // Toda imagem/foto enviada pelo usuário para edição ou referência deve preencher SIMULTANEAMENTE:
-            // Referência de Design/Layout + Cenário de Fundo (com useEnvRef=true) + Sujeito Principal (se houver pessoa/sujeito ativo).
+            // 4. Mapeamento Multicampo para Referência Completa (Design + Cenário + Sujeito)
             else {
               const isSubjectDisabled = updates.desativarSujeito === true || (updates.desativarSujeito === undefined && store.desativarSujeito === true);
               if (isSubjectDisabled) {
@@ -1703,7 +1906,6 @@ Exemplo de JSON de saída:
           if (typesList.includes("style")) {
             // style reference
             if (isReplaceMode && styCount === 0 && store.referenciasEstilo) {
-              // Limpa as atuais se for a primeira do replace
               store.referenciasEstilo.forEach(r => store.removeReferenciaEstilo(r.id));
             }
             const existingRef = store.referenciasEstilo?.find(r => r.url === rawBase64);
@@ -1729,7 +1931,6 @@ Exemplo de JSON de saída:
           }
           filledItems.push(`${subCount} Sujeito(s)`);
         } else {
-          if (isReplaceMode) store.setSujeitoBase64List([]);
           if (updates && updates.desativarSujeito !== undefined) {
              store.updateConfig({ desativarSujeito: updates.desativarSujeito, noPeople: updates.noPeople !== undefined ? updates.noPeople : updates.desativarSujeito });
           } else if ((store.sujeitosBase64List || []).length === 0) {
@@ -1747,7 +1948,6 @@ Exemplo de JSON de saída:
           }
           filledItems.push(`${sceCount} Cenário(s)`);
         } else {
-          if (isReplaceMode) store.setCenarioBase64List([]);
           if (updates && updates.useEnvRef !== undefined) {
              store.updateConfig({ useEnvRef: updates.useEnvRef });
           } else if ((store.cenariosBase64List || []).length === 0) {
@@ -1755,19 +1955,17 @@ Exemplo de JSON de saída:
           }
         }
         
-        if (logCount > 0) {
-          const currentList = isReplaceMode ? [] : (store.logosList || []);
-          let uniqueList = Array.from(new Set([...currentList, ...newLogos]));
-          if (uniqueList.length > 1) uniqueList = [uniqueList[uniqueList.length - 1]]; // Keep only one logo
-          store.setLogosList(uniqueList);
-          if (updates && updates.useLogo !== undefined) {
-            store.updateConfig({ useLogo: updates.useLogo });
-          } else {
-            store.updateConfig({ useLogo: true });
+        if (logCount > 0 || hasExplicitLogo) {
+          const explicitLogoObj = imagesOnly.find(img => img.category === "logo");
+          let rawLogoBase64 = explicitLogoObj 
+            ? (explicitLogoObj.data.startsWith("data:") ? explicitLogoObj.data : `data:${explicitLogoObj.type || "image/jpeg"};base64,${explicitLogoObj.data}`)
+            : (newLogos.length > 0 ? newLogos[newLogos.length - 1] : store.logoBase64);
+
+          if (rawLogoBase64) {
+            store.setLogosList([rawLogoBase64]);
+            store.updateConfig({ logoBase64: rawLogoBase64, useLogo: true });
+            filledItems.push(`Logo da Marca (${explicitLogoObj ? explicitLogoObj.name : "Selecionada"})`);
           }
-          filledItems.push(`${logCount} Logo(s)`);
-        } else if (isReplaceMode) {
-          store.setLogosList([]);
         }
 
         if (typoCount > 0) {
@@ -1775,8 +1973,6 @@ Exemplo de JSON de saída:
           const uniqueList = Array.from(new Set([...currentList, ...newTypographies]));
           store.setTipografiaRefsList(uniqueList);
           filledItems.push(`${typoCount} Ref. Texto`);
-        } else if (isReplaceMode) {
-          store.setTipografiaRefsList([]);
         }
         
         if (desCount > 0) {
@@ -1784,8 +1980,6 @@ Exemplo de JSON de saída:
           const uniqueList = Array.from(new Set([...currentList, ...newDesigns]));
           store.setDesignRefsList(uniqueList);
           filledItems.push(`${desCount} Design(s)`);
-        } else if (isReplaceMode) {
-          store.setDesignRefsList([]);
         }
 
         if (desCount > 0) {
@@ -1882,210 +2076,132 @@ Exemplo de JSON de saída:
 
   return (
     <div ref={chatPanelRef} className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50">
+      {/* Botão Flutuante Original */}
       <button
         onClick={() => {
           setChatDrawerOpen(!chatDrawerOpen);
           setIsDropdownOpen(false);
+          setIsAttachMenuOpen(false);
         }}
         className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-[0_4px_24px_rgba(197,168,128,0.25)] flex items-center justify-center cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 bg-black/90 border border-[#c5a880]/30 hover:border-[#c5a880]/60 text-[#c5a880]"
         title="Assistente ZION AI"
       >
         {chatDrawerOpen ? <X size={20} className="text-[#c5a880]" /> : <MessageSquare size={20} className="text-[#c5a880]" />}
-        {!chatDrawerOpen && <span className="absolute inset-0 rounded-full animate-ping opacity-20 bg-[#c5a880]" />}
+        {!chatDrawerOpen && <span className="absolute inset-0 rounded-full animate-ping opacity-20 bg-[#c5a880]"></span>}
       </button>
 
+      {/* Painel Interno do Assistente ZION AI */}
       {chatDrawerOpen && (
-        <div className={`border border-zinc-800 bg-black shadow-[0_25px_80px_rgba(0,0,0,0.95)] flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-300 transition-all ${isExpanded ? 'fixed inset-0 z-[100] rounded-none w-full h-full' : 'fixed sm:absolute bottom-20 right-4 left-4 sm:left-auto sm:right-0 sm:bottom-[68px] rounded-2xl w-[calc(100vw-32px)] sm:w-[440px] h-[560px] max-h-[82vh]'}`}>
+        <div className={`border border-[#c5a880]/25 bg-[#090a0f] shadow-[0_25px_80px_rgba(0,0,0,0.98)] flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-300 transition-all ${isExpanded ? 'fixed inset-0 z-[100] rounded-none w-full h-full' : 'fixed sm:absolute bottom-20 right-4 left-4 sm:left-auto sm:right-0 sm:bottom-[68px] rounded-2xl sm:rounded-3xl w-[calc(100vw-32px)] sm:w-[460px] h-[600px] max-h-[85vh]'}`}>
           
-          {/* Header */}
-          <div className="shrink-0 p-3 sm:p-4 border-b border-zinc-900 bg-black/90 backdrop-blur-md relative z-20">
-            <div className="flex items-center justify-between gap-2">
+          {/* Header Minimalista & Elegante */}
+          <div className="shrink-0 px-4 py-3 border-b border-white/10 bg-[#0c0d14] flex items-center justify-between gap-2 relative z-20">
+            {/* Seletor de Especialista */}
+            <button
+              onClick={() => { setIsDropdownOpen(!isDropdownOpen); setIsAttachMenuOpen(false); }}
+              className="flex items-center gap-2.5 group cursor-pointer text-left min-w-0 flex-1 hover:opacity-90 transition-opacity"
+              title="Trocar Assistente"
+            >
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#c5a880] to-[#ad8330] flex items-center justify-center text-zinc-950 font-black shadow-md shrink-0">
+                {activeAssistant.icon}
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-white group-hover:text-[#c5a880] transition-colors truncate">
+                    {activeAssistant.label}
+                  </span>
+                  <ChevronDown size={12} className="text-zinc-400 group-hover:text-[#c5a880] transition-transform shrink-0" style={{ transform: isDropdownOpen ? "rotate(180deg)" : "rotate(0)" }} />
+                </div>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span className="text-[10px] text-zinc-400 font-medium truncate">{activeAssistant.sublabel}</span>
+                </div>
+              </div>
+            </button>
+
+            {/* Ações Rápidas da Barra Superior */}
+            <div className="flex items-center gap-1 shrink-0">
+              {/* Modelo de IA */}
               <button
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="flex items-center gap-2.5 flex-1 min-w-0 group cursor-pointer rounded-xl p-1 -ml-1 hover:bg-black/80 transition-colors"
+                onClick={() => { setShowModelSettings(!showModelSettings); setIsDropdownOpen(false); setIsAttachMenuOpen(false); }}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white text-[10px] font-semibold transition-all cursor-pointer"
+                title="Configurar Modelo de IA"
               >
-                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 shadow-lg text-black bg-[#ad8330]">
-                  {activeAssistant.icon}
-                </div>
-                <div className="flex-1 min-w-0 text-left">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs sm:text-[13px] font-black text-white uppercase tracking-wide truncate">{activeAssistant.label}</span>
-                    <ChevronDown size={12} className="text-[#ad8330] group-hover:text-zinc-200 transition-all duration-200 shrink-0" style={{ transform: isDropdownOpen ? "rotate(180deg)" : "rotate(0)" }} />
-                  </div>
-                  <span className="text-[9px] font-bold tracking-widest uppercase block text-[#ad8330] truncate">{activeAssistant.sublabel}</span>
-                </div>
+                <Zap size={11} className="text-[#c5a880] fill-[#c5a880]" />
+                <span>{selectedModel.includes("flash") ? "Modelo: Flash" : selectedModel.includes("image") ? "Modelo: Image" : "Modelo: Pro"}</span>
+                <ChevronDown size={10} className="text-zinc-500" />
               </button>
-              <div className="flex items-center gap-1 shrink-0">
-                <button
-                  onClick={() => setShowModelSettings(!showModelSettings)}
-                  className={`p-1.5 sm:p-2 rounded-lg transition-all cursor-pointer ${showModelSettings ? "text-[#ad8330] bg-black" : "text-zinc-400 hover:text-[#ad8330] hover:bg-black"}`}
-                  title="Modelo de IA"
-                >
-                  <Settings size={14} />
-                </button>
-                <button
-                  onClick={() => setIsExpanded(!isExpanded)}
-                  className="p-1.5 sm:p-2 rounded-lg transition-all cursor-pointer text-zinc-400 hover:text-[#ad8330] hover:bg-black hidden sm:flex"
-                  title={isExpanded ? "Restaurar tamanho" : "Expandir painel"}
-                >
-                  {isExpanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-                </button>
 
-                <button
-                  onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-                  className={`p-1.5 sm:p-2 rounded-lg transition-all cursor-pointer ${isHistoryOpen ? "text-[#ad8330] bg-black" : "text-zinc-400 hover:text-[#ad8330] hover:bg-black"}`}
-                  title="Histórico de Conversas"
-                >
-                  <FolderOpen size={14} />
-                </button>
-                <button
-                  onClick={() => {
-                    store.createProject();
-                    setChats({});
-                    setAttachedFiles([]);
-                    setActiveClient(null);
-                    showToast("Nova conversa iniciada. Configurações zeradas.", "success");
-                  }}
-                  className="p-1.5 sm:p-2 text-zinc-400 hover:text-[#ad8330] hover:bg-black rounded-lg transition-all cursor-pointer"
-                  title="Nova Conversa"
-                >
-                  <Plus size={14} />
-                </button>
-                <button
-                  onClick={clearChat}
-                  className="p-1.5 sm:p-2 text-zinc-400 hover:text-[#ad8330] hover:bg-black rounded-lg transition-all cursor-pointer"
-                  title="Limpar mensagens"
-                >
-                  <Trash2 size={14} />
-                </button>
-                <button
-                  onClick={() => setChatDrawerOpen(false)}
-                  className="p-1.5 sm:p-2 text-zinc-400 hover:text-white hover:bg-black rounded-lg transition-all cursor-pointer"
-                  title="Fechar"
-                >
-                  <X size={14} />
-                </button>
-              </div>
-            </div>
+              {/* Novo Chat */}
+              <button
+                onClick={() => {
+                  store.createProject();
+                  setChats({});
+                  setAttachedFiles([]);
+                  setActiveClient(null);
+                  showToast("Nova conversa iniciada.", "success");
+                }}
+                className="p-1.5 rounded-lg text-zinc-400 hover:text-[#c5a880] hover:bg-white/5 transition-colors cursor-pointer"
+                title="Nova Conversa"
+              >
+                <Plus size={15} />
+              </button>
 
-            {/* Model Settings Dropdown */}
-            {showModelSettings && (
-              <div className="absolute top-14 left-3 right-3 z-50 bg-black border border-zinc-800 rounded-xl shadow-2xl p-3">
-                <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400 mb-2 block">Selecione o Modelo</label>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setSelectedModel("gemini-3.1-pro-preview")}
-                    className={`flex-1 flex flex-col items-center justify-center py-2.5 text-xs rounded-lg transition-all ${selectedModel === "gemini-3.1-pro-preview" ? "bg-[#ad8330]/20 text-[#d4af37] border border-[#ad8330]/50 font-bold" : "bg-black text-zinc-400 hover:text-zinc-200 border border-white/5"}`}
-                  >
-                    <Zap size={16} className="mb-1" />
-                    Pro 3.1
-                  </button>
-                  <button
-                    onClick={() => setSelectedModel("gemini-3-pro-image")}
-                    className={`flex-1 flex flex-col items-center justify-center py-2.5 text-xs rounded-lg transition-all ${selectedModel === "gemini-3-pro-image" ? "bg-[#ad8330]/20 text-[#d4af37] border border-[#ad8330]/50 font-bold" : "bg-black text-zinc-400 hover:text-zinc-200 border border-white/5"}`}
-                  >
-                    <Sparkles size={16} className="mb-1" />
-                    Image Pro
-                  </button>
-                </div>
-              </div>
-            )}
-            
-            {/* History Dropdown */}
-            {isHistoryOpen && (
-              <div className="absolute top-14 right-3 left-3 z-50 bg-black border border-zinc-800 rounded-xl shadow-2xl p-3 max-h-60 overflow-y-auto custom-scrollbar">
-                <div className="flex justify-between items-center mb-2.5 pb-2 border-b border-zinc-800">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">Suas Conversas Salvas</span>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  {store.projectsList.map(p => {
-                    const isProjGenerating = !!store.generatingProjectIds?.[p.id];
-                    return (
-                      <div 
-                        key={p.id} 
-                        className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors ${p.id === store.activeProjectId ? "bg-[#ad8330]/10 border border-[#ad8330]/30" : "hover:bg-black border border-transparent"}`}
-                        onClick={() => {
-                          store.loadProjectById(p.id);
-                          setIsHistoryOpen(false);
-                          showToast(`Conversa carregada.`, "success");
-                        }}
-                      >
-                        <div className="flex items-center gap-2 truncate pr-2">
-                          {isProjGenerating && <Loader2 size={12} className="animate-spin text-[#ad8330] shrink-0" />}
-                          <span className={`text-[11px] font-bold truncate ${p.id === store.activeProjectId ? "text-[#ad8330]" : "text-zinc-300"}`}>{p.name}</span>
-                        </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            store.deleteProject(p.id);
-                            showToast("Conversa deletada.", "success");
-                            if (store.projectsList.length <= 1) {
-                              setIsHistoryOpen(false);
-                            }
-                          }}
-                          className="text-zinc-600 hover:text-red-500 transition-colors p-1 shrink-0"
-                          title="Deletar"
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+              {/* Histórico */}
+              <button
+                onClick={() => { setIsHistoryOpen(!isHistoryOpen); setIsDropdownOpen(false); setIsAttachMenuOpen(false); }}
+                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${isHistoryOpen ? 'text-[#c5a880] bg-white/10' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}
+                title="Histórico de Conversas"
+              >
+                <FolderOpen size={15} />
+              </button>
 
-            {/* Quick agent bar */}
-            <div className="flex items-center gap-1.5 mt-2.5 overflow-x-auto pb-0.5 custom-scrollbar">
-              {assistants.map((a) => {
-                const isActive = activeAssistant.id === a.id;
-                return (
-                  <button
-                    key={a.id}
-                    onClick={() => switchAgent(a)}
-                    title={a.label}
-                    className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center shrink-0 text-white transition-all duration-200 cursor-pointer relative group ${
-                      isActive 
-                        ? "ring-1 ring-[#ad8330] scale-105 shadow-md bg-black" 
-                        : "opacity-50 hover:opacity-100 hover:scale-105 bg-black"
-                    }`}
-                  >
-                    <span className={isActive ? "text-[#ad8330]" : "text-zinc-400"}>{a.icon}</span>
-                  </button>
-                );
-              })}
+              {/* Expandir */}
+              <button
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer hidden sm:flex"
+                title={isExpanded ? "Restaurar tamanho" : "Tela cheia"}
+              >
+                {isExpanded ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+              </button>
+
+              {/* Fechar */}
+              <button
+                onClick={() => setChatDrawerOpen(false)}
+                className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer ml-0.5"
+                title="Fechar"
+              >
+                <X size={15} />
+              </button>
             </div>
           </div>
 
-          {/* Dropdown */}
-          {isDropdownOpen && (
-            <div className="absolute top-[115px] left-3 right-3 z-50 bg-[#09090b] border border-zinc-800 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.95)] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-              <div className="p-2.5 border-b border-zinc-900 bg-black">
-                <p className="text-[9px] font-black text-[#ad8330] uppercase tracking-widest">Escolha o Assistente Ideal</p>
+          {/* Popover de Modelos de IA */}
+          {showModelSettings && (
+            <div className="absolute top-14 right-4 z-50 bg-[#101218] border border-[#c5a880]/30 rounded-2xl shadow-2xl p-3 w-64 animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="flex justify-between items-center mb-2 pb-1.5 border-b border-white/10">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#c5a880]">Modelo de IA</span>
+                <button onClick={() => setShowModelSettings(false)} className="text-zinc-500 hover:text-white"><X size={11} /></button>
               </div>
-              <div className="overflow-y-auto max-h-[260px] sm:max-h-[320px] divide-y divide-zinc-900/60 custom-scrollbar">
-                {assistants.map((a) => (
+              <div className="space-y-1">
+                {[
+                  { id: "gemini-3.1-pro-preview", label: "Gemini Pro 3.1", desc: "Melhor para Design e Raciocínio", icon: <Zap size={13} /> },
+                  { id: "gemini-3.6-flash", label: "Gemini Flash 3.6", desc: "Ultra-rápido para Copys e Textos", icon: <Sparkles size={13} /> },
+                  { id: "gemini-3-pro-image", label: "Gemini Image Pro", desc: "Engenharia de Prompts Visuais", icon: <ImageIcon size={13} /> }
+                ].map(m => (
                   <button
-                    key={a.id}
-                    onClick={() => switchAgent(a)}
-                    className={`w-full px-3.5 py-2.5 flex items-center gap-3 hover:bg-black/60 transition-colors cursor-pointer text-left ${
-                      activeAssistant.id === a.id ? "bg-[#c5a880]/10" : ""
+                    key={m.id}
+                    onClick={() => { setSelectedModel(m.id); setShowModelSettings(false); showToast(`Modelo: ${m.label}`, "success"); }}
+                    className={`w-full flex items-center gap-2.5 p-2 rounded-xl text-left transition-all cursor-pointer border ${
+                      selectedModel === m.id 
+                        ? "bg-[#c5a880]/15 text-[#c5a880] border-[#c5a880]/40 font-bold" 
+                        : "bg-black/40 text-zinc-300 hover:bg-white/5 border-transparent"
                     }`}
                   >
-                    <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-black bg-[#ad8330] shadow-md">
-                      {a.icon}
-                    </div>
+                    <span className="text-[#c5a880]">{m.icon}</span>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs font-bold text-white tracking-wide truncate">{a.label}</span>
-                        {activeAssistant.id === a.id && (
-                          <span className="text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-full shrink-0 bg-[#ad8330]/20 text-[#ad8330]">
-                            Ativo
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-[9px] font-bold uppercase tracking-widest block text-zinc-400">{a.sublabel}</span>
-                      <p className="text-[9px] text-zinc-400 line-clamp-1 mt-0.5">{a.desc}</p>
+                      <p className="text-xs font-semibold truncate leading-none">{m.label}</p>
+                      <p className="text-[9px] text-zinc-500 truncate mt-0.5">{m.desc}</p>
                     </div>
                   </button>
                 ))}
@@ -2093,62 +2209,226 @@ Exemplo de JSON de saída:
             </div>
           )}
 
-          {/* Messages Area */}
+          {/* Popover de Histórico de Conversas */}
+          {isHistoryOpen && (
+            <div className="absolute top-14 right-4 z-50 bg-[#101218] border border-[#c5a880]/30 rounded-2xl shadow-2xl p-3 w-72 max-h-64 overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="flex justify-between items-center mb-2 pb-1.5 border-b border-white/10">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#c5a880]">Conversas Salvas</span>
+                <button onClick={() => setIsHistoryOpen(false)} className="text-zinc-500 hover:text-white"><X size={11} /></button>
+              </div>
+              <div className="space-y-1">
+                {store.projectsList.map(p => {
+                  const isCurrent = p.id === store.activeProjectId;
+                  return (
+                    <div 
+                      key={p.id} 
+                      className={`flex items-center justify-between p-2 rounded-xl cursor-pointer transition-colors ${isCurrent ? "bg-[#c5a880]/15 border border-[#c5a880]/30 text-[#c5a880]" : "hover:bg-white/5 text-zinc-300 border border-transparent"}`}
+                      onClick={() => {
+                        store.loadProjectById(p.id);
+                        setIsHistoryOpen(false);
+                        showToast(`Conversa carregada.`, "success");
+                      }}
+                    >
+                      <span className="text-xs font-medium truncate pr-2">{p.name}</span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          store.deleteProject(p.id);
+                          showToast("Conversa excluída.", "success");
+                          if (store.projectsList.length <= 1) setIsHistoryOpen(false);
+                        }}
+                        className="text-zinc-500 hover:text-red-400 p-1 shrink-0"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Modal Overlay: Seletor de Especialistas */}
+          {isDropdownOpen && (
+            <div className="absolute inset-0 z-50 bg-[#090a0f]/95 backdrop-blur-md flex flex-col p-4 animate-in fade-in duration-200">
+              {/* Header do Seletor */}
+              <div className="flex justify-between items-center mb-3">
+                <div>
+                  <h3 className="text-sm font-bold text-white">Escolha o Especialista IA</h3>
+                  <p className="text-[10px] text-zinc-400">16 especialistas treinados para cada etapa do seu fluxo</p>
+                </div>
+                <button 
+                  onClick={() => setIsDropdownOpen(false)}
+                  className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-zinc-400 hover:text-white transition-colors"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+
+              {/* Busca */}
+              <div className="relative mb-2.5">
+                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+                <input
+                  type="text"
+                  value={agentSearch}
+                  onChange={(e) => setAgentSearch(e.target.value)}
+                  placeholder="Buscar especialista..."
+                  className="w-full bg-[#12141c] border border-white/10 rounded-xl pl-8 pr-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#c5a880]"
+                />
+              </div>
+
+              {/* Abas de Categorias */}
+              <div className="flex items-center gap-1 overflow-x-auto pb-2 custom-scrollbar shrink-0">
+                {[
+                  { id: "all", label: "Todos" },
+                  { id: "design", label: "🎨 Design" },
+                  { id: "copy", label: "✍️ Copywriting" },
+                  { id: "vendas", label: "📈 Vendas" },
+                  { id: "dev", label: "💻 Sites" }
+                ].map(cat => (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => setAgentCategoryFilter(cat.id as any)}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all shrink-0 cursor-pointer ${
+                      agentCategoryFilter === cat.id
+                        ? "bg-[#c5a880] text-zinc-950 font-extrabold shadow-sm"
+                        : "bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10"
+                    }`}
+                  >
+                    {cat.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Lista dos Especialistas */}
+              <div className="overflow-y-auto flex-1 space-y-1.5 custom-scrollbar pr-1">
+                {assistants
+                  .filter(a => {
+                    if (agentCategoryFilter === "design") return ["diretor-criativo", "gc-tv-specialist", "prompt-extrator", "creative-assistant", "analisador-paginas", "easy-image"].includes(a.id);
+                    if (agentCategoryFilter === "copy") return ["copy-legendas-instagram", "copy-ads", "copy-carroseis", "easy-copy"].includes(a.id);
+                    if (agentCategoryFilter === "vendas") return ["analise-estrategica", "icp", "atendimento", "webson-vendedor"].includes(a.id);
+                    if (agentCategoryFilter === "dev") return ["estrutura-sites", "easy-coder"].includes(a.id);
+                    return true;
+                  })
+                  .filter(a => {
+                    if (!agentSearch.trim()) return true;
+                    const q = agentSearch.toLowerCase();
+                    return a.label.toLowerCase().includes(q) || a.sublabel.toLowerCase().includes(q) || a.desc.toLowerCase().includes(q);
+                  })
+                  .map((a) => {
+                    const isSelected = activeAssistant.id === a.id;
+                    return (
+                      <button
+                        key={a.id}
+                        onClick={() => switchAgent(a)}
+                        className={`w-full p-2.5 rounded-xl flex items-center gap-3 transition-all cursor-pointer text-left border ${
+                          isSelected 
+                            ? "bg-[#c5a880]/15 border-[#c5a880]/50 shadow-sm" 
+                            : "bg-[#11131a] hover:bg-[#161922] border-white/5 hover:border-[#c5a880]/30"
+                        }`}
+                      >
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 font-bold ${isSelected ? 'bg-[#c5a880] text-zinc-950' : 'bg-white/10 text-[#c5a880]'}`}>
+                          {a.icon}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs font-bold text-white truncate">{a.label}</span>
+                            {isSelected && (
+                              <span className="text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-[#c5a880] text-zinc-950 shrink-0">
+                                Ativo
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[9px] font-bold text-[#c5a880]/80 block truncate">{a.sublabel}</span>
+                          <p className="text-[10px] text-zinc-400 line-clamp-1 mt-0.5">{a.desc}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
+              </div>
+            </div>
+          )}
+
+          {/* Área Principal de Mensagens */}
           <div
-            className="flex-1 overflow-y-auto p-3.5 sm:p-4 space-y-3.5 relative bg-black/30 custom-scrollbar"
+            className="flex-1 overflow-y-auto p-4 space-y-3.5 relative bg-[#07080c] custom-scrollbar"
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             onPaste={handlePaste}
           >
+            {/* Drag and Drop Zone */}
             {isDraggingOver && (
-              <div className="absolute inset-3 bg-black/95 border-2 border-dashed border-[#ad8330] rounded-2xl flex flex-col items-center justify-center gap-3 z-30 animate-in fade-in duration-150">
-                <div className="w-12 h-12 rounded-full flex items-center justify-center animate-bounce bg-[#ad8330]/10 border border-[#ad8330]/20">
-                  <UploadCloud size={24} className="text-[#ad8330]" />
-                </div>
+              <div className="absolute inset-3 bg-black/95 border-2 border-dashed border-[#c5a880] rounded-2xl flex flex-col items-center justify-center gap-2 z-30 animate-in fade-in duration-150">
+                <UploadCloud size={28} className="text-[#c5a880] animate-bounce" />
                 <p className="text-xs font-bold text-white uppercase tracking-wider">Solte o arquivo aqui</p>
-                <p className="text-[9px] text-zinc-400">Fotos, documentos, textos</p>
               </div>
             )}
 
+            {/* Empty State: Limpo, Direto e Atraente */}
             {activeMessages.length === 0 && !isTyping && (
-              <div className="h-full flex flex-col items-center justify-center text-center gap-3 py-6 px-2">
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-[#ad8330] shadow-xl bg-[#ad8330]/10 border border-[#ad8330]/20">
-                  <Bot size={26} />
+              <div className="h-full flex flex-col items-center justify-center text-center px-2 py-6 space-y-5">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#c5a880] to-[#ad8330] flex items-center justify-center text-zinc-950 shadow-lg shadow-[#c5a880]/20">
+                  {activeAssistant.icon}
                 </div>
+                
                 <div>
-                  <p className="text-xs font-bold text-white tracking-wide">{activeAssistant.label}</p>
-                  <p className="text-[11px] text-zinc-400 max-w-[260px] leading-relaxed mt-1">{activeAssistant.desc}</p>
-                  <p className="text-[9px] text-zinc-500 mt-3 leading-relaxed">
-                    Envie mensagens, textos ou fotos para começar
+                  <h3 className="text-sm font-bold text-white">{activeAssistant.label}</h3>
+                  <p className="text-xs text-zinc-400 max-w-xs mt-1 leading-relaxed">
+                    {activeAssistant.desc}
                   </p>
                 </div>
+
+                {/* 3 Sugestões Limpas */}
+                <div className="w-full space-y-1.5 pt-2">
+                  <span className="text-[9.5px] font-bold text-zinc-500 uppercase tracking-wider block">
+                    Sugestões de início:
+                  </span>
+                  <div className="space-y-1.5">
+                    {(ASSISTANT_SUGGESTIONS[activeAssistant.id] || DEFAULT_SUGGESTIONS).slice(0, 3).map((sug, sIdx) => (
+                      <button
+                        key={sIdx}
+                        type="button"
+                        onClick={() => {
+                          setInputText(sug);
+                          textareaRef.current?.focus();
+                        }}
+                        className="w-full text-xs font-medium p-2.5 rounded-xl bg-[#11131a] hover:bg-[#181b24] border border-white/5 hover:border-[#c5a880]/40 text-zinc-300 hover:text-white transition-all cursor-pointer text-left shadow-sm flex items-center justify-between gap-2 group"
+                      >
+                        <span className="truncate">{sug}</span>
+                        <span className="text-[#c5a880] opacity-0 group-hover:opacity-100 transition-opacity shrink-0">→</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
 
+            {/* Lista de Mensagens */}
             {activeMessages.map((msg, index) => {
               const isModel = msg.role === "model";
               return (
                 <div key={index} className={`flex flex-col gap-1.5 ${isModel ? "items-start" : "items-end"}`}>
                   
-                  {/* File attachments renderer inside bubbles */}
+                  {/* Arquivos Renderizados Dentro da Mensagem */}
                   {msg.files && msg.files.length > 0 && (
                     <div className="flex flex-col gap-1.5 mb-1 max-w-[85%]">
                       {msg.files.map((file, fIdx) => {
                         const isImg = file.type.startsWith("image/");
                         if (isImg) {
                           return (
-                            <div key={fIdx} className="rounded-xl overflow-hidden border border-zinc-800 w-40 shadow-md bg-black/60 p-1">
-                              <img src={`data:${file.type};base64,${file.data}`} className="w-full h-24 object-cover rounded-lg" alt={file.name} />
+                            <div key={fIdx} className="rounded-xl overflow-hidden border border-white/10 w-44 shadow-md bg-black/60 p-1">
+                              <img src={`data:${file.type};base64,${file.data}`} className="w-full h-28 object-cover rounded-lg" alt={file.name} />
                             </div>
                           );
                         }
                         return (
                           <div 
                             key={fIdx} 
-                            className="flex items-center gap-2 px-3 py-2 bg-black border border-zinc-800 rounded-xl w-44 shadow-sm text-left"
+                            className="flex items-center gap-2 px-3 py-2 bg-[#11131a] border border-white/10 rounded-xl w-48 shadow-sm text-left"
                           >
-                            <File size={15} className="text-[#ad8330] shrink-0" />
+                            <File size={15} className="text-[#c5a880] shrink-0" />
                             <div className="flex-1 min-w-0">
                               <p className="text-[10px] font-bold text-white truncate">{file.name}</p>
                               <p className="text-[8px] text-zinc-500 uppercase mt-0.5">{formatFileSize(file.size)}</p>
@@ -2159,264 +2439,179 @@ Exemplo de JSON de saída:
                     </div>
                   )}
 
+                  {/* Balão de Mensagem */}
                   <div
                     className={`max-w-[92%] sm:max-w-[88%] px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl text-xs sm:text-[13px] leading-relaxed font-medium shadow-sm transition-all duration-200 break-words overflow-hidden ${
                       isModel 
-                        ? "bg-black/60 border border-zinc-800/80 text-zinc-200 rounded-bl-sm" 
-                        : "bg-[#ad8330]/20 border border-[#ad8330]/30 text-white rounded-br-sm"
+                        ? "bg-[#101218] border border-white/10 text-zinc-200 rounded-bl-sm" 
+                        : "bg-[#18140c] border border-[#c5a880]/35 text-white rounded-br-sm shadow-md"
                     }`}
                   >
                     {isModel ? formatMessage(msg.content) : <p className="whitespace-pre-wrap">{msg.content}</p>}
                   </div>
 
+                  {/* Ações da Mensagem da IA */}
                   {isModel && (
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      {!isCopyOrTextAssistant && (
+                        <button
+                          onClick={() => {
+                            applyModelMessageToEditor(index, msg.content);
+                            if (onGenerateImage) {
+                              onGenerateImage();
+                              showToast("Gerando nova arte no estúdio...", "warning");
+                            }
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-all bg-gradient-to-r from-[#c5a880] to-[#ad8330] hover:brightness-110 text-zinc-950 shadow-sm"
+                          title="Aplicar alterações e gerar imagem no estúdio"
+                        >
+                          <Zap size={11} className="fill-zinc-950 text-zinc-950" />
+                          <span>Aplicar no Estúdio</span>
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => handleCopyMessageText(index, msg.content)}
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-all bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white"
+                        title="Copiar texto"
+                      >
+                        {copiedMsgIndex === index ? (
+                          <>
+                            <Check size={11} className="text-emerald-400" />
+                            <span className="text-emerald-400 font-bold">Copiado!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy size={11} />
+                            <span>Copiar</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Opção de Editar Mensagem do Usuário */}
+                  {!isModel && (
                     <button
-                      onClick={() => applyModelMessageToEditor(index, msg.content)}
-                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider cursor-pointer transition-all hover:bg-[#111] border border-zinc-800 text-zinc-400 hover:text-[#ad8330]"
+                      onClick={() => {
+                        setEditingMsgIndex(index);
+                        setInputText(msg.content);
+                        if (msg.files && msg.files.length > 0) {
+                          setAttachedFiles(msg.files.map(f => ({ ...f })));
+                        }
+                        setTimeout(() => {
+                          textareaRef.current?.focus();
+                          textareaRef.current?.select();
+                        }, 80);
+                      }}
+                      className="text-[9px] font-semibold text-zinc-500 hover:text-[#c5a880] transition-colors cursor-pointer mr-1"
+                      title="Editar mensagem"
                     >
-                      <Zap size={10} />
-                      <span>Aplicar no Editor</span>
+                      Editar
                     </button>
                   )}
                 </div>
               );
             })}
 
+            {/* Indicador de Digitação */}
             {isTyping && (
               <div className="flex items-start gap-2 animate-pulse">
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-black bg-[#ad8330]">
+                <div className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0 text-zinc-950 bg-[#c5a880]">
                   {activeAssistant.icon}
                 </div>
-                <div className="px-4 py-3 bg-black/70 border border-zinc-800 rounded-2xl rounded-tl-sm flex items-center gap-1.5 shadow-sm">
-                  <span className="w-1.5 h-1.5 rounded-full animate-bounce bg-[#ad8330]" style={{ animationDelay: "0ms" }} />
-                  <span className="w-1.5 h-1.5 rounded-full animate-bounce bg-[#ad8330]" style={{ animationDelay: "150ms" }} />
-                  <span className="w-1.5 h-1.5 rounded-full animate-bounce bg-[#ad8330]" style={{ animationDelay: "300ms" }} />
+                <div className="px-3.5 py-2.5 bg-[#101218] border border-white/10 rounded-2xl rounded-tl-sm flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full animate-bounce bg-[#c5a880]" style={{ animationDelay: "0ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full animate-bounce bg-[#c5a880]" style={{ animationDelay: "150ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full animate-bounce bg-[#c5a880]" style={{ animationDelay: "300ms" }} />
                 </div>
               </div>
             )}
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Footer Area */}
-          <div className="shrink-0 p-3 border-t border-zinc-900 bg-black/90 backdrop-blur-md space-y-2">
+          {/* Barra Inferior Limpa de Entrada (Input Bar) */}
+          <div className="shrink-0 p-3 border-t border-white/10 bg-[#0c0d14] relative">
             
-            {/* Multiple files preview before send */}
+            {/* Arquivos Anexados (Miniatura Limpa com Categoria) */}
             {attachedFiles.length > 0 && (
-              <div className="flex flex-col gap-1.5 px-1 py-0.5 max-h-[90px] overflow-y-auto custom-scrollbar">
-                {attachedFiles.map((file, idx) => {
-                  const isImg = file.type.startsWith("image/");
-                  return (
-                    <div 
-                      key={idx} 
-                      className="flex flex-col gap-1 p-2 bg-black border border-zinc-800 rounded-xl animate-in slide-in-from-bottom-2 duration-150"
-                    >
-                      <div className="flex items-center gap-2">
-                        {isImg ? (
-                          <div className="w-7 h-7 rounded-md overflow-hidden border border-zinc-700 shrink-0">
-                            <img src={`data:${file.type};base64,${file.data}`} className="w-full h-full object-cover" alt="Preview" />
-                          </div>
-                        ) : (
-                          <File size={13} className="text-[#ad8330] shrink-0" />
-                        )}
-                        
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[10px] font-bold text-zinc-300 truncate">{file.name}</p>
-                          <p className="text-[8px] text-zinc-500">{formatFileSize(file.size)}</p>
-                        </div>
-                        
-                        <button 
-                          onClick={() => removeAttachedFile(idx)} 
-                          className="p-1 hover:bg-[#111] rounded-lg text-zinc-500 hover:text-red-500 transition-colors cursor-pointer shrink-0"
-                        >
-                          <X size={11} />
-                        </button>
-                      </div>
-
-                      {/* Explicit Category Tagging Pills */}
-                      <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar pt-0.5">
-                        <span className="text-[8px] font-semibold text-zinc-500 shrink-0 uppercase tracking-wider pr-0.5">Destino:</span>
-                        <button
-                          type="button"
-                          onClick={() => updateFileCategory(idx, "info")}
-                          className={`px-1.5 py-0.5 text-[9px] font-bold rounded-md transition-all shrink-0 cursor-pointer ${
-                            file.category === "info" || !file.category
-                              ? "bg-zinc-700 text-white shadow-sm border border-zinc-600"
-                              : "bg-[#111] text-zinc-400 hover:text-white"
-                          }`}
-                          title="Arquivo/Informação para leitura da IA (NÃO altera o editor)"
-                        >
-                          📄 Info/Geral
-                        </button>
-                        {isImg && (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() => updateFileCategory(idx, "logo")}
-                              className={`px-1.5 py-0.5 text-[9px] font-bold rounded-md transition-all shrink-0 cursor-pointer ${
-                                file.category === "logo"
-                                  ? "bg-[#ad8330] text-black shadow-sm font-extrabold"
-                                  : "bg-[#111] text-zinc-400 hover:text-white"
-                              }`}
-                              title="Usar esta imagem como Logotipo da Marca no Editor"
-                            >
-                              🏷️ Logo
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => updateFileCategory(idx, "design")}
-                              className={`px-1.5 py-0.5 text-[9px] font-bold rounded-md transition-all shrink-0 cursor-pointer ${
-                                file.category === "design"
-                                  ? "bg-[#ad8330] text-black shadow-sm font-extrabold"
-                                  : "bg-[#111] text-zinc-400 hover:text-white"
-                              }`}
-                              title="Usar esta imagem como Referência de Layout/Design no Editor"
-                            >
-                              📐 Ref. Design
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => updateFileCategory(idx, "subject")}
-                              className={`px-1.5 py-0.5 text-[9px] font-bold rounded-md transition-all shrink-0 cursor-pointer ${
-                                file.category === "subject"
-                                  ? "bg-emerald-600 text-white shadow-sm font-bold"
-                                  : "bg-[#111] text-zinc-400 hover:text-white"
-                              }`}
-                              title="Usar esta imagem como Sujeito/Pessoa Principal no Editor"
-                            >
-                              👤 Sujeito
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => updateFileCategory(idx, "scene")}
-                              className={`px-1.5 py-0.5 text-[9px] font-bold rounded-md transition-all shrink-0 cursor-pointer ${
-                                file.category === "scene"
-                                  ? "bg-[#c5a880] text-white shadow-sm font-bold"
-                                  : "bg-[#111] text-zinc-400 hover:text-white"
-                              }`}
-                              title="Usar esta imagem como Cenário/Fundo no Editor"
-                            >
-                              🏞️ Cenário
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+              <div className="flex items-center gap-2 mb-2 p-1.5 bg-[#12141c] border border-white/10 rounded-xl overflow-x-auto custom-scrollbar">
+                {attachedFiles.map((file, idx) => (
+                  <div key={idx} className="flex items-center gap-1.5 bg-black/60 border border-white/10 px-2 py-1 rounded-lg shrink-0">
+                    <span className="text-[10px] font-medium text-zinc-300 truncate max-w-[100px]">{file.name}</span>
+                    <button onClick={() => removeAttachedFile(idx)} className="text-zinc-500 hover:text-red-400"><X size={10} /></button>
+                  </div>
+                ))}
               </div>
             )}
 
-            {/* Hidden file inputs */}
-            <input 
-              type="file" 
-              ref={fileInputInfoRef} 
-              onChange={(e) => handleFileInput(e, "info")} 
-              className="hidden" 
-              multiple 
-              accept="*" 
-            />
-            <input 
-              type="file" 
-              ref={fileInputSubjectRef} 
-              onChange={(e) => handleFileInput(e, "subject")} 
-              className="hidden" 
-              multiple 
-              accept="image/*" 
-            />
-            <input 
-              type="file" 
-              ref={fileInputLogoRef} 
-              onChange={(e) => handleFileInput(e, "logo")} 
-              className="hidden" 
-              multiple 
-              accept="image/*" 
-            />
-            <input 
-              type="file" 
-              ref={fileInputDesignRef} 
-              onChange={(e) => handleFileInput(e, "design")} 
-              className="hidden" 
-              multiple 
-              accept="image/*" 
-            />
-            <input 
-              type="file" 
-              ref={fileInputSceneRef} 
-              onChange={(e) => handleFileInput(e, "scene")} 
-              className="hidden" 
-              multiple 
-              accept="image/*" 
-            />
-
-            {/* Quick Attachment Category Selector Toolbar */}
-            <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1 pt-0.5">
-              <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider shrink-0 mr-0.5 whitespace-nowrap">Anexar:</span>
-              <button
-                type="button"
-                onClick={() => fileInputInfoRef.current?.click()}
-                disabled={isUploading}
-                className="flex items-center gap-1 px-2 py-1 rounded-lg border border-zinc-800 bg-black hover:bg-[#111] text-zinc-300 text-[10px] font-semibold transition-all cursor-pointer shrink-0 whitespace-nowrap disabled:opacity-40"
-                title="Anexar arquivos de texto, PDFs ou imagens informativas para a IA ler"
-              >
-                <Paperclip size={11} className="text-zinc-400 shrink-0" />
-                <span className="whitespace-nowrap">Arquivo</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => fileInputSubjectRef.current?.click()}
-                disabled={isUploading}
-                className="flex items-center gap-1 px-2 py-1 rounded-lg border border-emerald-500/40 bg-emerald-950/30 hover:bg-emerald-900/50 text-emerald-300 text-[10px] font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap disabled:opacity-40"
-                title="Anexar Foto da Pessoa / Sujeito Principal para o Editor"
-              >
-                <span className="whitespace-nowrap">👤 Sujeito</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => fileInputLogoRef.current?.click()}
-                disabled={isUploading}
-                className="flex items-center gap-1 px-2 py-1 rounded-lg border border-[#ad8330]/40 bg-[#ad8330]/10 hover:bg-[#ad8330]/20 text-[#c5a880] text-[10px] font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap disabled:opacity-40"
-                title="Anexar Logotipo da Marca especificamente para o Editor"
-              >
-                <span className="whitespace-nowrap">🏷️ Logo</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => fileInputDesignRef.current?.click()}
-                disabled={isUploading}
-                className="flex items-center gap-1 px-2 py-1 rounded-lg border border-[#ad8330]/40 bg-[#ad8330]/10 hover:bg-[#ad8330]/20 text-[#c5a880] text-[10px] font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap disabled:opacity-40"
-                title="Anexar Referência de Design/Layout para o Editor"
-              >
-                <span className="whitespace-nowrap">📐 Referência</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => fileInputSceneRef.current?.click()}
-                disabled={isUploading}
-                className="flex items-center gap-1 px-2 py-1 rounded-lg border border-[#c5a880]/40 bg-[#c5a880]/30 hover:bg-[#c5a880]/50 text-[#c5a880] text-[10px] font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap disabled:opacity-40"
-                title="Anexar Foto de Cenário/Fundo para o Editor"
-              >
-                <span className="whitespace-nowrap">🏞️ Cenário</span>
-              </button>
-
-              <div className="h-3 w-px bg-zinc-800 my-auto shrink-0 mx-0.5" />
-
-              <button
-                type="button"
-                onClick={handleImprovePrompt}
-                disabled={isImprovingPrompt || isTyping || !inputText.trim()}
-                className="flex items-center gap-1 px-2 py-1 rounded-lg border border-[#ad8330]/50 bg-[#ad8330]/15 hover:bg-[#ad8330]/30 text-[#e6c687] text-[10px] font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap disabled:opacity-30 disabled:cursor-not-allowed"
-                title="Melhorar meu prompt usando Inteligência Artificial antes de enviar"
-              >
-                {isImprovingPrompt ? (
-                  <Loader2 size={11} className="animate-spin text-[#ad8330]" />
-                ) : (
-                  <Sparkles size={11} className="text-[#ad8330]" />
+            {/* Menu Popover de Anexos (quando clica no clipe) */}
+            {isAttachMenuOpen && (
+              <div className="absolute bottom-16 left-3 z-50 bg-[#12141c] border border-[#c5a880]/30 rounded-2xl shadow-2xl p-2 w-52 animate-in fade-in slide-in-from-bottom-2 duration-150 space-y-1">
+                <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-500 px-2 py-1">Anexar ao Editor:</p>
+                <button
+                  type="button"
+                  onClick={() => { fileInputInfoRef.current?.click(); setIsAttachMenuOpen(false); }}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-zinc-300 hover:text-white hover:bg-white/5 transition-colors text-left"
+                >
+                  <Paperclip size={13} className="text-zinc-400" />
+                  <span>📄 Arquivo / Documento</span>
+                </button>
+                {!isCopyOrTextAssistant && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => { fileInputSubjectRef.current?.click(); setIsAttachMenuOpen(false); }}
+                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-emerald-300 hover:bg-emerald-950/30 transition-colors text-left"
+                    >
+                      <span>👤 Sujeito / Pessoa</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { fileInputLogoRef.current?.click(); setIsAttachMenuOpen(false); }}
+                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[#c5a880] hover:bg-[#c5a880]/10 transition-colors text-left"
+                    >
+                      <span>🏷️ Logotipo</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { fileInputDesignRef.current?.click(); setIsAttachMenuOpen(false); }}
+                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[#c5a880] hover:bg-[#c5a880]/10 transition-colors text-left"
+                    >
+                      <span>📐 Referência de Design</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { fileInputSceneRef.current?.click(); setIsAttachMenuOpen(false); }}
+                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[#c5a880] hover:bg-[#c5a880]/10 transition-colors text-left"
+                    >
+                      <span>🏞️ Cenário / Fundo</span>
+                    </button>
+                  </>
                 )}
-                <span>Melhorar prompt</span>
-              </button>
-            </div>
+              </div>
+            )}
 
-            <div className="flex items-end gap-2">
+            {/* Inputs Ocultos de Arquivo */}
+            <input type="file" ref={fileInputInfoRef} onChange={(e) => handleFileInput(e, "info")} className="hidden" multiple accept="*" />
+            <input type="file" ref={fileInputSubjectRef} onChange={(e) => handleFileInput(e, "subject")} className="hidden" multiple accept="image/*" />
+            <input type="file" ref={fileInputLogoRef} onChange={(e) => handleFileInput(e, "logo")} className="hidden" multiple accept="image/*" />
+            <input type="file" ref={fileInputDesignRef} onChange={(e) => handleFileInput(e, "design")} className="hidden" multiple accept="image/*" />
+            <input type="file" ref={fileInputSceneRef} onChange={(e) => handleFileInput(e, "scene")} className="hidden" multiple accept="image/*" />
+
+            {/* Campo de Entrada com Botões Integrados */}
+            <div className="flex items-end gap-1.5 bg-[#07080c] border border-white/10 focus-within:border-[#c5a880] rounded-2xl p-1.5 transition-colors">
+              {/* Botão de Anexo */}
+              <button
+                type="button"
+                onClick={() => setIsAttachMenuOpen(!isAttachMenuOpen)}
+                className={`p-2 rounded-xl transition-colors cursor-pointer shrink-0 ${isAttachMenuOpen ? 'text-[#c5a880] bg-white/10' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}
+                title="Anexar arquivos ou referências"
+              >
+                <Paperclip size={16} />
+              </button>
+
+              {/* Textarea */}
               <textarea
                 ref={textareaRef}
                 value={inputText}
@@ -2432,40 +2627,35 @@ Exemplo de JSON de saída:
                   }
                 }}
                 onPaste={handlePaste}
-                placeholder={`Escreva o que você quer e aperte em "Melhorar prompt"...`}
+                placeholder={editingMsgIndex !== null ? "Edite sua mensagem e pressione Enter..." : `Converse com ${activeAssistant.label}...`}
                 rows={1}
-                className="flex-1 bg-black/80 border border-zinc-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-[#ad8330]/60 resize-none font-medium leading-relaxed transition-colors"
-                style={{ minHeight: "38px", maxHeight: "100px", scrollbarWidth: "none" }}
+                className="flex-1 bg-transparent border-0 px-1 py-1.5 text-xs text-white placeholder:text-zinc-500 focus:outline-none resize-none font-medium leading-relaxed"
+                style={{ minHeight: "36px", maxHeight: "100px", scrollbarWidth: "none" }}
               />
+
+              {/* Botão de Melhorar Prompt com IA */}
               <button
                 type="button"
                 onClick={handleImprovePrompt}
                 disabled={isImprovingPrompt || isTyping || !inputText.trim()}
-                className="h-[38px] px-3 rounded-xl flex items-center gap-1.5 text-xs font-bold bg-[#ad8330]/15 hover:bg-[#ad8330]/25 border border-[#ad8330]/40 hover:border-[#ad8330] text-[#e6c687] cursor-pointer transition-all active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed shrink-0 shadow-sm mb-0.5"
-                title="Melhorar meu prompt usando Inteligência Artificial"
+                className="p-2 rounded-xl text-zinc-400 hover:text-[#c5a880] hover:bg-white/5 transition-colors cursor-pointer shrink-0 disabled:opacity-30 disabled:cursor-not-allowed"
+                title="Melhorar Prompt com Inteligência Artificial"
               >
-                {isImprovingPrompt ? (
-                  <>
-                    <Loader2 size={14} className="animate-spin text-[#ad8330]" />
-                    <span className="hidden sm:inline">Melhorando...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles size={14} className="text-[#ad8330]" />
-                    <span className="whitespace-nowrap hidden sm:inline">Melhorar prompt</span>
-                  </>
-                )}
+                {isImprovingPrompt ? <Loader2 size={16} className="animate-spin text-[#c5a880]" /> : <Sparkles size={16} />}
               </button>
+
+              {/* Botão de Enviar */}
               <button
                 type="button"
                 onClick={handleSend}
                 disabled={isTyping || isUploading || (inputText.trim() === "" && attachedFiles.length === 0)}
-                className="w-9 h-[38px] rounded-xl flex items-center justify-center text-black bg-[#ad8330] cursor-pointer transition-all active:scale-90 disabled:opacity-30 disabled:cursor-not-allowed hover:brightness-110 shrink-0 shadow-md mb-0.5"
-                title="Enviar mensagem"
+                className="w-9 h-9 rounded-xl flex items-center justify-center text-zinc-950 bg-gradient-to-r from-[#c5a880] to-[#ad8330] hover:brightness-110 cursor-pointer transition-all active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed shrink-0 shadow-md shadow-[#c5a880]/20"
+                title="Enviar mensagem (Enter)"
               >
                 {isTyping ? <RefreshCw size={14} className="animate-spin" /> : <Send size={14} />}
               </button>
             </div>
+
           </div>
 
         </div>

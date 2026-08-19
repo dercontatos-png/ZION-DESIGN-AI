@@ -11,34 +11,7 @@ export const supabaseUrl = "https://dwyvpytblzqacnbfisuf.supabase.co";
 export const supabaseAnonKey =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR3eXZweXRibHpxYWNuYmZpc3VmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU4MTAwNDcsImV4cCI6MjEwMTM4NjA0N30.k-dvnJCH3RkTb8KUvZQeQ3hT0RGOtDqEya62k1Xy3AQ";
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
-export const supabaseClient = supabase;
-
-export async function loadUserAppState(userId: string) {
-  const { data, error } = await supabase
-    .from('users')
-    .select('data')
-    .eq('id', userId)
-    .maybeSingle();
-
-  if (error) {
-    console.error("Erro ao carregar estado do Supabase:", error);
-    return null;
-  }
-  return data?.data || null;
-}
-
-export async function saveUserAppState(userId: string, appState: unknown) {
-  const { error } = await supabase
-    .from('users')
-    .upsert({
-      id: userId,
-      updated_at: new Date().toISOString(),
-      data: appState
-    });
-
-  if (error) {
-    console.error("Erro ao salvar estado no Supabase:", error);
-    throw error;
-  }
-}
+// Initialize Supabase Client
+export const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = supabaseClient;
+export default supabaseClient;

@@ -30,7 +30,7 @@ export interface EstiloReferencia {
 
 export interface ProjectConfig {
   clientId?: string | null;
-  tipoPainel: "DESIGNER" | "PRODUCT" | "LOGO" | "GC_TV"; // Designer Zion vs Product Zion vs Logo Creator vs GC TV Broadcast
+  tipoPainel: "DESIGNER" | "PRODUCT" | "LOGO" | "GC_TV" | "FOTO"; // Designer Zion vs Product Zion vs Logo Creator vs GC TV Broadcast vs Foto Studio/Editing
   sujeitoBase64: string; // Fotos do Sujeito ou Produto
   desativarSujeito: boolean; // Flag para ignorar/desativar sujeito principal no prompt e UI
   cenarioBase64: string;

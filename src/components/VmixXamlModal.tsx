@@ -1135,7 +1135,7 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
     if (!imageBase64) return;
     setIsScanning(true);
     const activePromptToSend = promptOverride !== undefined ? promptOverride : customPrompt;
-    showToast("Escanear referência e instrução prompt com Visão IA...", "info");
+    showToast("Escanear referência e instrução do prompt com Visão IA...", "info");
 
     try {
       const hintStr = typeof styleHint === "string" ? styleHint : undefined;
@@ -1253,7 +1253,7 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      showToast(`Pacote nativo '${filenamePrefix}_${cleanTitle}.gtzip' criado com sucesso! Dê duplo-clique para abrir diretamente no GT Titulos ou vMix.`, "success");
+      showToast(`Pacote nativo '${filenamePrefix}_${cleanTitle}.gtzip' criado com sucesso! Dê duplo-clique para abrir diretamente no GT Títulos ou vMix.`, "success");
     } catch (err: any) {
       console.error("Erro ao gerar GTZIP:", err);
       showToast(`Falha ao empacotar GTZIP: ${err.message}`, "error");
@@ -1554,7 +1554,7 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
                         )}
                         <label className="flex-1 py-1 px-2.5 bg-[#111] hover:bg-zinc-700 text-zinc-200 text-[10px] font-bold rounded cursor-pointer transition-all flex items-center justify-center gap-1 border border-white/5">
                           <Upload size={11} />
-                          <span>{scanData.logoUrl ? "Alterar Logo..." : "Carregar Logo..."}</span>
+                          <span>{scanData.logoUrl ? "Alterar Logotipo..." : "Carregar Logotipo..."}</span>
                           <input type="file" accept="image/*" onChange={handleLogoFileUpload} className="hidden" />
                         </label>
                       </div>
@@ -1709,7 +1709,7 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
                   {/* Broadcast Screen Background Overlay simulation */}
                   <div className="absolute top-3 left-3 bg-black/70 border border-white/5 backdrop-blur-md px-2.5 py-1 rounded text-[9px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1.5 z-10">
                     <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
-                    vMix Output Preview [1080p Canvas]
+                    Prévia de Saída vMix [1080p Canvas]
                   </div>
 
                   {/* Play preview watermark trigger button inside canvas */}
@@ -1781,7 +1781,7 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
                         {scanData.generatedXaml && (
                           <div className="absolute top-12 left-1/2 -translate-x-1/2 bg-amber-500 text-black px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-wider z-20 shadow-xl flex items-center gap-1">
                             <Info size={11} className="shrink-0" />
-                            <span>Sintaxe Otimizada no Preview</span>
+                            <span>Sintaxe Otimizada na Prévia</span>
                           </div>
                         )}
                       </div>
@@ -1824,13 +1824,13 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
             {/* vMix How-To Instructions Box */}
             <div className="bg-amber-950/20 border border-amber-500/20 p-4 rounded-xl space-y-2.5">
               <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-                <Tv size={13} /> GUIA DE IMPORTAÇÃO vMIX E GT TITULOS:
+                <Tv size={13} /> GUIA DE IMPORTAÇÃO vMIX E GT TÍTULOS:
               </span>
               <div className="space-y-2.5 text-[11px] leading-relaxed text-zinc-300">
                 <div>
-                  <p className="font-extrabold text-amber-300 uppercase text-[9.5px] tracking-wider mb-0.5">Opção A: No GT Title Designer / GT Titulos (Recomendado para Edição Visual)</p>
+                  <p className="font-extrabold text-amber-300 uppercase text-[9.5px] tracking-wider mb-0.5">Opção A: No GT Title Designer / GT Títulos (Recomendado para Edição Visual)</p>
                   <p className="text-zinc-400">
-                    Baixe o pacote pelo botão <strong className="text-white">"Baixar para GT Titulos (.gtzip)"</strong>. No GT Title Designer, vá em <strong className="text-amber-400">File &gt; Open</strong> e selecione o arquivo baixado. Ele abrirá instantaneamente sem erros de renderização ou tela preta!
+                    Baixe o pacote pelo botão <strong className="text-white">"Baixar para GT Títulos (.gtzip)"</strong>. No GT Title Designer, vá em <strong className="text-amber-400">Arquivo &gt; Abrir</strong> e selecione o arquivo baixado. Ele abrirá instantaneamente sem erros de renderização ou tela preta!
                   </p>
                 </div>
                 <div className="border-t border-white/5 pt-2">
@@ -1850,7 +1850,7 @@ export const VmixXamlModal: React.FC<VmixXamlModalProps> = ({
                   className="py-3.5 px-4 bg-gradient-to-r from-[#c5a880] to-[#e6cfb3] text-black font-black text-[11px] uppercase tracking-wider rounded-xl hover:brightness-110 active:scale-[0.98] transition-all cursor-pointer shadow-xl flex items-center justify-center gap-2"
                 >
                   <Download size={15} />
-                  <span>Baixar para GT Titulos (.gtzip)</span>
+                  <span>Baixar para GT Títulos (.gtzip)</span>
                 </button>
 
                 <button

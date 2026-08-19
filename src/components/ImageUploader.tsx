@@ -180,7 +180,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       return (
         <div className="text-center py-4">
           <RefreshCw size={24} className="text-[#ad8330] animate-spin mx-auto mb-2.5" />
-          <span className="text-[10px] font-black text-zinc-350 uppercase tracking-widest block">
+          <span className="text-[10px] font-black text-zinc-300 uppercase tracking-widest block">
             Comprimindo ({compressProgress.current}/{compressProgress.total})...
           </span>
           <div className="w-24 h-1 bg-[#111] rounded-full mx-auto mt-2 overflow-hidden">
@@ -224,8 +224,8 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
               ))}
               
               <div className="relative aspect-square rounded-lg border border-dashed border-zinc-800 hover:border-[#ad8330]/40 flex flex-col items-center justify-center cursor-pointer bg-black/40 hover:bg-black/20 transition-all">
-                <Plus size={16} className="text-zinc-550 group-hover:text-zinc-400 mb-0.5" />
-                <span className="text-[8px] font-black text-zinc-550 uppercase tracking-wider">Adicionar</span>
+                <Plus size={16} className="text-zinc-400 group-hover:text-zinc-400 mb-0.5" />
+                <span className="text-[8px] font-black text-zinc-400 uppercase tracking-wider">Adicionar</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -261,7 +261,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     return (
       <div className="text-center pointer-events-none">
         <div className="mx-auto mb-2 text-[#ad8330]">{icon}</div>
-        <span className="text-[10px] font-black text-zinc-350 uppercase tracking-widest block">{label}</span>
+        <span className="text-[10px] font-black text-zinc-300 uppercase tracking-widest block">{label}</span>
         <span className="text-[8px] text-zinc-500 block mt-1 uppercase tracking-wider font-extrabold">
           Arraste múltiplos, clique ou cole (Ctrl + V)
         </span>

@@ -9,6 +9,67 @@ export interface DownloadMetaInfo {
   customFileName?: string;
 }
 
+const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+
+function crc32(buf: Uint8Array): number {
+  let crc = 0xffffffff;
+  for (let i = 0; i < buf.length; i++) {
+    let c = (crc ^ buf[i]) & 0xff;
+    for (let k = 0; k < 8; k++) {
+      c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+    }
+    crc = (crc >>> 8) ^ c;
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+// Pad a PNG to an EXACT byte size by inserting a valid tEXt chunk (file stays a valid image)
+function padPngToExact(bytes: Uint8Array, targetSize: number): Uint8Array | null {
+  if (bytes.length > targetSize) return null;
+  for (let i = 0; i < 8; i++) {
+    if (bytes[i] !== PNG_SIGNATURE[i]) return null;
+  }
+  const out = new Uint8Array(targetSize);
+  out.set(bytes);
+
+  // IEND chunk = last 12 bytes (length + "IEND" + CRC)
+  const iendStart = bytes.length - 12;
+  const deficit = targetSize - bytes.length;
+  if (deficit < 12) {
+    return out; // trailing bytes after IEND are ignored by decoders
+  }
+
+  const keyword = "ZionPadding";
+  const payloadLen = deficit - 12; // chunk = len(4) + type(4) + keyword + \0 + text + crc(4)
+  const textLen = payloadLen - keyword.length - 1;
+  if (textLen < 0) return out;
+
+  const chunk = new Uint8Array(deficit);
+  const dv = new DataView(chunk.buffer);
+  dv.setUint32(0, payloadLen, false);
+  chunk[4] = 0x74; // t
+  chunk[5] = 0x45; // E
+  chunk[6] = 0x58; // X
+  chunk[7] = 0x74; // t
+  for (let i = 0; i < keyword.length; i++) chunk[8 + i] = keyword.charCodeAt(i);
+  chunk[8 + keyword.length] = 0; // null terminator (text bytes stay zero)
+
+  const crc = crc32(chunk.subarray(4, deficit - 4));
+  dv.setUint32(deficit - 4, crc, false);
+
+  out.set(chunk, iendStart);
+  out.set(bytes.subarray(iendStart), iendStart + deficit);
+  return out;
+}
+
+// Pad a JPEG to an EXACT byte size with trailing zeros after the EOI marker (valid image)
+function padJpegToExact(bytes: Uint8Array, targetSize: number): Uint8Array | null {
+  if (bytes.length > targetSize) return null;
+  const out = new Uint8Array(targetSize);
+  out.set(bytes);
+  return out;
+}
+
 export function sanitizeFileNamePart(str: string, maxLength: number = 30): string {
   if (!str) return "";
   return str
@@ -86,7 +147,7 @@ export function generateSmartFileName(
   let qualityPart = "";
   const targetRes = meta?.targetResolution;
   if (targetRes === "16MP" || targetRes === 16) {
-    qualityPart = "WhatsApp_HD_16MB";
+    qualityPart = "WhatsApp_HD";
   } else if (targetRes === "4K" || targetRes === 30) {
     qualityPart = "4K_UltraHD";
   } else if (targetRes === "2K") {
@@ -122,26 +183,53 @@ export const downloadImage = (
       const hasBgColor = backgroundColor && backgroundColor !== "transparent";
       const isOriginalMode = targetResolution === "ORIGINAL" || !targetResolution;
 
+      // Extract original filename from a URL path (e.g. /generated-images/img_xxx.png) when available
+      let originalName: string | null = null;
+      if (base64Data.startsWith("http") || base64Data.startsWith("/")) {
+        try {
+          const urlPath = base64Data.split("?")[0].split("#")[0];
+          const candidate = decodeURIComponent(urlPath.split("/").pop() || "");
+          if (candidate && /^[\w.\-]+$/.test(candidate)) {
+            originalName = candidate;
+          }
+        } catch {
+          // ignore
+        }
+      }
+
       // Direct download of native API bytes if no canvas operations are needed
       if (isOriginalMode && !hasBgColor) {
         const isUrl = base64Data.startsWith("http") || base64Data.startsWith("/");
         const isBase64 = base64Data.startsWith("data:");
-        const extension = formatoSelecionado ? formatoSelecionado.toLowerCase() : "png";
+        const isPngSource = base64Data.startsWith("data:image/png");
 
         if (isUrl || isBase64) {
           try {
             const res = await fetch(base64Data);
             const blob = await res.blob();
-            const blobUrl = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = blobUrl;
-            link.download = generateSmartFileName({ ...metaInfo, targetResolution: metaInfo?.targetResolution || targetResolution }, extension);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(blobUrl);
-            resolve();
-            return;
+
+            // Guard: if the fetched bytes are not an image (HTML error page, etc.),
+            // abort instead of saving a broken file.
+            if (!blob.type.startsWith("image/") && !isBase64) {
+              throw new Error("Resposta não é uma imagem.");
+            }
+
+            // PNG lossless fast path: only if source is already PNG (zero re-encode = zero loss)
+            if (blob.type === "image/png" || (isPngSource && !blob.type)) {
+              const blobUrl = URL.createObjectURL(blob);
+              const link = document.createElement("a");
+              link.href = blobUrl;
+              link.download = originalName || generateSmartFileName({ ...metaInfo, targetResolution: metaInfo?.targetResolution || targetResolution }, "png");
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+              resolve();
+              return;
+            }
+
+            // Non-PNG source: fall through to canvas re-encode (lossless PNG)
+            console.warn("Fonte não é PNG, reconvertendo para PNG sem perdas via canvas:", blob.type);
           } catch (fetchErr) {
             console.warn("Fetch de bytes originais falhou, caindo para canvas nativo:", fetchErr);
           }
@@ -202,7 +290,7 @@ export const downloadImage = (
           const canvas = document.createElement("canvas");
           canvas.width = targetW;
           canvas.height = targetH;
-          const ctx = canvas.getContext("2d", { alpha: !isWhatsAppHD });
+          const ctx = canvas.getContext("2d", { alpha: true });
           if (!ctx) {
             reject(new Error("Could not get canvas context"));
             return;
@@ -212,12 +300,9 @@ export const downloadImage = (
           ctx.imageSmoothingEnabled = true;
           ctx.imageSmoothingQuality = "high";
 
-          // 1. Draw solid background color if provided, or solid white for WhatsApp JPEG
+          // 1. Draw solid background color if provided (only when requested)
           if (backgroundColor && backgroundColor !== "transparent") {
             ctx.fillStyle = backgroundColor;
-            ctx.fillRect(0, 0, targetW, targetH);
-          } else if (isWhatsAppHD) {
-            ctx.fillStyle = "#ffffff";
             ctx.fillRect(0, 0, targetW, targetH);
           }
 
@@ -225,23 +310,24 @@ export const downloadImage = (
           ctx.drawImage(img, 0, 0, targetW, targetH);
 
           // 3. Determine MIME type and extension
-          // CRITICAL FOR WHATSAPP HD: WhatsApp ONLY enables the "HD" toggle button for JPEG/JPG photos!
-          let extension = formatoSelecionado ? formatoSelecionado.toLowerCase() : "png";
+          // Native (ORIGINAL) and WhatsApp HD (16MP) always export LOSSESS PNG.
+          // Other target resolutions honor the selected export format.
+          const forceLosslessPng = isOriginalMode || isWhatsAppHD;
+          let extension = forceLosslessPng ? "png" : (formatoSelecionado ? formatoSelecionado.toLowerCase() : "png");
           let mimeType = "image/png";
 
-          if (isWhatsAppHD) {
-            mimeType = "image/jpeg";
-            extension = "jpg";
-          } else if (extension === "jpeg" || extension === "jpg") {
-            mimeType = "image/jpeg";
-            extension = "jpg";
-          } else if (extension === "webp") {
-            mimeType = "image/webp";
-          } else if (extension === "avif") {
-            mimeType = "image/avif";
+          if (!forceLosslessPng) {
+            if (extension === "jpeg" || extension === "jpg") {
+              mimeType = "image/jpeg";
+              extension = "jpg";
+            } else if (extension === "webp") {
+              mimeType = "image/webp";
+            } else if (extension === "avif") {
+              mimeType = "image/avif";
+            }
           }
 
-          // Quality: 0.98 for JPEG to preserve max crispness without artifacting
+          // Quality: 0.98 for JPEG to preserve max crispness without artifacting (PNG is always lossless)
           const quality = (mimeType === "image/jpeg" || mimeType === "image/webp") ? 0.98 : 1.0;
           let dataUrl = canvas.toDataURL(mimeType, quality);
           
@@ -255,34 +341,59 @@ export const downloadImage = (
           const res = await fetch(dataUrl);
           let outputBlob = await res.blob();
 
-          // Calculate exact byte padding if an exact MB target is specified (e.g. 16MB for WhatsApp)
-          let targetExactBytes: number | null = null;
-          if (isWhatsAppHD || targetResolution === "16MP" || targetResolution === 16) {
-            targetExactBytes = 16 * 1024 * 1024; // Exact 16.0 MB (16,777,216 bytes)
-          } else if (targetResolution === 30 || targetResolution === "30MB") {
-            targetExactBytes = 30 * 1024 * 1024; // Exact 30.0 MB
-          } else if (typeof targetResolution === "number" && targetResolution > 0) {
-            targetExactBytes = targetResolution * 1024 * 1024;
+          // WhatsApp HD: ALWAYS exactly 16.0 MB (16,777,216 bytes), never more, never less
+          if (isWhatsAppHD) {
+            const targetBytes = 16 * 1024 * 1024;
+            let bytes = new Uint8Array(await outputBlob.arrayBuffer());
+
+            if (bytes.length > targetBytes) {
+              // PNG is too big: flatten on white and re-encode as JPEG, lowering quality until it fits
+              const whiteCanvas = document.createElement("canvas");
+              whiteCanvas.width = targetW;
+              whiteCanvas.height = targetH;
+              const wctx = whiteCanvas.getContext("2d");
+              if (wctx) {
+                wctx.fillStyle = "#ffffff";
+                wctx.fillRect(0, 0, targetW, targetH);
+                wctx.drawImage(img, 0, 0, targetW, targetH);
+                for (let q = 0.95; q >= 0.15; q -= 0.05) {
+                  const jpegUrl = whiteCanvas.toDataURL("image/jpeg", q);
+                  const jpegBlob = await (await fetch(jpegUrl)).blob();
+                  if (jpegBlob.size <= targetBytes) {
+                    bytes = new Uint8Array(await jpegBlob.arrayBuffer());
+                    mimeType = "image/jpeg";
+                    extension = "jpg";
+                    break;
+                  }
+                }
+              }
+            }
+
+            const padded = extension === "png"
+              ? padPngToExact(bytes, targetBytes)
+              : padJpegToExact(bytes, targetBytes);
+            if (padded && padded.length === targetBytes) {
+              outputBlob = new Blob([padded], { type: mimeType });
+            }
           }
 
-          if (targetExactBytes && targetExactBytes > 0) {
-            if (outputBlob.size < targetExactBytes) {
-              const paddingSize = targetExactBytes - outputBlob.size;
-              const padding = new Uint8Array(paddingSize);
-              outputBlob = new Blob([outputBlob, padding], { type: outputBlob.type || mimeType });
-            } else if (outputBlob.size > targetExactBytes) {
-              outputBlob = outputBlob.slice(0, targetExactBytes, outputBlob.type || mimeType);
-            }
+          // Native mode: keep the original filename (re-encoded to .png)
+          let downloadName: string;
+          if (isOriginalMode && originalName) {
+            const baseName = originalName.replace(/\.[a-zA-Z0-9]+$/, "");
+            downloadName = `${baseName}.${extension}`;
+          } else {
+            downloadName = generateSmartFileName({ ...metaInfo, targetResolution: metaInfo?.targetResolution || targetResolution }, extension);
           }
 
           const blobUrl = URL.createObjectURL(outputBlob);
           const link = document.createElement("a");
           link.href = blobUrl;
-          link.download = generateSmartFileName({ ...metaInfo, targetResolution: metaInfo?.targetResolution || targetResolution }, extension);
+          link.download = downloadName;
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
-          URL.revokeObjectURL(blobUrl);
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
           resolve();
         } catch (procErr) {
           reject(procErr);

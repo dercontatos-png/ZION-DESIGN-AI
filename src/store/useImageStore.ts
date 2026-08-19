@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { safeStorageSetItem } from '../utils/imageStorageManager';
+import { recordImageGeneration } from '../utils/apiUsageManager';
+import { checkAdminOrOpenPlan, getAuthHeaders, openPlanModal } from '../utils/userAuth';
 
 export interface ImgConfig {
   imageSize: string;
@@ -315,6 +317,12 @@ export const useImageStore = create<ImageStoreState>((set, get) => ({
   
   generateImage: async (customApiKey, backgroundSettings, aspectRatioOverride) => {
     const { imgConfig, personRefs, envRefs, styleRefs, logoRefs } = get();
+    if (!checkAdminOrOpenPlan(customApiKey)) {
+      openPlanModal();
+      set({ isGeneratingImage: false, generationProgress: 0 });
+      alert("Apenas administradores podem utilizar a geração de imagens. Assine um plano para continuar!");
+      return;
+    }
     set({ isGeneratingImage: true, generationProgress: 100 });
     
     try {
@@ -332,17 +340,19 @@ export const useImageStore = create<ImageStoreState>((set, get) => ({
 
       const response = await fetch("/api/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders(effectiveApiKey) },
         body: JSON.stringify(payload)
       });
 
       if (!response.ok) {
         const errData = await response.json();
+        if (response.status === 403) openPlanModal();
         throw new Error(errData.error || "Erro desconhecido na geração.");
       }
 
       const data = await response.json();
       if (data.images && data.images.length > 0) {
+        recordImageGeneration(data.images.length);
         set((state) => ({
           generatedImages: [...state.generatedImages, ...data.images],
           canvasImage: data.images[0], // Set generated image as canvas active
@@ -361,6 +371,11 @@ export const useImageStore = create<ImageStoreState>((set, get) => ({
   },
   
   applyInpainting: async (customApiKey) => {
+    if (!checkAdminOrOpenPlan(customApiKey)) {
+      openPlanModal();
+      alert("Apenas administradores podem utilizar a edição de imagem. Assine um plano para continuar!");
+      return;
+    }
     const { canvasImage, maskImage, inpaintPrompt } = get();
     if (!canvasImage || !inpaintPrompt) {
       alert("Por favor, digite a descrição do ajuste e selecione a imagem no canvas.");
@@ -372,7 +387,7 @@ export const useImageStore = create<ImageStoreState>((set, get) => ({
       const effectiveApiKey = customApiKey || localStorage.getItem('custom_gemini_api_key') || "";
       const response = await fetch("/api/inpaint-image", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders(effectiveApiKey) },
         body: JSON.stringify({
           image: canvasImage,
           mask: maskImage || null,
@@ -466,9 +481,13 @@ export const useImageStore = create<ImageStoreState>((set, get) => ({
     }));
     
     // Save locally
-    const stored = JSON.parse(localStorage.getItem('design_projects') || '[]');
-    stored.unshift(newProject);
-    safeStorageSetItem('design_projects', JSON.stringify(stored.slice(0, 15)));
+    try {
+      const stored = JSON.parse(localStorage.getItem('design_projects') || '[]');
+      stored.unshift(newProject);
+      safeStorageSetItem('design_projects', JSON.stringify(stored.slice(0, 15)));
+    } catch (e) {
+      console.warn('Failed to save new project to storage:', e);
+    }
 
     return newProject;
   },
@@ -538,17 +557,18 @@ export const useImageStore = create<ImageStoreState>((set, get) => ({
   loadProjects: async (workspaceKey) => {
     try {
       const stored = JSON.parse(localStorage.getItem('design_projects') || '[]');
-      set({ projects: stored });
+      set({ projects: Array.isArray(stored) ? stored : [] });
     } catch (e) {
       console.error('Load projects error:', e);
+      set({ projects: [] });
     }
   },
 
   deleteProject: async (id, workspaceKey) => {
     try {
       const stored = JSON.parse(localStorage.getItem('design_projects') || '[]');
-      const filtered = stored.filter((p: any) => p.id !== id);
-      localStorage.setItem('design_projects', JSON.stringify(filtered));
+      const filtered = Array.isArray(stored) ? stored.filter((p: any) => p.id !== id) : [];
+      safeStorageSetItem('design_projects', JSON.stringify(filtered));
       
       set((state) => ({ 
         projects: state.projects.filter(p => p.id !== id),
@@ -574,12 +594,17 @@ export const useImageStore = create<ImageStoreState>((set, get) => ({
   },
 
   extractPrompt: async (imageData, mimeType, customApiKey) => {
+    if (!checkAdminOrOpenPlan(customApiKey)) {
+      openPlanModal();
+      alert("Apenas administradores podem extrair prompts. Assine um plano para continuar!");
+      return;
+    }
     set({ isExtractingPrompt: true, promptExtractorResult: '' });
     try {
       const effectiveApiKey = customApiKey || localStorage.getItem('custom_gemini_api_key') || "";
       const response = await fetch('/api/extract-prompt', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders(effectiveApiKey) },
         body: JSON.stringify({ imageData, mimeType, customApiKey: effectiveApiKey }),
       });
       

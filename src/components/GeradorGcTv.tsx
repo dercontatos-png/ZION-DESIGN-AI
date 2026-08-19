@@ -21,6 +21,7 @@ import {
   FileCheck
 } from "lucide-react";
 import JSZip from "jszip";
+import { checkAdminOrOpenPlan, getAuthHeaders } from "../utils/userAuth";
 import { 
   sanitizeXaml, 
   wpfToGtXml, 
@@ -29,6 +30,7 @@ import {
   updateXamlWithState,
   GcScanData 
 } from "./VmixXamlModal";
+import { t } from "../utils/i18n";
 
 interface GeradorGcTvProps {
   customApiKey?: string;
@@ -125,6 +127,7 @@ export function GeradorGcTv({ customApiKey, showToast: propShowToast }: GeradorG
 
   // Run Vision Scan via API
   const handleScanImage = async () => {
+    if (!checkAdminOrOpenPlan(customApiKey)) return;
     if (!refImageBase64) {
       showToast("Por favor, envie uma imagem de referência primeiro.", "warning");
       return;
@@ -159,7 +162,7 @@ export function GeradorGcTv({ customApiKey, showToast: propShowToast }: GeradorG
       
       const res = await fetch("/api/scan-gc-to-xaml", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders(customApiKey) },
         body: JSON.stringify({ 
           imageBase64: refImageBase64, 
           customApiKey,
@@ -956,7 +959,7 @@ export function GeradorGcTv({ customApiKey, showToast: propShowToast }: GeradorG
                           <div className="flex-1 min-w-0">
                             <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block">Arquivo Ativo</span>
                             <span className="text-[10px] text-zinc-300 font-bold block truncate">
-                              {scanData.logoUrl?.startsWith("data:image") ? "Imagem Personalizada Uploaded" : "Ícone Padrão de Transmissão"}
+                              {scanData.logoUrl?.startsWith("data:image") ? "Imagem Personalizada Enviada" : "Ícone Padrão de Transmissão"}
                             </span>
                           </div>
                           

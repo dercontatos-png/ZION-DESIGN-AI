@@ -1,6 +1,78 @@
 import React, { useState, useEffect } from "react";
 import { X, Check, Loader2, Download, Sliders, Smartphone, Image as ImageIcon, Send, ShieldCheck, Eye, Sparkles } from "lucide-react";
 
+const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+
+function crc32(buf: Uint8Array): number {
+  let crc = 0xffffffff;
+  for (let i = 0; i < buf.length; i++) {
+    let c = (crc ^ buf[i]) & 0xff;
+    for (let k = 0; k < 8; k++) {
+      c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+    }
+    crc = (crc >>> 8) ^ c;
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+// Pad a PNG to an EXACT byte size by inserting a valid tEXt chunk (file stays a valid image)
+function padPngToExact(bytes: Uint8Array, targetSize: number): Uint8Array | null {
+  if (bytes.length > targetSize) return null;
+  for (let i = 0; i < 8; i++) {
+    if (bytes[i] !== PNG_SIGNATURE[i]) return null;
+  }
+  const out = new Uint8Array(targetSize);
+  out.set(bytes);
+
+  // IEND chunk = last 12 bytes (length + "IEND" + CRC)
+  const iendStart = bytes.length - 12;
+  const deficit = targetSize - bytes.length;
+  if (deficit < 12) {
+    return out; // trailing bytes after IEND are ignored by decoders
+  }
+
+  const keyword = "ZionPadding";
+  const payloadLen = deficit - 12; // chunk = len(4) + type(4) + keyword + \0 + text + crc(4)
+  const textLen = payloadLen - keyword.length - 1;
+  if (textLen < 0) return out;
+
+  const chunk = new Uint8Array(deficit);
+  const dv = new DataView(chunk.buffer);
+  dv.setUint32(0, payloadLen, false);
+  chunk[4] = 0x74; // t
+  chunk[5] = 0x45; // E
+  chunk[6] = 0x58; // X
+  chunk[7] = 0x74; // t
+  for (let i = 0; i < keyword.length; i++) chunk[8 + i] = keyword.charCodeAt(i);
+  chunk[8 + keyword.length] = 0; // null terminator (text bytes stay zero)
+
+  const crc = crc32(chunk.subarray(4, deficit - 4));
+  dv.setUint32(deficit - 4, crc, false);
+
+  out.set(chunk, iendStart);
+  out.set(bytes.subarray(iendStart), iendStart + deficit);
+  return out;
+}
+
+// Pad a JPEG to an EXACT byte size with trailing zeros after the EOI marker (valid image)
+function padJpegToExact(bytes: Uint8Array, targetSize: number): Uint8Array | null {
+  if (bytes.length > targetSize) return null;
+  const out = new Uint8Array(targetSize);
+  out.set(bytes);
+  return out;
+}
+
+function triggerBlobDownload(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
 interface SocialExportModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -284,27 +356,85 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
   if (!isOpen) return null;
 
   // Handle Download Action
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!optimizedImage) return;
-    
+
     const platformLabel = platform === "whatsapp" ? "WhatsApp_Status" : "Instagram_Feed";
     const typeLabel = imageType !== "auto" ? imageType : "HD";
-    const fileName = `Zion_Otimizado_${platformLabel}_${typeLabel}_${Date.now().toString().slice(-4)}.jpg`;
+    const isInstagram = platform !== "whatsapp";
+    const baseName = `Zion_Otimizado_${platformLabel}_${typeLabel}_${Date.now().toString().slice(-4)}`;
 
-    // Create direct download
-    const link = document.createElement("a");
-    link.href = optimizedImage;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    // Append to parent's gallery so they have the optimized version available in their session
-    if (onOptimizeSuccess) {
-      onOptimizeSuccess(optimizedImage);
-    }
-    
-    showToast("Download iniciado e imagem salva na galeria!", "success");
+    const appendToGallery = () => {
+      if (onOptimizeSuccess) {
+        onOptimizeSuccess(optimizedImage);
+      }
+    };
+
+    const img = new Image();
+    img.onload = async () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          throw new Error("canvas unavailable");
+        }
+        ctx.drawImage(img, 0, 0);
+
+        if (isInstagram) {
+          // Instagram: ALWAYS exactly 30.0 MB (31,457,280 bytes), never more, never less
+          const targetBytes = 30 * 1024 * 1024;
+
+          let dataUrl = canvas.toDataURL("image/png");
+          let blob: Blob = await (await fetch(dataUrl)).blob();
+          let ext = "png";
+
+          if (blob.size > targetBytes) {
+            // PNG is too big: fall back to JPEG, progressively lowering quality until it fits
+            for (let q = 0.95; q >= 0.15; q -= 0.05) {
+              const jpegUrl = canvas.toDataURL("image/jpeg", q);
+              const jpegBlob = await (await fetch(jpegUrl)).blob();
+              if (jpegBlob.size <= targetBytes) {
+                blob = jpegBlob;
+                ext = "jpg";
+                break;
+              }
+            }
+          }
+
+          const bytes = new Uint8Array(await blob.arrayBuffer());
+          const padded = ext === "png"
+            ? padPngToExact(bytes, targetBytes)
+            : padJpegToExact(bytes, targetBytes);
+
+          if (padded && padded.length === targetBytes) {
+            triggerBlobDownload(new Blob([padded], { type: ext === "png" ? "image/png" : "image/jpeg" }), `${baseName}.${ext}`);
+            appendToGallery();
+            showToast("Download iniciado: Instagram 30MB exatos (arquivo válido) e imagem salva na galeria!", "success");
+          } else {
+            throw new Error("Não foi possível atingir o tamanho exato.");
+          }
+        } else {
+          // WhatsApp: lossless PNG at natural resolution
+          const pngUrl = canvas.toDataURL("image/png");
+          const pngBlob = await (await fetch(pngUrl)).blob();
+          triggerBlobDownload(pngBlob, `${baseName}.png`);
+          appendToGallery();
+          showToast("Download iniciado (PNG sem perdas) e imagem salva na galeria!", "success");
+        }
+      } catch {
+        triggerBlobDownload(new Blob([optimizedImage], { type: "image/png" }), `${baseName}.png`);
+        appendToGallery();
+        showToast("Download iniciado e imagem salva na galeria!", "success");
+      }
+    };
+    img.onerror = () => {
+      triggerBlobDownload(new Blob([optimizedImage], { type: "image/png" }), `${baseName}.png`);
+      appendToGallery();
+      showToast("Download iniciado e imagem salva na galeria!", "success");
+    };
+    img.src = optimizedImage;
   };
 
   // Get description depending on active preview mode
@@ -331,7 +461,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-black uppercase tracking-widest text-[#ad8330] bg-[#ad8330]/10 px-2 py-1 rounded">
-                PRO-EXPORT
+                EXPORTAÇÃO PRO
               </span>
               <h3 className="text-xs font-bold text-zinc-300 uppercase tracking-wider">Comparador de Compressão</h3>
             </div>
@@ -436,7 +566,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
                     }}
                     className="ml-1 px-1.5 py-0.5 rounded bg-[#ad8330]/20 hover:bg-[#ad8330]/30 text-[8px] font-black text-[#ad8330] uppercase transition-all cursor-pointer"
                   >
-                    Reset
+                    Redefinir
                   </button>
                   <span className="hidden sm:inline-block text-[8px] font-bold text-zinc-500 uppercase tracking-wider ml-1">
                     Arraste para mover
@@ -605,7 +735,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
           <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-zinc-900">
             <div className="flex flex-col items-start text-left">
               <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest">
-                Dither & False Gradient Technology
+                Tecnologia Dither & Falso Degradê
               </span>
               <p className="text-[10px] text-zinc-400 max-w-sm">
                 O dither de grão fino e o falso degradê sRGB agem criando transições cromáticas microscópicas que impedem o compressor de agrupar tons vizinhos.
@@ -846,8 +976,8 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
                   {/* Feather Width Slider */}
                   <div className={`space-y-1 ${autoParameters ? "opacity-60" : ""}`}>
                     <div className="flex items-center justify-between">
-                      <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-wider">Feather da Máscara</span>
-                      <span className="text-[9px] font-bold text-[#ad8330]">{featherWidth}px {autoParameters && "(Auto)"}</span>
+                      <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-wider">Suavização da Máscara</span>
+                      <span className="text-[9px] font-bold text-[#ad8330]">{featherWidth}px {autoParameters && "(Automático)"}</span>
                     </div>
                     <input 
                       type="range" 
@@ -865,7 +995,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
                   <div className={`space-y-1 ${autoParameters ? "opacity-60" : ""}`}>
                     <div className="flex items-center justify-between">
                       <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-wider">Suavização de Borda</span>
-                      <span className="text-[9px] font-bold text-[#ad8330]">{edgeSmoothing} {autoParameters && "(Auto)"}</span>
+                      <span className="text-[9px] font-bold text-[#ad8330]">{edgeSmoothing} {autoParameters && "(Automático)"}</span>
                     </div>
                     <input 
                       type="range" 

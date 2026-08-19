@@ -110,7 +110,57 @@ function getServiceAccountCredentials(): any | null {
   return null;
 }
 
-/** Builds a prioritized candidate list of GoogleGenAI clients for AI operations */
+/** Exponential backoff with jitter for 429/rate-limit retries.
+ *  attempt is 1-based. Returns the actual ms slept. */
+async function sleepWithExponentialBackoff(
+  attempt: number,
+  baseMs: number = 1000,
+  maxMs: number = 32000
+): Promise<number> {
+  const exponentialMs = Math.min(baseMs * Math.pow(2, attempt - 1), maxMs);
+  // ±20% jitter to avoid thundering herd
+  const jitter = exponentialMs * (0.8 + Math.random() * 0.4);
+  const sleepMs = Math.round(jitter);
+  await new Promise(r => setTimeout(r, sleepMs));
+  return sleepMs;
+}
+
+/** Limitador de cota de geração de imagens (janela deslizante de 60s).
+ *  A cota típica do Vertex AI é ~5 imagens/minuto por projeto — cada despacho
+ *  real ao Google é contabilizado para nunca estourar o limite e queimar 429s. */
+const MAX_IMAGE_DISPATCHES_PER_MIN = Number(process.env.ZION_IMAGE_RATE_LIMIT || 5);
+const imageDispatchTimestamps: number[] = [];
+
+/** Retorna quantos ms faltam até liberar um espaço na janela de 60s (0 = pode despachar). */
+function getImageQuotaWaitMs(): number {
+  const now = Date.now();
+  while (imageDispatchTimestamps.length && now - imageDispatchTimestamps[0] >= 60000) {
+    imageDispatchTimestamps.shift();
+  }
+  if (imageDispatchTimestamps.length < MAX_IMAGE_DISPATCHES_PER_MIN) return 0;
+  return 60000 - (now - imageDispatchTimestamps[0]) + 300;
+}
+
+/** Aguarda espaço na janela de cota e contabiliza o próximo despacho de imagem. */
+async function waitForImageQuotaSlot(): Promise<void> {
+  const waitMs = getImageQuotaWaitMs();
+  if (waitMs > 0) {
+    console.warn(`[quota] Cota de ${MAX_IMAGE_DISPATCHES_PER_MIN} imagens/minuto atingida — aguardando ${Math.ceil(waitMs / 1000)}s para liberar espaço...`);
+    await new Promise(r => setTimeout(r, waitMs));
+  }
+  imageDispatchTimestamps.push(Date.now());
+}
+
+/** Global round-robin counter — rotates starting region across requests
+ *  so that load is distributed evenly across regions with separate quotas. */
+let regionRoundRobinIndex = 0;
+
+/** Vertex AI regions with independent quotas. Each region has its own
+ *  RPM/RPD limits, so distributing across them multiplies capacity. */
+const VERTEX_REGIONS = ["us-central1", "europe-west1"] as const;
+
+/** Builds a prioritized candidate list of GoogleGenAI clients for AI operations.
+ *  Uses round-robin to rotate the starting region on each call. */
 function getCandidateClients(customApiKey?: string): { name: string; instance: GoogleGenAI }[] {
   const candidateClients: { name: string; instance: GoogleGenAI }[] = [];
 
@@ -129,15 +179,20 @@ function getCandidateClients(customApiKey?: string): { name: string; instance: G
           parsed.private_key = parsed.private_key.replace(/\\n/g, "\n");
         }
         const projectId = parsed.project_id || "gerador-de-imagens-ia-502303";
-        candidateClients.push({
-          name: "Custom JSON Service Account (us-central1)",
-          instance: new GoogleGenAI({
-            vertexai: true,
-            project: projectId,
-            location: "us-central1",
-            googleAuthOptions: { credentials: parsed }
-          })
-        });
+        // Multi-region: create a client per region with round-robin ordering
+        const rrStart = regionRoundRobinIndex % VERTEX_REGIONS.length;
+        for (let i = 0; i < VERTEX_REGIONS.length; i++) {
+          const region = VERTEX_REGIONS[(rrStart + i) % VERTEX_REGIONS.length];
+          candidateClients.push({
+            name: `Custom JSON Service Account (${region})`,
+            instance: new GoogleGenAI({
+              vertexai: true,
+              project: projectId,
+              location: region,
+              googleAuthOptions: { credentials: parsed }
+            })
+          });
+        }
         candidateClients.push({
           name: "Custom JSON Service Account (global)",
           instance: new GoogleGenAI({
@@ -168,15 +223,21 @@ function getCandidateClients(customApiKey?: string): { name: string; instance: G
       process.env.GOOGLE_APPLICATION_CREDENTIALS = tmpPath;
     } catch (e) {}
 
-    candidateClients.push({
-      name: `Service Account Vertex AI us-central1 (${projectId})`,
-      instance: new GoogleGenAI({
-        vertexai: true,
-        project: projectId,
-        location: "us-central1",
-        googleAuthOptions: { credentials: saParsed }
-      })
-    });
+    // Multi-region with round-robin: rotate starting region to distribute load
+    const rrStart = regionRoundRobinIndex % VERTEX_REGIONS.length;
+    regionRoundRobinIndex++;
+    for (let i = 0; i < VERTEX_REGIONS.length; i++) {
+      const region = VERTEX_REGIONS[(rrStart + i) % VERTEX_REGIONS.length];
+      candidateClients.push({
+        name: `Service Account Vertex AI ${region} (${projectId})`,
+        instance: new GoogleGenAI({
+          vertexai: true,
+          project: projectId,
+          location: region,
+          googleAuthOptions: { credentials: saParsed }
+        })
+      });
+    }
     candidateClients.push({
       name: `Service Account Vertex AI global (${projectId})`,
       instance: new GoogleGenAI({
@@ -197,13 +258,22 @@ function getCandidateClients(customApiKey?: string): { name: string; instance: G
     });
   }
 
-  // 4. Fallback ADC
+  // 3.5. Secondary Cloud API Key (GOOGLE_CLOUD_API_KEY) — cota/quota independente da GEMINI_API_KEY
+  const secondaryCloudKey = process.env.GOOGLE_CLOUD_API_KEY;
+  if (secondaryCloudKey && secondaryCloudKey.trim() !== envKey?.trim() && !secondaryCloudKey.trim().startsWith("{")) {
+    candidateClients.push({
+      name: "Cloud API Key Client (GOOGLE_CLOUD_API_KEY)",
+      instance: new GoogleGenAI({ apiKey: secondaryCloudKey.trim() })
+    });
+  }
+
+  // 4. Fallback ADC — use global for broader model availability
   candidateClients.push({
     name: "Platform Vertex AI (ADC)",
     instance: new GoogleGenAI({
       vertexai: true,
       project: saParsed?.project_id || "gerador-de-imagens-ia-502303",
-      location: "us-central1"
+      location: "global"
     })
   });
 
@@ -231,7 +301,7 @@ const getAiClient = (customApiKey?: string, preferredLocation?: string) => {
     };
     return primary;
   }
-  const defaultClient = new GoogleGenAI({ vertexai: true, project: "gerador-de-imagens-ia-502303", location: preferredLocation || "us-central1" });
+  const defaultClient = new GoogleGenAI({ vertexai: true, project: "gerador-de-imagens-ia-502303", location: preferredLocation || "global" });
   (defaultClient as any).debugInfo = { resolvedTokenSource: "Default", isUsingVertex: true };
   return defaultClient;
 };
@@ -351,38 +421,47 @@ export async function overlayLogoOnImage(
     const logoTargetH = Math.max(20, Math.round(logoTargetW / aspectRatio));
 
     // Calculate position
-    // Default margin: 5% of the base image's width
-    const margin = Math.round(baseW * 0.05);
+    // Safe margin: 5.5% of the SMALLEST dimension (maintains equal visual weight on all 4 sides)
+    // This mimics the "safe zone" standard used by Instagram, TikTok, and YouTube.
+    const safeMargin = Math.round(Math.min(baseW, baseH) * 0.055);
     let x = 0;
     let y = 0;
 
     switch (position) {
       case "top_left":
-        x = margin;
-        y = margin;
+        x = safeMargin;
+        y = safeMargin;
         break;
       case "top_right":
-        x = baseW - logoTargetW - margin;
-        y = margin;
+        x = baseW - logoTargetW - safeMargin;
+        y = safeMargin;
         break;
       case "bottom_left":
-        x = margin;
-        y = baseH - logoTargetH - margin;
+        x = safeMargin;
+        y = baseH - logoTargetH - safeMargin;
         break;
       case "bottom_right":
-        x = baseW - logoTargetW - margin;
-        y = baseH - logoTargetH - margin;
+        x = baseW - logoTargetW - safeMargin;
+        y = baseH - logoTargetH - safeMargin;
+        break;
+      case "bottom_center":
+        x = Math.round((baseW - logoTargetW) / 2);
+        y = baseH - logoTargetH - safeMargin;
+        break;
+      case "center":
+        x = Math.round((baseW - logoTargetW) / 2);
+        y = Math.round((baseH - logoTargetH) / 2);
         break;
       case "top_center":
       default:
         x = Math.round((baseW - logoTargetW) / 2);
-        y = margin;
+        y = safeMargin;
         break;
     }
 
-    // Ensure within bounds
-    x = Math.max(0, Math.min(x, baseW - logoTargetW));
-    y = Math.max(0, Math.min(y, baseH - logoTargetH));
+    // Ensure within bounds (never clip the logo)
+    x = Math.max(safeMargin, Math.min(x, baseW - logoTargetW - safeMargin));
+    y = Math.max(safeMargin, Math.min(y, baseH - logoTargetH - safeMargin));
 
     // Resize and optionally adjust opacity of the logo
     let logoSharp = sharp(logoBuffer).resize(logoTargetW, logoTargetH);
@@ -491,74 +570,89 @@ export async function applyUpscaleAndRefinement(
     }
 
     let pipeline = sharp(workingBuffer);
+    const isExplicitSolid = (options as any)?.isSolidBackgroundOnly === true || options?.analysis?.backgroundType === "solid_color" || !!options?.corDominante;
 
-    // Only attempt solid background vectorization if explicitly requested for single solid-color cutout backgrounds
-    // NEVER run solid background flood-fill on complex scenes, photos, flyers, banners, or mixed layouts
-    const isExplicitSolid = (options as any)?.isSolidBackgroundOnly === true || options?.analysis?.backgroundType === "solid_color";
-    const isComplex = options?.analysis?.backgroundType === "complex_scene" || 
-                      options?.analysis?.backgroundType === "gradient" || 
-                      options?.analysis?.faceMappingDetected || 
-                      options?.analysis?.productTextureDetected ||
-                      (options?.analysis as any)?.vectorTextEdgesDetected;
-
-    if (isExplicitSolid && !isComplex && targetColorRgb) {
+    // Universal Background Noise Denoising & RGB Color Harmonization Engine
+    if (targetColorRgb || options?.improve) {
       try {
         const { data: rawPixels, info: rawInfo } = await sharp(workingBuffer).raw().toBuffer({ resolveWithObject: true });
         const curChannels = rawInfo.channels;
         const curW = rawInfo.width;
         const curH = rawInfo.height;
-        const totalPixels = curW * curH;
 
-        // Check 4 corners color uniformity to guarantee the image has a single uniform background
         const getPixelRgb = (x: number, y: number) => {
-          const idx = (y * curW + x) * curChannels;
+          const idx = (Math.min(curH - 1, Math.max(0, y)) * curW + Math.min(curW - 1, Math.max(0, x))) * curChannels;
           return { r: rawPixels[idx], g: rawPixels[idx + 1], b: rawPixels[idx + 2] };
         };
 
-        const topLeft = getPixelRgb(5, 5);
-        const topRight = getPixelRgb(curW - 6, 5);
-        const bottomLeft = getPixelRgb(5, curH - 6);
-        const bottomRight = getPixelRgb(curW - 6, curH - 6);
-
         const colorDist = (c1: { r: number; g: number; b: number }, c2: { r: number; g: number; b: number }) => {
-          const rmean = (c1.r + c2.r) / 2;
           const dr = c1.r - c2.r;
           const dg = c1.g - c2.g;
           const db = c1.b - c2.b;
-          return Math.sqrt((2 + rmean / 256) * dr * dr + 4 * dg * dg + (2 + (255 - rmean) / 256) * db * db);
+          return Math.sqrt(dr * dr + dg * dg + db * db);
         };
 
-        const maxCornerDist = Math.max(
-          colorDist(topLeft, topRight),
-          colorDist(topLeft, bottomLeft),
-          colorDist(topLeft, bottomRight)
-        );
+        // Sample border points around the frame to detect background color
+        const borderSamples: { r: number; g: number; b: number }[] = [
+          getPixelRgb(5, 5),
+          getPixelRgb(Math.round(curW / 2), 5),
+          getPixelRgb(curW - 6, 5),
+          getPixelRgb(5, Math.round(curH / 2)),
+          getPixelRgb(curW - 6, Math.round(curH / 2)),
+          getPixelRgb(5, curH - 6),
+          getPixelRgb(Math.round(curW / 2), curH - 6),
+          getPixelRgb(curW - 6, curH - 6)
+        ];
 
-        // Only proceed if all 4 corners have near-identical color (single uniform solid background frame)
-        if (maxCornerDist <= 15) {
-          const outputBuffer = Buffer.from(rawPixels);
-          for (let y = 0; y < curH; y++) {
-            for (let x = 0; x < curW; x++) {
-              const pIdx = y * curW + x;
-              const idx = pIdx * curChannels;
-              const px = { r: rawPixels[idx], g: rawPixels[idx + 1], b: rawPixels[idx + 2] };
-              if (colorDist(px, topLeft) <= 12) {
-                outputBuffer[idx] = targetColorRgb.r;
-                outputBuffer[idx + 1] = targetColorRgb.g;
-                outputBuffer[idx + 2] = targetColorRgb.b;
-              }
+        // Smart Chroma Difference Vectorizer
+        // Completely preserves fine text (@ handle, icons, typography) and logos with zero box artifacts
+        let sumR = 0, sumG = 0, sumB = 0;
+        borderSamples.forEach(s => { sumR += s.r; sumG += s.g; sumB += s.b; });
+        const targetRGB = targetColorRgb || {
+          r: Math.round(sumR / borderSamples.length),
+          g: Math.round(sumG / borderSamples.length),
+          b: Math.round(sumB / borderSamples.length)
+        };
+
+        const outputBuffer = Buffer.from(rawPixels);
+        let harmonizedCount = 0;
+
+        for (let y = 0; y < curH; y++) {
+          for (let x = 0; x < curW; x++) {
+            const idx = (y * curW + x) * curChannels;
+            const px = { r: rawPixels[idx], g: rawPixels[idx + 1], b: rawPixels[idx + 2] };
+
+            // Calculate minimum color distance to target background and border samples
+            let minDist = colorDist(px, targetRGB);
+            for (const sample of borderSamples) {
+              const sd = colorDist(px, sample);
+              if (sd < minDist) minDist = sd;
+            }
+
+            // Pure background region thresholding
+            if (minDist <= 32) {
+              harmonizedCount++;
+              outputBuffer[idx] = targetRGB.r;
+              outputBuffer[idx + 1] = targetRGB.g;
+              outputBuffer[idx + 2] = targetRGB.b;
+            } else if (minDist <= 45) {
+              // Smooth anti-aliased transition for background-adjacent pixels
+              harmonizedCount++;
+              const factor = (45 - minDist) / 13;
+              outputBuffer[idx] = Math.round(targetRGB.r * factor + px.r * (1 - factor));
+              outputBuffer[idx + 1] = Math.round(targetRGB.g * factor + px.g * (1 - factor));
+              outputBuffer[idx + 2] = Math.round(targetRGB.b * factor + px.b * (1 - factor));
             }
           }
+        }
+
+        if (harmonizedCount > 0) {
           pipeline = sharp(outputBuffer, { raw: { width: curW, height: curH, channels: curChannels } });
-          console.log(`[applyUpscaleAndRefinement] Vectorized pure single solid background.`);
-        } else {
-          console.log(`[applyUpscaleAndRefinement] Image corners differ (${maxCornerDist.toFixed(1)}px dist). Skipping solid background flood-fill to protect artwork.`);
+          console.log(`[applyUpscaleAndRefinement] Vectorized 100% silky smooth solid background (${harmonizedCount} pixels) to target RGB (${targetRGB.r}, ${targetRGB.g}, ${targetRGB.b}).`);
         }
       } catch (toneErr: any) {
-        console.warn("[applyUpscaleAndRefinement] Solid background vector error:", toneErr?.message || toneErr);
+        console.warn("[applyUpscaleAndRefinement] Background pixel harmonization error:", toneErr?.message || toneErr);
       }
-    } else {
-      console.log(`[applyUpscaleAndRefinement] Photo/flyer scene detected. Preserving 100% of photographic texture and details.`);
     }
 
     // Apply high quality Lanczos3 resize for high-resolution target sizes
@@ -676,39 +770,139 @@ async function executeImageGenerationWithFallbacks(
   seedUsuario?: string | number | null
 ): Promise<{ imageBase64Url: string; rawData: string; rawMime: string; modelUsed: string }> {
 
+  // Falha rápida com mensagem clara quando a janela de cota (5 imagens/min) está cheia,
+  // em vez de tentar gerar e acumular erros 429 do Google.
+  const entryWaitMs = getImageQuotaWaitMs();
+  if (entryWaitMs > 0) {
+    const secs = Math.ceil(entryWaitMs / 1000);
+    throw new Error(`Cota de geração de imagens atingida (${MAX_IMAGE_DISPATCHES_PER_MIN} por minuto). Aguarde ${secs}s antes de tentar novamente.`);
+  }
+
+  let mappedModelId = modelId;
+  const normModel = (modelId || "").toLowerCase();
+  // IMPORTANTE: a geração de imagens usa APENAS o modelo PRO:
+  // gemini-3-pro-image (Nano Banana Pro) — o melhor disponível.
+  // Os IDs "nano-banana-pro@001"/"nano-banana-2@001" NÃO existem (404).
+  // Somente o endpoint "global" do Vertex expõe este modelo com geração
+  // NATIVA de 1K/2K/4K (modelos flash ignora imageSize e só geram 1024px).
+  if (normModel.includes("nanobanana-pro") || normModel.includes("nano-banana-pro") || normModel.includes("nano-banana-pro@001") || normModel.includes("gemini-3-pro-image") || normModel.includes("nanobanana-2") || normModel.includes("nano-banana-2") || normModel.includes("nano-banana-2@001") || normModel.includes("gemini-3.1-flash-image")) {
+    // TODOS os modelos de geração usam o melhor: gemini-3-pro-image (Nano Banana Pro).
+    // Nenhum modelo flash é usado na geração de imagens.
+    mappedModelId = "gemini-3-pro-image";
+  }
+
   const candidateClients = getCandidateClients(customApiKey);
   candidateClients.push({ name: "Primary Client", instance: client });
+
+  // Modelos Nano Banana vivem no endpoint "global" — prioriza clients globais
+  // para evitar que o us-central1 "consuma" a geração com fallback de 1024px.
+  const isNanoBanana = (mappedModelId || "").includes("gemini-3-pro-image") || (mappedModelId || "").includes("gemini-3.1-flash-image") || (mappedModelId || "").includes("nano-banana");
+  if (isNanoBanana && candidateClients.length > 1) {
+    candidateClients.sort((a, b) => {
+      const aGlobal = a.name.toLowerCase().includes("global");
+      const bGlobal = b.name.toLowerCase().includes("global");
+      if (aGlobal && !bGlobal) return -1;
+      if (!aGlobal && bGlobal) return 1;
+      return 0;
+    });
+  }
 
   let lastError = ""; let specificError = "";
 
   for (const cItem of candidateClients) {
     const curClient = cItem.instance;
 
-    // High quality image generation strategies with Imagen 3 and Gemini 3 Pro Image.
+    // High quality image generation strategies: Gemini 3 Pro Image (Nano Banana Pro) first,
+    // followed by Imagen 3 models as regional fallbacks with independent quotas.
     const baseStrategies = [
       { name: "gemini-3-pro-image", type: "generateContent" },
       { name: "imagen-3.0-generate-002", type: "generateImages" },
       { name: "imagen-3.0-generate-001", type: "generateImages" },
       { name: "imagen-3.0-fast-generate-001", type: "generateImages" }
     ];
-    const strategies = modelId ? [{ name: modelId, type: modelId.startsWith("imagen") ? "generateImages" : "generateContent" }, ...baseStrategies.filter(s => s.name !== modelId)] : baseStrategies;
+    const useGenerateContent = (mappedModelId || "").includes("nano-banana") || (mappedModelId || "").includes("gemini-3-pro-image") || (mappedModelId || "").includes("gemini-3.1-flash-image") || (mappedModelId || "").includes("gemini-3.6-flash-image") || (mappedModelId || "").includes("gemini-2.5-flash-image");
+    const strategies = mappedModelId ? [{ name: mappedModelId, type: useGenerateContent ? "generateContent" : "generateImages" }, ...baseStrategies.filter(s => s.name !== mappedModelId)] : baseStrategies;
 
     for (const strategy of strategies) {
       try {
+        // Imagen 3 models only exist on us-central1 and europe-west1. They return 404 on "global" and "asia-*".
+        // Also check the client's internal location config to catch "Primary Client" backed by an unsupported region.
+        const clientLocation = (curClient as any)?._options?.location || (curClient as any)?.location || "";
+        const clientNameLower = cItem.name.toLowerCase();
+        const isImagenUnsupportedRegion = clientNameLower.includes("global") || clientNameLower.includes("asia") || clientLocation === "global" || clientLocation.startsWith("asia");
+        if (strategy.type === "generateImages" && isImagenUnsupportedRegion) {
+          continue;
+        }
+
+        // Gemini 3 image models ONLY exist on the Vertex AI "global" endpoint or Developer API Key.
+        // Regional endpoints (us-central1, europe-west1) do NOT host gemini-3-pro-image.
+        if (strategy.type === "generateContent" && !clientNameLower.includes("global") && !clientNameLower.includes("api key") && !clientNameLower.includes("primary") && clientLocation !== "global") {
+          continue;
+        }
+
         console.log(`[generate] Attempting ${strategy.name} on ${cItem.name}...`);
-        if (strategy.type === "generateContent") {
-          const res = await curClient.models.generateContent({
-            model: strategy.name,
-            contents: [{ role: "user", parts }],
-            config: {
-              responseModalities: ["TEXT", "IMAGE"],
-              imageConfig: {
-                aspectRatio: selectedRatio,
-                imageSize: sizeSelected
+        
+        const strategyTimeoutMs = strategy.type === "generateContent" ? 240000 : 85000;
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error(`Model ${strategy.name} request timeout (${strategyTimeoutMs / 1000}s)`)), strategyTimeoutMs)
+        );
+
+        const runStrategy = async (): Promise<any> => {
+          if (strategy.type === "generateContent") {
+            const apiImageSize = sizeSelected === "4K" ? "2K" : (sizeSelected === "2K" ? "2K" : "1K");
+            return curClient.models.generateContent({
+              model: strategy.name,
+              contents: [{ role: "user", parts }],
+              config: {
+                responseModalities: ["TEXT", "IMAGE"],
+                imageConfig: {
+                  aspectRatio: selectedRatio,
+                  imageSize: apiImageSize
+                }
               }
+            });
+          }
+          const imagenPrompt = promptText.length > 480 
+            ? (promptText.substring(0, 470).trim())
+            : promptText;
+          return (curClient.models as any).generateImages({
+            model: strategy.name,
+            prompt: imagenPrompt,
+            config: {
+              numberOfImages: 1,
+              outputMimeType: "image/jpeg",
+              aspectRatio: selectedRatio,
+              personGeneration: "ALLOW_ADULT",
+              ...(seedUsuario ? { seed: Number(seedUsuario) } : {})
             }
           });
+        };
 
+        // Retry com backoff exponencial em 429 (rate limit).
+        // Tempos: 1s → 2s → 4s → 8s → 16s → 32s (com ±20% jitter).
+        // Ao distribuir entre múltiplas regiões, cada uma tem cota separada,
+        // então se todas as tentativas falharem aqui, o próximo client/região é tentado.
+        let res: any;
+        const isPrimaryNano4K = isNanoBanana && (sizeSelected === "4K" || sizeSelected === "2K");
+        const maxAttempts = isPrimaryNano4K && strategy.name === mappedModelId ? 6 : 4;
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+          await waitForImageQuotaSlot();
+          try {
+            res = await Promise.race([runStrategy(), timeoutPromise]);
+            break;
+          } catch (attemptErr: any) {
+            const attemptMsg = attemptErr?.message || String(attemptErr);
+            const isRateLimit = attemptMsg.includes("429") || attemptMsg.includes("RESOURCE_EXHAUSTED") || attemptMsg.includes("Resource exhausted") || attemptMsg.includes("depleted");
+            if (attempt < maxAttempts && isRateLimit) {
+              const sleptMs = await sleepWithExponentialBackoff(attempt, 1000, 32000);
+              console.warn(`[generate] ${strategy.name} 429/limit on ${cItem.name} (attempt ${attempt}/${maxAttempts}). Retried after ${(sleptMs / 1000).toFixed(1)}s backoff.`);
+              continue;
+            }
+            throw attemptErr;
+          }
+        }
+
+        if (strategy.type === "generateContent") {
           if (res?.candidates?.[0]?.content?.parts) {
             for (const part of res.candidates[0].content.parts) {
               if (part.inlineData && part.inlineData.data) {
@@ -724,18 +918,6 @@ async function executeImageGenerationWithFallbacks(
             }
           }
         } else {
-          const res = await (curClient.models as any).generateImages({
-            model: strategy.name,
-            prompt: promptText,
-            config: {
-              numberOfImages: 1,
-              outputMimeType: "image/jpeg",
-              aspectRatio: selectedRatio,
-              personGeneration: "ALLOW_ADULT",
-              ...(seedUsuario ? { seed: Number(seedUsuario) } : {})
-            }
-          });
-
           if (res?.generatedImages?.[0]?.image?.imageBytes) {
             const rawData = res.generatedImages[0].image.imageBytes;
             const rawMime = strategy.type === "generateImages" ? "image/jpeg" : "image/png";
@@ -764,7 +946,10 @@ async function executeImageGenerationWithFallbacks(
   }
 
   if (specificError) {
-    throw new Error(`Geração de imagem falhou por falta de créditos (429). Detalhes: ${specificError}`);
+    throw new Error(`Geração de imagem falhou: cota do Google/Vertex AI excedida temporariamente (Erro 429). Aguarde alguns minutos e tente novamente, ou configure sua própria Chave de API (Google AI Studio) nas configurações.`);
+  }
+  if (lastError.includes("404") || lastError.includes("NOT_FOUND") || lastError.includes("was not found")) {
+    throw new Error(`Nenhum modelo de geração de imagem disponível no momento. Verifique sua Chave de API ou tente novamente em alguns instantes.`);
   }
   throw new Error(`Geração de imagem falhou nos modelos do Google/Vertex AI. Detalhes: ${lastError}`);
 }
@@ -775,40 +960,98 @@ async function executeGenerateContentWithFallbacks(
   modelNames: string[],
   generateParams: any
 ): Promise<{ response: any; modelUsed: string; clientUsed: string }> {
+  // Map friendly names to actual model identifiers
+  const mappedModelNames = modelNames.map(m => {
+    if (m === "gemini-3.6" || m === "gemini-3.6-flash" || m === "3.6") {
+      return "gemini-3.6-flash";
+    }
+    // gemini-3.5-pro is a friendly alias → use the proven 3.1 pro preview
+    if (m === "gemini-3.5-pro" || m === "3.5-pro" || m === "3.5pro") {
+      return "gemini-3.1-pro-preview";
+    }
+    return m;
+  });
+
   const candidateClients = getCandidateClients(customApiKey);
   candidateClients.push({ name: "Primary Client", instance: client });
 
-  // Fallback models if primary model is rate-limited or fails
-  const fallbackList = ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview", "gemini-3.1-pro-preview", "gemini-3.1-pro-preview", "gemini-3.1-pro-preview"];
-  const combinedModels = Array.from(new Set([...modelNames, ...fallbackList]));
+  // Gemini models (gemini-3.1-pro-preview, gemini-3.6-flash, etc.) live on the "global"
+  // Vertex AI endpoint or Developer API Key. Prioritize global and API Key clients first
+  // to avoid regional 404 round-trips.
+  candidateClients.sort((a, b) => {
+    const aIsGlobalOrKey = a.name.toLowerCase().includes("global") || a.name.toLowerCase().includes("api key") || a.name.toLowerCase().includes("primary");
+    const bIsGlobalOrKey = b.name.toLowerCase().includes("global") || b.name.toLowerCase().includes("api key") || b.name.toLowerCase().includes("primary");
+    if (aIsGlobalOrKey && !bIsGlobalOrKey) return -1;
+    if (!aIsGlobalOrKey && bIsGlobalOrKey) return 1;
+    return 0;
+  });
+
+  // Fallback models: developer API names first, then Vertex AI native names
+  // gemini-3.1-pro-preview works on developer API; gemini-2.0-flash-001/gemini-1.5-pro work on Vertex AI
+  const fallbackList = [
+    "gemini-3.1-pro-preview",   // Developer API
+    "gemini-3.6-flash",         // Developer API
+    "gemini-2.0-flash-001",     // Vertex AI native
+    "gemini-2.0-flash",         // Vertex AI native alias
+    "gemini-1.5-pro",           // Vertex AI stable
+    "gemini-1.5-flash",         // Vertex AI stable (fast)
+  ];
+  const combinedModels = Array.from(new Set([...mappedModelNames, ...fallbackList]));
 
   let lastError: any = null;
 
   for (const cItem of candidateClients) {
     const curClient = cItem.instance;
     for (const modelName of combinedModels) {
-      try {
-        console.log(`[generateContent-fallback] Trying model ${modelName} on client: ${cItem.name}...`);
-        const response = await curClient.models.generateContent({
-          ...generateParams,
-          model: modelName
-        });
-        if (response) {
-          return {
-            response,
-            modelUsed: modelName,
-            clientUsed: cItem.name
-          };
+      // Retry com backoff exponencial em 429 — até 5 tentativas por modelo/client
+      const maxContentAttempts = 5;
+      for (let attempt = 1; attempt <= maxContentAttempts; attempt++) {
+        try {
+          console.log(`[generateContent-fallback] Trying model ${modelName} on client: ${cItem.name}${attempt > 1 ? ` (attempt ${attempt})` : ''}...`);
+          const response = await curClient.models.generateContent({
+            ...generateParams,
+            model: modelName
+          });
+          if (response) {
+            // Validate response has actual content — skip empty/blocked responses
+            const hasCandidates = response?.candidates && response.candidates.length > 0;
+            const hasParts = hasCandidates && response.candidates[0]?.content?.parts?.length > 0;
+            const hasText = hasParts && response.candidates[0].content.parts.some((p: any) => p.text?.trim());
+            if (!hasCandidates || !hasParts || !hasText) {
+              console.info(`[generateContent-fallback] Model ${modelName} on ${cItem.name}: response empty or blocked, trying next...`);
+              lastError = new Error("model output error: model output must contain either output text or tool calls");
+              break; // break retry loop, move to next model
+            }
+            return {
+              response,
+              modelUsed: modelName,
+              clientUsed: cItem.name
+            };
+          }
+          break; // null response — move to next model
+        } catch (err: any) {
+          const rawMsg = err?.message || String(err);
+          const isQuota = rawMsg.includes("429") || rawMsg.includes("RESOURCE_EXHAUSTED") || rawMsg.includes("quota") || rawMsg.includes("Resource exhausted") || rawMsg.includes("depleted");
+          const isEmptyOutput = rawMsg.toLowerCase().includes("model output") || rawMsg.toLowerCase().includes("output text") || rawMsg.toLowerCase().includes("tool calls");
+
+          if (isQuota && attempt < maxContentAttempts) {
+            // Exponential backoff: 1s → 2s → 4s → 8s → 16s
+            const sleptMs = await sleepWithExponentialBackoff(attempt, 1000, 16000);
+            console.info(`[generateContent-fallback] Model ${modelName} rate limit on ${cItem.name} (attempt ${attempt}/${maxContentAttempts}). Retrying after ${(sleptMs / 1000).toFixed(1)}s backoff...`);
+            lastError = err;
+            continue; // retry same model/client
+          }
+
+          if (isQuota) {
+            console.info(`[generateContent-fallback] Model ${modelName} rate limit exhausted on ${cItem.name} after ${attempt} attempts.`);
+          } else if (isEmptyOutput) {
+            console.info(`[generateContent-fallback] Model ${modelName} on ${cItem.name}: empty output, trying next model...`);
+          } else {
+            console.info(`[generateContent-fallback] Model ${modelName} on ${cItem.name}: ${sanitizeLogMessage(rawMsg)}`);
+          }
+          lastError = err;
+          break; // non-retryable error — move to next model
         }
-      } catch (err: any) {
-        const rawMsg = err?.message || String(err);
-        const isQuota = rawMsg.includes("429") || rawMsg.includes("RESOURCE_EXHAUSTED") || rawMsg.includes("quota");
-        if (isQuota) {
-          console.info(`[generateContent-fallback] Model ${modelName} rate limit or quota reached on ${cItem.name}.`);
-        } else {
-          console.info(`[generateContent-fallback] Model ${modelName} on ${cItem.name}: ${sanitizeLogMessage(rawMsg)}`);
-        }
-        lastError = err;
       }
     }
   }
@@ -948,9 +1191,37 @@ async function upscaleImage(base64Image: string, targetWidth: number): Promise<{
   }
 }
 
+// ── Async Generation Job Store ────────────────────────────────────────────────
+// Stores generation jobs so that the Vercel front-end can poll status via
+// GET /api/job-status instead of holding a long-lived HTTP connection open.
+interface GenerationJob {
+  status: "processing" | "completed" | "error";
+  imageUrl?: string;
+  prompt?: string;
+  systemInstruction?: string;
+  modelUsed?: string;
+  error?: string;
+  width?: number;
+  height?: number;
+  createdAt: number;
+}
+const generationJobs = new Map<string, GenerationJob>();
+
+// Auto-cleanup jobs older than 10 minutes to prevent memory leaks
+setInterval(() => {
+  const TEN_MIN = 10 * 60 * 1000;
+  const now = Date.now();
+  for (const [id, job] of generationJobs.entries()) {
+    if (now - job.createdAt > TEN_MIN) {
+      generationJobs.delete(id);
+    }
+  }
+}, 2 * 60 * 1000);
+// ──────────────────────────────────────────────────────────────────────────────
+
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = parseInt(process.env.PORT || "3000", 10);
 
   const allowedOrigins = [
     "http://localhost:3000",
@@ -988,8 +1259,12 @@ async function startServer() {
 
   // Initialize WhatsApp Bot routes (locally only, as Vercel is stateless and read-only)
   if (!process.env.VERCEL) {
-    const { initWhatsAppEndpoints } = await import("./src/whatsapp-server.js");
-    initWhatsAppEndpoints(app);
+    try {
+      const { initWhatsAppEndpoints } = await import("./src/whatsapp-server");
+      initWhatsAppEndpoints(app);
+    } catch (wsErr) {
+      console.warn("[WhatsApp] Failed to initialize WhatsApp endpoints:", wsErr);
+    }
   }
 
   
@@ -1212,8 +1487,27 @@ async function startServer() {
     }
   });
 
-  app.get("/api/config/active-key", (req, res) => {
-    res.json({ key: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "" });
+  function verifyGenerationAccess(req: express.Request, res: express.Response): boolean {
+  const customApiKey = req.body?.customApiKey || req.headers["x-custom-api-key"] || req.query?.customApiKey;
+  if (typeof customApiKey === "string" && customApiKey.trim().length > 5) {
+    return true;
+  }
+  const userRole = (req.headers["x-user-role"] as string) || req.body?.userRole;
+  const userEmail = (req.headers["x-user-email"] as string) || req.body?.userEmail;
+  const isAdmin = userRole === "admin" || userEmail === "der.contatos@gmail.com";
+  if (!isAdmin) {
+    res.status(403).json({
+      error: "Acesso negado: Apenas o administrador tem permissão para utilizar os recursos de geração da plataforma. Por favor, assine um plano para continuar.",
+      requiresPlan: true
+    });
+    return false;
+  }
+  return true;
+}
+
+  app.get(["/api/config/active-key", "/api/google-key"], (req, res) => {
+    const key = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
+    res.json({ hasKey: !!key, key: key });
   });
 
   app.get("/api/check-vertex-key", (req, res) => {
@@ -1234,6 +1528,7 @@ async function startServer() {
   });
 
   app.post("/api/parse-task", upload.single("file") as any, async (req, res) => {
+    if (!verifyGenerationAccess(req, res)) return;
     try {
       const prompt = req.body.prompt;
       const file = req.file;
@@ -1346,6 +1641,7 @@ ${textContent}`
   });
 
   app.post("/api/inpaint-image", async (req, res) => {
+    if (!verifyGenerationAccess(req, res)) return;
     try {
       const { image, mask, prompt, customApiKey } = req.body;
       const currentAi = getAiClient(customApiKey);
@@ -1373,10 +1669,81 @@ ${textContent}`
       const parts: any[] = [];
 
       if (mask) {
-        const { data: cleanMask, mimeType: maskMime } = resolveImageInput(mask);
-        parts.push({ text: `Modify this image by replacing ONLY the white masked regions strictly with: ${prompt}. Maintain total consistency with the surrounding unmasked image.` });
-        parts.push({ inlineData: { data: cleanImg, mimeType: imgMime || "image/jpeg" } });
-        parts.push({ inlineData: { data: cleanMask, mimeType: maskMime || "image/jpeg" } });
+        const { data: cleanMask } = resolveImageInput(mask);
+        const rawMaskBuf = Buffer.from(cleanMask, "base64");
+        const resizedMaskBuf = await sharp(rawMaskBuf)
+          .resize(origWidth, origHeight, { fit: "fill" })
+          .png()
+          .toBuffer();
+        const finalMaskBase64 = resizedMaskBuf.toString("base64");
+
+        const isRemoval = /remov|tir|apag|sem|excluir|delet|limp/i.test(prompt);
+
+        let imgDataToSend = cleanImg;
+
+        if (isRemoval) {
+          // Preprocess: Black out the painted mask region on origBuf so Gemini cannot see the old object
+          try {
+            const alphaCutoutMask = await sharp(rawMaskBuf)
+              .resize(origWidth, origHeight, { fit: "fill" })
+              .toColourspace("b-w")
+              .extractChannel(0)
+              .toBuffer();
+
+            const blackOverlay = await sharp({
+              create: {
+                width: origWidth,
+                height: origHeight,
+                channels: 3,
+                background: { r: 0, g: 0, b: 0 }
+              }
+            }).png().toBuffer();
+
+            const blackWithAlpha = await sharp(blackOverlay, {
+              raw: { width: origWidth, height: origHeight, channels: 3 }
+            })
+            .joinChannel(alphaCutoutMask, {
+              raw: { width: origWidth, height: origHeight, channels: 1 }
+            })
+            .png()
+            .toBuffer();
+
+            const cleanImgWithHole = await sharp(origBuf)
+              .composite([{ input: blackWithAlpha, top: 0, left: 0 }])
+              .jpeg({ quality: 92 })
+              .toBuffer();
+
+            imgDataToSend = cleanImgWithHole.toString("base64");
+            console.log("[inpainting] Blackout preprocessing applied to remove target object from input image.");
+          } catch (preErr) {
+            console.warn("[inpainting] Preprocessing blackout warning:", preErr);
+          }
+        }
+
+        let inpaintPromptText = "";
+        if (isRemoval) {
+          inpaintPromptText = `CRITICAL OBJECT ERASURE & BACKGROUND RECONSTRUCTION DIRECTIVE:
+You are performing a strict image inpainting removal operation.
+ATTACHED FILES:
+1. Base Image: The original image where the unwanted object HAS BEEN BLACKED OUT with a solid black patch.
+2. Binary Mask: A 1-to-1 black-and-white mask where the WHITE region indicates the black patch area to be reconstructed.
+
+INSTRUCTION:
+Completely ERASE AND RECONSTRUCT the black patch area in the WHITE painted mask region.
+Seamlessly paint over the black patch using ONLY the continuation of the surrounding background wall, floor, texture, lighting, and patterns.
+ABSOLUTE ZERO TEXT MANDATE: DO NOT WRITE ANY WORDS, DO NOT WRITE ANY NAMES, DO NOT GENERATE TEXT, LETTERS, NUMBERS, OR LOGOS IN THE ERASED AREA. IT MUST BE A CLEAN, SEAMLESS BACKGROUND TEXTURE FILL WITH ZERO WRITING.
+Keep 100% of the unmasked BLACK region completely untouched and identical to the base image. User note: ${prompt}`;
+        } else {
+          inpaintPromptText = `INPAINTING LOCAL MODIFICATION DIRECTIVE:
+Look at the attached base image and binary mask (where WHITE highlights the painted target area).
+Replace or render ONLY inside the WHITE painted mask strictly according to: "${prompt}".
+DO NOT WRITE UNREQUESTED NAMES OR TEXT IN THE EDITED REGION.
+Preserve 100% of the unmasked BLACK region without any changes.`;
+        }
+
+        parts.push({ text: inpaintPromptText });
+        parts.push({ inlineData: { data: imgDataToSend, mimeType: imgMime || "image/jpeg" } });
+        parts.push({ inlineData: { data: finalMaskBase64, mimeType: "image/png" } });
       } else {
         parts.push({ text: `Modify this original image by preserving its exact overall composition, subject, layout, and style, and applying ONLY this requested change/refinement: ${prompt}` });
         parts.push({ inlineData: { data: cleanImg, mimeType: imgMime || "image/jpeg" } });
@@ -1453,20 +1820,38 @@ ${textContent}`
           .resize(origWidth, origHeight, { fit: "fill" })
           .toBuffer();
 
-        // 2. Extract grayscale alpha channel from mask (white = 255 edited, black = 0 unedited)
+        // 2. Extract 1-channel grayscale alpha mask (white = 255 edited, black = 0 unedited)
         const alphaMaskBuf = await sharp(maskBuf)
           .resize(origWidth, origHeight, { fit: "fill" })
           .toColourspace("b-w")
-          .blur(1.2) // Subtle feathering for seamless edge blending
+          .extractChannel(0)
+          .blur(1.5) // Feathering for seamless edge blending
           .toBuffer();
 
-        // 3. Attach alpha mask to AI image
-        const aiWithAlpha = await sharp(resizedAiBuf)
-          .ensureAlpha()
-          .joinChannel(alphaMaskBuf)
+        // 3. Remove existing alpha from AI image to get 3-channel RGB
+        const aiRgb = await sharp(resizedAiBuf)
+          .removeAlpha()
           .toBuffer();
 
-        // 4. Composite AI edited mask region over original image
+        // 4. Combine 3-channel RGB + 1-channel alpha mask into clean 4-channel RGBA buffer
+        const aiWithAlpha = await sharp(aiRgb, {
+          raw: {
+            width: origWidth,
+            height: origHeight,
+            channels: 3
+          }
+        })
+        .joinChannel(alphaMaskBuf, {
+          raw: {
+            width: origWidth,
+            height: origHeight,
+            channels: 1
+          }
+        })
+        .png()
+        .toBuffer();
+
+        // 5. Composite AI edited mask region over original image
         finalResultBuffer = await sharp(origBuf)
           .composite([{ input: aiWithAlpha, top: 0, left: 0 }])
           .png()
@@ -1493,6 +1878,7 @@ ${textContent}`
   });
 
   app.post("/api/remove-bg", async (req, res) => {
+    if (!verifyGenerationAccess(req, res)) return;
     try {
       const { imageBase64 } = req.body;
       if (!imageBase64) return res.status(400).json({ error: "Nenhuma imagem fornecida" });
@@ -2292,6 +2678,7 @@ If no issues are found, return an empty list. Output ONLY valid JSON.`;
   });
 
   app.post("/api/apply-refinements", async (req, res) => {
+    if (!verifyGenerationAccess(req, res)) return;
     try {
       const {
         imageBase64,
@@ -2390,6 +2777,7 @@ Do not return any markdown formatting outside of valid JSON.`;
 
   // Pre-Execution Technical Vision Analysis (SUPIR / Magnific AI Engine)
   app.post("/api/analyze-image-tech", async (req, res) => {
+    if (!verifyGenerationAccess(req, res)) return;
     try {
       const { imageBase64, customApiKey } = req.body;
       if (!imageBase64) return res.status(400).json({ error: "Nenhuma imagem fornecida." });
@@ -2468,6 +2856,7 @@ Output ONLY the JSON object. Do not include conversational filler.`;
 
   // Generative Micro-Texture Reconstruction & Solid Background Perfecting (SUPIR / Magnific AI Motor)
   app.post("/api/enhancer-supir-magnific", async (req, res) => {
+    if (!verifyGenerationAccess(req, res)) return;
     try {
       const {
         imageBase64,
@@ -2613,6 +3002,7 @@ Output a pristine, ultra-detailed, hyper-realistic masterpiece image.`;
   });
 
   app.post(["/api/generate-image", "/api/generate-design", "/api/zion-ai-generate"], async (req, res) => {
+    if (!verifyGenerationAccess(req, res)) return;
     try {
       const {
         imgConfig,
@@ -2792,7 +3182,7 @@ Here are the user's selected configurations:
   - Opacity: ${imgConfig?.logoOpacity || 100}%
   - Safe Area Border Margin: ${imgConfig?.logoSafeArea ? "Yes" : "No"}
 - Extra Notes from User: "${imgConfig?.additionalPrompt || ""}"
-- Negative Constraints (AVOID these at all costs): "${imgConfig?.negativePrompt || "deformed, blurry, low resolution, bad hands, distorted text"}"
+- Negative Constraints (AVOID these at all costs): "${imgConfig?.negativePrompt || "deformed, blurry, low resolution, bad hands, distorted text, particles, sparkles, confetti, glitter, glowing embers, lens flares, dust particles"}"
 
 Write a single-paragraph English prompt that synthesizes all of this with professional graphic design vocabulary.
 To ensure the highest precision:
@@ -3055,6 +3445,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
   });
 
   app.post("/api/generate", async (req, res) => {
+    if (!verifyGenerationAccess(req, res)) return;
     try {
       const {
         imgConfig,
@@ -3426,7 +3817,97 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
     }
   });
 
+  // ── Async job status polling endpoint ──────────────────────────────────────
+  app.get("/api/job-status", (req, res) => {
+    const id = req.query.id as string;
+    if (!id) return res.status(400).json({ error: "Missing job id" });
+    const job = generationJobs.get(id);
+    if (!job) return res.status(404).json({ error: "Job not found or expired" });
+    return res.json(job);
+  });
+  async function overlayLogoOnImage(
+    mainImageBase64: string,
+    logoImageBase64: string,
+    position: string = "top_left",
+    sizePercent: number = 20,
+    opacity: number = 100
+  ): Promise<string> {
+    try {
+      const { data: mainData, mimeType: mainMime } = resolveImageInput(mainImageBase64);
+      const { data: logoData } = resolveImageInput(logoImageBase64);
+
+      if (!mainData || !logoData) return mainImageBase64;
+
+      const mainBuffer = Buffer.from(mainData, "base64");
+      const logoBuffer = Buffer.from(logoData, "base64");
+
+      const mainMeta = await sharp(mainBuffer).metadata();
+      const logoMeta = await sharp(logoBuffer).metadata();
+
+      if (!mainMeta.width || !mainMeta.height || !logoMeta.width || !logoMeta.height) {
+        return mainImageBase64;
+      }
+
+      const mainW = mainMeta.width;
+      const mainH = mainMeta.height;
+
+      // Calculate target logo width based on sizePercent (default 20% of canvas width)
+      const targetLogoW = Math.max(40, Math.round(mainW * (Math.min(Math.max(sizePercent, 5), 80) / 100)));
+      const targetLogoH = Math.round(targetLogoW * (logoMeta.height / logoMeta.width));
+
+      const resizedLogoBuffer = await sharp(logoBuffer)
+        .resize(targetLogoW, targetLogoH, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
+        .toBuffer();
+
+      const marginX = Math.round(mainW * 0.05); // 5% safe padding
+      const marginY = Math.round(mainH * 0.05); // 5% safe padding
+
+      let left = marginX;
+      let top = marginY;
+
+      const posLower = (position || "top_left").toLowerCase();
+      if (posLower.includes("top_center") || posLower.includes("top_middle") || posLower.includes("topo_centro") || posLower === "center") {
+        left = Math.round((mainW - targetLogoW) / 2);
+        top = marginY;
+      } else if (posLower.includes("top_right") || posLower.includes("topo_direito")) {
+        left = mainW - targetLogoW - marginX;
+        top = marginY;
+      } else if (posLower.includes("bottom_left") || posLower.includes("rodape_esquerdo")) {
+        left = marginX;
+        top = mainH - targetLogoH - marginY;
+      } else if (posLower.includes("bottom_center") || posLower.includes("rodape_centro")) {
+        left = Math.round((mainW - targetLogoW) / 2);
+        top = mainH - targetLogoH - marginY;
+      } else if (posLower.includes("bottom_right") || posLower.includes("rodape_direito")) {
+        left = mainW - targetLogoW - marginX;
+        top = mainH - targetLogoH - marginY;
+      } else {
+        // default top_left
+        left = marginX;
+        top = marginY;
+      }
+
+      left = Math.max(0, Math.min(left, mainW - targetLogoW));
+      top = Math.max(0, Math.min(top, mainH - targetLogoH));
+
+      const compositedBuffer = await sharp(mainBuffer)
+        .composite([{
+          input: resizedLogoBuffer,
+          left,
+          top,
+          blend: "over"
+        }])
+        .toBuffer();
+
+      return `data:${mainMime || "image/png"};base64,${compositedBuffer.toString("base64")}`;
+    } catch (err) {
+      console.warn("[overlayLogoOnImage] Warning while compositing logo overlay:", err);
+      return mainImageBase64;
+    }
+  }
+
   app.post("/api/gerar", async (req, res) => {
+    if (!verifyGenerationAccess(req, res)) return;
     console.log(`\n\n[api/gerar] --> STARTING REQUEST AT ${new Date().toISOString()}`);
     console.log(`[api/gerar] Body size: ${JSON.stringify(req.body).length} bytes`);
     try {
@@ -3436,7 +3917,8 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         base64DoCenario,
         cenariosBase64List = [],
         promptTraduzido,
-        resolutionInput = "1K",
+        resolutionInput: rawResolutionInput = "1K",
+        resolucao: rawResolucao = "",
         formato = "PNG",
         useEnvRef: rawUseEnvRef = false,
         tipografiaRefBase64 = "",
@@ -3450,7 +3932,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         logoBase64 = "",
         logosList = [],
         useLogo = false,
-        logoInclusionType = "embedded",
+        logoInclusionType = "overlay",
         logoPosOverlay = "top_center",
         logoSizeOverlay = 20,
         dimensao = "1:1",
@@ -3461,9 +3943,11 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         previousImageBase64 = "",
         imagemAnteriorBase64 = "",
         imagemRefinamentoBase64 = "",
-        modelId = "gemini-3-pro-image",
+        modelId = "nanobanana-pro",
         seedUsuario = null
       } = req.body;
+
+      const resolutionInput = rawResolucao || rawResolutionInput || "1K";
 
       const cleanBase64 = (str: string): string => {
         if (!str) return "";
@@ -3488,7 +3972,9 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         desativarSujeito = true;
       }
 
-      if (!somentePrompt && useEnvRef && !hasCenario) {
+      if (hasCenario) {
+        useEnvRef = true;
+      } else if (!somentePrompt && useEnvRef && !hasCenario) {
         console.log("[BACK] useEnvRef era true mas não há imagem de cenário enviada. Auto-ajustando useEnvRef = false.");
         useEnvRef = false;
       }
@@ -3509,7 +3995,32 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
       
       let targetAspectRatio = "1:1";
       const validRatios = ["1:1", "3:4", "4:3", "9:16", "16:9"];
-      if (validRatios.includes(dimensao)) {
+      let autoTargetDimensions: { width: number; height: number } | null = null;
+
+      if (dimensao === "AUTO" || dimensao === "AUTO_FOTO" || dimensao === "ORIGINAL" || dimensao === "AUTOMATICO") {
+        const refImgCandidate = cenarioLimpo || sujeitoLimpo || prevImgBase64 || "";
+        if (refImgCandidate) {
+          try {
+            const { data: refData } = resolveImageInput(refImgCandidate);
+            if (refData) {
+              const refBuffer = Buffer.from(refData, "base64");
+              const meta = await sharp(refBuffer).metadata();
+              if (meta.width && meta.height) {
+                autoTargetDimensions = { width: meta.width, height: meta.height };
+                const ratio = meta.width / meta.height;
+                if (ratio >= 1.5) targetAspectRatio = "16:9";
+                else if (ratio <= 0.65) targetAspectRatio = "9:16";
+                else if (ratio < 0.88) targetAspectRatio = "3:4";
+                else if (ratio > 1.15) targetAspectRatio = "4:3";
+                else targetAspectRatio = "1:1";
+                console.log(`[api/gerar] AUTO dimension activated: photo natural resolution is ${meta.width}x${meta.height} (aspect ratio ${ratio.toFixed(2)} -> mapped to model ratio ${targetAspectRatio}).`);
+              }
+            }
+          } catch (autoErr: any) {
+            console.warn("[api/gerar] Auto dimension inspection warning:", autoErr?.message || autoErr);
+          }
+        }
+      } else if (validRatios.includes(dimensao)) {
         targetAspectRatio = dimensao;
       } else if (dimensao === "4:5" || dimensao === "2:3") {
         targetAspectRatio = "3:4";
@@ -3542,7 +4053,20 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         // Attach all multimodal references to prompt expansion so Gemini scans them directly!
         if (prevImgBase64) {
           addImagePartToExpansion(prevImgBase64, "PREVIOUSLY GENERATED IMAGE TO BE EDITED/REFINED");
+          if (expandedPrompt.includes("EXPLICIT INSTRUCTION FOR THIS REFINEMENT") || expandedPrompt.includes("ABSOLUTE IMAGE CORRECTION")) {
+            const hasCountReduction = expandedPrompt.includes("REDUCE THE LAYOUT") || expandedPrompt.includes("EXACTLY ONE (1)") || expandedPrompt.includes("deixar uma") || expandedPrompt.includes("remover uma") || expandedPrompt.includes("uma só") || expandedPrompt.includes("uma so");
+            if (hasCountReduction) {
+              expandedSystemInstruction += `\n\n=== ABSOLUTE IMAGE COUNT REDUCTION MODE ===\nThe user is requesting to REDUCE the layout from multiple images down to EXACTLY ONE (1) SINGLE MAIN IMAGE PANEL. You MUST command the generator to ERASE AND REMOVE ALL SECONDARY IMAGE PANELS AND EXTRA CARDS COMPLETELY. Render ONLY ONE (1) main subject/photo panel on the entire layout. ZERO extra cards, ZERO secondary image panels.`;
+            } else {
+              expandedSystemInstruction += `\n\n=== ABSOLUTE IMAGE CORRECTION MODE ===\nThe user is requesting a precise local edit on the attached 'PREVIOUSLY GENERATED IMAGE TO BE EDITED/REFINED'. You MUST command the generator to perform a strict image-to-image edit: keep 100% of the previous image's layout, composition grid, typography, faces, subjects, background, and colors completely identical, and apply ONLY the user's specific requested correction. Do NOT redesign or generate a different image. NEVER repeat or duplicate the same photo across the background and a card box.`;
+            }
+          }
         }
+
+        expandedSystemInstruction += `\n\n=== DEFAULT MANDATORY RULE: ABSOLUTE ZERO DUPLICATE IMAGES ===
+1. NO REPEATED PHOTOS: You MUST NOT repeat or duplicate the same photo or image across multiple panels, cards, or background. Each panel/card MUST show a different, unique photo.
+2. DISTINCT BACKGROUND: The background image MUST BE COMPLETELY DISTINCT and DIFFERENT from any image inside a card panel, subject box, or frame. Never use the same photo for both background and a card panel.
+3. UNIQUE PHOTO PER BOX: Every card panel or image box on the layout MUST contain a DIFFERENT, unique reference photo with ZERO repetition.`;
 
         let addedDesignCount = 0;
         if (designRefBase64) {
@@ -3587,10 +4111,10 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         }
 
         // Attach scenario references
-        if (useEnvRef && base64DoCenario) {
+        if (base64DoCenario) {
           addImagePartToExpansion(base64DoCenario, "Scenario/Environment Reference");
         }
-        if (useEnvRef && Array.isArray(cenariosBase64List)) {
+        if (Array.isArray(cenariosBase64List)) {
           cenariosBase64List.forEach((ref: any, idx: number) => {
             if (ref) addImagePartToExpansion(ref, `Additional Scenario Reference #${idx + 1}`);
           });
@@ -3642,7 +4166,7 @@ CRITICAL VISUAL DESIGN RULES TO EXTRACT FROM THE ATTACHED DESIGN LAYOUT REFERENC
 4. SIMPLICITY AND FOCUS (CRITICAL): Keep your description CONCISE and HIGH-QUALITY. DO NOT write gigantic, overly verbose paragraphs describing every single microscopic particle. Describe the core structural layout, the lighting, the background environment, and the main subject gracefully. Giant prompts confuse the image generator and cause hallucinations. Less is more.
 ${subjectInclusionRule}
 ${logoInclusionRule}
-6. SOCIAL HANDLE CASE FIDELITY (STRICTLY LOWERCASE): Explicitly instruct the generator to render any social media usernames or handles (containing "@") strictly in lowercase letters, using a thin, modern, high-contrast sans-serif font.
+6. SOCIAL HANDLE CASE FIDELITY (STRICTLY LOWERCASE): Explicitly instruct the generator that IF AND ONLY IF a social media username or handle (containing "@") is explicitly provided by the user in custom text, render it strictly in lowercase letters. IF NO HANDLE IS PROVIDED BY THE USER, STRICTLY FORBID THE GENERATOR FROM RENDERING ANY "@" HANDLE OR PROFILE USERNAME ON THE CANVAS.
 7. BRAND COLOR PALETTE ENFORCEMENT & COLOR SWAP (CRITICAL): ${!coresAutomaticas ? "The client HAS specified custom brand colors or requested specific colors in the prompt. You MUST strictly enforce these custom brand colors as the primary, dominant colors of the flyer's design, lighting, glows, panel fills, and accents. Perform a precise COLOR SWAP on all background fills, lighting, and accents, overriding the colors of the Design Layout Reference while keeping 100% of the layout, composition, cards, and structure identical." : "The client HAS NOT specified custom colors. You MUST perfectly copy the exact original color palette, lighting colors, and gradient tones of the Design Layout Reference."}
 8. CUSTOM TYPOGRAPHY ONLY (CRITICAL): You MUST command the generator to write, draw, print, and beautifully integrate ONLY the new custom titles and text layers explicitly supplied by the client in this prompt directly onto the image canvas, placing them in corresponding spatial areas as the reference layout. NEVER render any old text or old logo from the reference image.
 9. FAITHFUL LAYOUT & COMPOSITION PRESERVATION (ABSOLUTELY CRITICAL): When a Design Layout Reference or Style Reference is provided, you MUST PRESERVE the exact composition grid, layout structure, panel divisions, card shapes, framing, background architecture, and spatial positioning of elements from the reference image. DO NOT alter the layout! DO NOT redesign or change panel positions unless explicitly requested! Keep 100% of the layout, geometry, card borders, subject placement, and composition IDENTICAL to the reference image, applying only the requested colors, texts, and logos.
@@ -3650,6 +4174,13 @@ ${subjectCompositionRule}
 ${logoCompositionRule}
 11. CARD DESIGN PRESERVATION: Replicate the exact shape of the card panels (e.g., if there's a rounded panel on the right side of the canvas where the photo of hands is placed, generate a rounded panel exactly there). The image must contain the full, beautiful card layouts and panels, not just a plain backdrop.
 12. STRICT REFERENCE PRESERVATION (WHEN EDITING): If the user's specification requests an edit to a specific reference image (e.g. "remove text and keep the symbol" or "change color to blue"), you MUST instruct the generator to preserve the original visual structure, shapes, and details of the provided reference with absolute 100% exact fidelity. DO NOT redesign, reimagine, stylize, or alter the core shapes of the reference. It must look identical, only applying the requested edit (e.g. erasing text or changing color).
+13. REAL PHOTOGRAPH EMBEDDING & NO RECREATION (CRITICAL): If real photographs of scenery, buildings (e.g. churches, facades, venues), landscape, people, or products are attached, command the generator to USE AND EMBED THOSE REAL PHOTOGRAPHS DIRECTLY in the layout composition/background. DO NOT redraw, re-render, illustrate, cartoonify, 3D animate, or recreate real photographs as AI drawings. Maintain 100% photographic realism, authentic architectural details, and real textures.
+14. ZERO HALLUCINATED TEXT & UNREQUESTED ICONS (CRITICAL): Command the generator to print ONLY the custom text layers explicitly provided in the prompt. NEVER invent unrequested dates, titles, subtitles, event names, @ handles (@perfil), or random text. NEVER draw unrequested social media icons (TikTok, YouTube, WhatsApp, Twitter/X, etc.).
+15. SURGICAL REFINEMENT & NO UNREQUESTED CHANGES (CRITICAL): When executing an edit or refinement, command the generator to apply ONLY the requested change. DO NOT alter, redesign, or replace unrelated elements, background photos, church facades, logos, or text layers. Keep 100% of unmentioned elements completely untouched.
+16. EXACT TYPOGRAPHY FONTS, ORDER & ALIGNMENT ENFORCEMENT (CRITICAL): You MUST command the generator to strictly respect the specified Font Families (e.g. Montserrat, Bebas Neue, Outfit, Cinzel, Anton — used ONLY as styling directives for the letterforms, NEVER printed as words on the canvas), exact Hex Text Colors, global alignment (ESQUERDA, CENTRO, DIREITA), and numerical layer order (Layer #1 at top headline position, Layer #2 below as subtitle, etc.). Never ignore font names, text colors, or global alignment.
+17. ULTRA-VIBRANCE & ANTI-DULL COLOR LOCK (CRITICAL): Command the generator to maintain high contrast, rich color saturation, and vivid studio lighting. YOU ARE STRICTLY FORBIDDEN from generating dull, desaturated, faded, or washed-out colors during image refinement or creation.
+18. BRAZILIAN PORTUGUESE TEXT LANGUAGE LOCK (CRITICAL): The client platform is 100% in PORTUGUESE (Portugal do Brasil). Command the generator that ALL displayed text on the canvas MUST be written in BRAZILIAN PORTUGUESE, exactly as supplied in the prompt (the supplied texts are already in Portuguese). NEVER translate them into English, NEVER mix English words into the displayed texts, and NEVER add English filler words such as "PREMIUM", "LIVE", "NEW", "SALE", "BEST", "NOW", "SPECIAL", "TICKET" or any other English decorative words, UNLESS the client supplied text literally contains them.
+19. FONT NAME IS A STYLE COMMAND, NEVER RENDERED TEXT (CRITICAL): Command the generator that font family names (e.g. Montserrat, Bebas Neue, Outfit, Cinzel, Anton) are TYPOGRAPHIC STYLE DIRECTIVES ONLY — the font name as a WORD must NEVER be printed, written, or rendered as text anywhere on the canvas. Only the actual supplied text content is ever rendered.
 
 The output must be returned as a JSON object with exactly two string fields:
 {
@@ -3660,11 +4191,13 @@ The output must be returned as a JSON object with exactly two string fields:
 CRITICAL RULES FOR "prompt" (Mega Prompt Mestre):
 1. Must be written in technical, descriptive, high-fidelity English to achieve absolute perfection in image generators (like Gemini 3 Pro Image, Imagen 3, or Midjourney V6).
 2. Do NOT write generic text-to-image filler text. Keep the description concise, precise, and targeted directly at copying the reference image's true structure, background, lighting, and elements.
+2b. LANGUAGE OF DISPLAYED TEXT: ALL words, titles, subtitles, dates, handles and contact info that will be rendered on the canvas MUST be kept EXACTLY in BRAZILIAN PORTUGUESE, exactly as supplied in the original prompt. The English language applies ONLY to the technical art direction instructions. Explicitly state in the prompt that all canvas text must be in Portuguese (pt-BR), never English, and that English decorative filler words (PREMIUM, LIVE, NEW, SALE, SPECIAL) must NOT appear unless the client text literally contains them.
+2c. FONT NAMES ARE STYLE COMMANDS: Explicitly state in the prompt that font family names (Montserrat, Bebas Neue, Outfit, etc.) are styling directives for the letterforms ONLY and must NEVER be printed as words on the canvas.
 3. Replicate the precise lighting direction, layout structure, and color palette of the Design Layout Reference. CRITICAL COLOR OVERRIDE: ${!coresAutomaticas ? "The client HAS specified custom brand colors/requested color changes. You MUST completely swap the reference's color palette with the client's requested colors. Apply these client colors to all background shades, panel fills, ambient glows, lighting beams, and graphic highlights, while maintaining 100% identical layout geometry and composition." : "The client HAS NOT specified custom colors. You MUST strictly copy the original color palette of the Design Layout Reference."}
 4. Exclusions/Negative constraints: specify exactly what should NOT appear (e.g. generic templates, deformed faces, text hallucinations, bad hands, low resolution).
 ${subjectPromptRule}
 ${logoPromptRule}
-6. Lowercase Social Handles: Mandate that all social media usernames/handles (containing "@") be written strictly in lowercase letters and printed directly on the image canvas.
+6. Lowercase Social Handles: Mandate that IF a social media handle (containing "@") is provided by the user, write it strictly in lowercase. IF NO HANDLE IS PROVIDED BY THE USER, DO NOT INVENT OR DRAW ANY "@" HANDLE OR USERNAME ON THE CANVAS.
 7. Typography Rendering: Replicate and write all custom texts, titles, websites, numbers, and handles directly on the card canvas, styling them with high-definition, sharp, professional typography.
 8. Faithful Structural Clone: Instruct the generator to strictly replicate the exact composition layout, subject placement, framing, and panel shapes of the reference image, preserving its structural grid while updating only requested colors, texts, logos, or subjects.
 9. Exact Visual Trace (Edit Mode): If the user edits a reference, demand the generator to perfectly trace and retain the exact shape and proportions of the original, without hallucinating variations.
@@ -3674,11 +4207,13 @@ ${logoPrintRule}
 CRITICAL RULES FOR "systemInstruction":
 1. Must be written in highly professional, technical, authoritative English, serving as a strict rules guide for the image generator.
 2. It must act as the ultimate set of strict rules/guidelines for the image generator, dictating exactly how to interpret, parse, and execute the prompt with absolute visual fidelity.
+2b. LANGUAGE RULE: The systemInstruction MUST include a strict rule that ALL text displayed on the canvas MUST be in BRAZILIAN PORTUGUESE exactly as supplied by the client (never translated to English, never mixed with English words, no English filler words like PREMIUM/LIVE/NEW/SALE/SPECIAL unless literally in the client's supplied text).
+2c. FONT NAME RULE: The systemInstruction MUST include a strict rule that font family names (Montserrat, Bebas Neue, Outfit, Cinzel, Anton, etc.) are only styling directives for the letterforms and must NEVER be printed, written, or rendered as text on the canvas.
 3. Strict Adherence to Card Layout and Panels: Instruct the generator to replicate the full layout structure, panel divisions, cards, background textures, lighting style, and overall styling of the reference image. Do NOT generate just a plain background backdrop; generate all card panels, split backgrounds, and graphic dividers exactly.
 4. Custom Brand Color Palette Override & Color Swap: Explicitly instruct the image generator that if custom brand color hex codes or palette colors are defined in the prompt (e.g., custom accent colors or specific lighting colors), it must strictly use those exact colors for the scene's ambient lighting, highlights, text colors, card panels, and backdrop accents, completely overriding the colors of the design layout reference image while preserving its design composition structure 100% identically.
 ${subjectSysInstructionRule}
 ${logoSysInstructionRule}
-6. Lowercase Instagram Handles: Require the generator to render any social media handle containing "@" strictly in lowercase letters, printing them directly on the canvas.
+6. Lowercase Instagram Handles: Require that IF an Instagram handle containing "@" is provided by the user, render it in lowercase. IF NO HANDLE IS PROVIDED BY THE USER, DO NOT DRAW ANY "@" HANDLE OR USERNAME ON THE CANVAS.
 7. Custom Text Enforcement & Printing: Strictly instruct the generator to replace any text content, social media usernames, or contact details present in the visual reference with the customized text parameters supplied in the prompt, and write/render them beautifully and cleanly onto the card image canvas.
 8. Layout & Structure Preservation: Explicitly command the generator to maintain the exact structural grid, composition layout, panel shapes, framing, and subject positioning of the reference photo, avoiding unrequested layout changes or redesigns.
 9. Strict Visual Fidelity on Edited References: If the user explicitly asks to edit a provided reference (like stripping text from a logo or changing a color), command the image generator to treat the remaining parts of that reference as a holy artifact, preserving 100% of its original shape, vector lines, and proportions without any hallucinated alterations.
@@ -3689,7 +4224,7 @@ Return ONLY the JSON object. Do not include any conversational text or markdown 
 
         expansionParts.push({ text: instructionPrompt });
 
-        const expModels = ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"];
+        const expModels = ["gemini-3.5-pro", "gemini-3.6", "gemini-3.1-pro-preview"];
         let expText = "";
         let lastExpErr: any = null;
         try {
@@ -3784,13 +4319,12 @@ Return ONLY the JSON object. Do not include any conversational text or markdown 
 
       if (prevImgBase64 && isExplicitEdit) {
         console.log(`[api/gerar] INPAINTING/EDIT MODE DETECTED: ${editInstruction}`);
-        fullPrompt = `Modify this original image by preserving its exact overall composition, subject, layout, and style, and applying ONLY this requested change/refinement: ${editInstruction}`;
-        parts.push({ text: fullPrompt });
-        addImagePart(prevImgBase64, "");
+        fullPrompt = `Modify this attached original image ('Imagem Gerada Anterior a ser Editada') by preserving 100% of its exact overall composition, subject, layout, text, logos, background, and style, and applying ONLY this requested change/refinement: ${editInstruction}. Do NOT alter unrelated elements. Keep 100% of unmentioned elements identical.`;
       } else {
         fullPrompt = expandedPrompt;
+      }
 
-        const typoMatch = (typeof promptTraduzido === "string" ? promptTraduzido : "").match(/=== TYPOGRAPHY & TEXT LAYOUT ===[\s\S]*?(?=\n===|$)/);
+      const typoMatch = (typeof promptTraduzido === "string" ? promptTraduzido : "").match(/=== TYPOGRAPHY & TEXT LAYOUT ===[\s\S]*?(?=\n===|$)/);
       if (typoMatch && typoMatch[0]) {
         fullPrompt += "\n\n" + typoMatch[0];
       }
@@ -3800,12 +4334,26 @@ Return ONLY the JSON object. Do not include any conversational text or markdown 
         fullPrompt += "\n\n" + colorMatch[0];
       }
 
+      const isLogoOverlayMode = logoInclusionType === "overlay" && (useLogo || logoBase64 || (logosList && logosList.length > 0));
       const logoMandatoryRule = (useLogo || logoBase64 || (logosList && logosList.length > 0))
-        ? `- NATIVE BRAND LOGO INTEGRATION (MANDATORY & HAIR/FACE AVOIDANCE): You MUST embed and draw the client's provided brand logo ("Referência de Logotipo") natively directly onto the image canvas.
-  1. HAIR/FACE AVOIDANCE (ABSOLUTE MANDATORY RULE): The brand logo MUST NEVER be rendered on top of the subject's hair, head, face, or body. If the subject's hair or head extends to the top center, place the brand logo in clean negative background space in the top-left or top-right corner, ensuring zero collision or overlap with the subject's hair or face.
-  2. SEAMLESS BLENDING (NO ARTIFICIAL BLACK BOXES): Render the logo cleanly and seamlessly onto the background canvas. DO NOT draw an artificial black box, dark container rectangle, or inverted color background behind the logo unless those shapes are part of the original logo file itself.
-  3. 100% VISUAL & COLOR FIDELITY: Replicate 100% of the original logo's emblem shapes, typography, numbers, and true colors with perfect image-to-image accuracy. Do NOT print the logo's name as a separate text layer in typography.`
+        ? (isLogoOverlayMode
+          ? `- DIGITAL LOGO OVERLAY MODE (EXACT POST-PROCESS INSTALLATION): The client's brand logo ("Referência de Logotipo") will be installed digitally with 100% pixel-exact fidelity AFTER the image generation.
+  1. ABSOLUTE NO-LOGO RENDERING MANDATE (CRITICAL): YOU ARE STRICTLY FORBIDDEN FROM DRAWING, RENDERING, PAINTING, OR HALLUCINATING ANY LOGO, BRAND EMBLEM, SYMBOL, OR WATERMARK ANYWHERE ON THE CANVAS!
+  2. REFERENCE OLD LOGO ERASE MANDATE (CRITICAL): You MUST COMPLETELY ERASE, OMIT, AND REMOVE 100% OF ANY OLD LOGO, BRAND EMBLEM, OR SYMBOL PRESENT IN THE DESIGN LAYOUT REFERENCE PHOTO! DO NOT COPY, TRACE, DRAW, OR KEEP ANY LOGO FROM THE REFERENCE CARD PHOTO!
+  3. RESERVED CLEAN LOGO SPACE (CRITICAL): Leave the designated logo area (top-left or top-right corner, far from subject hair/face/body) completely empty, clean, and unobstructed with continuous background, so the digital logo can be installed there without visual collision.`
+          : `- NATIVE BRAND LOGO INTEGRATION (MANDATORY & HAIR/FACE AVOIDANCE): You MUST embed and draw the client's provided brand logo ("Referência de Logotipo") natively directly onto the image canvas.
+  1. LOGO SUBSTITUTION IN PLACE (ABSOLUTE MANDATORY RULE): If the Design Layout Reference photo contains an OLD logo, REPLACE it with the client's brand logo AT THE EXACT SAME POSITION and similar size/scale where the old logo appears. The client's logo must visually take the place of the old one.
+  2. HAIR/FACE AVOIDANCE (ABSOLUTE MANDATORY RULE): The brand logo MUST NEVER be rendered on top of the subject's hair, head, face, or body. If the subject's hair or head extends to the top center, place the brand logo in clean negative background space in the top-left or top-right corner, ensuring zero collision or overlap with the subject's hair or face.
+  3. SEAMLESS BLENDING (NO ARTIFICIAL BLACK BOXES): Render the logo cleanly and seamlessly onto the background canvas. DO NOT draw an artificial black box, dark container rectangle, or inverted color background behind the logo unless those shapes are part of the original logo file itself.
+  4. 100% VISUAL & COLOR FIDELITY: Replicate 100% of the original logo's emblem shapes, typography, numbers, and true colors with perfect image-to-image accuracy. Do NOT print the logo's name as a separate text layer in typography.`)
         : `- NO RANDOM LOGOS: Do not invent or hallucinate logos if not provided. Erase any existing logos from the reference image.`;
+
+      // Foto-para-grade (photo-slot) mapping: layout com vários espaços de foto + várias fotos de pessoas enviadas
+      const totalSujeitos = (sujeitosBase64List && sujeitosBase64List.length) + (base64DoSujeito ? 1 : 0);
+      const temLayoutRef = !!(designRefBase64 || (designRefsList && designRefsList.length > 0));
+      const photoSlotMappingRule = (temLayoutRef && totalSujeitos >= 1)
+        ? `- EXACT PHOTO-TO-SLOT MAPPING MANDATE (CRITICAL - MULTI-PHOTO LAYOUTS): The Design Layout Reference contains ONE OR MORE photo slots/frames where individual photos appear. Assign EVERY attached subject photo to its own SLOT, in strict left-to-right, top-to-bottom reading order: the FIRST subject photo ('FOTO DE PESSOA #1'/'Referência do Sujeito Principal') goes in the FIRST/leftmost/topmost photo slot, the SECOND subject photo ('FOTO DE PESSOA #2') goes in the NEXT slot, and so on. Each slot MUST show a DIFFERENT photo with ZERO repetition or duplication. Determine the exact number of photo slots by counting the photo frames visibly present in the Design Layout Reference. If there are MORE photos than slots, keep the most important ones (in order); if there are FEWER photos than slots, keep the remaining slots with the exact same empty style as in the reference. Embed each REAL photograph fully inside its slot, preserving each person's face, expression, pose, and clothing 100% identical to its source photo. NEVER redraw, re-paint, or recreate the people as illustrations — USE the real photos.`
+        : "";
 
       const subjectMandatoryRule = hasSujeito
         ? `- EXACT SUBJECT, FACE, POSE & POSITION FIDELITY (ABSOLUTE MANDATORY RULE): When reference photos ("Referência do Sujeito Principal", "Referência de Design/Layout", "Referência de Cenário/Ambiente" or "Imagem Gerada Anterior") are attached, you MUST perfectly preserve the EXACT person/people, faces, facial features, facial expressions, eyes, hair, skin tone, clothing, physical body poses, spatial ordering, and exact positions of ALL subjects. ABSOLUTE CRITICAL RULE: YOU ARE STRICTLY FORBIDDEN FROM CHANGING FACIAL FEATURES, RECREATING DIFFERENT PEOPLE, SWAPPING FACES, OR ALTERING THE POSITIONS, POSES, OR ARRANGEMENT OF THE SUBJECTS. The generated image MUST feature the EXACT SAME people in the EXACT SAME poses and positions as shown in the reference photo.`
@@ -3813,75 +4361,86 @@ Return ONLY the JSON object. Do not include any conversational text or markdown 
 
       const mandatorySuffix = `\n\n=== ABSOLUTE CRITICAL CONSTRAINTS (MANDATORY) ===
 ${subjectMandatoryRule}
+${photoSlotMappingRule}
+- REAL PHOTOGRAPH EMBEDDING & NO RECREATION (CRITICAL): When a real photograph of scenery, buildings (e.g. churches, facades, venues), landscape, people, or products is attached, USE AND EMBED THAT REAL PHOTOGRAPH DIRECTLY in the artwork composition/background! DO NOT redraw, re-render, illustrate, cartoonify, 3D animate, or recreate real photographs as AI drawings. Maintain 100% photographic realism, authentic architectural details, and real textures.
+- ZERO HALLUCINATED TEXT & UNREQUESTED ICONS (CRITICAL): Print ONLY the custom text layers explicitly provided in the prompt. NEVER invent unrequested dates, titles, subtitles, event names, or random text. NEVER draw unrequested social media icons (TikTok, YouTube, WhatsApp, Twitter/X, etc.).
+- BRAZILIAN PORTUGUESE LANGUAGE LOCK (CRITICAL): ALL text rendered on the canvas MUST be written in BRAZILIAN PORTUGUESE, exactly as supplied by the client. NEVER translate the supplied texts, NEVER mix English words into the displayed texts, and NEVER add English filler/decoration words such as PREMIUM, LIVE, NEW, SALE, BEST, NOW, SPECIAL, TICKET, SHOW, EVENT — unless the client's supplied text literally contains them.
+- FONT NAMES ARE STYLE COMMANDS, NEVER RENDERED TEXT (CRITICAL): Font family names (e.g. Montserrat, Bebas Neue, Outfit, Cinzel, Anton) are TYPOGRAPHIC STYLE DIRECTIVES for the letterforms ONLY. The font name as a WORD must NEVER be printed, written, or rendered as text anywhere on the canvas. Only the actual supplied text content is ever rendered.
 - STRICT FACIAL IDENTITY, POSE & POSITION PRESERVATION (CRITICAL): You MUST keep 100% identical faces, facial features, expressions, age, skin tones, physical poses, body postures, spatial order, and exact positions of ALL people/subjects from any attached reference photo. DO NOT change their faces, do NOT recreate them as different individuals, do NOT swap their positions, and do NOT alter their body poses!
+- CRITICAL MULTIMODAL FLYER VS LOGO DISAMBIGUATION (ABSOLUTE MANDATORY RULE): When a Design Layout Reference (flyer/card) AND a Client Brand Logo reference are both attached, you MUST generate the FULL GRAPHIC CARD LAYOUT (with all headlines, subtitles, 3D elements, subjects, and panel hierarchy from the Design Reference) AND embed the logo emblem cleanly in the top header or safe corner. YOU ARE STRICTLY FORBIDDEN FROM GENERATING AN ISOLATED LOGO OR AN EMPTY BACKGROUND. Render the complete, rich, professional flyer card with all typography and subjects.
 - LAYOUT & COMPOSITION FIDELITY (CRITICAL): If a Design Layout Reference is provided, you MUST clone the visual layout, spatial structure, panel dividers, 3D elements, lighting, and composition grid from it. HOWEVER, ALL WRITTEN TEXT MUST BE REPLACED WITH THE NEW CUSTOM TEXT PROVIDED!
-- STRICT ORIGINAL BACKGROUND PRESERVATION (CRITICAL): When editing an existing photo or image reference, you MUST KEEP AND PRESERVE 100% OF THE ORIGINAL BACKGROUND SCENE, ROOM, WALLS, FURNITURE, AND ENVIRONMENT from the attached photo reference. DO NOT REPLACE, SWAP, GENERATE A DIFFERENT BACKGROUND, OR CHANGE THE SCENE. Keep the exact same wall, room, and setting from the reference photo, applying ONLY the specific edits requested (such as removing shadows from the wall/behind the subject, cleaning clutter from tables, skin retouching, or color grading).
-- MANDATORY OBJECT & SHADOW REMOVAL (CRITICAL): If the client requests to remove shadows (e.g. shadows behind subjects, shadows on walls, cast shadows, flash shadows behind the second person on the right) or remove objects/clutter from tables/surfaces, you MUST MANDATORILY ERASE, OMIT, DISSOLVE AND PAINT OVER all shadows behind subjects, wall shadows, dark flash cast shadows, and table objects. Replace those shadow areas with the clean, bright, evenly lit wall texture matching the rest of the room. Render a completely clean, shadow-free background and clean surfaces without any unwanted dark cast shadow outlines, while keeping the original background room/walls intact!
+- STRICT ORIGINAL BACKGROUND PRESERVATION (CRITICAL): When editing an existing photo or image reference, you MUST KEEP AND PRESERVE 100% OF THE ORIGINAL BACKGROUND SCENE, ROOM, WALLS, FURNITURE, AND ENVIRONMENT from the attached photo reference. DO NOT REPLACE, SWAP, GENERATE A DIFFERENT BACKGROUND, OR CHANGE THE SCENE. Keep the exact same wall, room, and setting from the reference photo, applying ONLY the specific edits requested.
+- MANDATORY OBJECT & SHADOW REMOVAL (CRITICAL): If the client requests to remove shadows or remove objects/clutter from tables/surfaces, you MUST MANDATORILY ERASE, OMIT, DISSOLVE AND PAINT OVER all shadows behind subjects, wall shadows, dark flash cast shadows, and table objects. Replace those shadow areas with the clean, bright, evenly lit wall texture matching the rest of the room.
 - MANDATORY TEXT OVERWRITE & COMPLETE ERASURE (CRITICAL): You MUST COMPLETELY ERASE AND REPLACE 100% of the original text, titles, subtitles, dates, handles (@profiles), phone numbers, prices, and words originally present in the Design Layout Reference image. Print ONLY the new custom text explicitly provided by the client in this prompt. NEVER copy, re-render, or leave behind ANY text or words from the original reference photo!
 - ICONS, EFFECTS, & 3D DEPTH (CRITICAL): You MUST perfectly clone all icons, visual effects, lighting glows, 3D elements, depth of field, and graphic adornments present in the Design Layout Reference. Do NOT simplify the design. If the reference has glowing icons, 3D shapes, shadow depth, or cinematic lighting, you MUST reproduce those exact effects and depths with 100% fidelity.
 - BRAND COLOR PALETTE ENFORCEMENT (CRITICAL): ${!coresAutomaticas ? "The client HAS specified custom brand colors in the prompt. You MUST strictly and aggressively use those EXACT colors for the entire graphic composition, background panels, highlights, glows, and ambient lighting. You MUST completely OVERRIDE the original reference flyer's colors with the requested colors." : "The client HAS NOT specified custom colors. You MUST perfectly copy the exact original color palette of the Design Layout Reference."}
-- STRICT REPLACEMENT & NO LEFTOVER INFO (CRITICAL): You MUST completely ERASE, OMIT AND REMOVE any street address, street names, street text ("rua"), Instagram profiles (@handles), social media icons, contact information, old reference logos, or "designer premium" logos originally present in the Design Layout Reference. ${negativePrompt ? `EXPLICIT UNWANTED ITEMS TO REMOVE AND ERASE: ${negativePrompt.trim()}.` : ''} Keep the bottom footer region completely clean and empty of these removed elements! ONLY use the exact text, handles, and logos explicitly provided by the client in this prompt.
+- STRICT REPLACEMENT, SINGLE LOGO & ICON EXCLUSION MANDATE (CRITICAL):
+  1. SINGLE LOGO INSTANCE: Render EXACTLY ONE single instance of the brand logo on the entire artwork. Absolute prohibition against duplicate logos, double logos, twin logos, extra logo placements, or repeating the logo anywhere else on the canvas.
+  2. SOCIAL MEDIA ICON EXCLUSION: If the user requests specific social media icons (e.g. ONLY Instagram and Facebook), render STRICTLY ONLY those exact icons requested. You MUST completely ERASE, EXCLUDE, AND REMOVE any unrequested social media icons originally present in the reference image (such as TikTok, YouTube, WhatsApp, Twitter/X, LinkedIn). Do NOT render TikTok icon or unrequested logos from the reference photo.
+  3. REMOVE UNWANTED INFO: You MUST completely ERASE, OMIT AND REMOVE any street address, street names, street text ("rua"), Instagram profiles (@handles, @perfil, @seu.perfil), social media icons, contact information, old reference logos, or "designer premium" logos originally present in the Design Layout Reference. ${negativePrompt ? `EXPLICIT UNWANTED ITEMS TO REMOVE AND ERASE: ${negativePrompt.trim()}.` : ''} Keep the bottom footer region completely clean and empty of these removed elements! ONLY use the exact text, handles, and logos explicitly provided by the client in this prompt. If no @ handle is explicitly provided in the prompt, DO NOT RENDER ANY @ HANDLE OR PROFILE USERNAME ON THE CANVAS.
 - TEXT COMPLETENESS & PLACEMENT (CRITICAL): You MUST print ALL provided text fields, titles, and words exactly as requested. DO NOT SKIP ANY TEXT. You MUST place the new text EXACTLY in the corresponding spatial positions as the text blocks in the Design Layout Reference. DO NOT put text in random places.
 - COMPLETE CARD LAYOUT GENERATION: Do NOT generate just a plain empty background backdrop. You MUST generate the complete graphic composition, including all layouts, cards, panels, curved border divides, background textures, lighting setups, and the main visual subjects in their exact spatial positions, proportions, and layouts as shown in the Design Layout Reference image.
-- EMBEDDED TYPOGRAPHY (MANDATORY): You MUST print, write, embed, and render all actual written texts, titles, words, acronyms, letters, numbers, and website URLs directly onto the image canvas. Style them with beautiful, modern, extremely crisp, and highly-legible typography matching the alignments and visual style of the reference design. All social media usernames or handles (starting with "@") must be printed strictly in lowercase letters.
+- EMBEDDED TYPOGRAPHY (MANDATORY): You MUST print, write, embed, and render all actual written texts, titles, words, acronyms, letters, numbers, and website URLs directly onto the image canvas. Style them with beautiful, modern, extremely crisp, and highly-legible typography matching the alignments and visual style of the reference design. All social media usernames or handles (starting with "@") explicitly provided by the user must be printed strictly in lowercase letters. IF NO HANDLE WAS PROVIDED BY THE USER, DO NOT INVENT OR RENDER ANY "@" HANDLE OR PROFILE NAME.
 ${corDominante && corDominante !== "transparent" ? "- SOLID BACKGROUND REQUIREMENT FOR CUTOUT: Because the client requested a solid background color, YOU MUST GENERATE ALL TEXTS AND ELEMENTS OVER A PURE WHITE OR HIGHLY CONTRASTING FLAT SOLID BACKGROUND. Do not generate ANY background textures, scenes, or gradients. Just the subjects and text floating over a blank, flat solid color canvas. This is critical so we can cleanly cut them out." : ""}
 ${logoMandatoryRule}`;
 
+      const antiDuplicateLogosAndIcons = "duplicate logos, double logos, twin logos, multiple logos, repeated brand logos, extra logo placements, unrequested social media icons, tiktok icon, tiktok logo, musical.ly logo, invented @ handles, unrequested instagram handles, @perfil, @seu.perfil, unrequested profile usernames, duplicate photos, repeated background image, repeating same image in multiple panels, same subject repeated in background and card, duplicate image boxes";
       if (negativePrompt && negativePrompt.trim() !== "") {
-        fullPrompt += `\nAvoid / Negative constraints: old logos, original reference text, original reference text words, original reference titles, hallucinated words, blurry, pixelated, distorted, low resolution, bad colors, color banding, jpeg artifacts, low quality, glitch, out of focus, noise, visual bugs, ${negativePrompt.trim()}`;
+        fullPrompt += `\nAvoid / Negative constraints: old logos, original reference text, original reference text words, original reference titles, hallucinated words, blurry, pixelated, distorted, low resolution, bad colors, color banding, jpeg artifacts, low quality, glitch, out of focus, noise, visual bugs, ${antiDuplicateLogosAndIcons}, ${negativePrompt.trim()}`;
       } else {
-        fullPrompt += `\nAvoid / Negative constraints: old logos, original reference text, original reference text words, original reference titles, original reference logos, hallucinated words, incorrect spelling, blurry, pixelated, distorted, low resolution, bad colors, color banding, jpeg artifacts, low quality, glitch, out of focus, noise, visual bugs`;
+        fullPrompt += `\nAvoid / Negative constraints: old logos, original reference text, original reference text words, original reference titles, original reference logos, hallucinated words, incorrect spelling, blurry, pixelated, distorted, low resolution, bad colors, color banding, jpeg artifacts, low quality, glitch, out of focus, noise, visual bugs, ${antiDuplicateLogosAndIcons}`;
       }
       
       fullPrompt += mandatorySuffix;
       parts.push({ text: fullPrompt });
 
-      // 0. Add Previously Generated Image for direct refinement/edit
+      // 1. Add Design/Layout References FIRST so Gemini treats it as the Primary Composition Grid Anchor
+      if (designRefBase64) {
+        const logoEraseDirective = (useLogo || logoBase64 || (Array.isArray(logosList) && logosList.length > 0))
+          ? " CRITICAL LOGO ERASE MANDATE: If this design reference photo contains an old logo, brand emblem, or symbol, YOU MUST COMPLETELY ERASE AND OMIT THAT OLD LOGO! DO NOT COPY, TRACE, OR KEEP THE LOGO FROM THIS PHOTO. RENDER ONLY THE CLIENT'S BRAND LOGO ATTACHED AS 'LOGOTIPO DA MARCA DO CLIENTE'."
+          : "";
+        addImagePart(designRefBase64, `PRIMARY DESIGN CARD LAYOUT & COMPOSITION GRID REFERENCE (MANDATORY: Replicate this entire flyer layout composition, cards, split-panels, text block positions, visual hierarchy, lighting effects, and 3D depth. DO NOT generate an empty canvas or just an isolated logo!${logoEraseDirective})`);
+      }
+      if (Array.isArray(designRefsList)) {
+        designRefsList.forEach((ref: any, idx: number) => {
+          if (ref) addImagePart(ref, `Referência de Design/Layout Adicional ${idx + 1}`);
+        });
+      }
+
+      // 2. Add Previously Generated Image for direct refinement/edit
       if (prevImgBase64) {
         addImagePart(prevImgBase64, "Imagem Gerada Anterior a ser Editada/Refinada");
       }
 
-      // 2. Add Subject References
+      // 3. Add Subject References
       if (!desativarSujeito) {
         if (base64DoSujeito) {
-          addImagePart(base64DoSujeito, "Referência do Sujeito Principal");
+          addImagePart(base64DoSujeito, "FOTO DE PESSOA #1 / Referência do Sujeito Principal");
         }
         if (Array.isArray(sujeitosBase64List)) {
           sujeitosBase64List.forEach((ref: any, idx: number) => {
-            if (ref) addImagePart(ref, `Referência de Sujeito Adicional ${idx + 1}`);
+            if (ref) addImagePart(ref, `FOTO DE PESSOA #${idx + 2}`);
           });
         }
       }
 
-      // 3. Add Scenario References
-      if (useEnvRef) {
-        if (base64DoCenario) {
-          addImagePart(base64DoCenario, "Referência de Cenário/Ambiente");
-        }
-        if (Array.isArray(cenariosBase64List)) {
-          cenariosBase64List.forEach((ref: any, idx: number) => {
-            if (ref) addImagePart(ref, `Referência de Cenário Adicional ${idx + 1}`);
-          });
-        }
+      // 4. Add Scenario References
+      if (base64DoCenario) {
+        addImagePart(base64DoCenario, "Referência de Cenário/Ambiente");
+      }
+      if (Array.isArray(cenariosBase64List)) {
+        cenariosBase64List.forEach((ref: any, idx: number) => {
+          if (ref) addImagePart(ref, `Referência de Cenário Adicional ${idx + 1}`);
+        });
       }
 
-      // 4. Add Typography References
+      // 5. Add Typography References
       if (tipografiaRefBase64) {
         addImagePart(tipografiaRefBase64, "Referência de Tipografia");
       }
       if (Array.isArray(tipografiaRefsList)) {
         tipografiaRefsList.forEach((ref: any, idx: number) => {
           if (ref) addImagePart(ref, `Referência de Tipografia Adicional ${idx + 1}`);
-        });
-      }
-
-      // 5. Add Design References
-      if (designRefBase64) {
-        addImagePart(designRefBase64, "Referência de Design/Layout");
-      }
-      if (Array.isArray(designRefsList)) {
-        designRefsList.forEach((ref: any, idx: number) => {
-          if (ref) addImagePart(ref, `Referência de Design Adicional ${idx + 1}`);
         });
       }
 
@@ -3892,20 +4451,26 @@ ${logoMandatoryRule}`;
         });
       }
 
-      } // END OF ELSE (NOT EDIT MODE)
-      // 7. Add Logo References for native AI rendering
+      // 7. Add Logo References for native AI rendering (placed LAST, clearly labeled as header emblem)
       if (useLogo || logoBase64 || (Array.isArray(logosList) && logosList.length > 0)) {
-        if (logoInclusionType !== "overlay") {
+        if (isLogoOverlayMode) {
           if (logoBase64) {
-            addImagePart(logoBase64, "Referência de Logotipo do Cliente para Estampar Nativamente no Design na Posição Exata da Referência");
+            addImagePart(logoBase64, "LOGOTIPO DA MARCA DO CLIENTE (MODO OVERLAY DIGITAL: NÃO DESENHE ESTA LOGO NO CANVAS. Apenas reserve um espaço limpo e vazio no canto superior esquerdo/direito para a inclusão digital. APAGUE COMPLETAMENTE QUALQUER LOGO ANTIGO DA FOTO DE REFERÊNCIA DE DESIGN!).");
           }
           if (Array.isArray(logosList)) {
             logosList.forEach((ref: any, idx: number) => {
-              if (ref) addImagePart(ref, `Referência de Logotipo Adicional ${idx + 1}`);
+              if (ref) addImagePart(ref, `LOGOTIPO DA MARCA DO CLIENTE Adicional ${idx + 1} (MODO OVERLAY DIGITAL: NÃO DESENHAR NO CANVAS)`);
             });
           }
         } else {
-          console.log("[api/gerar] Logo explicitly configured as overlay mode: skipping native AI image part attachment.");
+          if (logoBase64) {
+            addImagePart(logoBase64, "LOGOTIPO DA MARCA DO CLIENTE (MANDATÓRIO: SUBSTITUA a logo antiga presente na FOTO DE REFERÊNCIA DE DESIGN pela SUA logo, no MESMO local e com tamanho aproximado onde a logo original da referência aparece. Estampe este emblema nativamente na arte, sem caixas, sem fundo atrás da logo, com as cores e formas EXATAS do arquivo enviado. COMPLETAMENTE APAGAR E IGNORAR QUALQUER OUTRA LOGO ANTIGA DA FOTO DE REFERÊNCIA DE DESIGN!).");
+          }
+          if (Array.isArray(logosList)) {
+            logosList.forEach((ref: any, idx: number) => {
+              if (ref) addImagePart(ref, `LOGOTIPO DA MARCA DO CLIENTE Adicional ${idx + 1}`);
+            });
+          }
         }
       }
 
@@ -3942,11 +4507,11 @@ ${logoMandatoryRule}`;
         
         let finalImageBase64 = rawData ? `data:${rawMime};base64,${rawData}` : genResult.imageBase64Url;
 
-        // Apply clean pixel-exact logo overlay if explicitly requested
+        // Apply 2D sharp overlay ONLY if explicitly configured with logoInclusionType === "overlay"
         if (useLogo && logoInclusionType === "overlay" && (logoBase64 || (logosList && logosList.length > 0))) {
           const targetLogo = logoBase64 || (logosList && logosList[0]);
           if (targetLogo) {
-            console.log(`[api/gerar] Applying high-precision sharp logo overlay at position "${logoPosOverlay || 'top_left'}"...`);
+            console.log(`[api/gerar] Applying high-precision sharp 2D logo overlay at position "${logoPosOverlay || 'top_left'}"...`);
             finalImageBase64 = await overlayLogoOnImage(
               finalImageBase64,
               targetLogo,
@@ -3954,6 +4519,59 @@ ${logoMandatoryRule}`;
               logoSizeOverlay || 20,
               100
             );
+          }
+        }
+
+        // Apply ultra-fast native C++ Lanczos3 high-resolution upscale for 4K / 2K (executes in < 200ms)
+        if (resolutionInput === "4K" || resolutionInput === "2K") {
+          console.log(`[api/gerar] Executing ultra-fast native sharp Lanczos3 upscale to ${resolutionInput}...`);
+          try {
+            const { data: rawB64Data } = resolveImageInput(finalImageBase64);
+            if (rawB64Data) {
+              const inBuf = Buffer.from(rawB64Data, "base64");
+              const targetW = resolutionInput === "4K" ? 3840 : 2048;
+              const meta = await sharp(inBuf).metadata();
+              const curW = meta.width || 1024;
+              const curH = meta.height || 1024;
+              // Upscales native 1K/2K base outputs directly to TRUE 4K (3840px) using Lanczos3
+              const minBaseForUpscale = resolutionInput === "4K" ? 768 : 512;
+              if (curW < targetW && curW >= minBaseForUpscale) {
+                const targetH = Math.round(targetW * (curH / curW));
+                console.log(`[api/gerar] Upscaling image from ${curW}x${curH} to TRUE ${resolutionInput} (${targetW}x${targetH}) using Lanczos3 super-sampling + adaptive sharpening...`);
+                const upscaledBuf = await sharp(inBuf)
+                  .resize(targetW, targetH, {
+                    fit: "cover",
+                    kernel: sharp.kernel.lanczos3
+                  })
+                  .sharpen({ sigma: 1.2, m1: 1.0, m2: 2.0 })
+                  .png({ compressionLevel: 6, adaptiveFiltering: true })
+                  .toBuffer();
+                finalImageBase64 = `data:image/png;base64,${upscaledBuf.toString("base64")}`;
+              } else if (curW < targetW && curW < minBaseForUpscale) {
+                console.warn(`[api/gerar] Resolução nativa baixa (${curW}x${curH}) — pulando upscale para evitar "4K fake" borrado. Devolvendo resolução nativa.`);
+              }
+            }
+          } catch (upscaleErr) {
+            console.warn("[api/gerar] Fast Lanczos3 upscale warning, proceeding with native resolution:", upscaleErr);
+          }
+        }
+        // Apply exact natural dimensions if AUTO aspect ratio is selected
+        if (autoTargetDimensions && autoTargetDimensions.width && autoTargetDimensions.height) {
+          try {
+            console.log(`[api/gerar] Resizing final generated output to 100% exact original photo resolution (${autoTargetDimensions.width}x${autoTargetDimensions.height})...`);
+            const { data: rawB64Data, mimeType: rawB64Mime } = resolveImageInput(finalImageBase64);
+            if (rawB64Data) {
+              const inBuf = Buffer.from(rawB64Data, "base64");
+              const resizedBuf = await sharp(inBuf)
+                .resize(autoTargetDimensions.width, autoTargetDimensions.height, {
+                  fit: "cover",
+                  kernel: sharp.kernel.lanczos3
+                })
+                .toBuffer();
+              finalImageBase64 = `data:${rawB64Mime || "image/png"};base64,${resizedBuf.toString("base64")}`;
+            }
+          } catch (autoResizeErr: any) {
+            console.warn("[api/gerar] Auto dimension exact resize warning:", autoResizeErr?.message || autoResizeErr);
           }
         }
 
@@ -3979,6 +4597,7 @@ ${logoMandatoryRule}`;
           height
         });
 
+        // ── If this is an async job, store result in job map instead of HTTP response
         return res.json({ 
           image: responseImgUrl, 
           prompt: expandedPrompt, 
@@ -4032,6 +4651,7 @@ ${logoMandatoryRule}`;
 
   // Prompt Extractor: analyze an image and return the prompt that describes its composition
   app.post("/api/extract-prompt", async (req, res) => {
+    if (!verifyGenerationAccess(req, res)) return;
     try {
       const { imageData, mimeType, customApiKey } = req.body;
       if (!imageData) return res.status(400).json({ error: "Imagem não fornecida." });
@@ -4089,6 +4709,7 @@ ${logoMandatoryRule}`;
   });
 
   app.post("/api/scan-gc-to-xaml", async (req, res) => {
+    if (!verifyGenerationAccess(req, res)) return;
     try {
       const { imageBase64, customApiKey, layoutStyleHint, userPrompt, customPrompt } = req.body;
       if (!imageBase64) return res.status(400).json({ error: "Imagem de referência de GC não fornecida." });
@@ -4232,18 +4853,21 @@ IMPORTANT: Return valid, strictly parseable JSON. Do not put unescaped raw newli
 
   // Chat Assistant Endpoint: routes user chats to different expert personas
   app.post(["/api/chat-assistente", "/api/chat-agentes"], async (req, res) => {
+    if (!verifyGenerationAccess(req, res)) return;
     try {
       const { assistantId, message, imageBase64, attachedFiles = [], history = [], customApiKey, modelId } = req.body;
       const currentAi = getAiClient(customApiKey);
       if (!currentAi) return res.status(400).json({ error: "API Key não configurada." });
 
-      const baseInstructions = `REGRAS ABSOLUTAS DE ESTILO FLYER BR E DIÁLOGO ALTAMENTE INTERATIVO COM O USUÁRIO:
-1. Pense e fale como um Diretor de Arte de Flyers Brasileiros Profissionais (Shows, Eventos, Corporativos, Produtos).
-2. INTERAÇÃO HUMANA E EMPÁTICA (IGUAL AO BATE-PAPO DO GEMINI): Você deve ser extremamente conversador, amigável, acolhedor e interativo. Nunca envie apenas códigos secos, listas rígidas ou apenas um bloco JSON. Converse naturalmente em português do Brasil, dê dicas valiosas de design, elogie as escolhas do usuário, faça sugestões inovadoras e crie uma verdadeira parceria criativa com ele.
-3. EXPLIQUE AS CONFIGURAÇÕES: Sempre que você sugerir ou alterar configurações do editor através do bloco JSON, você DEVE explicar de forma simples, entusiasmada e detalhada no seu texto em português o que você está configurando e o porquê (ex: "Preparei uma atmosfera incrível com tons de azul e dourado, e adicionei efeitos de faíscas flutuantes para dar mais energia!").
-4. INSTRUÇÃO DE GERAÇÃO: Sempre lembre o usuário de forma natural para clicar no botão "GERAR BACKGROUND" ou "GERAR IMAGEM" no painel principal para ver a arte final, pois você apenas prepara as configurações para ele na interface.
-5. FORMATO DO JSON: O bloco de código JSON para automação da interface deve ficar estritamente no FINAL de sua resposta, formatado exclusivamente dentro do bloco de código \`\`\`json ... \`\`\`. Nunca coloque o JSON no início ou no meio do texto, e nunca envie JSON sem uma resposta amigável, rica e conversada antes.
-6. EVITE TERMOS TÉCNICOS EXCESSIVOS: Explique as coisas de forma que qualquer designer ou cliente entenda, mantendo a conversa super fluida, amigável e próxima, exatamente como se estivessem num bate-papo de café.
+      const baseInstructions = `REGRAS ABSOLUTAS DE ESTILO FLYER BR, ANÁLISE MULTIMODAL E CONTEXTO COMPARTILHADO ZION AI:
+1. DIREÇÃO DE ARTE PROFISSIONAL: Pense e fale como um Diretor de Arte Sênior e Especialista em Design Gráfico (Flyers Brasileiros para Shows, Eventos, Negócios, Gastronomia e Produtos).
+2. CONTEXTO GLOBAL E INTELIGÊNCIA INTEGRADA: Você tem visão completa de todo o ecossistema do Zion Studio. Se o usuário perguntar sobre algo de OUTRA aba ou campo (ex: perguntar sobre Roteiros de Vídeo no Chat de Design, perguntar sobre WhatsApp no Diretor Criativo, ou sobre Logotipos no Gerador de Texto), VOCÊ DEVE ENTENDER PERFEITAMENTE, conectar as informações e responder com autoridade e fluidez total, integrando os conceitos!
+3. ANÁLISE MULTIMODAL DE REFERÊNCIAS (FLYERS E LOGOS): Quando o usuário enviar uma imagem de referência de flyer ou um logotipo:
+   - Examine a estrutura visual completa: cartões, painéis 3D, hierarquia de texto (Título H1, Subtítulo H2, CTA), alinhamentos, espaçamentos, iluminação e cores.
+   - Entenda que a ideia do gerador de imagem é criar uma composição de ALTO NÍVEL baseada no pedido do usuário, mantendo a organização, hierarquia e legibilidade perfeitas, aplicando o logotipo do cliente em área de segurança (cabeçalho/canto limpo, sem sobrepor cabelo ou rosto).
+4. INTERAÇÃO HUMANA E EMPÁTICA (ESTILO GEMINI): Seja extremamente conversador, amigável, acolhedor e dinâmico. Converse naturalmente em português do Brasil, elogie as ideias do usuário, faça sugestões inovadoras e crie uma verdadeira parceria criativa com ele.
+5. EXPLIQUE AS CONFIGURAÇÕES: Sempre que você sugerir ou alterar configurações através do bloco JSON, explique de forma simples e entusiasmada o que está configurando e o porquê (ex: "Estruturei o layout com um título de alto impacto no topo, alinhamento perfeito do logotipo e iluminação dourada!").
+6. FORMATO DO JSON: O bloco de código JSON para automação da interface deve ficar estritamente no FINAL de sua resposta, formatado dentro do bloco \`\`\`json ... \`\`\`. Nunca coloque o JSON no início ou meio do texto, e nunca envie JSON sem uma conversa amigável antes.
 
 IMPORTANTÍSSIMO SOBRE O PREENCHIMENTO AUTOMÁTICO (JSON):
 1. Se o usuário disser apenas "oi", "olá", ou fizer perguntas conceituais sem relação com as configurações, NÃO inclua o bloco JSON.
@@ -4349,11 +4973,46 @@ RIGOROSA CORREÇÃO GRAMATICAL, ZERO ERROS DE CONCORDÂNCIA E PORTUGUÊS IMPECÁ
 Responda sempre em Português do Brasil com máxima praticidade sem enviar NENHUM bloco de código JSON.`;
       } else if (assistantId === "copiloto-agencia") {
         systemInstruction = "Você é o Copiloto Estratégico de Agência de Marketing. Sua função é ajudar o dono da agência a prospectar, vender, onboardar, executar, otimizar e renovar contratos de marketing digital para seus clientes. Tom profissional, prático e focado em resultados. Responda em Português do Brasil sem enviar JSON de interface.";
+      } else if (assistantId === "copy-legendas-instagram") {
+        systemInstruction = `Você é o Especialista em Legendas e Engajamento para Instagram (Copy Zion Instagram).
+Sua missão é gerar APENAS E EXCLUSIVAMENTE a legenda final pronta para publicação no Instagram a partir dos textos, ideias, áudios ou arquivos/imagens enviadas pelo usuário.
+
+REGRAS RÍGIDAS E ABSOLUTAS DE SAÍDA (PROIBIDO DESVIAR):
+1. ZERO CONVERSAS, ELOGIOS OU INTRODUÇÕES:
+   - É STRICTLY PROIBIDO escrever saudações, introduções ou elogios como "Fala, meu parceiro!", "Que arte espetacular!", "Aqui está a sua legenda...", "Ótima escolha!".
+   - É STRICTLY PROIBIDO escrever comentários no início ou no fim ("Como você pediu apenas a legenda...", "Estou mantendo as configurações...").
+5. PROIBIDO USAR ASTERISCOS:
+   - O Instagram NÃO formata negrito por marcação de asteriscos. É TERMINANTEMENTE PROIBIDO usar asteriscos ao redor de palavras ou frases. Escreva todas as palavras normalmente sem nenhum asterisco.
+2. CONTEÚDO 100% LIMPO DA LEGENDA:
+   - Sua resposta DEVE CONTER APENAS E EXCLUSIVAMENTE A LEGENDA FINAL com emojis, CTA e o bloco de hashtags (#), sem aspas e pronta para o Instagram.
+3. EXTRAÇÃO TOTAL DE TEXTOS DE ARQUIVOS E CARDS:
+   - Se o usuário anexou uma imagem de referência, card, print ou documento contendo textos, VOCÊ DEVE LER E EXTRAIR TODOS OS TEXTOS E CONTEÚDOS DA IMAGEM E PREENCHER OS CAMPOS DA LEGENDA INTEGRALMENTE (a não ser que o usuário peça explicitamente para remover ou ignorar algo).
+4. ESTRUTURA OBRIGATÓRIA DA LEGENDA:
+   - GANCHO INICIAL (HOOK): Primeira linha magnética com emoji para parar o scroll.
+   - CORPO DA LEGENDA: Parágrafos curtos, limpos e com emojis.
+   - CHAMADA PARA AÇÃO (CTA): Instrução para comentários, salvamento ou compartilhamento.
+   - BLOCO DE HASHTAGS DE ALTO ENGAJAMENTO (OBRIGATÓRIO EM 100% DAS RESPOSTAS):
+     * No final de TODA legenda gerada, inclua OBRIGATORIAMENTE um bloco separado com hashtags (#) estratégicas e virais (#...).
+
+Sua resposta inteira DEVE ser APENAS O TEXTO DA LEGENDA.`;
       }
       switch (assistantId) {
         case "prompt-extrator":
-          systemInstruction += `Você é o Prompt Extrator da Zion, assumindo a persona de um DESIGNER EXPERIENTE PROFISSIONAL. Seu objetivo máximo é analisar as imagens de referência enviadas e extrair um MEGA PROMPT técnico e detalhado para IA.
-Você deve compreender CADA IMAGEM de referência enviada. Se receber um Sujeito e um Cenário, você DEVE descrevê-los com riqueza de detalhes no prompt, mapeando onde cada um deve ficar. NUNCA use palavras como 'filme', 'cinematográfico', 'cinema' (use 'high-end commercial photography', 'studio lighting', 'sharp focus', 'flyer br style', 'masterpiece'). Responda em Português, mas gere o prompt da imagem em INGLÊS TÉCNICO.`;
+          systemInstruction = `Você é o Extrator de Prompts da Zion AI Studio, um Analista de Engenharia Visual especializado EXCLUSIVAMENTE em EXTRAÇÃO de informações de imagens de referência (cards, flyers, artes, fotos, documentos).
+
+MODO DE OPERAÇÃO — EXTRAÇÃO PURA (REGRA MAIS IMPORTANTE):
+1. Sua função é SOMENTE EXTRAIR e TRANSCREVER o que está visível na imagem enviada ou o que o usuário pedir. Você NUNCA cria, inventa, sugere ou preenche configurações por conta própria.
+2. Se o usuário pedir os TEXTOS da imagem: transcreva 100% dos textos visíveis EXATAMENTE como estão (títulos, subtítulos, corpo, preços, telefones, datas, endereços, CTAs, rodapés), organizados em blocos por função, prontos para copiar e colar. NÃO reescreva, corrija ou embeleze as palavras — transcreva fielmente.
+3. Se o usuário pedir as CORES: informe os valores HEX aproximados de cada cor visível (fundo, textos, destaques).
+4. Se o usuário pedir um PROMPT de reprodução: entregue UM prompt técnico completo em um parágrafo iniciado com a marcação "PROMPT EXTRATOR:".
+5. Se a imagem não for clara ou houver textos ilegíveis, diga honestamente o que consegue e o que não consegue ler.
+
+PROIBIÇÕES ABSOLUTAS:
+- É TERMINANTEMENTE PROIBIDO retornar qualquer bloco de código JSON, mapeamento de imagens, camadas de texto ou qualquer configuração de editor.
+- É TERMINANTEMENTE PROIBIDO inventar textos, preços, datas, telefones, nomes, informações ou estilos que não estejam visíveis na imagem.
+- É TERMINANTEMENTE PROIBIDO sugerir alterações de design, ativar efeitos, preencher campos do editor ou dar opiniões criativas não solicitadas.
+
+Responda apenas o que foi solicitado, de forma direta e organizada, em Português do Brasil, pronta para o usuário copiar e colar.`;
           break;
         case "creative-assistant":
           systemInstruction += "Você é o Assistente Criativo da Zion, um MESTRE do DESIGN ESTILO FLYER BR. Sua missão é ter ideias brilhantes, ousadas e de nível de agência internacional para flyers, artes e banners. Sugira paletas de neon, iluminação agressiva (recorte, glow), posicionamento 3D de elementos flutuantes e contrastes perfeitos, independente do nicho (eventos, produtos, lançamentos, gospel, etc). O resultado deve ser sempre 'TUDO PERFEITO', orquestrando texto, elementos, cenário e pessoa em uma visão criativa única.";
@@ -4376,17 +5035,55 @@ Analise qualquer imagem de referência e diga como reproduzir aquela excelência
 
 IMPORTANTÍSSIMO: MANTENHA UM DIÁLOGO COM O USUÁRIO (COMO DIRETOR E CLIENTE/DESIGNER).
 - REGRA ABSOLUTA DE RESOLUÇÃO E TAMANHO (NÃO PERGUNTE AO USUÁRIO): JAMAIS pergunte ao usuário se ele deseja resolução 1K, 2K ou 4K, e JAMAIS pergunte sobre dimensões/tamanhos de imagem ou inicie conversas sobre qualidade! O usuário define a resolução e tamanho manualmente no painel de controles. NUNCA mencione ou pergunte sobre 1K, 2K ou 4K.
+- REGRA DE FOTOS DE CENÁRIO REAL (IGREJAS, PRÉDIOS, FACHADAS, LOCAIS, PRODUTOS):
+  * Se o usuário enviar uma foto real de igreja, fachada, prédio, paisagem, ambiente ou produto, você DEVE OBRIGATORIAMENTE definir 'useEnvRef': true no JSON.
+  * Em 'promptCenario': coloque 'Usar e incorporar a foto REAL da igreja/fachada/ambiente enviada diretamente no fundo da composição. PROIBIDO redesenhar, ilustrar ou transformar fotos reais em desenhos 3D ou ilustrações digitais. Manter 100% de realismo fotográfico e detalhes arquitetônicos reais.'
+- REGRA DE ALTERAÇÕES INCREMENTAIS (NÃO ALTERAR O QUE NÃO FOI PEDIDO):
+  * Quando o usuário pedir uma alteração pontual (ex: "mude a cor da camisa", "remova 1 foto"), altere APENAS o parâmetro solicitado no JSON e preserve todos os outros parâmetros (logo, textos, tipos de painel, cores de fundo).
 - REGRA DE REMOÇÃO DE SOMBRAS E OBJETOS + PRESERVAÇÃO DE ROSTOS E CENÁRIO + TRATAMENTO LIGHTROOM: Se o usuário pedir para remover sombras (atrás de pessoas, na parede) ou remover coisas da mesa, ou solicitar tratamento/edição de foto:
   * Preencha OBRIGATORIAMENTE no "negativePrompt": "sombras atrás das pessoas, sombras na parede, sombras fortes de flash, sombras indesejadas, contorno escuro na parede, objetos sobre a mesa, coisas da mesa, desordem, estúdio fotográfico sintético".
   * Em "promptCenario": coloque APENAS "Fundo e ambiente originais da foto de referência (manter a mesma parede e cômodo sem transformar em estúdio de fotografia)." ou string vazia. JAMAIS escreva "Fundo de estúdio fotográfico" ou "parede neutra de estúdio" pois isso altera o cenário e deforma as pessoas!
   * Em "additionalPrompt" e "promptEstilo": reforce os mandatos:
     1. MANDATO DE ROSTOS, POSES E POSIÇÕES IDÊNTICOS + ELIMINAR SOMBRAS DE FLASH: Manter 100% idênticos os rostos, traços faciais, expressões, roupas, poses e posições físicas de TODAS as pessoas da foto. PROIBIDO alterar fisionomias ou recriar o fundo. Apagar e eliminar 100% das sombras de flash na parede atrás das pessoas e objetos sobre a mesa.
     2. SUÍTE COMPLETA ADOBE LIGHTROOM: Equilíbrio perfeito de Exposição, Contraste, Highlights (preservados), Shadows (abertas), Whites e Blacks limpos. Temperatura e Tint corrigidos para tons de pele naturais. Texture, Clarity e Dehaze para definição refinada. Curva S-Curve suave RGB para contraste cinematográfico. Ajuste HSL individual (laranja pele natural, azuis profundos, verdes equilibrados). Color grading com sombras levemente frias e realces quentes. Sharpening e redução de ruído refinados com suave vinheta e granulação fina. Máscaras inteligentes de IA para destacar rostos e limpar sombras da parede sem alterar a estrutura do cômodo.
+- REGRA DE OURO CONTRA PLACEHOLDERS E COLCHETES: É STRICTLY PROIBIDO retornar textos com colchetes como "[headline principal]", "[subtítulo]", "[inserir texto]" ou "[CTA]" nos campos H1, H2, CTA ou additionalPrompt do JSON! Preencha SEMPRE com o texto real fornecido pelo usuário ou extraído da imagem de referência. Se não houver texto específico, escreva a frase real limpa sem nenhum colchete.
+- REGRAS RÍGIDAS DE LOGOTIPO, PROPORÇÃO E CONTRASTE VISUAL:
+  * Ao usar a logo ("useLogo": true), NUNCA estique ou deforme a imagem. A proporção natural (aspect ratio) deve ser 100% mantida. Preserve 100% das cores originais e formato da logo.
+  * CONTRASTE DE CORES DA LOGO: Se a logo do cliente tiver texto ou detalhes escuros/pretos e a arte tiver um fundo escuro, instrua OBRIGATORIAMENTE no prompt um brilho/halo de contraste claro em volta da logo para garantir 100% de legibilidade sem sumir no fundo.
+- REGRA DE TIPOGRAFIA (CAMADAS DE TEXTO), FONTES E CORES:
+  * Ao definir 'camadasTexto', preencha cada camada com 'conteudo', 'funcao' (Headline Principal, Subheadline Secundário, CTA Botão, Corpo Descrição, Legenda / Detalhe, Selo / Badge, Preço / Valor, Data / Horário), 'fonte' (ex: Montserrat, Bebas Neue, Outfit, Cinzel, Anton) e 'cor' (hexadecimal ex: #ffffff).
+  * Respeite rigorosamente a ordem numérica das camadas (Camada #1 topo/headline principal, Camada #2 subtítulo, etc.) e a posição global ('typographyPosition': 'ESQUERDA' | 'CENTRO' | 'DIREITA').
+- REGRA DE POSIÇÃO DO SUJEITO E ENQUADRAMENTO:
+  * Configure 'positioning': 'Esquerda' | 'Centro' | 'Direita' conforme a composição desejada.
+  * Configure 'composicao': 'Close-up (Rosto)' | 'Plano Médio (Busto)' | 'Plano Americano' | 'Personalizada'.
+- REGRA DE SATURAÇÃO E VIBRANCIA DE CORES (ANTI-DESBOTAMENTO):
+  * Em todas as edições, garanta 'ULTRA-VIBRANCE LOCK': cores ricas, contraste dinâmico profundo e saturação viva sem desbotar ou fosquear as cores do flyer.
 - Se o usuário disse apenas "oi", "olá", ou foi muito vago, NÃO GERE JSON NENHUM. APENAS cumprimente-o e pergunte como pode ajudar na criação do design hoje.
 - Se a ideia ainda estiver vaga, faça perguntas antes de gerar o JSON de configuração.
 - Se o usuário solicitar qualquer alteração ou ajuste de design (ex: mudar cor, remover sujeito, desativar sujeito, ativar logo, mudar resolução/proporção, etc.), você DEVE incluir o JSON correspondente imediatamente.
 - Se a arte não tiver pessoas, retorne sempre "desativarSujeito": true e "noPeople": true. Se tiver, retorne "desativarSujeito": false e "noPeople": false.
 - Você deve usar a inteligência para preencher "cores", "promptCenario", "estiloVisualCustom", "useLogo", "enableTypography", etc. GERE O JSON NO FINAL DA RESPOSTA sempre que houver qualquer alteração de estado ou configuração solicitada para atualizar o painel automaticamente!`;
+          break;
+        case "copy-legendas-instagram":
+          systemInstruction += `\n\nVocê é o Especialista em Legendas e Engajamento para Instagram (Copy Zion Instagram).
+Sua missão é criar legendas altamente envolventes, organizadas, otimizadas para conversão e prontas para publicação no Instagram a partir dos textos, ideias, áudios ou arquivos/imagens enviadas pelo usuário.
+
+REGRAS RÍGIDAS E ESTRUTURA OBRIGATÓRIA DA LEGENDA:
+1. LEITURA DE ARQUIVOS E IMAGENS ANEXADAS:
+   - Se o usuário enviar um arquivo, print, card ou imagem de referência, VOCÊ DEVE LER E EXTRAIR TODOS OS TEXTOS E CONTEÚDOS DA IMAGEM E PREENCHER OS CAMPOS DA LEGENDA INTEGRALMENTE (a não ser que o usuário peça explicitamente para remover ou ignorar algo).
+2. GANCHO INICIAL (HOOK):
+   - A primeira linha DEVE ser extremamente forte, curiosa e envolvente, acompanhada de um emoji estratégico para parar o scroll no feed/reels.
+3. ESTRUTURA DO CORPO DA LEGENDA:
+   - Divida o texto em parágrafos curtos e espaçados com emojis para facilitar a leitura no celular.
+   - Entregue o valor principal ou a mensagem central da publicação.
+4. CHAMADA PARA AÇÃO (CTA):
+   - Inclua uma instrução clara para engajamento (ex: "Comente X para receber...", "Salve para não esquecer!", "Clique no link da bio", "Compartilhe com um amigo").
+5. BLOCO DE HASHTAGS DE ALTO ENGAJAMENTO (OBRIGATÓRIO EM 100% DAS RESPOSTAS):
+   - No final de TODA legenda gerada, inclua OBRIGATORIAMENTE um bloco separado com hashtags (#) estratégicas para engajar a publicação:
+     * Hashtags do nicho específico do conteúdo fornecido pelo usuário
+     * Hashtags virais e de alto volume de busca no Instagram (#instagramestrategico #conteudodevalor #marketingdigital #viralreels #dicasdeconteudo #engajamento #explorepage #criadoresdeconteudo etc.)
+
+Responda em Português do Brasil de forma direta, clara e sem introduções desnecessárias, entregando a legenda pronta para copiar.`;
           break;
         case "copy-ads":
           systemInstruction += "Você é o Copy Zion Ads, especialista em copywriting para anúncios estáticos de alta conversão. Você deve OBRIGATORIAMENTE estruturar todas as suas copys utilizando a técnica AIDA (Atenção, Interesse, Desejo, Ação). É TERMINANTEMENTE PROIBIDO inventar ou inserir marcações de perfis de terceiros (@) em qualquer sugestão de texto. Responda em português do Brasil.";
@@ -4430,7 +5127,7 @@ IMPORTANTÍSSIMO: MANTENHA UM DIÁLOGO COM O USUÁRIO (COMO DIRETOR E CLIENTE/DE
       }
       
       // Adiciona regra de formatação universal para o parser do frontend funcionar 100% (Apenas para assistentes de design/flyers)
-      if (assistantId !== "gerador-roteiros") {
+      if (assistantId !== "gerador-roteiros" && assistantId !== "prompt-extrator") {
         systemInstruction += `\n\nDIRETRIZES DE ESTILO FLYER BR:
 Lembre-se sempre das características de altíssima qualidade de Flyers Brasileiros Profissionais (Eventos, Shows, Lançamentos, Corporativo):
 1. Estilo & Qualidade: Nível de agência premium, masterpiece, high-end commercial design.
@@ -4478,6 +5175,12 @@ REGRAS OBRIGATÓRIAS DE EDIÇÃO DE FOTO E MELHORIA DE PROMPT COM IMAGEM ANEXADA
      - "promptEstilo": descrição do tratamento de iluminação, cor e nitidez da foto original.
      - "additionalPrompt": "MANDATO DE ROSTOS, POSES, EXPRESSÕES E POSIÇÕES IDÊNTICOS: Manter 100% idênticos os rostos, traços faciais, feições, idades, roupas, poses corporais, a expressão facial INDIVIDUAL exata de cada pessoa (respeitando quem está de boca fechada sem forçar sorrisos) e posições exatas de TODAS as pessoas da foto. PROIBIDO alterar fisionomias ou transformar o cenário em estúdio sintético. Executar APENAS as edições solicitadas: [detalhar remoções/melhorias pedidas pelo usuário]".
 
+- REGRA DE TROCA OU USO DE CENÁRIO ANEXADO (PROIBIDO ALUCINAR CENÁRIO NOVO):
+  Se o usuário pedir para usar, colocar ou trocar o fundo/cenário por uma imagem enviada anteriormente ou anexada agora:
+  1. VOCÊ DEVE DEFINIR OBRIGATORIAMENTE "useEnvRef": true NO SEU JSON DE RESPOSTA.
+  2. VOCÊ DEVE MAPEAR A IMAGEM EM "mapeamentoImagens" COMO "scene" (ex: { "fundo.jpg": "scene" }).
+  3. EM "promptCenario", ESCREVA: "Usar o ambiente, cômodo e cenário exatos da foto de referência de cenário anexada ([fundo.jpg]). É TERMINANTEMENTE PROIBIDO alucinar, inventar um novo estúdio ou gerar um cenário diferente do enviado pelo usuário."
+
 DETECÇÃO DE NOVO PEDIDO (NOVA ARTE / NOVO BRIEFING) - CRÍTICO:
 Se o usuário mandar uma mensagem ou briefing que indica que ele está iniciando um NOVO PEDIDO, uma NOVA ARTE, ou uma nova ideia temática (ex: "agora faz um flyer de padaria", "novo pedido: show de sertanejo", "cria uma arte para pizzaria", ou se ele enviar novas fotos de referências que não têm relação alguma com o flyer/pedido anterior do chat), você DEVE:
 1. Definir obrigatoriamente "substituirImagens": true no seu JSON de resposta.
@@ -4486,49 +5189,88 @@ Se o usuário mandar uma mensagem ou briefing que indica que ele está iniciando
 4. Redefinir e reescrever "additionalPrompt", "promptCenario", "promptDesign", "promptTipografia" e as cores do projeto com base apenas na nova solicitação, limpando qualquer rastro da arte antiga.
 A IA deve obedecer estritamente ao usuário e garantir uma transição limpa, sem misturar dados do pedido antigo com o novo!
 
-AJUSTES ESPECÍFICOS (OBEDIÊNCIA ESTRITA):
-Se o usuário pedir para alterar, remover ou corrigir apenas UM detalhe ou algo específico (ex: "remova a logo", "mude a cor para vermelho", "apague os textos", "tira o desfoque"), você DEVE enviar o JSON contendo APENAS a chave correspondente alterada e JAMAIS enviar "substituirConfig": true. Você deve ser estritamente obediente: se o usuário mandar remover algo, DESATIVE a chave correspondente no JSON imediatamente (ex: "useLogo": false, "enableTypography": false, "camadasTexto": [], "enableBlur": false, "desativarSujeito": true) para que o painel seja atualizado cirurgicamente apenas no que foi pedido.
+AJUSTES ESPECÍFICOS — OBEDIÊNCIA CIRÚRGICA (REGRA MAIS IMPORTANTE DO SISTEMA):
+Quando o usuário pedir para alterar, remover ou corrigir apenas UM detalhe ou algo específico (ex: "mude a cor do título", "remova a logo", "tira o desfoque", "muda a fonte", "coloca fundo vermelho"), você DEVE seguir TODAS estas regras:
+
+1. ENVIE NO JSON **APENAS** AS CHAVES QUE FORAM EXPLICITAMENTE ALTERADAS PELO PEDIDO DO USUÁRIO. Todas as demais chaves devem ser COMPLETAMENTE OMITIDAS do JSON.
+   EXEMPLO CORRETO: Se o usuário disse "mude a cor do título para vermelho", retorne APENAS:
+   \`\`\`json
+   { "camadasTexto": [{ "funcao": "Headline Principal", "conteudo": "TEXTO ATUAL SEM ALTERAR", "cor": "#ff0000" }] }
+   \`\`\`
+   EXEMPLO ERRADO (PROIBIDO): Retornar um JSON com "cores", "promptCenario", "additionalPrompt", "estiloVisualCustom", "mapeamentoImagens" etc. quando o usuário SÓ pediu para mudar a cor do título.
+
+2. JAMAIS envie "substituirConfig": true ou "substituirImagens": true em ajustes específicos. Essas flags são EXCLUSIVAMENTE para novos pedidos/artes do zero.
+
+3. PRESERVAÇÃO DA LOGO — REGRA INVIOLÁVEL: Se o usuário já configurou uma logo anteriormente no chat e NÃO pediu para mexer nela, você NÃO PODE incluir "useLogo", "mapeamentoImagens" (com logo), "limparLogoRef" ou qualquer chave relacionada à logo no JSON. A logo é SAGRADA e só pode ser alterada se o usuário pedir EXPLICITAMENTE.
+
+4. PRESERVAÇÃO DE TEXTOS — REGRA INVIOLÁVEL: Se o usuário NÃO pediu para mexer nos textos/camadas de texto, NÃO inclua "camadasTexto" no JSON. Os textos já configurados devem ser mantidos intactos. Se o usuário pediu para alterar APENAS UM texto específico (ex: "mude o título para X"), envie "camadasTexto" com SOMENTE a camada alterada (a camada com a mesma "funcao" ou "id", com o novo "conteudo").
+
+5. PRESERVAÇÃO DE CENÁRIO E PROMPT — REGRA INVIOLÁVEL: Se o usuário NÃO pediu para mexer no cenário, NÃO inclua "promptCenario", "promptDesign", "useEnvRef" no JSON. Se NÃO pediu para mexer no prompt adicional, NÃO inclua "additionalPrompt". Cada campo só entra no JSON se foi EXPLICITAMENTE mencionado pelo usuário.
+
+6. PRESERVAÇÃO DE CORES — REGRA INVIOLÁVEL: Se o usuário NÃO pediu para mexer nas cores, NÃO inclua "cores", "corDominante", "coresAutomaticas" no JSON.
+
+7. LEIA O HISTÓRICO DA CONVERSA: Antes de responder, analise o histórico inteiro da conversa para entender o estado atual da arte. NÃO re-envie campos que já estão corretos. Se a logo já foi configurada 3 mensagens atrás, ela continua lá — não precisa reenviá-la.
+
+8. REENVIO DA MESMA IMAGEM / CORREÇÃO PONTUAL — REGRA CRÍTICA: Se o usuário re-enviar a mesma imagem que já está configurada no editor (ex: a arte gerada anteriormente, ou a mesma foto de referência) apenas para pedir uma correção, ajuste ou melhoria pontual (ex: "corrija o texto", "mude o valor para R$ 600", "aumente o título"), você DEVE:
+   - NÃO refazer o mapeamento das imagens e NÃO incluir "mapeamentoImagens" no JSON. As referências já carregadas no editor permanecem intactas.
+   - NÃO incluir "substituirConfig" nem "substituirImagens" (essas flags apagam as configurações e as referências de imagem existentes!).
+   - Retornar no JSON APENAS as chaves alteradas pelo pedido (ex: somente "camadasTexto" com a camada corrigida). Todos os demais campos do editor continuam como estão.
+   - Se o usuário pedir para alterar APENAS UM texto, retorne SOMENTE essa camada de texto em "camadasTexto" (pelo "id" ou "funcao" já existente) com o novo "conteudo". JAMAIS retorne a lista completa de textos com conteúdo reescrito ou inventado.
+
+REGRA DE OURO CONTRA PLACEHOLDERS, COLCHETES E TEXTOS GENÉRICOS:
+É TERMINANTEMENTE PROIBIDO retornar textos com colchetes ou placeholders nos campos "conteudo" das "camadasTexto" ou em qualquer campo de texto. EXEMPLOS PROIBIDOS:
+- "[HEADLINE PRINCIPAL]", "[SUBTÍTULO]", "[CHAMADA SECUNDÁRIA]", "[TEXTO DE APOIO]", "[RODAPÉ]", "[CTA]"
+- "[Inserir texto]", "[Seu texto aqui]", "[Nome do evento]", "[Data]"
+- "HEADLINE PRINCIPAL", "CHAMADA SECUNDÁRIA" (sem colchetes mas genéricos)
+REGRA: Se o usuário forneceu o texto real (ex: "117 Anos", "Morro do Chapéu"), use EXATAMENTE o texto que o usuário forneceu. Se o usuário NÃO forneceu texto para algum campo, PERGUNTE ao usuário qual texto ele quer ANTES de preencher — NUNCA preencha com placeholders genéricos.
+
+RIGOROSA CORREÇÃO GRAMATICAL E PORTUGUÊS IMPECÁVEL EM TODOS OS TEXTOS:
+- Respeite de forma absoluta e rigorosa as regras de gramática, ortografia, pontuação, acentuação e concordância verbal e nominal do Português do Brasil em TODOS os textos gerados (camadasTexto, additionalPrompt, promptCenario, promptDesign, etc.).
+- PROIBIÇÃO TOTAL DE ERROS: Faça dupla validação interna de cada frase para garantir zero erros de concordância, acentuação ou digitação.
+- Todos os nomes próprios, cidades e marcas devem ter capitalização correta (ex: "Morro do Chapéu", não "morro do chapeu").
+- Nunca invente informações. Se o usuário disse "117 anos", escreva exatamente "117 anos", não "120 anos" ou outro número.
 
 REGRAS CRÍTICAS DE SAÍDA (AUTO-FILL):
 Sempre que você gerar uma sugestão de configuração, copys, prompt ou extração de estilo, você DEVE incluir OBRIGATORIAMENTE no final da sua resposta um bloco de código JSON para preenchimento automático.
+REGRA CRÍTICA: Para AJUSTES INCREMENTAIS (alterações pontuais), o JSON deve conter SOMENTE as chaves que foram alteradas. Para NOVOS PEDIDOS (nova arte do zero), o JSON deve conter todas as chaves necessárias + "substituirConfig": true + "substituirImagens": true.
 O JSON deve ser formatado exatamente assim (inclua apenas as chaves que você conseguir inferir):
 \`\`\`json
 {
   "cores": { "ambiente": "#hex", "recorte": "#hex", "complementar": "#hex", "paleta": ["#hex1", "#hex2", "#hex3"] }, 
-  "coresAutomaticas": false, // true se você acha que as cores devem ser escolhidas automaticamente, false se definiu cores específicas
+  "coresAutomaticas": false,
   "corDominante": "#hex",
-  "useCorDominante": true, // false se não houver cor dominante
-  "dimensao": "1:1", // ou "9:16", "16:9", "4:5"
-  "sobriedade": 50, // de 0 (criativo/caótico) a 100 (sóbrio)
-  "desativarSujeito": true, // IMPORTANTE: Defina true se NÃO houver foto de pessoa/modelo ou se for comunicado/aviso/arte sem sujeito humano!
-  "noPeople": true, // Defina true se a imagem não deve ter pessoas
-  "useEnvRef": true, // true se estiver usando referência de cenário ou cenário carregado
-  "useLogo": true, // true se houver logo para aplicar
-  "enableTypography": true, // true se for usar textos na arte
-  "degradeLeitura": true, // true se o cenário precisar de escurecimento para leitura do texto, false se não
-  "enableBlur": false, // true se o cenário precisar de desfoque (fundo desfocado), false se não
-  "lateralGradient": false, // true se quiser gradiente/degradê lateral, false se não
-  "floatingElementsMode": "auto", // "off" para desligar, "auto" para ativar automático, "custom" para descrever os elementos flutuantes personalizados
-  "floatingElementsCustom": "Ex: poeira dourada e faíscas brilhantes ao fundo", // preencher em PORTUGUÊS do Brasil caso use modo "custom"
-  "gender": "Masculino", // "Masculino", "Feminino", "Outros", ou "" (vazio se sem sujeito)
-  "poseDescription": "descrição da pose ou enquadramento em PORTUGUÊS DO BRASIL (ex: postura confiante, olhando para a câmera)", 
-  "positioning": "Centro", // "Centro", "Esquerda", "Direita"
-  "typographyPosition": "CENTRO", // OBRIGATÓRIO: Escolha exatamente "ESQUERDA", "CENTRO" ou "DIREITA"
-  "composicao": "Plano Americano", // "Close-up (Rosto)", "Plano Médio (Busto)", "Plano Americano", "Customizada"
-  "composicaoCustom": "Ex: Ângulo baixo dramático cinematográfico", // preencher em PORTUGUÊS do Brasil
-  "promptCenario": "descrição do fundo/cenário em PORTUGUÊS DO BRASIL (ex: Fundo de estúdio escuro com iluminação neon azul e fumaça dramática)",
-  "promptDesign": "descrição do que extrair do layout/design da referência em PORTUGUÊS DO BRASIL (ex: Copiar a estrutura diagonal e os painéis assimétricos)",
-  "promptTipografia": "INSTRUÇÕES DE POSICIONAMENTO ESPACIAL EM PORTUGUÊS DO BRASIL: Descreva em português do Brasil onde cada texto e logo devem ficar. REGRA ABSOLUTA PARA A LOGO: A logo NUNCA deve ficar em cima do cabelo, rosto ou corpo do sujeito! Se houver sujeito no centro superior, posicione a logo no topo à esquerda ou topo à direita em espaço limpo. O título principal deve ficar centralizado abaixo.",
-  "additionalPrompt": "detalhes adicionais, texturas, iluminação e estética em PORTUGUÊS DO BRASIL (ex: Iluminação dramática de estúdio, brilho suave e alta definição)",
-  "negativePrompt": "elementos indesejados em PORTUGUÊS DO BRASIL (ex: texto ilegível, desfoque, deformação, logo sobre o cabelo)",
-  "enableEstiloVisual": true, // true para ativar o estilo visual, false para desativar
+  "useCorDominante": true,
+  "dimensao": "1:1",
+  "sobriedade": 50,
+  "desativarSujeito": true,
+  "noPeople": true,
+  "useEnvRef": true,
+  "useLogo": true,
+  "enableTypography": true,
+  "degradeLeitura": true,
+  "enableBlur": false,
+  "lateralGradient": false,
+  "floatingElementsMode": "auto",
+  "floatingElementsCustom": "Ex: poeira dourada e faíscas brilhantes ao fundo",
+  "gender": "Masculino",
+  "poseDescription": "descrição da pose em PORTUGUÊS DO BRASIL",
+  "positioning": "Centro",
+  "typographyPosition": "CENTRO",
+  "composicao": "Plano Americano",
+  "composicaoCustom": "descrição customizada em PORTUGUÊS DO BRASIL",
+  "promptCenario": "descrição do fundo/cenário em PORTUGUÊS DO BRASIL",
+  "promptDesign": "descrição do layout de referência em PORTUGUÊS DO BRASIL",
+  "promptTipografia": "INSTRUÇÕES DE POSICIONAMENTO ESPACIAL EM PORTUGUÊS DO BRASIL. REGRA ABSOLUTA PARA A LOGO: A logo NUNCA deve ficar em cima do cabelo, rosto ou corpo do sujeito!",
+  "additionalPrompt": "detalhes adicionais em PORTUGUÊS DO BRASIL",
+  "negativePrompt": "elementos indesejados em PORTUGUÊS DO BRASIL",
+  "enableEstiloVisual": true,
   "estilosVisuais": ["Cyberpunk", "Minimalista", "Neon"], 
-  "estiloVisualCustom": "descrição do estilo personalizado em PORTUGUÊS DO BRASIL (ex: Pintura barroca dramática com iluminação de Caravaggio)",
+  "estiloVisualCustom": "descrição do estilo personalizado em PORTUGUÊS DO BRASIL",
   "substituirImagens": true,
-  "mapeamentoImagens": { "nome_do_arquivo.png": "subject", "outro_arquivo.jpg": "logo", "layout.jpg": "design", "estilo.jpg": "style" }, // IMPORTANTE: Classifique cada arquivo como: "subject" (sujeito), "logo" (logotipo), "scene" (cenário/fundo), "design" (referência de layout/design completo) ou "style" (referência de estilo visual/estética). Se receber um flyer/card de referência de design, SEMPRE mapeie como "design".
-  "descricoesEstilo": { "estilo.jpg": "Descrição detalhada do estilo e paleta de cores dessa referência (O que copiar: texturas, luz, cores, etc). Obrigatorio se o tipo for 'style'" },
+  "mapeamentoImagens": { "nome_do_arquivo.png": "subject", "outro_arquivo.jpg": "logo", "layout.jpg": "design" },
+  "descricoesEstilo": { "estilo.jpg": "Descrição detalhada do estilo dessa referência" },
   "camadasTexto": [
-    { "funcao": "Headline Principal", "conteudo": "SEU TITULO", "fonte": "Outfit", "cor": "#ffffff" }
+    { "funcao": "Headline Principal", "conteudo": "TEXTO REAL AQUI (NUNCA PLACEHOLDER)", "fonte": "Outfit", "cor": "#ffffff" }
   ]
 }
 \`\`\`
@@ -4745,6 +5487,7 @@ async function generateLyria002(promptText: string, customApiKey?: string): Prom
 }
 
   app.post("/api/generate-audio", upload.single("file") as any, async (req, res) => {
+    if (!verifyGenerationAccess(req, res)) return;
     try {
       const promptText = req.body.prompt;
       const customApiKey = req.body.customApiKey;
@@ -4799,6 +5542,7 @@ async function generateLyria002(promptText: string, customApiKey?: string): Prom
   });
 
   app.post("/api/melhorar-prompt", async (req, res) => {
+    if (!verifyGenerationAccess(req, res)) return;
     try {
       const { prompt, assistantId, agentName, customApiKey } = req.body;
       if (!prompt || typeof prompt !== "string" || !prompt.trim()) {
@@ -4819,9 +5563,10 @@ O usuário digitou o seguinte rascunho de ideia ou prompt para interagir com o a
 SUA MISSÃO:
 Transforme e reescreva este rascunho em um prompt profissional, rico em detalhes, extremamente claro, assertivo e eficiente em Português do Brasil.
 REGRAS RÍGIDAS:
-1. Mantenha 100% da intenção original do usuário (assunto, nomes, datas, marcas, ideias), mas expanda com termos técnicos de design, iluminação, composição, tom de voz, gatilhos mentais ou estrutura de briefing adequados ao agente.
-2. Não adicione saudações, introduções ("Aqui está o prompt aprimorado:"), explicações ou aspas extras.
-3. Responda APENAS E EXCLUSIVAMENTE com o texto final do prompt aprimorado pronto para uso no chat.`;
+1. Mantenha 100% da intenção original do usuário e TODOS os dados informados (assunto, textos, títulos, ofertas, preços, telefones, datas, nomes, marcas e orientações de imagem). É STRICTLY PROIBIDO remover, omitir ou resumir informações do usuário!
+2. Expanda a ideia adicionando direcionamento profissional de design, iluminação cinematográfica, composição estética, enquadramento e preservação total de imagens de referência/cards e logotipos.
+3. Não adicione saudações, introduções ("Aqui está o prompt aprimorado:"), explicações ou aspas extras.
+4. Responda APENAS E EXCLUSIVAMENTE com o texto final do prompt aprimorado pronto para uso no chat.`;
 
       let improvedPrompt = "";
       try {
@@ -4847,15 +5592,18 @@ REGRAS RÍGIDAS:
           improvedPrompt = `Trilha sonora de fundo e áudio: ${raw}, estilo comercial moderno, melodia agradável e arranjo equilibrado.`;
         } else if (assistantId?.includes("sfx")) {
           improvedPrompt = `Efeito sonoro cristalino: ${raw}, acústica natural e impacto detalhado.`;
+        } else if (assistantId?.includes("instagram") || assistantId?.includes("legendas")) {
+          improvedPrompt = `Crie uma legenda altamente conversiva e profissional sobre: "${raw}". (Inclua gancho envolvente, emojis no corpo do texto, CTA para comentários e um bloco completo de hashtags virais de alto engajamento no final).`;
         } else {
           improvedPrompt = `${raw}. (Direcionamento criativo rico em detalhes, iluminação equilibrada e estética profissional).`;
         }
       }
 
-      // Remover aspas envolventes se a IA tiver colocado
+      // Remover aspas e colchetes genéricos como [headline principal] se a IA tiver colocado
       if (improvedPrompt.startsWith('"') && improvedPrompt.endsWith('"') && improvedPrompt.length > 2) {
         improvedPrompt = improvedPrompt.slice(1, -1).trim();
       }
+      improvedPrompt = improvedPrompt.replace(/\[(headline|subtítulo|subtitulo|texto|cta|inserir|digite|seu texto|sua frase|conteúdo|conteudo)[^\]]*\]/gi, '').trim();
 
       res.json({ improvedPrompt });
     } catch (error: any) {
@@ -4865,10 +5613,91 @@ REGRAS RÍGIDAS:
     }
   });
 
+  app.post("/api/check-api-quota", async (req, res) => {
+    try {
+      const { customApiKey } = req.body;
+      const currentAi = getAiClient(customApiKey);
+      if (!currentAi) {
+        return res.status(400).json({
+          status: "invalid_key",
+          keyType: "Sem Chave Configurada",
+          message: "Nenhuma API Key válida encontrada.",
+          dailyEstimate: "0 gerações"
+        });
+      }
+
+      let keyType = "Chave do Sistema Zion";
+      let dailyEstimate = "~50 a 100 gerações/dia (Plano Gratuito)";
+
+      const trimmedKey = (customApiKey || "").trim();
+      if (trimmedKey.startsWith("{") && trimmedKey.includes("private_key")) {
+        keyType = "Vertex AI (Conta de Serviço JSON)";
+        dailyEstimate = "Créditos Ilimitados (Pay-as-you-go / Google Cloud)";
+      } else if (trimmedKey) {
+        keyType = "Chave Própria do Desenvolvedor (Google AI Studio)";
+        dailyEstimate = "~50 a 100 gerações de imagem/dia e 1.500 req/dia de texto";
+      } else {
+        const saParsed = getServiceAccountCredentials();
+        if (saParsed) {
+          keyType = "Plataforma Zion (Vertex AI Service Account)";
+          dailyEstimate = "Créditos Ilimitados da Plataforma";
+        }
+      }
+
+      // Test live request with lightweight prompt
+      try {
+        const testRes = await currentAi.models.generateContent({
+          model: "gemini-3.1-pro-preview",
+          contents: [{ role: "user", parts: [{ text: "ping" }] }]
+        });
+        if (testRes && testRes.text) {
+          return res.json({
+            status: "active",
+            keyType,
+            message: "Sua chave de API está 100% ativa, funcionando e pronta para uso!",
+            dailyEstimate
+          });
+        }
+      } catch (testErr: any) {
+        const errMsg = testErr.message || String(testErr);
+        if (errMsg.includes("429") || errMsg.includes("RESOURCE_EXHAUSTED") || errMsg.includes("quota")) {
+          return res.json({
+            status: "quota_exceeded",
+            keyType,
+            message: "A cota gratuita desta chave atingiu o limite temporário (Erro 429). Alterne sua chave ou aguarde um momento.",
+            dailyEstimate
+          });
+        } else if (errMsg.includes("API_KEY_INVALID") || errMsg.includes("401") || errMsg.includes("403")) {
+          return res.json({
+            status: "invalid_key",
+            keyType,
+            message: "A chave API informada é inválida ou expirou. Verifique sua chave no Google AI Studio.",
+            dailyEstimate
+          });
+        }
+      }
+
+      return res.json({
+        status: "active",
+        keyType,
+        message: "Chave ativa no servidor.",
+        dailyEstimate
+      });
+    } catch (err: any) {
+      res.status(500).json({
+        status: "error",
+        keyType: "Erro no Servidor",
+        message: err.message || "Erro ao verificar cota da API.",
+        dailyEstimate: "Indisponível"
+      });
+    }
+  });
+
   // Endpoints para o Gerador de Prompts e Vídeo Omni Flash (gemini-omni-flash-preview)
 
   // Endpoint para Melhorar Prompt com IA
   app.post("/api/omni-flash-enhance", async (req, res) => {
+    if (!verifyGenerationAccess(req, res)) return;
     try {
       const { prompt, mediaBase64, mediaMimeType, customApiKey } = req.body;
       if (!prompt && !mediaBase64) {
@@ -4917,6 +5746,7 @@ Responda APENAS com o texto do prompt melhorado em Português (curto, direto e u
   });
 
   app.post("/api/omni-flash-prompt", async (req, res) => {
+    if (!verifyGenerationAccess(req, res)) return;
     try {
       const { 
         concept, mode, style, camera, lighting, motion, lens, aspectRatio, 
@@ -5037,6 +5867,7 @@ Responda ESTRITAMENTE em formato JSON com as seguintes chaves exatas:
   });
 
   app.post("/api/omni-flash-generate", async (req, res) => {
+    if (!verifyGenerationAccess(req, res)) return;
     try {
       const { prompt, aspectRatio, duration, customApiKey } = req.body;
       if (!prompt || typeof prompt !== "string" || !prompt.trim()) {
@@ -5088,10 +5919,325 @@ Responda ESTRITAMENTE em formato JSON com as seguintes chaves exatas:
     }
   });
 
+  // ── Video Audiovisual Analysis ─────────────────────────────────────────────
+  // Endpoint 1: Analyze video with Gemini (multimodal — audio transcription,
+  // color palette, framing, scene descriptions, central elements)
+  app.post("/api/video-analysis", upload.single("video") as any, async (req, res) => {
+    try {
+      const file = (req as any).file;
+      if (!file) {
+        return res.status(400).json({ error: "Nenhum arquivo de vídeo enviado." });
+      }
+
+      const customApiKey = req.body.customApiKey;
+      const client = getAiClient(customApiKey);
+      if (!client) {
+        return res.status(400).json({ error: "Cliente GenAI não pôde ser inicializado." });
+      }
+
+      console.log(`[video-analysis] Received video: ${file.originalname} (${(file.size / 1024 / 1024).toFixed(2)} MB, ${file.mimetype})`);
+
+      const videoBase64 = file.buffer.toString("base64");
+
+      const analysisPrompt = `Você é um especialista em edição de vídeo, motion design e legendas dinâmicas para Reels/TikTok.
+
+Analise este vídeo com extrema precisão e retorne um JSON estruturado com:
+
+1. "transcription": Transcrição EXATA e COMPLETA de todo o áudio do vídeo, palavra por palavra, em português (ou idioma falado).
+2. "scenes": Array de objetos, onde cada objeto representa um momento/frase marcante do vídeo (crie pelo menos 3 a 6 momentos ao longo do vídeo):
+   - "timestamp": Formato de tempo (ex: "0:02")
+   - "time_seconds": Número flutuante com os segundos exatos no vídeo em que essa fala acontece (ex: 2.5)
+   - "description": Descrição precisa do que aparece visualmente no frame nesse segundo exato (pessoa, roupa, posição, expressão, cenário)
+   - "framing": Tipo de enquadramento (plano aberto, médio, close, etc.)
+   - "caption_text": A frase EXATA e LITERAL falada nesse segundo exato do vídeo (sem inventar nada, use o áudio real)
+   - "key_words": Array com 1 ou 2 palavras principais dessa frase que DEVEM ser destacadas em amarelo com tamanho grande
+   - "mood": Tom da frase (ex: motivacional, curiosidade, revelação)
+3. "color_palette": Array de 5 cores HEX dominantes do vídeo
+4. "central_elements": Descrição precisa dos elementos centrais (ex: "homem de camiseta preta falando para a câmera num estúdio")
+5. "style_notes": Observações sobre a estética visual (iluminação, cores)
+6. "suggested_accent_colors": Array de 3 cores HEX (incluindo obrigatoriamente "#FFD700" para amarelo)
+
+Retorne APENAS o JSON puro, sem textos adicionais e sem marcação de código markdown.`;
+
+      // Use fallback system for text generation
+      const genResult = await executeGenerateContentWithFallbacks(
+        client,
+        customApiKey,
+        ["gemini-2.0-flash", "gemini-2.5-flash", "gemini-1.5-pro"],
+        {
+          contents: [{
+            role: "user",
+            parts: [
+              {
+                inlineData: {
+                  data: videoBase64,
+                  mimeType: file.mimetype || "video/mp4"
+                }
+              },
+              { text: analysisPrompt }
+            ]
+          }],
+          config: {
+            responseModalities: ["TEXT"],
+            maxOutputTokens: 8192
+          }
+        }
+      );
+
+      const responseText = genResult.response?.candidates?.[0]?.content?.parts
+        ?.map((p: any) => p.text || "")
+        .join("") || "";
+
+      // Parse the JSON response, handling potential markdown wrappers
+      let analysis: any;
+      try {
+        let jsonStr = responseText.trim();
+        if (jsonStr.startsWith("```")) {
+          jsonStr = jsonStr.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
+        }
+        analysis = JSON.parse(jsonStr);
+      } catch (parseErr) {
+        console.warn("[video-analysis] Failed to parse JSON response, returning raw text");
+        analysis = { raw: responseText };
+      }
+
+      console.log(`[video-analysis] Analysis complete. Scenes found: ${analysis.scenes?.length || 0}`);
+
+      res.json({
+        status: "success",
+        analysis,
+        modelUsed: genResult.modelUsed
+      });
+
+    } catch (error: any) {
+      console.error("[video-analysis] Error:", error);
+      const is429 = error.message?.includes("429") || error.message?.includes("RESOURCE_EXHAUSTED");
+      res.status(is429 ? 429 : 500).json({
+        error: is429
+          ? "Cota de requisições excedida. Aguarde alguns instantes antes de tentar novamente."
+          : error.message || "Erro ao analisar o vídeo."
+      });
+    }
+  });
+
+  // Endpoint 2: Generate styleframes with Imagen 3 / Real Frame Overlay based on video analysis
+  app.post("/api/video-generate-frames", async (req, res) => {
+    try {
+      const { analysis, customApiKey, accentColor = "#FFD700", numFrames = 3, frameImages = [] } = req.body;
+
+      if (!analysis || !analysis.scenes || analysis.scenes.length === 0) {
+        return res.status(400).json({ error: "Análise de vídeo não fornecida ou sem cenas." });
+      }
+
+      const client = getAiClient(customApiKey);
+      if (!client) {
+        return res.status(400).json({ error: "Cliente GenAI não pôde ser inicializado." });
+      }
+
+      console.log(`[video-generate-frames] Generating ${numFrames} styleframes (with ${frameImages.length} real frame snapshots)...`);
+
+      const selectedScenes = analysis.scenes.slice(0, Math.min(numFrames, analysis.scenes.length));
+      const centralElements = analysis.central_elements || "pessoa no vídeo";
+      const colorPalette = analysis.color_palette || ["#1a1a2e", "#16213e", "#0f3460"];
+      const styleNotes = analysis.style_notes || "cinemático, moderno";
+
+      const results: { imageUrl: string; prompt: string; scene: any }[] = [];
+      const errors: string[] = [];
+
+      for (let i = 0; i < selectedScenes.length; i++) {
+        const scene = selectedScenes[i];
+        const keyWords = scene.key_words || [];
+        const captionText = scene.caption_text || "";
+        const highlightWord = keyWords[0] || (captionText.split(" ").sort((a: string, b: string) => b.length - a.length)[0] || "");
+        const realFrameBase64 = frameImages[i] || frameImages[0] || "";
+
+        // Clean real frame base64
+        const cleanFrameB64 = realFrameBase64 ? realFrameBase64.replace(/^data:image\/[a-z]+;base64,/, "") : "";
+
+        const framePrompt = `Photorealistic 9:16 vertical styleframe created directly from the original video frame.
+
+MANDATORY ORIGINAL SCENE FIDELITY:
+- Maintain the exact person, face, expression, clothing, pose, and background from the provided reference video frame.
+- Do NOT replace the person or alter their facial identity.
+
+KINETIC TYPOGRAPHY OVERLAY (REELS / TIKTOK STYLE):
+- Overlay bold kinetic text in the center/upper third of the frame: "${captionText}".
+- The key word "${highlightWord}" MUST be displayed in a substantially LARGER font size, colored ${accentColor} (vibrant yellow), with a heavy dark drop-shadow.
+- The rest of the words are in crisp white, bold sans-serif font (Montserrat Black or Impact style) with subtle drop-shadows.
+
+3D MOTION GRAPHICS OVERLAY:
+- Add floating glassmorphic 3D social media cards (like Instagram post pop-ups with rounded corners and frosted glass transparency) hovering slightly around or behind the subject.
+
+HIGH-END COMMERCIAL QUALITY:
+- 4K resolution, razor sharp, rich contrast, professional color grading.`;
+
+        try {
+          console.log(`[video-generate-frames] Processing frame ${i + 1}/${selectedScenes.length} (Timestamp: ${scene.timestamp})...`);
+
+          let imageUrl = "";
+
+          // Build input parts including the REAL video frame if available
+          const parts: any[] = [];
+          parts.push({ text: framePrompt });
+          if (cleanFrameB64) {
+            parts.push({
+              inlineData: {
+                data: cleanFrameB64,
+                mimeType: "image/jpeg"
+              }
+            });
+            parts.push({ text: "Esta é a imagem REAL do frame do vídeo original. Use-a como base exata do sujeito e cenário." });
+          }
+
+          // Try AI generation with the real frame image as reference
+          try {
+            const genResult = await executeImageGenerationWithFallbacks(
+              client,
+              parts,
+              framePrompt,
+              "9:16",
+              "1K",
+              customApiKey
+            );
+
+            const rawData = genResult.rawData;
+            const rawMime = genResult.rawMime;
+
+            if (rawData) {
+              imageUrl = await saveImageToDisk(rawData, rawMime);
+            } else if (genResult.imageBase64Url) {
+              const parsed = resolveImageInput(genResult.imageBase64Url);
+              if (parsed.data) {
+                imageUrl = await saveImageToDisk(parsed.data, parsed.mimeType);
+              }
+            }
+          } catch (aiErr: any) {
+            console.warn(`[video-generate-frames] AI generation fallback for frame ${i + 1}: ${aiErr.message}`);
+          }
+
+          // Fallback: If AI didn't return an image, or as primary fallback using Sharp to render exact text over real frame
+          if (!imageUrl && cleanFrameB64) {
+            console.log(`[video-generate-frames] Rendering graphic overlay over real frame ${i + 1} using Sharp...`);
+            try {
+              const frameBuffer = Buffer.from(cleanFrameB64, "base64");
+              const metadata = await sharp(frameBuffer).metadata();
+              const width = metadata.width || 1080;
+              const height = metadata.height || 1920;
+
+              // Split text into words and highlight key word
+              const words = captionText.split(" ");
+              let svgWords = "";
+              let curY = Math.round(height * 0.25);
+              const fontSize = Math.round(width * 0.07);
+              const highlightFontSize = Math.round(width * 0.11);
+
+              words.forEach((w: string, idx: number) => {
+                const isHighlight = highlightWord && w.toLowerCase().includes(highlightWord.toLowerCase());
+                const color = isHighlight ? accentColor : "#FFFFFF";
+                const size = isHighlight ? highlightFontSize : fontSize;
+                const weight = isHighlight ? "900" : "800";
+                
+                svgWords += `<tspan x="${width / 2}" dy="${idx === 0 ? 0 : size * 1.25}" font-size="${size}" fill="${color}" font-weight="${weight}">${w.toUpperCase()}</tspan>`;
+              });
+
+              const svgOverlay = `
+              <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
+                <style>
+                  .caption-text {
+                    font-family: 'Impact', 'Montserrat', 'Arial Black', sans-serif;
+                    text-anchor: middle;
+                    filter: drop-shadow(0px 8px 16px rgba(0,0,0,0.9)) drop-shadow(0px 2px 4px rgba(0,0,0,1));
+                  }
+                </style>
+                <!-- Subtle dark gradient vignette behind text for legibility -->
+                <rect x="0" y="0" width="${width}" height="${height}" fill="url(#vignette)" />
+                <defs>
+                  <linearGradient id="vignette" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="rgba(0,0,0,0.4)" />
+                    <stop offset="40%" stop-color="rgba(0,0,0,0.1)" />
+                    <stop offset="100%" stop-color="rgba(0,0,0,0.6)" />
+                  </linearGradient>
+                </defs>
+                <text x="${width / 2}" y="${Math.round(height * 0.28)}" class="caption-text">
+                  ${svgWords}
+                </text>
+              </svg>`;
+
+              const compositedBuffer = await sharp(frameBuffer)
+                .composite([{ input: Buffer.from(svgOverlay), top: 0, left: 0 }])
+                .jpeg({ quality: 95 })
+                .toBuffer();
+
+              imageUrl = await saveImageToDisk(compositedBuffer.toString("base64"), "image/jpeg");
+            } catch (sharpErr: any) {
+              console.error(`[video-generate-frames] Sharp compositing error:`, sharpErr);
+            }
+          }
+
+          if (imageUrl) {
+            results.push({
+              imageUrl,
+              prompt: framePrompt,
+              scene: {
+                timestamp: scene.timestamp,
+                caption_text: captionText,
+                key_words: keyWords,
+                mood: scene.mood
+              }
+            });
+          }
+        } catch (genErr: any) {
+          console.error(`[video-generate-frames] Frame ${i + 1} failed:`, genErr.message);
+          errors.push(`Frame ${i + 1}: ${genErr.message}`);
+        }
+      }
+
+      if (results.length === 0) {
+        return res.status(500).json({
+          error: `Nenhum frame foi gerado com sucesso. Erros: ${errors.join("; ")}`,
+        });
+      }
+
+      console.log(`[video-generate-frames] Generated ${results.length}/${selectedScenes.length} styleframes successfully.`);
+
+      res.json({
+        status: "success",
+        frames: results,
+        totalGenerated: results.length,
+        totalRequested: selectedScenes.length,
+        errors: errors.length > 0 ? errors : undefined
+      });
+
+    } catch (error: any) {
+      console.error("[video-generate-frames] Error:", error);
+      const is429 = error.message?.includes("429") || error.message?.includes("RESOURCE_EXHAUSTED");
+      res.status(is429 ? 429 : 500).json({
+        error: is429
+          ? "Cota de requisições excedida. Aguarde alguns instantes antes de tentar novamente."
+          : error.message || "Erro ao gerar styleframes."
+      });
+    }
+  });
+
   if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
+
     const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        watch: {
+          ignored: [
+            '**/*.log',
+            '**/*.txt',
+            '**/server-log.txt',
+            '**/server-err.txt',
+            '**/public/generated-images/**',
+            '**/dist/**',
+            '**/chave-vertex.json',
+            '**/.tempmediaStorage/**'
+          ]
+        }
+      },
       appType: "spa",
     });
     app.use(vite.middlewares);

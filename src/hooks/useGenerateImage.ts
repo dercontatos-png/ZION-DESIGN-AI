@@ -1,6 +1,8 @@
 import { useProjectStore } from "../store/useProjectStore";
 import { buildMasterPrompt } from "../utils/buildMasterPrompt";
 import { optimizeBase64Image, optimizeBase64List } from "../utils/compressBase64";
+import { recordImageGeneration } from "../utils/apiUsageManager";
+import { checkAdminOrOpenPlan, getAuthHeaders, openPlanModal } from "../utils/userAuth";
 
 export const useGenerateImage = (
   customApiKey: string,
@@ -12,6 +14,11 @@ export const useGenerateImage = (
   const store = useProjectStore();
 
   const generatePremiumImage = async (options?: { isRefinement?: boolean; previousImageBase64?: string }) => {
+    if (!checkAdminOrOpenPlan(customApiKey)) {
+      showToast("🔒 Apenas o Administrador pode utilizar a geração de imagens. Assine um plano para liberar o acesso!", "error");
+      return;
+    }
+
     const targetProjectId = store.activeProjectId;
     if (!targetProjectId) {
       showToast("Nenhum projeto ativo selecionado.", "warning");
@@ -44,43 +51,37 @@ export const useGenerateImage = (
       store.setLastGeneratedPrompt(masterPrompt);
     }
 
-    const currentActiveImg = store.galeriaImages?.[store.activeImageIndex] || "";
+const currentActiveImg = store.galeriaImages?.[store.activeImageIndex] || "";
     const rawPreviousImage = options?.previousImageBase64 || (options?.isRefinement ? currentActiveImg : "");
 
-    // Otimiza/comprime imagens base64 cliente-side para prevenir erro HTTP 413 (Payload Too Large)
-    const [
-      optPreviousImage,
-      optSujeito,
-      optSujeitosList,
-      optCenario,
-      optCenariosList,
-      optTipografiaRef,
-      optTipografiaRefsList,
-      optDesignRef,
-      optDesignRefsList,
-      optReferenciasEstilo,
-      optLogo,
-      optLogosList
-    ] = await Promise.all([
-      optimizeBase64Image(rawPreviousImage, 1024, 0.8),
-      optimizeBase64Image(store.sujeitoBase64 || "", 1024, 0.8),
-      optimizeBase64List(store.sujeitosBase64List || [], 1024, 0.8),
-      optimizeBase64Image(store.cenarioBase64 || "", 1024, 0.8),
-      optimizeBase64List(store.cenariosBase64List || [], 1024, 0.8),
-      optimizeBase64Image(store.tipografiaRefBase64 || "", 1024, 0.8),
-      optimizeBase64List(store.tipografiaRefsList || [], 1024, 0.8),
-      optimizeBase64Image(store.designRefBase64 || "", 1024, 0.8),
-      optimizeBase64List(store.designRefsList || [], 1024, 0.8),
-      Promise.all((store.referenciasEstilo || []).map(async (ref) => ({
-        ...ref,
-        data: await optimizeBase64Image(ref.data || "", 1024, 0.8)
-      }))),
-      optimizeBase64Image(store.logoBase64 || "", 1024, 0.8),
-      optimizeBase64List(store.logosList || [], 1024, 0.8)
-    ]);
+    const is4K = (store.resolucao || "1K") === "4K";
 
-    const buildPayloadObj = (maxDim = 1024, qual = 0.8) => ({
-      previousImageBase64: optPreviousImage,
+    // Limite seguro do corpo da requisição (permite envio de imagens em alta definição sem bloqueio indevido no cliente)
+    const MAX_PAYLOAD_BYTES = 35_000_000;
+
+    const buildPayloadObj = async (maxDim: number, quality: number, essentialOnly: boolean) => {
+      const [optPreviousImage, optSujeito, optSujeitosList, optCenario, optCenariosList, optTipografiaRef, optTipografiaRefsList, optDesignRef, optDesignRefsList, optLogo, optLogosList] = await Promise.all([
+        optimizeBase64Image(rawPreviousImage, maxDim, quality - 0.03),
+        optimizeBase64Image(store.sujeitoBase64 || "", maxDim, quality),
+        optimizeBase64List(store.sujeitosBase64List || [], maxDim, quality),
+        optimizeBase64Image(store.cenarioBase64 || "", maxDim, quality),
+        optimizeBase64List(store.cenariosBase64List || [], maxDim, quality),
+        optimizeBase64Image(store.tipografiaRefBase64 || "", maxDim, quality),
+        optimizeBase64List(store.tipografiaRefsList || [], maxDim, quality),
+        optimizeBase64Image(store.designRefBase64 || "", maxDim, quality),
+        optimizeBase64List(store.designRefsList || [], maxDim, quality),
+        optimizeBase64Image(store.logoBase64 || "", maxDim, 0.9, true),
+        optimizeBase64List(store.logosList || [], maxDim, 0.9, true)
+      ]);
+      const optReferenciasEstilo = essentialOnly
+        ? []
+        : await Promise.all((store.referenciasEstilo || []).map(async (ref) => ({
+            ...ref,
+            data: await optimizeBase64Image(ref.data || "", maxDim, quality)
+          })));
+
+        return {
+          previousImageBase64: optPreviousImage,
       base64DoSujeito: optSujeito,
       sujeitosBase64List: optSujeitosList,
       base64DoCenario: optCenario,
@@ -100,7 +101,7 @@ export const useGenerateImage = (
       logoBase64: optLogo,
       logosList: optLogosList,
       useLogo: store.useLogo,
-      logoInclusionType: store.logoInclusionType || "embedded",
+      logoInclusionType: store.logoInclusionType || "overlay",
       logoPosOverlay: store.logoPosOverlay || "top_center",
       logoSizeOverlay: store.logoSizeOverlay || 20,
       dimensao: store.dimensao,
@@ -108,58 +109,88 @@ export const useGenerateImage = (
       modelId: store.modelId,
       coresAutomaticas: store.coresAutomaticas,
       seedUsuario: store.seedUsuario
-    });
+    };
+    };
 
-    let payloadObj = buildPayloadObj();
-    let payloadString = JSON.stringify(payloadObj);
-    console.log("[FRONT] Tamanho do Payload otimizado (bytes):", payloadString.length);
+    // Níveis progressivos de compressão: tenta alta qualidade, mas reduz automaticamente
+    // até o payload caber no limite do servidor (evita 413 Payload Too Large)
+    const compressionLevels: Array<[number, number]> = [
+      [768, 0.75],
+      [640, 0.68],
+      [512, 0.60],
+      [448, 0.52],
+      [384, 0.45]
+    ];
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 360000); // 6 minutos de timeout
-
-    try {
-      let response = await fetch("/api/gerar", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: payloadString,
-        signal: controller.signal
-      });
-
-      // Se ocorrer erro 413 (Payload Too Large), aplica compressão ultra-agressiva e tenta novamente
-      if (response.status === 413) {
-        console.warn("[FRONT] Erro 413 detectado. Re-comprimindo imagens para limite seguro...");
-        showToast("Tamanho das imagens excede limite do proxy (413). Re-comprimindo para envio seguro...", "warning");
-        
-        const ultraSujeito = await optimizeBase64Image(store.sujeitoBase64 || "", 600, 0.65);
-        const ultraCenario = await optimizeBase64Image(store.cenarioBase64 || "", 600, 0.65);
-        const ultraLogo = await optimizeBase64Image(store.logoBase64 || "", 600, 0.65);
-        const ultraPrev = await optimizeBase64Image(rawPreviousImage, 600, 0.65);
-
-        payloadObj = {
-          ...payloadObj,
-          previousImageBase64: ultraPrev,
-          base64DoSujeito: ultraSujeito,
-          sujeitosBase64List: await optimizeBase64List(store.sujeitosBase64List || [], 600, 0.65),
-          base64DoCenario: ultraCenario,
-          cenariosBase64List: await optimizeBase64List(store.cenariosBase64List || [], 600, 0.65),
-          logoBase64: ultraLogo,
-          logosList: await optimizeBase64List(store.logosList || [], 600, 0.65)
-        };
-        
-        payloadString = JSON.stringify(payloadObj);
-        console.log("[FRONT] Tamanho do Payload com compressão extrema (bytes):", payloadString.length);
-
-        response = await fetch("/api/gerar", {
+    const sendAttempt = async (payloadObj: any, isLastChance: boolean = false) => {
+      const payloadString = JSON.stringify(payloadObj);
+      console.log("[FRONT] Tamanho do Payload (bytes):", payloadString.length, "| Limite seguro:", MAX_PAYLOAD_BYTES);
+      if (payloadString.length > MAX_PAYLOAD_BYTES && !isLastChance) {
+        console.warn("[FRONT] Payload excede o limite seguro. Avançando para o próximo nível de compressão...");
+        return null;
+      }
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 300000); // 300s (5 min) timeout estendido para alta qualidade 4K
+      try {
+        const response = await fetch("/api/gerar", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...getAuthHeaders(customApiKey) },
           body: payloadString,
           signal: controller.signal
         });
+        clearTimeout(timeoutId);
+        return { response };
+      } catch (firstErr: any) {
+        clearTimeout(timeoutId);
+        console.warn("[FRONT] Envio abortado ou falhou na rede. Tentando próximo nível de compressão...", firstErr?.message || firstErr);
+        return null;
       }
+    };
 
-      clearTimeout(timeoutId);
+    let response: Response | null = null;
 
-      // TRATAMENTO DE ERROS VISUAIS
+    if (is4K) {
+      showToast("⏳ Gerando imagem em 4K Ultra HD...", "warning");
+    }
+
+    for (let i = 0; i < compressionLevels.length; i++) {
+      const [maxDim, quality] = compressionLevels[i];
+      const isLast = i === compressionLevels.length - 1;
+      console.log(`[FRONT] Compressão nível ${maxDim}px / q${quality}...`);
+      const payloadObj = await buildPayloadObj(maxDim, quality, false);
+      const attempt = await sendAttempt(payloadObj, isLast);
+      if (!attempt) continue;
+      response = attempt.response;
+      if (response.status !== 413) break;
+      console.warn(`[FRONT] Erro 413 no nível ${maxDim}px. Esgotando retentativa do nível anterior e re-comprimindo...`);
+    }
+
+    // Último recurso: apenas referências essenciais (sem estilos) na compressão máxima
+    if (!response || response.status === 413) {
+      console.warn("[FRONT] 413 persistente ou envio pendente. Tentando último recurso com apenas referências essenciais...");
+      const essentialPayload = await buildPayloadObj(400, 0.45, true);
+      const attempt = await sendAttempt(essentialPayload, true);
+      if (attempt) response = attempt.response;
+    }
+
+    // Se mesmo assim estourou o limite, informa o usuário de forma clara
+    if (response && response.status === 413) {
+      const errMsg = "Erro de Envio (413 Payload Too Large): As imagens anexadas ainda ultrapassam o limite do servidor. Por favor, reduza a quantidade de imagens de referência (principalmente as fotos de pessoas do layout).";
+      showToast(errMsg, "error");
+      onError?.(errMsg);
+      store.setIsProjectGenerating(targetProjectId, false);
+      return;
+    }
+
+    if (!response) {
+      const errMsg = "⏱️ Conexão ou tempo limite de envio excedido. Clique em Gerar Novamente para reconectar automaticamente.";
+      showToast(errMsg, "error");
+      onError?.(errMsg);
+      store.setIsProjectGenerating(targetProjectId, false);
+      return;
+    }
+
+    try {
       if (response.status === 400) {
         const data = await response.json();
         const errMsg = data.error || "Por favor, faça o upload da imagem do Sujeito.";
@@ -175,9 +206,16 @@ export const useGenerateImage = (
         return;
       }
 
-      if (response.status === 413) {
-        const errMsg = "Erro de Envio (413 Payload Too Large): As imagens anexadas ultrapassam o limite do servidor. Por favor, reduza o número de imagens de referência.";
+      if (response.status === 504 || response.status === 524) {
+        const errMsg = "⏱️ Timeout (504): O servidor demorou muito para responder. Tente novamente em alguns instantes ou use a resolução 1K/2K.";
         showToast(errMsg, "error");
+        onError?.(errMsg);
+        return;
+      }
+
+      if (response.status === 429) {
+        const errMsg = "⚠️ Limite de Cota por Minuto Atingido (Erro 429). A API do Google limita gerações rápidas. Por favor, aguarde de 30 a 60 segundos antes de gerar a próxima imagem!";
+        showToast(errMsg, "warning");
         onError?.(errMsg);
         return;
       }
@@ -200,19 +238,22 @@ export const useGenerateImage = (
         return;
       }
 
+      const imageUrl = data.image || data.imageUrl;
       const newImages: string[] = [];
-      if (data.image) {
-        newImages.push(data.image);
+      if (imageUrl) {
+        newImages.push(imageUrl);
       } else if (data.images && data.images.length > 0) {
         newImages.push(...data.images);
       }
 
       if (newImages.length > 0) {
+        recordImageGeneration(newImages.length);
         const isActive = store.addImagesToProjectGallery(targetProjectId, newImages);
+        const clusterInfo = data.modelUsed ? ` (${data.modelUsed.replace(/Service Account Vertex AI\s*/i, "").replace(/\(gerador[^\)]+\)/i, "").trim()})` : "";
         if (isActive) {
-          showToast("Imagem premium gerada com sucesso!", "success");
+          showToast(`Imagem ${is4K ? "4K Ultra HD" : "premium"} gerada com sucesso${clusterInfo}! ✅`, "success");
         } else {
-          showToast(`Imagem do '${targetProjectName}' foi gerada no plano de fundo!`, "success");
+          showToast(`Imagem do '${targetProjectName}' foi gerada no plano de fundo${clusterInfo}!`, "success");
         }
         onSuccess?.();
       } else {
@@ -220,7 +261,10 @@ export const useGenerateImage = (
       }
     } catch (err: any) {
       console.error(`Geração falhou para o projeto ${targetProjectName}:`, err);
-      const errMsg = err.message || "Falha de conexão com a API de geração.";
+      let errMsg = err.message || "Falha de conexão com a API de geração.";
+      if (err.name === "AbortError" || String(errMsg).toLowerCase().includes("aborted") || String(errMsg).toLowerCase().includes("signal")) {
+        errMsg = "⏱️ Conexão ou tempo limite de geração excedido. Clique em Gerar Novamente para reconectar automaticamente.";
+      }
       showToast(errMsg, "error");
       onError?.(errMsg);
     } finally {
@@ -234,3 +278,4 @@ export const useGenerateImage = (
     isGenerating: store.isGenerating
   };
 };
+

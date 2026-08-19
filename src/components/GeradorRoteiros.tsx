@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { checkAdminOrOpenPlan, getAuthHeaders } from "../utils/userAuth";
 import {
   Sparkles,
   Loader2,
@@ -38,6 +39,7 @@ import {
   Download,
   Archive
 } from "lucide-react";
+import { t } from "../utils/i18n";
 import { Client } from "../types";
 import { safeStorageSetItem } from "../utils/imageStorageManager";
 import { VoiceInputButton } from "./VoiceInputButton";
@@ -127,7 +129,7 @@ function PdfSheetPreview({ scriptText, clientName, target }: PdfSheetPreviewProp
                     : "bg-blue-500/10 text-blue-300 border-blue-500/30"
                 }`}
               >
-                {target === "CLIENTE" ? "📱 ROTEIRO DE VÍDEO" : "🎬 FILMMAKER & EDITOR"}
+                {target === "CLIENTE" ? "📱 ROTEIRO DE VÍDEO" : "🎬 GUIA DO EDITOR"}
               </span>
             </div>
             <h3 className="text-sm font-extrabold text-zinc-100 uppercase tracking-wide">
@@ -668,7 +670,7 @@ ${combinedPermanent}\n\n`;
   // Active session object
   const activeSession = sessions.find((s) => s.id === activeSessionId) || sessions[0] || {
     id: `sess-${activeClient.id}-${Date.now()}`,
-    title: "Nova Conversa",
+    title: "Nova conversa",
     pinned: false,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -1046,9 +1048,10 @@ ${clientContext}
 ROTEIRO ORIGINAL DE REFERÊNCIA (QUE DEVE SER DESCARTADO E SUBSTITUÍDO POR ESTE NOVO DO ZERO):
 ${targetScript.content}`;
 
+      if (!checkAdminOrOpenPlan()) return;
       const res = await fetch("/api/chat-agentes", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({
           assistantId: "gerador-roteiros",
           message: systemPrompt,
@@ -1138,9 +1141,10 @@ ${clientContext}
 ROTEIRO ORIGINAL DE REFERÊNCIA (QUE DEVE SER DESCARTADO E SUBSTITUÍDO POR ESTE NOVO DO ZERO):
 ${activeScript.content}`;
 
+      if (!checkAdminOrOpenPlan()) return;
       const res = await fetch("/api/chat-agentes", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({
           assistantId: "gerador-roteiros",
           message: systemPrompt,
@@ -1271,9 +1275,10 @@ ${activeScript.content}`;
           }))
         : [];
 
+      if (!checkAdminOrOpenPlan()) return;
       const res = await fetch("/api/chat-agentes", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({
           assistantId: "gerador-roteiros",
           message: textToSend + "\n\n" + clientContext,
@@ -1390,9 +1395,10 @@ ${activeScript.content}`;
         mimeType: img.mimeType || "image/jpeg"
       }));
 
+      if (!checkAdminOrOpenPlan()) return;
       const res = await fetch("/api/chat-agentes", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({
           assistantId: "gerador-roteiros",
           message: textToSend + "\n\n" + clientContext,
@@ -1900,7 +1906,8 @@ ${activeScript.content}`;
               className="bg-[#1e1f20] hover:bg-zinc-800 border border-zinc-700/50 text-zinc-200 text-xs font-medium rounded-full px-3 py-1.5 focus:outline-none transition-colors cursor-pointer"
             >
               <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro Preview</option>
-              
+              <option value="gemini-3.6-flash">Gemini 3.6</option>
+              <option value="gemini-3.5-pro">Gemini 3.5 Pro</option>
             </select>
 
             {/* New Conversation Icon */}
@@ -2216,7 +2223,7 @@ ${activeScript.content}`;
                                             title={`Melhorar o Roteiro ${scriptItem.index} no mesmo local sem criar nova resposta`}
                                           >
                                             <Sparkles size={12} />
-                                            <span>✨ Melhore este</span>
+                                            <span>✨ Melhore este Roteiro</span>
                                           </button>
                                         </div>
                                       </div>
@@ -2255,7 +2262,7 @@ ${activeScript.content}`;
                                             {[
                                               "🎯 Gancho inicial mais forte e chamativo",
                                               "⏱️ Encurtar para 30s (Reels dinâmico)",
-                                              "🎬 Enriquecer B-roll e Tabela do Editor",
+                                              "🎬 Enriquecer cenas de apoio e Tabela do Editor",
                                               "📱 CTA mais direta para Bio / WhatsApp",
                                               "🌶️ Linguagem mais viva e engajante"
                                             ].map((preset, pIdx) => (
@@ -2458,7 +2465,7 @@ ${activeScript.content}`;
                               {!isMulti && refiningScriptKey === `${msg.id}-1` && (
                                 <div className="w-full p-3 bg-[#c5a880]/40 border border-[#c5a880]/40 rounded-xl flex items-center justify-center gap-2.5 text-[#c5a880] text-xs font-bold animate-pulse">
                                   <Loader2 size={16} className="animate-spin text-[#c5a880]" />
-                                  <span>Aprimorando roteiro com IA no mesmo local...</span>
+                                  <span>Aprimorando Roteiro com IA no mesmo local...</span>
                                 </div>
                               )}
 
@@ -2488,7 +2495,7 @@ ${activeScript.content}`;
                                     {[
                                       "🎯 Gancho inicial mais forte e chamativo",
                                       "⏱️ Encurtar para 30s (Reels dinâmico)",
-                                      "🎬 Enriquecer B-roll e Tabela do Editor",
+                                      "🎬 Enriquecer cenas de apoio e Tabela do Editor",
                                       "📱 CTA mais direta para Bio / WhatsApp",
                                       "🌶️ Linguagem mais viva e engajante"
                                     ].map((preset, pIdx) => (
@@ -2981,7 +2988,7 @@ ${activeScript.content}`;
                             📄 Prévia do PDF (
                             {editingScriptModal.target === "CLIENTE"
                               ? "📱 Layout Cliente"
-                              : "🎬 Layout Editor & Filmmaker"}
+                              : "🎬 Layout do Editor"}
                             ):
                           </span>
                         </span>

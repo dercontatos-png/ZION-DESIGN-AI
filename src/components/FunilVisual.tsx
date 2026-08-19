@@ -210,7 +210,7 @@ export const FunilVisual: React.FC = () => {
       metric: "Volume de Entrada",
       desc: "Campanhas contínuas de Meta Ads e Google Ads direcionando proprietários de negócios diretamente para o seu Instagram Posicionado ou Landing Page de Vendas.",
       checklist: [
-        "Rodar campaigns de distribuição de conteúdo técnico de alto engajamento",
+        "Rodar campanhas de distribuição de conteúdo técnico de alto engajamento",
         "Criar anúncios focados em dores e gargalos de vendas comuns do nicho",
         "Utilizar criativos dinâmicos em formato de vídeo bastidor ou depoimento",
         "Direcionar o público morno para o Instagram Posicionado para criar relacionamento antes da abordagem"
@@ -657,7 +657,7 @@ export const FunilVisual: React.FC = () => {
               <span className="text-[10px] font-black text-[#c5a880] uppercase tracking-widest">O Fluxo do Funil</span>
             </div>
             <h5 className="text-xs font-bold text-zinc-100 uppercase">Conexão das Etapas</h5>
-            <div className="space-y-1 text-[11px] text-zinc-450 leading-relaxed">
+            <div className="space-y-1 text-[11px] text-zinc-400 leading-relaxed">
               <p>• <strong className="text-zinc-300">Topo (Atração):</strong> Tráfego orgânico/pago ou prospecção sniper direcionando leads para o seu Instagram.</p>
               <p>• <strong className="text-zinc-300">Meio (Qualificação):</strong> Perfil, Portfólio (Behance) e Site funcionam como filtros de autoridade.</p>
               <p>• <strong className="text-zinc-300">Fundo (Interação/Oferta):</strong> No WhatsApp, perguntas estratégicas extraem as dores antes de apresentar o preço.</p>
@@ -873,7 +873,7 @@ export const FunilVisual: React.FC = () => {
               <div className="text-[10px] text-zinc-300 font-extrabold text-center leading-tight">Pesca em Balde</div>
               <div className="w-14 h-14 rounded-full bg-[#e1306c] flex items-center justify-center text-white shadow-lg border border-white/5 relative">
                 <Instagram size={20} />
-                <div className="absolute -top-1 -right-1 bg-black border border-[#c5a880]/30 px-1 py-0.5 rounded-full text-[7px] font-black text-[#c5a880] uppercase">Active</div>
+                <div className="absolute -top-1 -right-1 bg-black border border-[#c5a880]/30 px-1 py-0.5 rounded-full text-[7px] font-black text-[#c5a880] uppercase">Ativo</div>
               </div>
             </motion.div>
 
@@ -928,8 +928,8 @@ export const FunilVisual: React.FC = () => {
                     Be
                   </div>
                   <div className="bg-black rounded-xs p-1 flex flex-col gap-0.5">
-                    <div className="h-1 bg-zinc-750 w-full rounded-xs"></div>
-                    <div className="h-1 bg-zinc-750 w-2/3 rounded-xs"></div>
+                    <div className="h-1 bg-zinc-700 w-full rounded-xs"></div>
+                    <div className="h-1 bg-zinc-700 w-2/3 rounded-xs"></div>
                   </div>
                   <div className="bg-black aspect-video rounded-xs"></div>
                   <div className="bg-black aspect-video rounded-xs"></div>
@@ -1005,7 +1005,7 @@ export const FunilVisual: React.FC = () => {
                 whileHover={{ scale: 1.02 }}
                 onClick={() => handleNodeClick("instagram_posicionado")}
                 className={`w-full bg-black rounded-xl border transition-all cursor-pointer p-3.5 shadow-2xl overflow-hidden relative flex-1 flex flex-col justify-between ${
-                  selectedNode === "instagram_posicionado" ? "border-[#c5a880] shadow-[#c5a880]/15" : "border-zinc-850 hover:border-zinc-800"
+                  selectedNode === "instagram_posicionado" ? "border-[#c5a880] shadow-[#c5a880]/15" : "border-zinc-800 hover:border-zinc-800"
                 }`}
               >
                 {/* Profile Info */}
@@ -1565,7 +1565,7 @@ export const FunilVisual: React.FC = () => {
                   onClick={() => handleNodeClick("cliente_insatisfeito")}
                   className="cursor-pointer flex flex-col items-center gap-1.5 transition-all text-center"
                 >
-                  <div className="text-[11px] font-extrabold text-zinc-300 uppercase tracking-widest">Cliente não satisfeito</div>
+                  <div className="text-[11px] font-extrabold text-zinc-300 uppercase tracking-widest">Cliente Não Satisfeito</div>
                   <div className={`w-14 h-14 bg-teal-800 rotate-45 flex items-center justify-center text-white shadow-xl relative rounded-md border-2 transition-all duration-200 ${
                     selectedNode === "cliente_insatisfeito" ? "border-[#c5a880] shadow-[#c5a880]/25" : "border-white/5 hover:border-white/20"
                   }`}>
@@ -1588,7 +1588,7 @@ export const FunilVisual: React.FC = () => {
                   onClick={() => handleNodeClick("bom_relacionamento")}
                   className="cursor-pointer flex flex-col items-center gap-1.5 transition-all text-center"
                 >
-                  <div className="text-[11px] font-extrabold text-zinc-300 uppercase tracking-widest">Bom relacionamento</div>
+                  <div className="text-[11px] font-extrabold text-zinc-300 uppercase tracking-widest">Bom Relacionamento</div>
                   <div className={`w-14 h-14 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-xl border-2 transition-all duration-200 ${
                     selectedNode === "bom_relacionamento" ? "border-[#c5a880] shadow-[#c5a880]/25" : "border-white/5 hover:border-white/20"
                   }`}>
@@ -1605,7 +1605,7 @@ export const FunilVisual: React.FC = () => {
                   onClick={() => handleNodeClick("boa_entrega")}
                   className="cursor-pointer flex flex-col items-center gap-1.5 transition-all text-center"
                 >
-                  <div className="text-[11px] font-extrabold text-zinc-300 uppercase tracking-widest">Boa entrega</div>
+                  <div className="text-[11px] font-extrabold text-zinc-300 uppercase tracking-widest">Boa Entrega</div>
                   <div className={`w-14 h-14 bg-black rounded-full flex items-center justify-center text-white shadow-xl border-2 transition-all duration-200 ${
                     selectedNode === "boa_entrega" ? "border-[#c5a880] shadow-[#c5a880]/25" : "border-white/5 hover:border-white/20"
                   }`}>
@@ -1641,7 +1641,7 @@ export const FunilVisual: React.FC = () => {
                   onClick={() => handleNodeClick("depoimento_loop")}
                   className="cursor-pointer flex flex-col items-center gap-1.5 transition-all text-center"
                 >
-                  <div className="text-[11px] font-extrabold text-zinc-300 uppercase tracking-widest">Depoimento</div>
+                  <div className="text-[11px] font-extrabold text-zinc-300 uppercase tracking-widest">Mecanismo de Depoimentos</div>
                   <div className={`w-14 h-14 bg-red-600 rotate-45 flex items-center justify-center text-white shadow-xl relative rounded-md border-2 transition-all duration-200 ${
                     selectedNode === "depoimento_loop" ? "border-[#c5a880] shadow-[#c5a880]/25" : "border-white/5 hover:border-white/20"
                   }`}>
@@ -1666,7 +1666,7 @@ export const FunilVisual: React.FC = () => {
                       onClick={() => handleNodeClick("pesca_balde")}
                       className="cursor-pointer flex flex-col items-center gap-1 transition-all text-center"
                     >
-                      <div className="text-[10px] font-extrabold text-zinc-300 uppercase tracking-widest">Pesca Balde</div>
+                      <div className="text-[10px] font-extrabold text-zinc-300 uppercase tracking-widest">Pesca em Balde</div>
                       <div className={`w-14 h-14 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-lg border-2 transition-all duration-200 ${
                         selectedNode === "pesca_balde" ? "border-[#c5a880] shadow-[#c5a880]/25" : "border-white/5 hover:border-white/20"
                       }`}>
@@ -1682,7 +1682,7 @@ export const FunilVisual: React.FC = () => {
                       onClick={() => handleNodeClick("conteudo")}
                       className="cursor-pointer flex flex-col items-center gap-1 transition-all text-center"
                     >
-                      <div className="text-[10px] font-extrabold text-zinc-300 uppercase tracking-widest">Conteúdo</div>
+                      <div className="text-[10px] font-extrabold text-zinc-300 uppercase tracking-widest">Conteúdo N3</div>
                       <div className={`w-14 h-14 bg-red-600 rounded-full flex items-center justify-center text-white shadow-lg border-2 transition-all duration-200 ${
                         selectedNode === "conteudo" ? "border-[#c5a880] shadow-[#c5a880]/25" : "border-white/5 hover:border-white/20"
                       }`}>
@@ -1774,7 +1774,7 @@ export const FunilVisual: React.FC = () => {
                   whileHover={{ scale: 1.02 }}
                   onClick={() => handleNodeClick("instagram_posicionado")}
                   className={`w-full bg-black rounded-xl border transition-all cursor-pointer p-3.5 shadow-2xl overflow-hidden relative flex-1 flex flex-col justify-between ${
-                    selectedNode === "instagram_posicionado" ? "border-[#c5a880] shadow-[#c5a880]/15" : "border-zinc-850 hover:border-zinc-800"
+                    selectedNode === "instagram_posicionado" ? "border-[#c5a880] shadow-[#c5a880]/15" : "border-zinc-800 hover:border-zinc-800"
                   }`}
                 >
                   {/* Profile Info */}
@@ -1818,24 +1818,24 @@ export const FunilVisual: React.FC = () => {
 
               {/* Looping Node */}
               <div className="absolute flex flex-col items-center gap-1.5" style={{ left: "450px", top: "1050px", width: "100px" }}>
-                <div className="text-[12px] text-zinc-300 font-extrabold text-center leading-tight">Looping</div>
+                <div className="text-[12px] text-zinc-300 font-extrabold text-center leading-tight">Loop</div>
                 <div className="w-14 h-14 rounded-full bg-black border-2 border-zinc-700 flex items-center justify-center text-white shadow-xl hover:border-white transition-colors cursor-pointer">
                   <Aperture size={28} className="text-white" />
                 </div>
-                <div className="text-[9px] text-zinc-400 text-center leading-tight">Analisa, Ajusta, melhora e repete</div>
+                <div className="text-[9px] text-zinc-400 text-center leading-tight">Analisa, ajusta, melhora e repete</div>
               </div>
 
               {/* Yellow Text Box from the Image */}
               <div className="absolute" style={{ left: "680px", top: "800px", width: "300px" }}>
                 <div className="bg-[#fce9a6] rounded-md p-4 text-[#1a1a1a] shadow-lg border border-[#e6cc68]">
                   <p className="text-[10px] font-bold mb-3">
-                    A partir de agora prospecção e tráfego é A MAIS, e não prioridade.
+                    A partir de agora, prospecção e tráfego são o a mais, e não a prioridade.
                   </p>
                   <p className="text-[10px] leading-relaxed mb-3">
-                    Cada novo cliente atendido trás novos clientes com ele. Lotando agenda você aumenta o preço, escolhe com quem quer trabalhar e finalmente passa a ter previsibilidade e crescimento sólido.
+                    Cada novo cliente atendido traz novos clientes com ele. Lotando agenda você aumenta o preço, escolhe com quem quer trabalhar e finalmente passa a ter previsibilidade e crescimento sólido.
                   </p>
                   <p className="text-[10px] leading-relaxed mb-4">
-                    O cliente fecha, volta, indica, trás tráfego, você tem portfólio, novo post, que melhora seu posicionamento e atrai ainda mais interessados... que viram clientes... e o céu é o limite.
+                    O cliente fecha, volta, indica, traz tráfego, você tem portfólio, novo post, que melhora seu posicionamento e atrai ainda mais interessados... que viram clientes... e o céu é o limite.
                   </p>
                   <div className="text-[8px] font-bold opacity-60 text-right uppercase">
                     Agência Ar3

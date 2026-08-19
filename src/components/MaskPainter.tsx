@@ -101,11 +101,31 @@ export const MaskPainter: React.FC<MaskPainterProps> = ({ imageUrl, onConfirm, o
       clientY = e.clientY;
     }
 
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
+    let renderWidth = rect.width;
+    let renderHeight = rect.height;
+    let renderLeft = rect.left;
+    let renderTop = rect.top;
+
+    if (imageSize.width && imageSize.height) {
+      const imgRatio = imageSize.width / imageSize.height;
+      const containerRatio = rect.width / rect.height;
+
+      if (containerRatio > imgRatio) {
+        // Pillarboxed (empty space on left and right)
+        renderWidth = rect.height * imgRatio;
+        renderLeft = rect.left + (rect.width - renderWidth) / 2;
+      } else if (containerRatio < imgRatio) {
+        // Letterboxed (empty space on top and bottom)
+        renderHeight = rect.width / imgRatio;
+        renderTop = rect.top + (rect.height - renderHeight) / 2;
+      }
+    }
+
+    const scaleX = canvas.width / renderWidth;
+    const scaleY = canvas.height / renderHeight;
     
-    const x = (clientX - rect.left) * scaleX;
-    const y = (clientY - rect.top) * scaleY;
+    const x = (clientX - renderLeft) * scaleX;
+    const y = (clientY - renderTop) * scaleY;
 
     ctx.lineWidth = brushSize;
 

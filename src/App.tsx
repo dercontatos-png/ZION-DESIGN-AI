@@ -8,12 +8,14 @@ import { supabase } from "./supabase";
 import { handleFirestoreError, OperationType } from "./lib/firebase-utils";
 import { motion, AnimatePresence } from "motion/react";
 import ReactMarkdown from "react-markdown";
+import { checkAdminOrOpenPlan, getAuthHeaders, openPlanModal } from "./utils/userAuth";
 import {
   LayoutDashboard,
   CheckSquare,
   Sparkles, Zap,
   Users,
   User,
+  ChevronUp,
   Settings,
   Search,
   Bell,
@@ -60,14 +62,22 @@ import {
   Globe,
   Bot,
   Tv, Music, Film, Video,
+  ChevronDown,
+  Mail,
+  CreditCard,
 } from "lucide-react";
 import { GoogleGenAI, Type } from "@google/genai";
 import SettingsModal from "./components/SettingsModal";
+import { CreditsModal } from "./components/CreditsModal";
+import { getUsageStats } from "./utils/apiUsageManager";
 import { GeradorRoteiros } from "./components/GeradorRoteiros";
 import { ClientPortal } from "./components/ClientPortal";
 import { VoiceInputButton } from "./components/VoiceInputButton";
 import WhatsAppTab from "./components/WhatsAppTab";
 import { useImageStore } from "./store/useImageStore";
+import { useProjectStore } from "./store/useProjectStore";
+import { useClientStore } from "./store/useClientStore";
+import { get as idbGet, set as idbSet, del as idbDel } from "idb-keyval";
 import { InpaintCanvas } from "./components/InpaintCanvas";
 import DesignBuilder from "./components/DesignBuilder";
 import { GeradorGcTv } from "./components/GeradorGcTv";
@@ -75,6 +85,7 @@ import Agentes from "./components/Agentes";
 import { CopilotoAgencia } from "./components/CopilotoAgencia";
 import AudioStudio from "./components/AudioStudio";
 import GeradorOmniFlash from "./components/GeradorOmniFlash";
+import VideoAnalysis from "./components/VideoAnalysis";
 import { safeStorageSetItem, getStorageStats, cleanImageStorage } from "./utils/imageStorageManager";
 
 
@@ -170,19 +181,19 @@ Consigo analisar a saúde financeira dos seus **${clients.length} clientes**, su
 
   const quickPrompts = [
     {
-      label: "ðŸ’¡ Ideias de Post",
+      label: "💡 Ideias de Post",
       text: "Me dê 5 ideias criativas e persuasivas de posts para o Instagram focados em atração orgânica.",
     },
     {
-      label: "ðŸŽ¬ Roteiro de Reels",
+      label: "🎬 Roteiro de Reels",
       text: "Crie um roteiro de Reels dinâmico de 30 segundos, incluindo gancho, conteúdo e chamada para ação (CTA).",
     },
     {
-      label: "ðŸ“ˆ Estratégia de Ads",
+      label: "📈 Estratégia de Ads",
       text: "Qual estrutura de campanha você recomenda para impulsionar um negócio local com orçamento baixo?",
     },
     {
-      label: "âœï¸ Copy de Vendas",
+      label: "✍️ Copy de Vendas",
       text: "Escreva uma legenda de Instagram com copy persuasiva e hashtags para venda de serviços digitais.",
     },
   ];
@@ -277,6 +288,9 @@ Consigo analisar a saúde financeira dos seus **${clients.length} clientes**, su
               .join("\n")
           : "Nenhum cliente cadastrado no momento.";
 
+      const activeKey = getActiveApiKey();
+      if (!checkAdminOrOpenPlan(activeKey)) return;
+
       const fullPrompt = `Você é o assistente inteligente pessoal da agência digital "Zion Company", focado no sucesso de mídias sociais, tráfego pago e branding.
 Sua personalidade é extremamente profissional, criativa, amigável e focada em resultados práticos.
 
@@ -290,7 +304,7 @@ Pergunta ou comando do usuário:
 
       const res = await fetch("/api/chat-agentes", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders(activeKey) },
         body: JSON.stringify({
           assistantId: "creative-assistant",
           message: fullPrompt,
@@ -409,7 +423,7 @@ Pergunta ou comando do usuário:
           <div className="text-sm text-zinc-300 space-y-6 p-1">
             <div className="bg-black p-4 border border-white/5 rounded-xl">
               <p className="text-xs font-bold text-white mb-2 flex items-center gap-1">
-                ðŸ“¸ Extrair Prompt de Imagem
+                📸 Extrair Prompt de Imagem
               </p>
               <p className="text-[11px] text-zinc-500 mb-3">
                 Envie uma imagem de referência de social media e o assistente
@@ -450,7 +464,7 @@ Pergunta ou comando do usuário:
 
             <div className="bg-black p-4 border border-white/5 rounded-xl">
               <p className="text-xs font-bold text-white mb-2 flex items-center gap-1">
-                ðŸŽ¨ Extrair Estilo Tipográfico
+                🎨 Extrair Estilo Tipográfico
               </p>
               <p className="text-[11px] text-zinc-500 mb-3">
                 Gostou das letras de um post? Envie a imagem e descubra fontes,
@@ -717,9 +731,622 @@ const PRESET_AVATARS = [
   "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&q=80", // Tech Entrepreneur
 ];
 
+const DEFAULT_DEMO_CLIENTS: Client[] = [
+  {
+    id: 1,
+    name: "Dr. Silva (Odonto)",
+    niche: "Odontologia",
+    status: "Ativo",
+    contact: "(11) 99999-9999",
+    plan: "Premium (R$ 1.500/mês)",
+    planValue: 1500,
+    dueDate: "2026-06-10",
+    paymentStatus: "Em dia",
+    startDate: "2026-01-10",
+    notes: "Contato prioritário por WhatsApp. Foco em campanhas de implante.",
+  },
+  {
+    id: 2,
+    name: "Estética Beauty",
+    niche: "Beleza & Estética",
+    status: "Ativo",
+    contact: "(11) 88888-8888",
+    plan: "Basic (R$ 1.200/mês)",
+    planValue: 1200,
+    dueDate: "2026-06-15",
+    paymentStatus: "Em dia",
+    startDate: "2026-02-15",
+    notes: "Gosta de conteúdos dinâmicos e fotos de antes/depois da clínica.",
+  },
+  {
+    id: 3,
+    name: "Tech Solutions",
+    niche: "Tecnologia B2B",
+    status: "Prospecção",
+    contact: "contato@tech.com",
+    plan: "Custom (R$ 3.000/mês)",
+    planValue: 3000,
+    dueDate: "2026-06-05",
+    paymentStatus: "Pendente",
+    startDate: "2026-06-01",
+    notes: "Aguardando aprovação formal do contrato de tráfego de leads.",
+  },
+  {
+    id: 4,
+    name: "Sispumumc",
+    niche: "Sindicato dos Servidores Públicos",
+    status: "Ativo",
+    contact: "(74) 9.9807-3287",
+    plan: "Presença Local (R$ 829/mês)",
+    planDetails:
+      "2 Posts Estratégicos por semana (8/mês)\n1 Vídeo Reels Dinâmico por semana (4/mês)\nGestão de Legendas e Agendamento\nTráfego Local Incluso (R$ 150 de verba)\nRelatório Mensal de Alcance",
+    planValue: 829,
+    dueDate: "2026-06-20",
+    paymentStatus: "Em dia",
+    startDate: "2026-03-20",
+    notes: "Publicar sempre em tom institucional e informativo.",
+  },
+];
+
+const DEFAULT_DEMO_TASKS: Task[] = [
+  {
+    id: 1,
+    title: "Criar roteiro de Reels",
+    status: "todo",
+    client: "Dr. Silva (Odonto)",
+    hasDeadline: true,
+    dueDate: "2026-06-24",
+  },
+  {
+    id: 2,
+    title: "Configurar campanha Meta Ads",
+    status: "doing",
+    client: "Estética Beauty",
+    hasDeadline: true,
+    dueDate: "2026-06-30",
+  },
+  {
+    id: 3,
+    title: "Aprovar identidade visual",
+    status: "done",
+    client: "Tech Solutions",
+    hasDeadline: false,
+  },
+];
+
+const DEFAULT_DEMO_TRANSACTIONS: Transaction[] = [
+  {
+    id: 1,
+    description: "Mensalidade Dr. Silva (Odonto)",
+    type: "receita",
+    amount: 1500,
+    date: "2026-01-10",
+    category: "Contratos",
+    status: "pago",
+    client: "Dr. Silva (Odonto)",
+  },
+  {
+    id: 9999,
+    description: "Edição de Vídeo (Felipe Maker)",
+    type: "despesa",
+    amount: 250,
+    date: "2026-07-25",
+    category: "Freelancers",
+    status: "pendente",
+    client: "Tech Solutions",
+  },
+  {
+    id: 2,
+    description: "Assinatura Canva Pro",
+    type: "despesa",
+    amount: 35,
+    date: "2026-01-01",
+    category: "Ferramentas",
+    status: "pago",
+  },
+  {
+    id: 3,
+    description: "Mensalidade Dr. Silva (Odonto)",
+    type: "receita",
+    amount: 1500,
+    date: "2026-02-10",
+    category: "Contratos",
+    status: "pago",
+    client: "Dr. Silva (Odonto)",
+  },
+  {
+    id: 4,
+    description: "Mensalidade Estética Beauty",
+    type: "receita",
+    amount: 1200,
+    date: "2026-02-15",
+    category: "Contratos",
+    status: "pago",
+    client: "Estética Beauty",
+  },
+  {
+    id: 5,
+    description: "Assinatura Canva Pro",
+    type: "despesa",
+    amount: 35,
+    date: "2026-02-01",
+    category: "Ferramentas",
+    status: "pago",
+  },
+  {
+    id: 6,
+    description: "Freelancer Copywriting",
+    type: "despesa",
+    amount: 250,
+    date: "2026-02-18",
+    category: "Freelancers",
+    status: "pago",
+  },
+  {
+    id: 7,
+    description: "Mensalidade Dr. Silva (Odonto)",
+    type: "receita",
+    amount: 1500,
+    date: "2026-03-10",
+    category: "Contratos",
+    status: "pago",
+    client: "Dr. Silva (Odonto)",
+  },
+  {
+    id: 8,
+    description: "Mensalidade Estética Beauty",
+    type: "receita",
+    amount: 1200,
+    date: "2026-03-15",
+    category: "Contratos",
+    status: "pago",
+    client: "Estética Beauty",
+  },
+  {
+    id: 9,
+    description: "Mensalidade Sispumumc",
+    type: "receita",
+    amount: 829,
+    date: "2026-03-20",
+    category: "Contratos",
+    status: "pago",
+    client: "Sispumumc",
+  },
+  {
+    id: 10,
+    description: "Assinatura Canva Pro",
+    type: "despesa",
+    amount: 35,
+    date: "2026-03-01",
+    category: "Ferramentas",
+    status: "pago",
+  },
+  {
+    id: 11,
+    description: "Campanha Tráfego Local",
+    type: "despesa",
+    amount: 150,
+    date: "2026-03-10",
+    category: "Tráfego Ads",
+    status: "pago",
+  },
+  {
+    id: 12,
+    description: "Mensalidade Dr. Silva (Odonto)",
+    type: "receita",
+    amount: 1500,
+    date: "2026-04-10",
+    category: "Contratos",
+    status: "pago",
+    client: "Dr. Silva (Odonto)",
+  },
+  {
+    id: 13,
+    description: "Mensalidade Estética Beauty",
+    type: "receita",
+    amount: 1200,
+    date: "2026-04-15",
+    category: "Contratos",
+    status: "pago",
+    client: "Estética Beauty",
+  },
+  {
+    id: 14,
+    description: "Mensalidade Sispumumc",
+    type: "receita",
+    amount: 829,
+    date: "2026-04-20",
+    category: "Contratos",
+    status: "pago",
+    client: "Sispumumc",
+  },
+  {
+    id: 15,
+    description: "Assinatura Canva Pro",
+    type: "despesa",
+    amount: 35,
+    date: "2026-04-01",
+    category: "Ferramentas",
+    status: "pago",
+  },
+  {
+    id: 16,
+    description: "Assinatura Midjourney Studio",
+    type: "despesa",
+    amount: 150,
+    date: "2026-04-05",
+    category: "Ferramentas",
+    status: "pago",
+  },
+  {
+    id: 17,
+    description: "Anúncios Google Ads",
+    type: "despesa",
+    amount: 300,
+    date: "2026-04-12",
+    category: "Tráfego Ads",
+    status: "pago",
+  },
+  {
+    id: 18,
+    description: "Mensalidade Dr. Silva (Odonto)",
+    type: "receita",
+    amount: 1500,
+    date: "2026-05-10",
+    category: "Contratos",
+    status: "pago",
+    client: "Dr. Silva (Odonto)",
+  },
+  {
+    id: 19,
+    description: "Mensalidade Estética Beauty",
+    type: "receita",
+    amount: 1200,
+    date: "2026-05-15",
+    category: "Contratos",
+    status: "pago",
+    client: "Estética Beauty",
+  },
+  {
+    id: 20,
+    description: "Mensalidade Sispumumc",
+    type: "receita",
+    amount: 829,
+    date: "2026-05-20",
+    category: "Contratos",
+    status: "pago",
+    client: "Sispumumc",
+  },
+  {
+    id: 21,
+    description: "Assinatura Canva Pro",
+    type: "despesa",
+    amount: 35,
+    date: "2026-05-01",
+    category: "Ferramentas",
+    status: "pago",
+  },
+  {
+    id: 22,
+    description: "Assinatura Midjourney Studio",
+    type: "despesa",
+    amount: 150,
+    date: "2026-05-05",
+    category: "Ferramentas",
+    status: "pago",
+  },
+  {
+    id: 23,
+    description: "Campanha de Tráfego - Sispumumc",
+    type: "despesa",
+    amount: 150,
+    date: "2026-05-10",
+    category: "Tráfego Ads",
+    status: "pago",
+    client: "Sispumumc",
+  },
+  {
+    id: 24,
+    description: "Freelancer Designer Motion",
+    type: "despesa",
+    amount: 500,
+    date: "2026-05-18",
+    category: "Freelancers",
+    status: "pago",
+  },
+  {
+    id: 25,
+    description: "Mensalidade Dr. Silva (Odonto)",
+    type: "receita",
+    amount: 1500,
+    date: "2026-06-10",
+    category: "Contratos",
+    status: "pago",
+    client: "Dr. Silva (Odonto)",
+  },
+  {
+    id: 26,
+    description: "Mensalidade Estética Beauty",
+    type: "receita",
+    amount: 1200,
+    date: "2026-06-15",
+    category: "Contratos",
+    status: "pago",
+    client: "Estética Beauty",
+  },
+  {
+    id: 27,
+    description: "Assinatura Canva Pro",
+    type: "despesa",
+    amount: 35,
+    date: "2026-06-01",
+    category: "Ferramentas",
+    status: "pago",
+  },
+  {
+    id: 28,
+    description: "Assinatura Midjourney Studio",
+    type: "despesa",
+    amount: 150,
+    date: "2026-06-05",
+    category: "Ferramentas",
+    status: "pago",
+  },
+  {
+    id: 29,
+    description: "Campanha de Tráfego - Sispumumc",
+    type: "despesa",
+    amount: 150,
+    date: "2026-06-10",
+    category: "Tráfego Ads",
+    status: "pago",
+    client: "Sispumumc",
+  },
+  {
+    id: 30,
+    description: "Freelancer Design Gráfico",
+    type: "despesa",
+    amount: 450,
+    date: "2026-06-18",
+    category: "Freelancers",
+    status: "pago",
+  },
+  {
+    id: 31,
+    description: "Mensalidade Sispumumc",
+    type: "receita",
+    amount: 829,
+    date: "2026-06-20",
+    category: "Contratos",
+    status: "pago",
+    client: "Sispumumc",
+  },
+];
+
+import { AuthModal } from "./components/AuthModal";
+import { ProfileCompletePopup } from "./components/ProfileCompletePopup";
+
 export default function App() {
+  const [currentUser, setCurrentUser] = useState<{ email: string; role: "admin" | "client" } | null>(() => {
+    try {
+      const saved = localStorage.getItem("zion_auth_user");
+      if (!saved) return null;
+      const parsed = JSON.parse(saved) as { email?: string; role?: string };
+      const email = (parsed?.email || "").toLowerCase();
+      if (!email) return null;
+      // O papel NUNCA é confiado do localStorage: é derivado do email
+      return { email, role: email === "der.contatos@gmail.com" ? "admin" : "client" };
+    } catch (e) {
+      return null;
+    }
+  });
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isPasswordResetMode, setIsPasswordResetMode] = useState(false);
+  // Popup "Complete seu cadastro": abre assim que o cliente loga (1x por sessão)
+  const [isProfileCompleteOpen, setIsProfileCompleteOpen] = useState(false);
+  const dismissProfileCompletePopup = () => {
+    try {
+      sessionStorage.setItem("zion_profile_popup_done", "1");
+    } catch (e) {}
+    setIsProfileCompleteOpen(false);
+  };
+  React.useEffect(() => {
+    if (currentUser?.role !== "client") return;
+    try {
+      if (sessionStorage.getItem("zion_profile_popup_done")) return;
+    } catch (e) {}
+    const timer = setTimeout(() => setIsProfileCompleteOpen(true), 1200);
+    return () => clearTimeout(timer);
+  }, [currentUser]);
+  // Chave de sincronização na nuvem: SEMPRE o id do usuário logado no Supabase.
+  // NUNCA o workspace key — antes todas as contas usavam "ZION-MASTER" e
+  // enxergavam/sobrescreviam os MESMOS dados (vazamento entre contas).
+  const [syncUserId, setSyncUserId] = useState<string | null>(null);
+  const isAdmin = currentUser?.role === "admin";
+  const isAdminRef = React.useRef(false);
+  React.useEffect(() => {
+    isAdminRef.current = currentUser?.role === "admin";
+  }, [currentUser]);
+
   const [activeTab, setActiveTab] = useState("ai-tools");
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  React.useEffect(() => {
+    if (currentUser?.role === "client" && activeTab !== "ai-tools" && activeTab !== "gallery" && activeTab !== "profile") {
+      setActiveTab("ai-tools");
+    }
+  }, [currentUser, activeTab]);
+
+  // Listen for Supabase OAuth redirect logins (Google Login)
+  React.useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      // Se chegou pelo link de "redefinir senha", não loga — abre a tela de nova senha
+      const isRecovery = typeof window !== "undefined" && window.location.hash.includes("type=recovery");
+      if (session?.user && !isRecovery) {
+        const userEmail = session.user.email?.toLowerCase() || "";
+        const role: "admin" | "client" = userEmail === "der.contatos@gmail.com" ? "admin" : "client";
+        const userPayload = { email: userEmail, role };
+        setCurrentUser(userPayload);
+        setSyncUserId(session.user.id);
+        switchUserLocalStores(userEmail);
+        localStorage.setItem("zion_auth_user", JSON.stringify(userPayload));
+      } 
+      setIsAuthChecking(false);
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      // Link de recuperação de senha: mostra a tela de definir nova senha
+      if (event === "PASSWORD_RECOVERY") {
+        setIsPasswordResetMode(true);
+        setCurrentUser(null);
+        setIsAuthModalOpen(true);
+        return;
+      }
+      if (session?.user) {
+        const userEmail = session.user.email?.toLowerCase() || "";
+        const role: "admin" | "client" = userEmail === "der.contatos@gmail.com" ? "admin" : "client";
+        const userPayload = { email: userEmail, role };
+
+        setCurrentUser(userPayload);
+        setSyncUserId(session.user.id);
+        switchUserLocalStores(userEmail);
+        localStorage.setItem("zion_auth_user", JSON.stringify(userPayload));
+
+        if (role === "client") setActiveTab("ai-tools");
+
+        // Sync Google user profile to Supabase Database users table
+        // IMPORTANTE: faz MERGE com o registro existente para NUNCA apagar os
+        // dados de app (clients, tasks, etc.) do usuário.
+        try {
+          const { data: existing } = await supabase
+            .from("users")
+            .select("data")
+            .eq("id", session.user.id)
+            .maybeSingle();
+          const prevData =
+            existing?.data && typeof existing.data === "object" && !Array.isArray(existing.data)
+              ? (existing.data as Record<string, unknown>)
+              : {};
+          await supabase.from("users").upsert({
+            id: session.user.id,
+            email: userEmail,
+            role,
+            data: {
+              ...prevData,
+              full_name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || userEmail,
+              avatar_url: session.user.user_metadata?.avatar_url || "",
+              provider: session.user.app_metadata?.provider || "google",
+              role
+            },
+            updated_at: new Date().toISOString()
+          });
+        } catch (e) {}
+      }
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
+  const CLOUD_SYNCED_CACHE_KEYS = [
+    "zion_clients", "zion_tasks", "zion_transactions", "zion_calendar_events",
+    "zion_notifications", "zion_whatsapp_logs", "zion_saved_notes",
+    "zion_my_profile", "zion_transaction_categories", "chatMessages",
+    "logoRefs", "savedCards", "zion_selected_portal_client_id",
+  ];
+  // Dados locais que NÃO vão para a nuvem (projetos do builder, galeria de
+  // imagens e clientes do banco de IA). Guardados POR CONTA, para que cada
+  // usuário tenha somente os próprios dados no mesmo navegador.
+  const LOCAL_PER_USER_KEYS = ["design_projects", "zion_project_list_v5", "zion-client-storage"];
+
+  const clearUserLocalCache = () => {
+    CLOUD_SYNCED_CACHE_KEYS.forEach((k) => localStorage.removeItem(k));
+    LOCAL_PER_USER_KEYS.forEach((k) => localStorage.removeItem(k));
+    try {
+      idbDel("zion_project_list_v5");
+    } catch (e) {}
+    try {
+      useImageStore.setState({ projects: [], activeProjectId: null, generatedImages: [] });
+    } catch (e) {}
+    try {
+      useClientStore.setState({ clients: [], activeClientId: null });
+    } catch (e) {}
+    try {
+      useProjectStore.setState((s) => ({ ...s, projectsList: [], activeProjectId: null, galeriaImages: [] }));
+    } catch (e) {}
+  };
+
+  const backupUserLocalStores = async (email: string) => {
+    try {
+      LOCAL_PER_USER_KEYS.forEach((k) => {
+        if (k === "zion_project_list_v5") return;
+        const v = localStorage.getItem(k);
+        if (v) localStorage.setItem(`${k}_${email}`, v);
+      });
+      // A lista de projetos do builder fica no IndexedDB (não no localStorage)
+      const projectList = await idbGet("zion_project_list_v5");
+      if (projectList && Array.isArray(projectList) && projectList.length > 0) {
+        localStorage.setItem(`zion_project_list_v5_${email}`, JSON.stringify(projectList));
+      } else {
+        const legacy = localStorage.getItem("zion_project_list_v5");
+        if (legacy) localStorage.setItem(`zion_project_list_v5_${email}`, legacy);
+      }
+    } catch (e) {}
+  };
+
+  // Troca de conta: salva os dados locais do dono anterior, carrega (ou inicia
+  // vazio) os do novo usuário e re-hidrata os stores na memória.
+  const switchUserLocalStores = async (email: string) => {
+    const prevOwner = localStorage.getItem("zion_local_owner");
+    if (prevOwner === email) return;
+    if (prevOwner) await backupUserLocalStores(prevOwner);
+    if (prevOwner) {
+      LOCAL_PER_USER_KEYS.forEach((k) => {
+        if (k === "zion_project_list_v5") return;
+        const perUser = localStorage.getItem(`${k}_${email}`);
+        if (perUser != null) localStorage.setItem(k, perUser);
+        else localStorage.removeItem(k);
+      });
+      try {
+        const perUserList = localStorage.getItem(`zion_project_list_v5_${email}`);
+        if (perUserList) await idbSet("zion_project_list_v5", JSON.parse(perUserList));
+        else await idbDel("zion_project_list_v5");
+      } catch (e) {}
+    }
+    // Primeira vez (sem dono anterior): mantém o que já existia no navegador
+    localStorage.setItem("zion_local_owner", email);
+    try {
+      const dp = JSON.parse(localStorage.getItem("design_projects") || "[]");
+      if (Array.isArray(dp)) {
+        useImageStore.setState({ projects: dp, activeProjectId: dp[0]?.id ?? null });
+      }
+    } catch (e) {}
+    try {
+      const cs = JSON.parse(localStorage.getItem("zion-client-storage") || "{}");
+      if (cs?.state?.clients) {
+        useClientStore.setState({ clients: cs.state.clients, activeClientId: cs.state.activeClientId ?? null });
+      }
+    } catch (e) {}
+    try {
+      useProjectStore.getState().initProjectsList();
+    } catch (e) {}
+  };
+
+  const handleSignOut = async () => {
+    if (currentUser?.email) await backupUserLocalStores(currentUser.email);
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.warn("SignOut warning:", err);
+    }
+    localStorage.removeItem("zion_auth_user");
+    clearUserLocalCache();
+    setSyncUserId(null);
+    setCurrentUser(null);
+    setIsAuthModalOpen(true);
+  };
   const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true);
   const [hoveredPointIndex, setHoveredPointIndex] = useState<number | null>(
     null,
@@ -763,6 +1390,16 @@ export default function App() {
         }, 300);
       } else {
         safeStorageSetItem("custom_key_cleared_for_vertex_v2", "true");
+      }
+      // Migration v3: Mark done - Supabase is the source of truth, localStorage is just cache
+      const demoClearedV3 = localStorage.getItem("zion_demo_cleared_v3");
+      if (!demoClearedV3) {
+        // Just clear localStorage so Supabase data takes full priority on next load
+        localStorage.removeItem("zion_clients");
+        localStorage.removeItem("zion_tasks");
+        localStorage.removeItem("zion_transactions");
+        console.log("Migration v3: localStorage cleared. Supabase will be the source of truth.");
+        safeStorageSetItem("zion_demo_cleared_v3", "true");
       }
     } catch (e) {
       console.error("Migration error:", e);
@@ -832,7 +1469,9 @@ export default function App() {
   const [isGcalSyncing, setIsGcalSyncing] = useState(false);
   const [googleToken, setGoogleToken] = useState<string | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
-  const activeSyncKey = workspaceKey;
+  // Dados na nuvem SEMPRE por usuário logado (id Supabase). O workspace key
+  // continua existindo apenas para a URL/compartilhamento, sem afetar dados.
+  const activeSyncKey = syncUserId;
 
   // AI Assistant State (Text)
   // TODO: Refactor UI to use TabbedContent component
@@ -864,6 +1503,7 @@ export default function App() {
     generateImage,
     applyInpainting
   } = useImageStore();
+  const projectStore = useProjectStore();
 
   const handleFileUpload = (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -906,6 +1546,129 @@ export default function App() {
   };
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isCreditsModalOpen, setIsCreditsModalOpen] = useState(false);
+
+  useEffect(() => {
+    const handleOpenCredits = () => setIsCreditsModalOpen(true);
+    window.addEventListener("open-credits-modal", handleOpenCredits);
+    return () => window.removeEventListener("open-credits-modal", handleOpenCredits);
+  }, []);
+
+  // i18n Language & Menu States (Português, Inglês, Espanhol)
+  const [currentLang, setCurrentLang] = useState<"pt" | "en" | "es">(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("app_language");
+      if (saved === "en" || saved === "es" || saved === "pt") return saved;
+    }
+    return "pt";
+  });
+  const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+
+  const setLanguage = (lang: "pt" | "en" | "es") => {
+    setCurrentLang(lang);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("app_language", lang);
+    }
+    setIsLangMenuOpen(false);
+  };
+
+  // Translation Helper Dictionary
+  const t = (key: string): string => {
+    const dict: Record<"pt" | "en" | "es", Record<string, string>> = {
+      pt: {
+        inicio: "Início",
+        copiloto: "Copiloto da Agência",
+        assistentes: "Assistentes Virtuais",
+        roteiros: "Gerador de Roteiros",
+        fotos: "Gerador de Fotos",
+        gcs: "Gerador de GCs",
+        audio: "Áudio & Efeitos",
+        omni: "Gerador Omni Flash",
+        videoAnalise: "Análise de Vídeo",
+        galeria: "Galeria de Fotos",
+        organizacao: "Organização do Negócio",
+        financeiro: "Gestão Financeira",
+        clientes: "Meus Clientes",
+        tarefas: "Lista de Tarefas",
+        agenda: "Minha Agenda",
+        whatsapp: "WhatsApp",
+        anotacoes: "Anotações",
+        bonus_recebido: "BÔNUS RECEBIDO",
+        iniciante: "Iniciante",
+        tokens_vencem: "tokens vencem em 20 de ago de 2026.",
+        assinar_plano: "Assinar Plano",
+        portugues: "Português",
+        ingles: "Inglês (English)",
+        espanhol: "Espanhol (Español)",
+        ver_perfil: "Ver Perfil",
+        sair_conta: "Sair da Conta",
+        fazer_login: "Fazer Login",
+        trabalho: "PAINEL DE TRABALHO",
+      },
+      en: {
+        inicio: "Home",
+        copiloto: "Agency Copilot",
+        assistentes: "Virtual Assistants",
+        roteiros: "Script Generator",
+        fotos: "Photo Generator",
+        gcs: "Lower Thirds (GCs)",
+        audio: "Audio & Effects",
+        omni: "Omni Flash Generator",
+        videoAnalise: "Video Analysis",
+        galeria: "Photo Gallery",
+        organizacao: "Business Management",
+        financeiro: "Financial Management",
+        clientes: "My Clients",
+        tarefas: "Task List",
+        agenda: "My Calendar",
+        whatsapp: "WhatsApp",
+        anotacoes: "Notes",
+        bonus_recebido: "BONUS RECEIVED",
+        iniciante: "Beginner",
+        tokens_vencem: "tokens expire on Aug 20, 2026.",
+        assinar_plano: "Subscribe Plan",
+        portugues: "Portuguese",
+        ingles: "English",
+        espanhol: "Spanish",
+        ver_perfil: "View Profile",
+        sair_conta: "Sign Out",
+        fazer_login: "Log In",
+        trabalho: "WORK DASHBOARD",
+      },
+      es: {
+        inicio: "Inicio",
+        copiloto: "Copiloto de Agencia",
+        assistentes: "Asistentes Virtuales",
+        roteiros: "Generador de Guiones",
+        fotos: "Generador de Fotos",
+        gcs: "Generador de GCs",
+        audio: "Audio y Efectos",
+        omni: "Generador Omni Flash",
+        videoAnalise: "Análisis de Video",
+        galeria: "Galería de Fotos",
+        organizacao: "Organización del Negocio",
+        financeiro: "Gestión Financiera",
+        clientes: "Mis Clientes",
+        tarefas: "Lista de Tareas",
+        agenda: "Mi Agenda",
+        whatsapp: "WhatsApp",
+        anotacoes: "Notas",
+        bonus_recebido: "BONO RECIBIDO",
+        iniciante: "Principiante",
+        tokens_vencem: "tokens vencen el 20 de ago de 2026.",
+        assinar_plano: "Suscribir Plan",
+        portugues: "Portugués",
+        ingles: "Inglés",
+        espanhol: "Español",
+        ver_perfil: "Ver Perfil",
+        sair_conta: "Cerrar Sesión",
+        fazer_login: "Iniciar Sesión",
+        trabalho: "PANEL DE TRABAJO",
+      },
+    };
+    return dict[currentLang]?.[key] || dict["pt"][key] || key;
+  };
 
   const [isSavingNote, setIsSavingNote] = useState(false);
   const [noteClient, setNoteClient] = useState("");
@@ -1022,34 +1785,42 @@ export default function App() {
     return merged;
   };
 
-  // --- STATE WITH DURABLE OFFLINE PERSISTENCE & PROFESSIONAL MOCK DATA ---
+  // --- STATE WITH CLOUD SYNC (Supabase) - No fake demo data ---
 
-  // Clients State
+  // Clients State — always starts empty; real data loaded from Supabase
   const [clients, setClients] = useState<Client[]>(() => {
     try {
       const saved = localStorage.getItem("zion_clients");
       if (saved) {
         const parsed = JSON.parse(saved);
-        return mergeClientsWithLocalRoteiros(parsed);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return mergeClientsWithLocalRoteiros(parsed);
+        }
       }
     } catch (e) {}
     return [];
   });
 
-  // Tasks State
+  // Tasks State — always starts empty; real data loaded from Supabase
   const [tasks, setTasks] = useState<Task[]>(() => {
     try {
       const saved = localStorage.getItem("zion_tasks");
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
     } catch (e) {}
     return [];
   });
 
-  // Finances (Transactions) State
+  // Finances (Transactions) State — always starts empty; real data loaded from Supabase
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
     try {
       const saved = localStorage.getItem("zion_transactions");
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
     } catch (e) {}
     return [];
   });
@@ -1096,408 +1867,6 @@ export default function App() {
   const [taskViewMode, setTaskViewMode] = useState<"kanban" | "client">("kanban");
 
   const handleLoadDemoData = () => {
-    const demoClients: Client[] = [
-      {
-        id: 1,
-        name: "Dr. Silva (Odonto)",
-        niche: "Odontologia",
-        status: "Ativo",
-        contact: "(11) 99999-9999",
-        plan: "Premium (R$ 1.500/mês)",
-        planValue: 1500,
-        dueDate: "2026-06-10",
-        paymentStatus: "Em dia",
-        startDate: "2026-01-10",
-        notes:
-          "Contato prioritário por WhatsApp. Foco em campanhas de implante.",
-      },
-      {
-        id: 2,
-        name: "Estética Beauty",
-        niche: "Beleza & Estética",
-        status: "Ativo",
-        contact: "(11) 88888-8888",
-        plan: "Basic (R$ 1.200/mês)",
-        planValue: 1200,
-        dueDate: "2026-06-15",
-        paymentStatus: "Em dia",
-        startDate: "2026-02-15",
-        notes:
-          "Gosta de conteúdos dinâmicos e fotos de antes/depois da clínica.",
-      },
-      {
-        id: 3,
-        name: "Tech Solutions",
-        niche: "Tecnologia B2B",
-        status: "Prospecção",
-        contact: "contato@tech.com",
-        plan: "Custom (R$ 3.000/mês)",
-        planValue: 3000,
-        dueDate: "2026-06-05",
-        paymentStatus: "Pendente",
-        startDate: "2026-06-01",
-        notes: "Aguardando aprovação formal do contrato de tráfego de leads.",
-      },
-      {
-        id: 4,
-        name: "Sispumumc",
-        niche: "Sindicato dos Servidores Públicos",
-        status: "Ativo",
-        contact: "(74) 9.9807-3287",
-        plan: "Presença Local (R$ 829/mês)",
-        planDetails:
-          "2 Posts Estratégicos por semana (8/mês)\n1 Vídeo Reels Dinâmico por semana (4/mês)\nGestão de Legendas e Agendamento\nTráfego Local Incluso (R$ 150 de verba)\nRelatório Mensal de Alcance",
-        planValue: 829,
-        dueDate: "2026-06-20",
-        paymentStatus: "Em dia",
-        startDate: "2026-03-20",
-        notes: "Publicar sempre em tom institucional e informativo.",
-      },
-    ];
-    const demoTasks: Task[] = [
-      {
-        id: 1,
-        title: "Criar roteiro de Reels",
-        status: "todo",
-        client: "Dr. Silva (Odonto)",
-        hasDeadline: true,
-        dueDate: "2026-06-24",
-      },
-      {
-        id: 2,
-        title: "Configurar campanha Meta Ads",
-        status: "doing",
-        client: "Estética Beauty",
-        hasDeadline: true,
-        dueDate: "2026-06-30",
-      },
-      {
-        id: 3,
-        title: "Aprovar identidade visual",
-        status: "done",
-        client: "Tech Solutions",
-        hasDeadline: false,
-      },
-    ];
-    const demoTransactions: Transaction[] = [
-      // Janeiro
-      {
-        id: 1,
-        description: "Mensalidade Dr. Silva (Odonto)",
-        type: "receita",
-        amount: 1500,
-        date: "2026-01-10",
-        category: "Contratos",
-        status: "pago",
-        client: "Dr. Silva (Odonto)",
-      },
-      {
-        id: 9999,
-        description: "Edição de Vídeo (Felipe Maker)",
-        type: "despesa",
-        amount: 250,
-        date: "2026-07-25",
-        category: "Freelancers",
-        status: "pendente",
-        client: "Tech Solutions",
-      },
-      {
-        id: 2,
-        description: "Assinatura Canva Pro",
-        type: "despesa",
-        amount: 35,
-        date: "2026-01-01",
-        category: "Ferramentas",
-        status: "pago",
-      },
-
-      // Fevereiro
-      {
-        id: 3,
-        description: "Mensalidade Dr. Silva (Odonto)",
-        type: "receita",
-        amount: 1500,
-        date: "2026-02-10",
-        category: "Contratos",
-        status: "pago",
-        client: "Dr. Silva (Odonto)",
-      },
-      {
-        id: 4,
-        description: "Mensalidade Estética Beauty",
-        type: "receita",
-        amount: 1200,
-        date: "2026-02-15",
-        category: "Contratos",
-        status: "pago",
-        client: "Estética Beauty",
-      },
-      {
-        id: 5,
-        description: "Assinatura Canva Pro",
-        type: "despesa",
-        amount: 35,
-        date: "2026-02-01",
-        category: "Ferramentas",
-        status: "pago",
-      },
-      {
-        id: 6,
-        description: "Freelancer Copywriting",
-        type: "despesa",
-        amount: 250,
-        date: "2026-02-18",
-        category: "Freelancers",
-        status: "pago",
-      },
-
-      // Março
-      {
-        id: 7,
-        description: "Mensalidade Dr. Silva (Odonto)",
-        type: "receita",
-        amount: 1500,
-        date: "2026-03-10",
-        category: "Contratos",
-        status: "pago",
-        client: "Dr. Silva (Odonto)",
-      },
-      {
-        id: 8,
-        description: "Mensalidade Estética Beauty",
-        type: "receita",
-        amount: 1200,
-        date: "2026-03-15",
-        category: "Contratos",
-        status: "pago",
-        client: "Estética Beauty",
-      },
-      {
-        id: 9,
-        description: "Mensalidade Sispumumc",
-        type: "receita",
-        amount: 829,
-        date: "2026-03-20",
-        category: "Contratos",
-        status: "pago",
-        client: "Sispumumc",
-      },
-      {
-        id: 10,
-        description: "Assinatura Canva Pro",
-        type: "despesa",
-        amount: 35,
-        date: "2026-03-01",
-        category: "Ferramentas",
-        status: "pago",
-      },
-      {
-        id: 11,
-        description: "Campanha Tráfego Local",
-        type: "despesa",
-        amount: 150,
-        date: "2026-03-10",
-        category: "Tráfego Ads",
-        status: "pago",
-      },
-
-      // Abril
-      {
-        id: 12,
-        description: "Mensalidade Dr. Silva (Odonto)",
-        type: "receita",
-        amount: 1500,
-        date: "2026-04-10",
-        category: "Contratos",
-        status: "pago",
-        client: "Dr. Silva (Odonto)",
-      },
-      {
-        id: 13,
-        description: "Mensalidade Estética Beauty",
-        type: "receita",
-        amount: 1200,
-        date: "2026-04-15",
-        category: "Contratos",
-        status: "pago",
-        client: "Estética Beauty",
-      },
-      {
-        id: 14,
-        description: "Mensalidade Sispumumc",
-        type: "receita",
-        amount: 829,
-        date: "2026-04-20",
-        category: "Contratos",
-        status: "pago",
-        client: "Sispumumc",
-      },
-      {
-        id: 15,
-        description: "Assinatura Canva Pro",
-        type: "despesa",
-        amount: 35,
-        date: "2026-04-01",
-        category: "Ferramentas",
-        status: "pago",
-      },
-      {
-        id: 16,
-        description: "Assinatura Midjourney Studio",
-        type: "despesa",
-        amount: 150,
-        date: "2026-04-05",
-        category: "Ferramentas",
-        status: "pago",
-      },
-      {
-        id: 17,
-        description: "Anúncios Google Ads",
-        type: "despesa",
-        amount: 300,
-        date: "2026-04-12",
-        category: "Tráfego Ads",
-        status: "pago",
-      },
-
-      // Maio
-      {
-        id: 18,
-        description: "Mensalidade Dr. Silva (Odonto)",
-        type: "receita",
-        amount: 1500,
-        date: "2026-05-10",
-        category: "Contratos",
-        status: "pago",
-        client: "Dr. Silva (Odonto)",
-      },
-      {
-        id: 19,
-        description: "Mensalidade Estética Beauty",
-        type: "receita",
-        amount: 1200,
-        date: "2026-05-15",
-        category: "Contratos",
-        status: "pago",
-        client: "Estética Beauty",
-      },
-      {
-        id: 20,
-        description: "Mensalidade Sispumumc",
-        type: "receita",
-        amount: 829,
-        date: "2026-05-20",
-        category: "Contratos",
-        status: "pago",
-        client: "Sispumumc",
-      },
-      {
-        id: 21,
-        description: "Assinatura Canva Pro",
-        type: "despesa",
-        amount: 35,
-        date: "2026-05-01",
-        category: "Ferramentas",
-        status: "pago",
-      },
-      {
-        id: 22,
-        description: "Assinatura Midjourney Studio",
-        type: "despesa",
-        amount: 150,
-        date: "2026-05-05",
-        category: "Ferramentas",
-        status: "pago",
-      },
-      {
-        id: 23,
-        description: "Campanha de Tráfego - Sispumumc",
-        type: "despesa",
-        amount: 150,
-        date: "2026-05-10",
-        category: "Tráfego Ads",
-        status: "pago",
-        client: "Sispumumc",
-      },
-      {
-        id: 24,
-        description: "Freelancer Designer Motion",
-        type: "despesa",
-        amount: 500,
-        date: "2026-05-18",
-        category: "Freelancers",
-        status: "pago",
-      },
-
-      // Junho
-      {
-        id: 25,
-        description: "Mensalidade Dr. Silva (Odonto)",
-        type: "receita",
-        amount: 1500,
-        date: "2026-06-10",
-        category: "Contratos",
-        status: "pago",
-        client: "Dr. Silva (Odonto)",
-      },
-      {
-        id: 26,
-        description: "Mensalidade Estética Beauty",
-        type: "receita",
-        amount: 1200,
-        date: "2026-06-15",
-        category: "Contratos",
-        status: "pago",
-        client: "Estética Beauty",
-      },
-      {
-        id: 27,
-        description: "Assinatura Canva Pro",
-        type: "despesa",
-        amount: 35,
-        date: "2026-06-01",
-        category: "Ferramentas",
-        status: "pago",
-      },
-      {
-        id: 28,
-        description: "Assinatura Midjourney Studio",
-        type: "despesa",
-        amount: 150,
-        date: "2026-06-05",
-        category: "Ferramentas",
-        status: "pago",
-      },
-      {
-        id: 29,
-        description: "Campanha de Tráfego - Sispumumc",
-        type: "despesa",
-        amount: 150,
-        date: "2026-06-10",
-        category: "Tráfego Ads",
-        status: "pago",
-        client: "Sispumumc",
-      },
-      {
-        id: 30,
-        description: "Freelancer Design Gráfico",
-        type: "despesa",
-        amount: 450,
-        date: "2026-06-18",
-        category: "Freelancers",
-        status: "pago",
-      },
-      {
-        id: 31,
-        description: "Mensalidade Sispumumc",
-        type: "receita",
-        amount: 829,
-        date: "2026-06-20",
-        category: "Contratos",
-        status: "pago",
-        client: "Sispumumc",
-      },
-    ];
     const demoEvents: CalendarEvent[] = [
       {
         id: 1,
@@ -1505,8 +1874,7 @@ export default function App() {
         date: "2026-06-26",
         time: "14:00",
         clientName: "Estética Beauty",
-        description:
-          "Gravar 4 vídeos de dicas de skin care com a especialista.",
+        description: "Gravar 4 vídeos de dicas de skin care com a especialista.",
         type: "entrega",
       },
       {
@@ -1537,6 +1905,7 @@ export default function App() {
         type: "reuniao",
       },
     ];
+
     const demoNotifications: NotificationItem[] = [
       {
         id: 1,
@@ -1561,20 +1930,21 @@ export default function App() {
       },
     ];
 
-    setClients(demoClients);
-    setTasks(demoTasks);
-    setTransactions(demoTransactions);
+    // Clear local storage and force reload from Supabase
+    localStorage.removeItem("zion_clients");
+    localStorage.removeItem("zion_tasks");
+    localStorage.removeItem("zion_transactions");
+    localStorage.removeItem("zion_calendar_events");
+    localStorage.removeItem("zion_notifications");
+
+    setClients([]);
+    setTasks([]);
+    setTransactions([]);
     setCalendarEvents(demoEvents);
     setNotifications(demoNotifications);
 
-    safeStorageSetItem("zion_clients", JSON.stringify(demoClients));
-    safeStorageSetItem("zion_tasks", JSON.stringify(demoTasks));
-    safeStorageSetItem("zion_transactions", JSON.stringify(demoTransactions));
     safeStorageSetItem("zion_calendar_events", JSON.stringify(demoEvents));
-    safeStorageSetItem(
-      "zion_notifications",
-      JSON.stringify(demoNotifications),
-    );
+    safeStorageSetItem("zion_notifications", JSON.stringify(demoNotifications));
 
     // notify
     const notif: NotificationItem = {
@@ -1723,8 +2093,6 @@ export default function App() {
     return [];
   });
 
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-
   React.useEffect(() => {
     safeStorageSetItem("zion_my_profile", JSON.stringify(myProfile));
   }, [myProfile]);
@@ -1774,6 +2142,7 @@ export default function App() {
   // Force a synchronized local backup to localStorage when ending/refreshing the session
   React.useEffect(() => {
     const handleBeforeUnload = () => {
+      if (!isInitialLoadCompletedRef.current || isSyncingFromServerRef.current) return;
       safeStorageSetItem("zion_clients", JSON.stringify(clients));
       safeStorageSetItem("zion_tasks", JSON.stringify(tasks));
       safeStorageSetItem("zion_transactions", JSON.stringify(transactions));
@@ -1791,6 +2160,7 @@ export default function App() {
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
+        if (!isInitialLoadCompletedRef.current || isSyncingFromServerRef.current) return;
         handleBeforeUnload();
         if (activeSyncKey) {
           try {
@@ -1809,7 +2179,11 @@ export default function App() {
               savedNotes,
               messages,
             }));
-            supabase.from('users').upsert(sanitizedData).then(({ error }) => {
+            supabase.from('users').upsert({
+              id: activeSyncKey,
+              updated_at: new Date().toISOString(),
+              data: sanitizedData
+            }).then(({ error }) => {
               if (error) console.error("Error on visibilitychange Supabase sync:", error);
             });
           } catch(e) {}
@@ -1851,6 +2225,7 @@ export default function App() {
 
     isInitialLoadCompletedRef.current = false;
 
+    let active = true;
     let subscription: { unsubscribe: () => void } | null = null;
 
     const setupSync = async () => {
@@ -1864,33 +2239,63 @@ export default function App() {
           .eq('id', activeSyncKey)
           .maybeSingle();
 
+        if (!active) return;
         if (getError) throw getError;
 
         let data = dbData?.data;
 
+        // MIGRAÇÃO (uma única vez): os dados antigos de todas as contas ficavam
+        // no registro id="ZION-MASTER". Agora cada conta tem o próprio registro.
+        // Somente a conta do ADMIN herda o registro antigo (era o dono dos dados).
+        if ((!data || (!data.clients && !data.tasks)) && isAdminRef.current) {
+          try {
+            const { data: legacyData } = await supabase
+              .from('users')
+              .select('data')
+              .eq('id', 'ZION-MASTER')
+              .maybeSingle();
+            if (
+              legacyData?.data &&
+              ((legacyData.data as any)?.clients?.length || (legacyData.data as any)?.tasks?.length)
+            ) {
+              data = legacyData.data;
+              await supabase.from('users').upsert({
+                id: activeSyncKey,
+                updated_at: new Date().toISOString(),
+                data
+              });
+              console.log("Migração concluída: dados antigos (ZION-MASTER) copiados para a conta do admin.");
+            }
+          } catch (e) {
+            console.error("Migração ZION-MASTER falhou:", e);
+          }
+        }
+
         if (!data) {
-          console.log("Iniciando backup local para o workspace na nuvem...");
-          const sanitizedData = JSON.parse(JSON.stringify({
+          console.log("Conta sem dados na nuvem: iniciando com dados VAZIOS (nunca herda dados de outras contas)...");
+          const emptyData = JSON.parse(JSON.stringify({
             userId: activeSyncKey,
             updatedAt: new Date().toISOString(),
-            clients,
-            tasks,
-            transactions,
-            calendarEvents,
-            notifications,
-            myProfile,
-            transactionCategories,
-            logoRefs,
-            savedCards,
-            savedNotes,
-            messages,
+            clients: [],
+            tasks: [],
+            transactions: [],
+            calendarEvents: [],
+            notifications: [],
+            myProfile: null,
+            transactionCategories: [],
+            logoRefs: [],
+            savedCards: [],
+            savedNotes: [],
+            messages: [],
+            whatsappLogs: [],
           }));
           await supabase.from('users').upsert({
             id: activeSyncKey,
             updated_at: new Date().toISOString(),
-            data: sanitizedData
+            data: emptyData
           });
-          data = sanitizedData;
+          if (!active) return;
+          data = emptyData;
         }
 
         // Apply loaded data to state
@@ -1918,12 +2323,16 @@ export default function App() {
         }
 
         setTimeout(() => {
-          isSyncingFromServerRef.current = false;
+          if (active) {
+            isSyncingFromServerRef.current = false;
+          }
         }, 500);
 
         setIsCloudSyncing(false);
         setIsAuthLoading(false);
         isInitialLoadCompletedRef.current = true;
+
+        if (!active) return;
 
         // Real-time synchronization
         const channel = supabase
@@ -1963,7 +2372,9 @@ export default function App() {
                 }
 
                 setTimeout(() => {
-                  isSyncingFromServerRef.current = false;
+                  if (active) {
+                    isSyncingFromServerRef.current = false;
+                  }
                 }, 500);
               }
             }
@@ -1977,6 +2388,7 @@ export default function App() {
         };
 
       } catch (err) {
+        if (!active) return;
         console.error("Erro na sincronização inicial do Supabase:", err);
         setIsCloudSyncing(false);
         setIsAuthLoading(false);
@@ -1984,9 +2396,10 @@ export default function App() {
       }
     };
 
-    setupSync(); setTimeout(() => { setIsAuthLoading(false); }, 3000);
+    setupSync(); setTimeout(() => { if (active) { setIsAuthLoading(false); } }, 3000);
 
     return () => {
+      active = false;
       if (subscription) {
         subscription.unsubscribe();
       }
@@ -2403,10 +2816,15 @@ export default function App() {
       formData.append("currentISODate", localISODate);
       formData.append("existingClients", JSON.stringify(clientNames));
       const activeKey = getActiveApiKey();
+      if (!checkAdminOrOpenPlan(activeKey)) {
+        setIsParsingTask(false);
+        return;
+      }
       if (activeKey) formData.append("apiKey", activeKey);
       
       const res = await fetch("/api/parse-task", {
         method: "POST",
+        headers: getAuthHeaders(activeKey),
         body: formData,
       });
       if (res.ok) {
@@ -2777,6 +3195,10 @@ ${textContent}`
       // Reset workspace to ZION-MASTER as a form of log out
       setWorkspaceKey("ZION-MASTER");
       safeStorageSetItem("zion_workspace_key", "ZION-MASTER");
+      if (currentUser?.email) await backupUserLocalStores(currentUser.email);
+      clearUserLocalCache();
+      setSyncUserId(null);
+      setCurrentUser(null);
       setGcalToken(null);
       setGcalUser(null);
       localStorage.removeItem("gcal_access_token");
@@ -3465,210 +3887,322 @@ ${textContent}`
       {/* Conteúdo Principal + Barra Lateral */}
       <div className="flex h-screen mt-0 overflow-hidden relative w-full">
         
-        {/* Menu Lateral Expandido Profissional (Desktop) */}
-        <aside className={`hidden ${isDesktopSidebarOpen ? 'lg:flex' : 'lg:hidden'} w-64 bg-[#09090b] border-r border-white/5 flex-col py-5 px-3.5 flex-shrink-0 overflow-y-auto custom-scrollbar h-full justify-between`}>
-          <div className="space-y-6">
+        {/* Menu Lateral Expandido Profissional (Desktop Zion Theme: Preto Sólido, Dourado & Branco) */}
+        <aside className={`hidden ${isDesktopSidebarOpen ? 'lg:flex' : 'lg:hidden'} w-64 bg-[#000000] border-r border-[#c5a880]/15 flex-col py-5 px-3.5 flex-shrink-0 overflow-y-auto custom-scrollbar h-full justify-between shadow-2xl`}>
+          <div className="space-y-5">
             
-            {/* Logo Zion Design na lateral */}
-            <div className="flex items-center gap-3 px-2.5 py-1.5 border-b border-white/5 pb-4">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#c5a880] to-[#ad8330] flex items-center justify-center text-zinc-950 shadow-lg shadow-[#c5a880]/10 shrink-0">
-                <Layers size={18} />
+            {/* Logo Zion Studio Dourado */}
+            <div className="flex items-center justify-between px-2.5 py-1 border-b border-[#c5a880]/15 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#c5a880] to-[#ad8330] flex items-center justify-center text-zinc-950 shadow-lg shadow-[#c5a880]/20 shrink-0">
+                  <Layers size={18} />
+                </div>
+                <div className="flex flex-col">
+                  <span className="font-montserrat font-black text-sm tracking-wider uppercase bg-gradient-to-r from-white via-zinc-200 to-[#c5a880] bg-clip-text text-transparent">
+                    ZION STUDIO
+                  </span>
+                  <span className="text-[9px] text-[#c5a880]/80 font-mono tracking-widest uppercase -mt-0.5">
+                    PAINEL DE TRABALHO
+                  </span>
+                </div>
               </div>
-              <div className="flex flex-col">
-                <span className="font-montserrat font-black text-sm tracking-wider uppercase bg-gradient-to-r from-white via-zinc-200 to-[#c5a880] bg-clip-text text-transparent">
-                  Zion Studio
-                </span>
-                <span className="text-[9px] text-zinc-500 font-mono tracking-widest uppercase -mt-0.5">
-                  PAINEL DE TRABALHO
-                </span>
-              </div>
+              <button 
+                onClick={() => setIsDesktopSidebarOpen(false)}
+                className="text-zinc-500 hover:text-white p-1 rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
+                title="Recolher Menu"
+              >
+                <ChevronLeft size={14} />
+              </button>
             </div>
 
             {/* Seção 1: Criação & IA */}
             <div className="space-y-1">
-              <SidebarItem
-                icon={<LayoutDashboard size={16} />}
-                label="Início"
-                active={activeTab === "dashboard"}
-                onClick={() => setActiveTab("dashboard")}
-              />
-              <SidebarItem
-                icon={<Bot size={16} />}
-                label="Copiloto da Agência"
-                active={activeTab === "copiloto-agencia"}
-                onClick={() => setActiveTab("copiloto-agencia")}
-              />
-              <SidebarItem
-                icon={<Layers size={16} />}
-                label="Assistentes Virtuais"
-                active={activeTab === "agents"}
-                onClick={() => setActiveTab("agents")}
-              />
-              <SidebarItem
-                icon={<FileText size={16} />}
-                label="Gerador Roteiros"
-                active={activeTab === "roteiros"}
-                onClick={() => setActiveTab("roteiros")}
-              />
+              {isAdmin && (
+                <>
+                  <SidebarItem
+                    icon={<LayoutDashboard size={16} />}
+                    label={t("inicio")}
+                    active={activeTab === "dashboard"}
+                    onClick={() => setActiveTab("dashboard")}
+                  />
+                  <SidebarItem
+                    icon={<Bot size={16} />}
+                    label={t("copiloto")}
+                    active={activeTab === "copiloto-agencia"}
+                    onClick={() => setActiveTab("copiloto-agencia")}
+                  />
+                  <SidebarItem
+                    icon={<Layers size={16} />}
+                    label={t("assistentes")}
+                    active={activeTab === "agents"}
+                    onClick={() => setActiveTab("agents")}
+                  />
+                  <SidebarItem
+                    icon={<FileText size={16} />}
+                    label={t("roteiros")}
+                    active={activeTab === "roteiros"}
+                    onClick={() => setActiveTab("roteiros")}
+                  />
+                </>
+              )}
               <SidebarItem
                 icon={<Sparkles size={16} />}
-                label="Gerador de Fotos"
+                label={t("fotos")}
                 active={activeTab === "ai-tools"}
                 onClick={() => setActiveTab("ai-tools")}
               />
-              <SidebarItem
-                icon={<Tv size={16} />}
-                label="Gerador de GCs"
-                active={activeTab === "gc-tv"}
-                onClick={() => setActiveTab("gc-tv")}
-              />
-              <SidebarItem
-                icon={<Music size={16} />}
-                label="Áudio & Efeitos"
-                active={activeTab === "audio"}
-                onClick={() => setActiveTab("audio")}
-              />
-              <SidebarItem
-                icon={<Film size={16} />}
-                label="Gerador Omni Flash"
-                active={activeTab === "omni-flash"}
-                onClick={() => setActiveTab("omni-flash")}
-              />
+              {isAdmin && (
+                <>
+                  <SidebarItem
+                    icon={<Tv size={16} />}
+                    label={t("gcs")}
+                    active={activeTab === "gc-tv"}
+                    onClick={() => setActiveTab("gc-tv")}
+                  />
+                  <SidebarItem
+                    icon={<Music size={16} />}
+                    label={t("audio")}
+                    active={activeTab === "audio"}
+                    onClick={() => setActiveTab("audio")}
+                  />
+                  <SidebarItem
+                    icon={<Film size={16} />}
+                    label={t("omni")}
+                    active={activeTab === "omni-flash"}
+                    onClick={() => setActiveTab("omni-flash")}
+                  />
+                  <SidebarItem
+                    icon={<Video size={16} />}
+                    label={t("videoAnalise")}
+                    active={activeTab === "video-analysis"}
+                    onClick={() => setActiveTab("video-analysis")}
+                  />
+                </>
+              )}
               <SidebarItem
                 icon={<ImageIcon size={16} />}
-                label="Galeria de Fotos"
+                label={t("galeria")}
                 active={activeTab === "gallery"}
                 onClick={() => setActiveTab("gallery")}
               />
             </div>
 
             {/* Separador sutil */}
-            <div className="h-px bg-white/5 mx-2" />
+            {isAdmin && <div className="h-px bg-[#c5a880]/15 mx-2" />}
 
-            {/* Seção 2: Organização & Clientes */}
-            <div className="space-y-1">
-              <p className="px-3 text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-2.5">
-                Organização do Negócio
-              </p>
-              <SidebarItem
-                icon={<Users size={16} />}
-                label="Meus Clientes"
-                active={activeTab === "clients"}
-                onClick={() => setActiveTab("clients")}
-              />
-              <SidebarItem
-                icon={<CheckSquare size={16} />}
-                label="Lista de Tarefas"
-                active={activeTab === "tasks"}
-                onClick={() => setActiveTab("tasks")}
-              />
-              <SidebarItem
-                icon={<Calendar size={16} />}
-                label="Minha Agenda"
-                active={activeTab === "calendar"}
-                onClick={() => setActiveTab("calendar")}
-              />
-              <SidebarItem
-                icon={<MessageSquare size={16} />}
-                label="WhatsApp"
-                active={activeTab === "whatsapp"}
-                onClick={() => setActiveTab("whatsapp")}
-              />
-              <SidebarItem
-                icon={<FileText size={16} />}
-                label="Anotações"
-                active={activeTab === "notes"}
-                onClick={() => setActiveTab("notes")}
-              />
-            </div>
-          </div>
-
-          {/* Rodapé da Sidebar */}
-          <div className="pt-4 border-t border-white/5 space-y-3 shrink-0">
-            {typeof window !== "undefined" &&
-            localStorage.getItem("custom_gemini_api_key") ? (
-              <div className="p-2 bg-[#c5a880]/10 border border-[#c5a880]/20 rounded-xl flex items-center justify-between mx-1.5">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-[#c5a880] animate-pulse" />
-                  <span className="text-xs text-[#c5a880] font-medium">
-                    Sua API Ativa
-                  </span>
-                </div>
-                <button
-                  onClick={() => {
-                    localStorage.removeItem("custom_gemini_api_key");
-                    window.location.reload();
-                  }}
-                  className="text-[10px] text-zinc-500 hover:text-red-400 font-bold"
-                >
-                  Remover
-                </button>
-              </div>
-            ) : (
-              <div
-                className="p-2 bg-black border border-white/5 rounded-xl flex items-center justify-between cursor-pointer mx-1.5"
-                onClick={() => {
-                  setIsSettingsModalOpen(true);
-                }}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-xs text-zinc-400 font-medium">
-                    Usando API Padrão
-                  </span>
-                </div>
+            {/* Seção 2: Organização & Clientes (Apenas Administrador) */}
+            {isAdmin && (
+              <div className="space-y-1">
+                <p className="px-3 text-[10px] font-black uppercase tracking-widest text-[#c5a880]/80 mb-2.5">
+                  {t("organizacao")}
+                </p>
+                <SidebarItem
+                  icon={<DollarSign size={16} />}
+                  label={t("financeiro")}
+                  active={activeTab === "finance"}
+                  onClick={() => setActiveTab("finance")}
+                />
+                <SidebarItem
+                  icon={<Users size={16} />}
+                  label={t("clientes")}
+                  active={activeTab === "clients"}
+                  onClick={() => setActiveTab("clients")}
+                />
+                <SidebarItem
+                  icon={<CheckSquare size={16} />}
+                  label={t("tarefas")}
+                  active={activeTab === "tasks"}
+                  onClick={() => setActiveTab("tasks")}
+                />
+                <SidebarItem
+                  icon={<Calendar size={16} />}
+                  label={t("agenda")}
+                  active={activeTab === "calendar"}
+                  onClick={() => setActiveTab("calendar")}
+                />
+                <SidebarItem
+                  icon={<MessageSquare size={16} />}
+                  label={t("whatsapp")}
+                  active={activeTab === "whatsapp"}
+                  onClick={() => setActiveTab("whatsapp")}
+                />
+                <SidebarItem
+                  icon={<FileText size={16} />}
+                  label={t("anotacoes")}
+                  active={activeTab === "notes"}
+                  onClick={() => setActiveTab("notes")}
+                />
               </div>
             )}
+          </div>
 
-            <SidebarItem
-              icon={<Settings size={16} />}
-              label="Configurações"
-              active={false}
-              onClick={() => setIsSettingsModalOpen(true)}
-            />
+          {/* Rodapé da Sidebar com Widgets Zion Preto Sólido (Bônus, Streaks, Tokens, Assinar, Idioma, Perfil) */}
+          <div className="pt-4 border-t border-[#c5a880]/15 space-y-3 shrink-0">
+            
+            {/* Widget 1: BÔNUS RECEBIDO +600 tokens */}
+            <div className="p-3 bg-[#0a0a0a] border border-[#c5a880]/30 rounded-xl flex items-center justify-between shadow-sm relative group">
+              <div className="flex items-center gap-2.5">
+                <span className="text-[#c5a880] text-sm">🎁</span>
+                <div className="flex flex-col">
+                  <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#c5a880]">{t("bonus_recebido")}</span>
+                  <span className="text-xs font-black text-white">+600 tokens</span>
+                </div>
+              </div>
+              <button 
+                onClick={(e) => { e.stopPropagation(); }}
+                className="text-zinc-500 hover:text-[#c5a880] text-xs p-1 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
 
-            <SidebarItem
-              icon={<LogOut size={16} />}
-              label="Sair da Conta"
-              active={false}
-              onClick={handleGoogleSignOut}
-            />
+            {/* Widget 2: Streak 🔥 2 & Status 🟢 Iniciante */}
+            <div className="flex items-center gap-2">
+              <div className="flex-1 bg-[#0a0a0a] border border-[#c5a880]/15 rounded-xl py-1.5 px-3 flex items-center gap-1.5 text-xs font-bold text-zinc-300">
+                <span>🔥</span>
+                <span>2</span>
+              </div>
+              <div className="flex-[1.5] bg-[#0a0a0a] border border-[#c5a880]/15 rounded-xl py-1.5 px-3 flex items-center gap-1.5 text-xs font-bold text-zinc-300">
+                <span className="w-2 h-2 rounded-full bg-[#c5a880] animate-pulse" />
+                <span className="truncate text-[#c5a880] font-bold">{t("iniciante")}</span>
+              </div>
+            </div>
+
+            {/* Widget 3: Contador de Tokens Real & Barra de Progresso Dourada Zion */}
+            <div 
+              onClick={() => setIsCreditsModalOpen(true)}
+              className="p-3 bg-[#0a0a0a] border border-[#c5a880]/15 hover:border-[#c5a880]/40 rounded-xl space-y-2 cursor-pointer transition-all"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-xs font-black text-white">
+                  <span className="text-[#c5a880]">⚡</span>
+                  <span>97 tokens</span>
+                </div>
+                <span className="text-[10px] text-zinc-500 hover:text-[#c5a880]">ⓘ</span>
+              </div>
+              <div className="w-full bg-[#151515] h-1.5 rounded-full overflow-hidden">
+                <div className="bg-gradient-to-r from-[#ad8330] via-[#c5a880] to-[#e6c687] h-full rounded-full w-[65%]" />
+              </div>
+              <p className="text-[9.5px] text-zinc-400 leading-tight">
+                87 {t("tokens_vencem")}
+              </p>
+            </div>
+
+            {/* Widget 4: Botão Assinar Plano Dourado */}
+            <button 
+              onClick={() => setIsCreditsModalOpen(true)}
+              className="w-full py-2.5 bg-gradient-to-r from-[#c5a880] to-[#ad8330] hover:from-[#d4b991] hover:to-[#be9441] rounded-full text-xs font-black text-zinc-950 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#c5a880]/20"
+            >
+              <CreditCard size={14} className="text-zinc-950" />
+              <span>{t("assinar_plano")}</span>
+            </button>
+
+            {/* Widget 5: Seletor Interativo de Idioma (Português, Inglês, Espanhol) */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsLangMenuOpen(!isLangMenuOpen)}
+                className="w-full flex items-center justify-between px-2.5 py-1.5 text-xs font-medium text-zinc-400 hover:text-white cursor-pointer transition-colors rounded-lg hover:bg-white/5 border border-transparent hover:border-[#c5a880]/20"
+              >
+                <div className="flex items-center gap-2">
+                  <Globe size={14} className="text-[#c5a880]" />
+                  <span className="font-bold">
+                    {currentLang === "pt" ? "Português 🇧🇷" : currentLang === "en" ? "English 🇺🇸" : "Español 🇪🇸"}
+                  </span>
+                </div>
+                <ChevronUp size={12} className={`text-zinc-500 transition-transform ${isLangMenuOpen ? "rotate-180" : ""}`} />
+              </button>
+
+              {isLangMenuOpen && (
+                <div className="absolute bottom-full left-0 mb-1 w-full bg-[#050505] border border-[#c5a880]/30 rounded-xl p-1.5 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150 space-y-1">
+                  <button
+                    onClick={() => setLanguage("pt")}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold rounded-lg text-left transition-all cursor-pointer ${
+                      currentLang === "pt" ? "bg-[#c5a880]/20 text-[#c5a880]" : "text-zinc-300 hover:bg-white/10 hover:text-white"
+                    }`}
+                  >
+                    <span>🇧🇷</span>
+                    <span>Português</span>
+                  </button>
+                  <button
+                    onClick={() => setLanguage("en")}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold rounded-lg text-left transition-all cursor-pointer ${
+                      currentLang === "en" ? "bg-[#c5a880]/20 text-[#c5a880]" : "text-zinc-300 hover:bg-white/10 hover:text-white"
+                    }`}
+                  >
+                    <span>🇺🇸</span>
+                    <span>English</span>
+                  </button>
+                  <button
+                    onClick={() => setLanguage("es")}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold rounded-lg text-left transition-all cursor-pointer ${
+                      currentLang === "es" ? "bg-[#c5a880]/20 text-[#c5a880]" : "text-zinc-300 hover:bg-white/10 hover:text-white"
+                    }`}
+                  >
+                    <span>🇪🇸</span>
+                    <span>Español</span>
+                  </button>
+                </div>
+              )}
+            </div>
 
             {renderCloudSyncStatus()}
 
-            <div
-              onClick={() => setIsProfileModalOpen(true)}
-              className="flex items-center gap-3 py-2.5 px-2.5 cursor-pointer hover:bg-white/5 rounded-xl transition-all border border-white/5 bg-black/40 mx-1.5"
-            >
-              {myProfile?.avatarUrl ? (
-                <img
-                  src={myProfile.avatarUrl}
-                  alt={myProfile?.name || "Zion"}
-                  className="w-9 h-9 rounded-full object-cover border border-white/5"
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                <div className="w-9 h-9 rounded-full bg-[#c5a880] text-zinc-950 flex items-center justify-center text-xs font-bold uppercase shrink-0">
-                  {(myProfile?.name || "Zion").substring(0, 2)}
+            {/* Widget 6: Perfil do Usuário Zion Dourado no Rodapé com Popover Interativo */}
+            <div className="relative">
+              {isProfileMenuOpen && (
+                <div className="absolute bottom-full left-0 mb-2 w-full bg-[#050505] border border-[#c5a880]/30 rounded-2xl p-1.5 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150 space-y-1">
+                  <button
+                    onClick={() => {
+                      setActiveTab("profile");
+                      setIsProfileMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-bold text-white hover:bg-[#c5a880]/15 hover:text-[#c5a880] rounded-xl transition-all cursor-pointer"
+                  >
+                    <User size={15} className="text-[#c5a880]" />
+                    <span>{t("ver_perfil")}</span>
+                  </button>
+
+                  <div className="h-px bg-[#c5a880]/15 mx-1" />
+
+                  <button
+                    onClick={() => {
+                      setIsProfileMenuOpen(false);
+                      if (currentUser) {
+                        handleSignOut();
+                      } else {
+                        setIsAuthModalOpen(true);
+                      }
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-bold text-red-400 hover:bg-red-500/10 rounded-xl transition-all cursor-pointer"
+                  >
+                    <LogOut size={15} />
+                    <span>{currentUser ? t("sair_conta") : t("fazer_login")}</span>
+                  </button>
                 </div>
               )}
-              <div className="flex flex-col min-w-0">
-                <span className="text-sm font-bold truncate text-white">
-                  {myProfile?.name || "Equipe Zion"}
-                </span>
-                <span className="text-[11px] text-zinc-400 truncate">
-                  {myProfile?.role || "Agência Digital"}
-                </span>
+
+              <div
+                onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                className="flex items-center justify-between p-2 bg-[#0a0a0a] border border-[#c5a880]/15 hover:border-[#c5a880]/40 rounded-xl transition-all cursor-pointer group"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#c5a880] to-[#ad8330] text-zinc-950 font-black flex items-center justify-center text-sm shadow-md shrink-0">
+                    {(myProfile?.name || currentUser?.email || "Ricardo").substring(0, 1).toUpperCase()}
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-xs font-bold text-white truncate group-hover:text-[#c5a880] transition-colors">
+                      {myProfile?.name || "Ricardo"}
+                    </span>
+                    <span className="text-[10px] text-zinc-400 truncate">
+                      {currentUser?.email || "der.contatos@gmail.com"}
+                    </span>
+                  </div>
+                </div>
+                <ChevronUp size={14} className={`text-zinc-500 transition-transform ${isProfileMenuOpen ? "rotate-180" : ""}`} />
               </div>
             </div>
 
-            <button
-              onClick={() => setIsDesktopSidebarOpen(false)}
-              className="flex items-center gap-3 px-3 py-2 rounded-xl text-zinc-500 hover:text-zinc-300 hover:bg-white/5 transition-all w-full mt-1 cursor-pointer"
-            >
-              <div className="w-5 flex justify-center"><ChevronLeft size={16} /></div>
-              <span className="text-xs font-bold tracking-wide">Recolher Menu</span>
-            </button>
           </div>
         </aside>
 
@@ -3719,7 +4253,7 @@ ${textContent}`
                 <div className="space-y-1.5">
                   <SidebarItem
                     icon={<LayoutDashboard size={16} />}
-                    label="Início"
+                    label={t("inicio")}
                     active={activeTab === "dashboard"}
                     onClick={() => {
                       setActiveTab("dashboard");
@@ -3728,7 +4262,7 @@ ${textContent}`
                   />
                   <SidebarItem
                     icon={<Bot size={16} />}
-                    label="Copiloto da Agência"
+                    label={t("copiloto")}
                     active={activeTab === "copiloto-agencia"}
                     onClick={() => {
                       setActiveTab("copiloto-agencia");
@@ -3737,7 +4271,7 @@ ${textContent}`
                   />
                   <SidebarItem
                     icon={<Layers size={16} />}
-                    label="Assistentes Virtuais"
+                    label={t("assistentes")}
                     active={activeTab === "agents"}
                     onClick={() => {
                       setActiveTab("agents");
@@ -3746,7 +4280,7 @@ ${textContent}`
                   />
                   <SidebarItem
                     icon={<FileText size={16} />}
-                    label="Gerador Roteiros"
+                    label={t("roteiros")}
                     active={activeTab === "roteiros"}
                     onClick={() => {
                       setActiveTab("roteiros");
@@ -3755,7 +4289,7 @@ ${textContent}`
                   />
                   <SidebarItem
                     icon={<Sparkles size={16} />}
-                    label="Gerador de Fotos"
+                    label={t("fotos")}
                     active={activeTab === "ai-tools"}
                     onClick={() => {
                       setActiveTab("ai-tools");
@@ -3764,7 +4298,7 @@ ${textContent}`
                   />
                   <SidebarItem
                     icon={<Tv size={16} />}
-                    label="Gerador de GCs"
+                    label={t("gcs")}
                     active={activeTab === "gc-tv"}
                     onClick={() => {
                       setActiveTab("gc-tv");
@@ -3773,7 +4307,7 @@ ${textContent}`
                   />
                   <SidebarItem
                     icon={<Music size={16} />}
-                    label="Áudio & Efeitos"
+                    label={t("audio")}
                     active={activeTab === "audio"}
                     onClick={() => {
                       setActiveTab("audio");
@@ -3782,7 +4316,7 @@ ${textContent}`
                   />
                   <SidebarItem
                     icon={<Film size={16} />}
-                    label="Gerador Omni Flash"
+                    label={t("omni")}
                     active={activeTab === "omni-flash"}
                     onClick={() => {
                       setActiveTab("omni-flash");
@@ -3790,8 +4324,17 @@ ${textContent}`
                     }}
                   />
                   <SidebarItem
+                    icon={<Video size={16} />}
+                    label={t("videoAnalise")}
+                    active={activeTab === "video-analysis"}
+                    onClick={() => {
+                      setActiveTab("video-analysis");
+                      setIsMobileSidebarOpen(false);
+                    }}
+                  />
+                  <SidebarItem
                     icon={<ImageIcon size={16} />}
-                    label="Galeria de Fotos"
+                    label={t("galeria")}
                     active={activeTab === "gallery"}
                     onClick={() => {
                       setActiveTab("gallery");
@@ -3802,10 +4345,19 @@ ${textContent}`
 
                 {/* Section: Workspace */}
                 <div className="space-y-1.5">
-                  <p className="px-3.5 text-[9px] font-black uppercase tracking-widest text-zinc-600 mb-2">Organização do Negócio</p>
+                  <p className="px-3.5 text-[9px] font-black uppercase tracking-widest text-[#c5a880]/80 mb-2">{t("organizacao")}</p>
+                  <SidebarItem
+                    icon={<DollarSign size={16} />}
+                    label={t("financeiro")}
+                    active={activeTab === "finance" || activeTab === "dashboard"}
+                    onClick={() => {
+                      setActiveTab("finance");
+                      setIsMobileSidebarOpen(false);
+                    }}
+                  />
                   <SidebarItem
                     icon={<Users size={16} />}
-                    label="Meus Clientes"
+                    label={t("clientes")}
                     active={activeTab === "clients"}
                     onClick={() => {
                       setActiveTab("clients");
@@ -3814,7 +4366,7 @@ ${textContent}`
                   />
                   <SidebarItem
                     icon={<CheckSquare size={16} />}
-                    label="Lista de Tarefas"
+                    label={t("tarefas")}
                     active={activeTab === "tasks"}
                     onClick={() => {
                       setActiveTab("tasks");
@@ -3823,7 +4375,7 @@ ${textContent}`
                   />
                   <SidebarItem
                     icon={<Calendar size={16} />}
-                    label="Minha Agenda"
+                    label={t("agenda")}
                     active={activeTab === "calendar"}
                     onClick={() => {
                       setActiveTab("calendar");
@@ -3832,7 +4384,7 @@ ${textContent}`
                   />
                   <SidebarItem
                     icon={<MessageSquare size={16} />}
-                    label="WhatsApp"
+                    label={t("whatsapp")}
                     active={activeTab === "whatsapp"}
                     onClick={() => {
                       setActiveTab("whatsapp");
@@ -3841,7 +4393,7 @@ ${textContent}`
                   />
                   <SidebarItem
                     icon={<FileText size={16} />}
-                    label="Anotações"
+                    label={t("anotacoes")}
                     active={activeTab === "notes"}
                     onClick={() => {
                       setActiveTab("notes");
@@ -3854,54 +4406,48 @@ ${textContent}`
               <div className="border-t border-white/5 pt-4 space-y-3">
                 {typeof window !== "undefined" &&
                 localStorage.getItem("custom_gemini_api_key") ? (
-                  <div className="p-2 bg-[#c5a880]/10 border border-[#c5a880]/20 rounded-xl flex items-center justify-between">
+                  <div
+                    className="p-2.5 bg-black border border-white/10 hover:border-[#c5a880]/40 rounded-xl flex items-center justify-between cursor-pointer transition-all shadow-sm group"
+                    onClick={() => {
+                      setIsCreditsModalOpen(true);
+                      setIsMobileSidebarOpen(false);
+                    }}
+                  >
                     <div className="flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-[#c5a880] animate-pulse" />
-                      <span className="text-xs text-[#c5a880] font-medium">
-                        Sua API Ativa
+                      <span className="text-xs text-[#c5a880] font-bold">
+                        ⚡ Créditos & Cota API
                       </span>
                     </div>
-                    <button
-                      onClick={() => {
-                        localStorage.removeItem("custom_gemini_api_key");
-                        window.location.reload();
-                      }}
-                      className="text-[10px] text-zinc-500 hover:text-red-400 font-bold"
-                    >
-                      Remover
-                    </button>
+                    <span className="text-[10px] bg-[#c5a880]/15 text-[#c5a880] px-2 py-0.5 rounded-full font-mono font-bold">
+                      {getUsageStats().generatedToday}/50 hoje
+                    </span>
                   </div>
                 ) : (
                   <div
-                    className="p-2 bg-black border border-white/5 rounded-xl flex items-center justify-between cursor-pointer"
+                    className="p-2.5 bg-black border border-white/5 hover:border-[#c5a880]/40 rounded-xl flex items-center justify-between cursor-pointer transition-all shadow-sm group"
                     onClick={() => {
-                      setIsSettingsModalOpen(true);
+                      setIsCreditsModalOpen(true);
                       setIsMobileSidebarOpen(false);
                     }}
                   >
                     <div className="flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                      <span className="text-xs text-zinc-400 font-medium">
-                        Usando API Padrão
+                      <span className="text-xs text-zinc-300 font-bold">
+                        ⚡ Créditos API (Padrão)
                       </span>
                     </div>
+                    <span className="text-[10px] bg-emerald-500/15 text-emerald-400 px-2 py-0.5 rounded-full font-mono font-bold">
+                      {getUsageStats().generatedToday}/50 hoje
+                    </span>
                   </div>
                 )}
-                <SidebarItem
-                  icon={<Settings size={20} />}
-                  label="Configurações"
-                  active={false}
-                  onClick={() => {
-                    setIsSettingsModalOpen(true);
-                    setIsMobileSidebarOpen(false);
-                  }}
-                />
                 <SidebarItem
                   icon={<LogOut size={20} />}
                   label="Sair da Conta"
                   active={false}
                   onClick={() => {
-                    handleGoogleSignOut();
+                    handleSignOut();
                     setIsMobileSidebarOpen(false);
                   }}
                 />
@@ -3910,7 +4456,7 @@ ${textContent}`
 
                 <div
                   onClick={() => {
-                    setIsProfileModalOpen(true);
+                    setActiveTab("profile");
                     setIsMobileSidebarOpen(false);
                   }}
                   className="flex items-center gap-3 py-3 px-2.5 cursor-pointer hover:bg-white/5 rounded-xl transition-all border border-white/5 bg-black/40"
@@ -3946,6 +4492,218 @@ ${textContent}`
       <main className="flex-1 flex flex-col h-full overflow-hidden bg-black">
         {/* Scrollable Content Area */}
         <div className={`flex-1 flex flex-col ${activeTab === "ai-tools" || activeTab === "roteiros" || activeTab === "audio" ? "p-0 h-full overflow-hidden" : "p-4 sm:p-8 pt-6 sm:pt-10 overflow-y-auto"}`}>
+              {/* View: Perfil (tela completa) */}
+          {activeTab === "profile" && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="max-w-5xl mx-auto w-full space-y-6"
+            >
+              {/* Header de Banner Top Estilo Gravyx com Cores Zion */}
+              <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-gradient-to-r from-zinc-950 via-[#10141d] to-[#070a11] shadow-2xl">
+                {/* Glow Radial Dourado no topo */}
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_200px_at_50%_0%,rgba(197,168,128,0.18),transparent_80%)] pointer-events-none" />
+                
+                {/* Banner Top Area & Trocar Banner Button */}
+                <div className="h-36 sm:h-44 w-full flex items-start justify-end p-4 relative">
+                  <label
+                    htmlFor="user-banner-upload"
+                    className="bg-[#c5a880] hover:bg-[#ad8330] text-zinc-950 text-xs font-bold px-4 py-2 rounded-full flex items-center gap-1.5 shadow-lg shadow-[#c5a880]/20 cursor-pointer transition-all hover:scale-105 active:scale-95"
+                  >
+                    <span>📷 Trocar banner</span>
+                  </label>
+                  <input type="file" id="user-banner-upload" accept="image/*" className="hidden" />
+                </div>
+
+                {/* Perfil Sobreposto ao Banner */}
+                <div className="px-6 pb-6 pt-0 flex flex-col sm:flex-row sm:items-end justify-between gap-4 relative">
+                  <div className="flex flex-col sm:flex-row items-center sm:items-end gap-5">
+                    
+                    {/* Avatar Redondo Zion */}
+                    <div className="relative shrink-0 -mt-16 sm:-mt-14">
+                      {myProfile.avatarUrl ? (
+                        <img
+                          src={myProfile.avatarUrl}
+                          alt={myProfile.name}
+                          className="w-24 h-24 sm:w-28 sm:h-28 rounded-full object-cover border-4 border-[#070a11] shadow-2xl"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-tr from-[#c5a880] to-[#ad8330] text-zinc-950 flex items-center justify-center text-4xl font-black border-4 border-[#070a11] shadow-2xl uppercase">
+                          {(myProfile?.name || "Zion").substring(0, 2)}
+                        </div>
+                      )}
+                      
+                      {/* Botão de Trocar Foto Badge */}
+                      <label
+                        htmlFor="user-avatar-upload-badge"
+                        className="absolute bottom-1 right-1 w-7 h-7 bg-[#c5a880] hover:bg-[#ad8330] text-zinc-950 rounded-full flex items-center justify-center text-xs font-bold shadow-md cursor-pointer transition-all"
+                        title="Trocar Foto de Perfil"
+                      >
+                        📷
+                      </label>
+                      <input
+                        type="file"
+                        id="user-avatar-upload-badge"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          if (e.target.files && e.target.files[0]) {
+                            const file = e.target.files[0];
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              setMyProfile({ ...myProfile, avatarUrl: reader.result as string });
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                    </div>
+
+                    {/* Nome & Badges Zion */}
+                    <div className="text-center sm:text-left space-y-1.5 pb-1">
+                      <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
+                        <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                          {myProfile.name || "Equipe Zion"}
+                        </h1>
+                      </div>
+
+                      <div className="flex items-center justify-center sm:justify-start gap-2.5 flex-wrap pt-0.5">
+                        <span className="bg-[#c5a880]/20 border border-[#c5a880]/40 text-[#c5a880] text-[11px] font-bold px-3 py-0.5 rounded-md shadow-sm">
+                          {isAdmin ? "Administrador Zion" : "Cliente Agência"}
+                        </span>
+                        <span className="bg-[#101622] border border-white/10 text-slate-300 text-[11px] font-bold px-3 py-0.5 rounded-full flex items-center gap-1.5 shadow-sm">
+                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                          <span>Status: Ativo</span>
+                        </span>
+                        <span className="text-zinc-400 text-xs font-semibold">
+                          {currentUser?.email || "—"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setActiveTab("dashboard")}
+                    className="text-xs font-bold bg-[#c5a880] hover:bg-[#c5a880]/80 text-zinc-950 px-4 py-2 rounded-xl transition-colors shrink-0 shadow-md"
+                  >
+                    ← Voltar ao Painel
+                  </button>
+                </div>
+              </div>
+
+              {/* Navegação de Abas Horizontais Zion */}
+              <div className="flex items-center gap-2 border-b border-white/10 overflow-x-auto pb-3 scrollbar-none">
+                {[
+                  { id: "pessoais", label: "Editar Perfil", active: true },
+                  { id: "chave", label: "Chave API", active: false },
+                  { id: "dados", label: "Seus Dados (Exportar)", active: false },
+                  { id: "perigo", label: "Segurança", active: false },
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => {
+                      document.getElementById(item.id)?.scrollIntoView({ behavior: "smooth", block: "center" });
+                    }}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                      item.active
+                        ? "bg-[#c5a880]/20 text-[#c5a880] border border-[#c5a880]/40 shadow-md"
+                        : "text-zinc-400 hover:text-white hover:bg-white/5"
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Bloco do Feed (Card Principal Gravyx) */}
+              <div id="feed" className="bg-[#0d131f] border border-white/5 rounded-2xl p-6 sm:p-8 space-y-6 shadow-2xl">
+                <div>
+                  <h2 className="text-xl font-extrabold text-white">Feed</h2>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Suas contribuições aprovadas na Comunidade e imagens que você salvou.
+                  </p>
+                </div>
+
+                {/* Sub-abas de Contribuições / Salvos */}
+                {(() => {
+                  const allProfileImages = Array.from(
+                    new Set(
+                      (projectStore.projectsList || [])
+                        .flatMap((p: any) => p.galeria || [])
+                        .concat(projectStore.galeriaImages || [])
+                        .concat(savedCards || [])
+                    )
+                  ).filter(Boolean);
+
+                  return (
+                    <>
+                      <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                        <div className="flex items-center gap-2">
+                          <button className="bg-[#182234] border border-[#2563eb]/40 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm">
+                            <span>📷 Minhas Criações ({allProfileImages.length})</span>
+                          </button>
+                        </div>
+                        {allProfileImages.length > 0 && (
+                          <span className="text-xs text-zinc-400 font-medium hidden sm:inline">
+                            Clique em qualquer arte para abrir no Estúdio Criativo
+                          </span>
+                        )}
+                      </div>
+
+                      {allProfileImages.length === 0 ? (
+                        <div className="bg-[#090d16] border border-white/5 rounded-xl p-12 flex flex-col items-center justify-center text-center space-y-4 min-h-[260px]">
+                          <div className="w-16 h-16 rounded-2xl bg-[#101622] border border-white/10 flex items-center justify-center text-slate-500 shadow-inner">
+                            <ImageIcon size={32} className="opacity-50" />
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-sm font-bold text-zinc-300">Nenhuma imagem gerada ainda</p>
+                            <p className="text-xs text-zinc-500">Gere artes no Gerador de Fotos para vê-las sincronizadas no seu perfil.</p>
+                          </div>
+                          <button
+                            onClick={() => setActiveTab("ai-tools")}
+                            className="px-4 py-2 bg-[#c5a880] hover:bg-[#b08e58] text-black font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md cursor-pointer"
+                          >
+                            Ir para o Gerador de Fotos
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                          {allProfileImages.map((img, idx) => (
+                            <div
+                              key={idx}
+                              onClick={() => {
+                                projectStore.setGaleriaImages((prev: string[]) => {
+                                  const next = [img, ...prev.filter((i) => i !== img)];
+                                  return next;
+                                });
+                                projectStore.setActiveImageIndex(0);
+                                setActiveTab("ai-tools");
+                              }}
+                              className="group relative bg-[#090d16] border border-white/10 hover:border-[#c5a880]/50 rounded-xl overflow-hidden cursor-pointer shadow-lg hover:shadow-2xl hover:scale-[1.02] transition-all aspect-[3/4]"
+                            >
+                              <img
+                                src={img}
+                                alt={`Criação ${idx + 1}`}
+                                className="w-full h-full object-cover"
+                                referrerPolicy="no-referrer"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
+                                <span className="text-xs font-bold text-white mb-1">Abrir no Estúdio</span>
+                                <span className="text-[10px] text-[#c5a880] font-medium">Ultra HD</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+            </motion.div>
+          )}
+
               {/* View: Notes & Docs */}
           {activeTab === "notes" && (
             <motion.div
@@ -4019,48 +4777,93 @@ ${textContent}`
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="max-w-6xl mx-auto"
+              className="max-w-6xl mx-auto space-y-6"
             >
-              <div className="mb-8">
-                <h1 className="text-xl sm:text-3xl font-bold text-white mb-2 flex items-center gap-2 sm:gap-3">
-                  <ImageIcon className="text-[#c5a880]" size={28} /> Galeria de
-                  Cards
-                </h1>
-                <p className="text-zinc-400">Gerencie seus cards gerados.</p>
+              <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h1 className="text-xl sm:text-3xl font-bold text-white mb-1 flex items-center gap-2 sm:gap-3">
+                    <ImageIcon className="text-[#c5a880]" size={28} /> Minha Galeria de Artes
+                  </h1>
+                  <p className="text-zinc-400 text-xs sm:text-sm">Todas as suas artes geradas no estúdio reunidas em um só lugar.</p>
+                </div>
+                <button
+                  onClick={() => setActiveTab("ai-tools")}
+                  className="px-4 py-2.5 bg-[#c5a880] hover:bg-[#b08e58] text-black font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md flex items-center gap-2 self-start sm:self-auto cursor-pointer"
+                >
+                  <Sparkles size={14} /> Criar Nova Arte
+                </button>
               </div>
 
-              {savedCards.length === 0 ? (
-                <div className="text-center py-20 bg-black border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl">
-                  <p className="text-zinc-500">Nenhum card salvo na galeria.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                  {savedCards.map((img, idx) => (
-                    <div
-                      key={idx}
-                      className="relative group bg-black border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl overflow-hidden"
-                    >
-                      <img
-                        src={img}
-                        alt={`Card ${idx}`}
-                        className="w-full h-auto"
-                        referrerPolicy="no-referrer"
-                      />
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                        <button
-                          onClick={() => {
-                            const newCards = savedCards.filter((_, i) => i !== idx);
-                            setSavedCards(newCards);
-                          }}
-                          className="p-2 bg-red-500/20 text-red-400 rounded-full hover:bg-red-500/40 transition-colors"
-                        >
-                          <Trash2 size={20} />
-                        </button>
+              {(() => {
+                const allGalleryImages = Array.from(
+                  new Set(
+                    (projectStore.projectsList || [])
+                      .flatMap((p: any) => p.galeria || [])
+                      .concat(projectStore.galeriaImages || [])
+                      .concat(savedCards || [])
+                  )
+                ).filter(Boolean);
+
+                if (allGalleryImages.length === 0) {
+                  return (
+                    <div className="text-center py-20 bg-black border border-white/5 shadow-2xl rounded-2xl flex flex-col items-center justify-center space-y-4">
+                      <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-zinc-600">
+                        <ImageIcon size={32} />
                       </div>
+                      <div className="space-y-1">
+                        <p className="text-zinc-300 font-bold text-sm">Nenhuma arte salva na galeria ainda.</p>
+                        <p className="text-zinc-500 text-xs">Suas artes geradas em 4K e 2K aparecerão automaticamente aqui.</p>
+                      </div>
+                      <button
+                        onClick={() => setActiveTab("ai-tools")}
+                        className="px-5 py-2 bg-[#c5a880] hover:bg-[#b08e58] text-black font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md cursor-pointer"
+                      >
+                        Abrir Gerador de Fotos
+                      </button>
                     </div>
-                  ))}
-                </div>
-              )}
+                  );
+                }
+
+                return (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    {allGalleryImages.map((img, idx) => (
+                      <div
+                        key={idx}
+                        className="relative group bg-[#08080a] border border-white/10 hover:border-[#c5a880]/60 rounded-xl overflow-hidden shadow-lg transition-all aspect-[3/4]"
+                      >
+                        <img
+                          src={img}
+                          alt={`Arte ${idx + 1}`}
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                        <div className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2.5 p-3 text-center">
+                          <button
+                            onClick={() => {
+                              projectStore.setGaleriaImages((prev: string[]) => {
+                                const next = [img, ...prev.filter((i) => i !== img)];
+                                return next;
+                              });
+                              projectStore.setActiveImageIndex(0);
+                              setActiveTab("ai-tools");
+                            }}
+                            className="px-3 py-1.5 bg-[#c5a880] hover:bg-[#b08e58] text-black font-black text-xs uppercase tracking-wider rounded-lg transition-all shadow-md w-full cursor-pointer"
+                          >
+                            Editar / Abrir
+                          </button>
+                          <a
+                            href={img}
+                            download={`arte_zion_${idx + 1}.png`}
+                            className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-lg transition-all border border-white/10 w-full flex items-center justify-center gap-1.5"
+                          >
+                            <Download size={12} /> Baixar
+                          </a>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
             </motion.div>
           )}
 
@@ -4366,6 +5169,11 @@ ${textContent}`
           {activeTab === "omni-flash" && (
             <div className="h-full w-full bg-[#09090b] flex flex-col min-h-0 overflow-hidden">
               <GeradorOmniFlash customApiKey={getActiveApiKey()} />
+            </div>
+          )}
+          {activeTab === "video-analysis" && (
+            <div className="h-full w-full bg-[#09090b] flex flex-col min-h-0 overflow-hidden">
+              <VideoAnalysis customApiKey={getActiveApiKey()} />
             </div>
           )}
           {activeTab === "ai-tools" && (
@@ -4767,7 +5575,7 @@ ${textContent}`
           )}
 
           {/* View: Dashboard & Finanças */}
-          {activeTab === "dashboard" && (
+          {(activeTab === "dashboard" || activeTab === "finance") && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -5823,10 +6631,10 @@ ${textContent}`
                                     }`}
                                   >
                                     {e.type === "post"
-                                      ? "Postagem ðŸ“"
+                                      ? "Postagem 📝"
                                       : e.type === "reuniao"
-                                        ? "Reunião ðŸ¤"
-                                        : "Entrega ðŸ“¦"}
+                                        ? "Reunião 🤝"
+                                        : "Entrega 📦"}
                                   </span>
                                   <span className="text-[10px] text-zinc-500 font-mono font-medium">
                                     {e.date} às {e.time}
@@ -6161,9 +6969,9 @@ ${textContent}`
                         }
                         className="w-full bg-black border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 focus:ring-1 focus:ring-amber-500/20"
                       >
-                        <option value="Em dia">ðŸŸ¢ Em dia</option>
-                        <option value="Pendente">ðŸŸ¡ Pendente</option>
-                        <option value="Atrasado">ðŸ”´ Atrasado</option>
+                        <option value="Em dia">🟢 Em dia</option>
+                        <option value="Pendente">🟡 Pendente</option>
+                        <option value="Atrasado">🔴 Atrasado</option>
                       </select>
                     </div>
                     <div>
@@ -6438,192 +7246,6 @@ ${textContent}`
             </motion.div>
           </div>
         )}
-
-        {isProfileModalOpen && (
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-black border border-white/5 rounded-xl p-8 sm:p-6 w-full max-w-md shadow-2xl max-h-[92vh] overflow-y-auto flex flex-col"
-            >
-              <div className="flex items-center justify-between mb-6 pb-3 border-b border-white/5">
-                <div>
-                  <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                    <User size={20} className="text-[#c5a880]" />
-                    Configurações da Minha Conta
-                  </h2>
-                  <p className="text-xs text-zinc-500 mt-0.5">
-                    Gerencie o nome e avatar exibidos no painel Zion.
-                  </p>
-                </div>
-                <button
-                  onClick={() => setIsProfileModalOpen(false)}
-                  className="text-zinc-400 hover:text-white p-1 hover:bg-white/5 rounded-lg transition-colors"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
-              <div className="space-y-5 text-left">
-                {/* Avatar Display & Input */}
-                <div className="flex flex-col items-center gap-4 bg-black border border-white/5 rounded-xl p-8">
-                  {myProfile.avatarUrl ? (
-                    <img
-                      src={myProfile.avatarUrl}
-                      alt={myProfile.name}
-                      className="w-20 h-20 rounded-full object-cover border-2 border-[#c5a880]/50 shadow-lg shadow-amber-500/10"
-                      referrerPolicy="no-referrer"
-                    />
-                  ) : (
-                    <div className="w-20 h-20 rounded-full bg-[#c5a880] text-zinc-950 flex items-center justify-center text-2xl font-black uppercase">
-                      {myProfile.name.substring(0, 2)}
-                    </div>
-                  )}
-
-                  <div className="flex flex-col items-center gap-1.5 w-full">
-                    <label
-                      htmlFor="user-avatar-upload"
-                      className="text-xs font-bold bg-[#111] hover:bg-zinc-700 text-white px-3 py-2 rounded-lg cursor-pointer transition-colors text-center w-full sm:w-auto"
-                    >
-                      + Enviar Foto do Computador
-                    </label>
-                    <input
-                      type="file"
-                      id="user-avatar-upload"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        if (e.target.files && e.target.files[0]) {
-                          const file = e.target.files[0];
-                          const reader = new FileReader();
-                          reader.onloadend = () => {
-                            setMyProfile({
-                              ...myProfile,
-                              avatarUrl: reader.result as string,
-                            });
-                          };
-                          reader.readAsDataURL(file);
-                        }
-                      }}
-                    />
-                    {myProfile.avatarUrl && (
-                      <button
-                        onClick={() =>
-                          setMyProfile({ ...myProfile, avatarUrl: "" })
-                        }
-                        className="text-[11px] text-red-400 hover:text-red-300 font-bold"
-                      >
-                        Remover Foto
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Preset photo options for user/agency */}
-                  <div className="w-full space-y-1">
-                    <span className="text-[10px] text-zinc-500 block text-center">
-                      Ou escolha um avatar pronto de agência:
-                    </span>
-                    <div className="flex gap-2 justify-center py-1 overflow-x-auto scrollbar-none">
-                      {[
-                        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80", // Default
-                        "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=150&q=80", // Executive Man
-                        "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=150&q=80", // Woman
-                        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80", // Man
-                        "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=150&q=80", // Woman 2
-                      ].map((url, i) => (
-                        <button
-                          key={i}
-                          type="button"
-                          onClick={() =>
-                            setMyProfile({ ...myProfile, avatarUrl: url })
-                          }
-                          className={`w-8 h-8 rounded-full overflow-hidden border transition-all ${
-                            myProfile.avatarUrl === url
-                              ? "border-[#c5a880] scale-110"
-                              : "border-white/5"
-                          }`}
-                        >
-                          <img
-                            src={url}
-                            className="w-full h-full object-cover"
-                            referrerPolicy="no-referrer"
-                            alt=""
-                          />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Name & Role Form fields */}
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase">
-                    Nome do Usuário / Agência
-                  </label>
-                  <input
-                    type="text"
-                    value={myProfile.name}
-                    onChange={(e) =>
-                      setMyProfile({ ...myProfile, name: e.target.value })
-                    }
-                    className="w-full bg-black border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50"
-                    placeholder="Ex: Equipe Zion"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase">
-                    Função / Cargo
-                  </label>
-                  <input
-                    type="text"
-                    value={myProfile.role}
-                    onChange={(e) =>
-                      setMyProfile({ ...myProfile, role: e.target.value })
-                    }
-                    className="w-full bg-black border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50"
-                    placeholder="Ex: Agência Digital"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-[#c5a880] mb-1.5 uppercase flex items-center gap-1.5">
-                    <Wand2 size={12} /> Chave API Gemini (Opcional)
-                  </label>
-                  <input
-                    type="password"
-                    value={myProfile.geminiApiKey || ""}
-                    onChange={(e) =>
-                      setMyProfile({
-                        ...myProfile,
-                        geminiApiKey: e.target.value,
-                      })
-                    }
-                    className="w-full bg-black border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50"
-                    placeholder="Cole sua API Key do Google AI Studio aqui"
-                  />
-                  <p className="text-[10px] text-zinc-500 mt-1.5">
-                    Ao definir a chave aqui, a IA utilizará sua cota para gerar
-                    textos e ler imagens. Esta chave é salva diretamente no
-                    Firebase e fica disponível em todos os seus dispositivos.
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-8 pt-4 border-t border-white/5 flex justify-end">
-                <button
-                  onClick={() => setIsProfileModalOpen(false)}
-                  className="bg-[#c5a880] hover:bg-[#c5a880]/80 text-zinc-950 px-5 py-2.5 rounded-xl font-black text-xs transition-all shadow-md shadow-amber-500/15"
-                >
-                  Confirmar Alterações
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-
-
 
         {isTaskModalOpen && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -7202,9 +7824,9 @@ ${textContent}`
                       }
                       className="w-full bg-black border border-white/5 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 text-sm"
                     >
-                      <option value="post">Post ðŸ“</option>
-                      <option value="reuniao">Reunião ðŸ¤</option>
-                      <option value="entrega">Entrega/Gravação ðŸ“¦</option>
+                      <option value="post">Post 📝</option>
+                      <option value="reuniao">Reunião 🤝</option>
+                      <option value="entrega">Entrega/Gravação 📦</option>
                     </select>
                   </div>
                   <div>
@@ -7284,6 +7906,18 @@ ${textContent}`
       </AnimatePresence>
 
 
+      {isCreditsModalOpen && (
+        <CreditsModal
+          onClose={() => setIsCreditsModalOpen(false)}
+          currentLang={currentLang}
+          onOpenSettings={() => {
+            setIsCreditsModalOpen(false);
+            setIsSettingsModalOpen(true);
+          }}
+          customApiKey={myProfile?.geminiApiKey || localStorage.getItem("custom_gemini_api_key") || ""}
+        />
+      )}
+
       {isSettingsModalOpen && (
         <SettingsModal
           onClose={() => setIsSettingsModalOpen(false)}
@@ -7300,6 +7934,66 @@ ${textContent}`
           setCalendarEvents={setCalendarEvents}
         />
       )}
+
+      <AuthModal
+        isOpen={!isAuthChecking && (!currentUser || isAuthModalOpen)}
+        onClose={() => {
+          setIsAuthModalOpen(false);
+          setIsPasswordResetMode(false);
+        }}
+        initialViewMode={isPasswordResetMode ? "reset" : "login"}
+        onLoginSuccess={(u) => {
+          setCurrentUser(u);
+          if (u.role === "client") setActiveTab("ai-tools");
+        }}
+      />
+
+      {/* Popup "Complete seu cadastro" — aparece logo após o login do cliente */}
+      <ProfileCompletePopup
+        isOpen={isProfileCompleteOpen}
+        onClose={dismissProfileCompletePopup}
+        onSave={async (data) => {
+          setMyProfile((prev: any) => ({
+            ...(prev || {}),
+            name: data.name || prev?.name,
+            role: data.occupation || prev?.role,
+            phone: data.phone || prev?.phone,
+          }));
+          try {
+            const {
+              data: { session },
+            } = await supabase.auth.getSession();
+            if (session?.user) {
+              const { data: existing } = await supabase
+                .from("users")
+                .select("data")
+                .eq("id", session.user.id)
+                .maybeSingle();
+              const prevData =
+                existing?.data && typeof existing.data === "object" && !Array.isArray(existing.data)
+                  ? (existing.data as Record<string, unknown>)
+                  : {};
+              await supabase.from("users").upsert({
+                id: session.user.id,
+                email: session.user.email,
+                role: "client",
+                data: {
+                  ...prevData,
+                  full_name: data.name || prevData.full_name || "",
+                  phone: data.phone || prevData.phone || "",
+                  occupation: data.occupation || prevData.occupation || "",
+                },
+                updated_at: new Date().toISOString(),
+              });
+            }
+          } catch (e) {}
+          dismissProfileCompletePopup();
+        }}
+        onOpenProfile={() => {
+          dismissProfileCompletePopup();
+          setActiveTab("profile");
+        }}
+      />
     </div>
   );
 }
@@ -7395,16 +8089,16 @@ function SidebarItemMini({
     <div className="relative group flex justify-center w-full">
       <button
         onClick={onClick}
-        className={`p-3 rounded-xl transition-all ${
+        className={`p-3 rounded-xl transition-all cursor-pointer ${
           active
-            ? "bg-[#c5a880]/15 text-[#c5a880] border border-[#c5a880]/20 font-bold"
-            : "text-zinc-500 hover:text-white hover:bg-white/[0.03] border border-transparent"
+            ? "bg-[#c5a880]/15 text-[#c5a880] border border-[#c5a880]/40 font-bold shadow-md shadow-[#c5a880]/10"
+            : "text-zinc-400 hover:text-white hover:bg-white/[0.05] border border-transparent"
         }`}
       >
         {icon}
       </button>
       {/* Tooltip on Hover */}
-      <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-black border border-white/5 text-white text-[10px] font-bold py-1.5 px-3 rounded-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap shadow-xl">
+      <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-[#090d16] border border-[#c5a880]/20 text-white text-[10px] font-bold py-1.5 px-3 rounded-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap shadow-xl">
         {tooltip}
       </div>
     </div>
@@ -7425,9 +8119,9 @@ function SidebarItem({
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-200 text-xs font-medium tracking-wide group ${
+      className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-200 text-xs font-medium tracking-wide group cursor-pointer ${
         active
-          ? "bg-gradient-to-r from-[#c5a880]/20 to-[#c5a880]/5 text-[#c5a880] border border-[#c5a880]/30 font-semibold shadow-sm"
+          ? "bg-[#c5a880]/15 text-white border border-[#c5a880]/40 font-bold shadow-md shadow-[#c5a880]/10"
           : "text-zinc-400 hover:bg-white/5 hover:text-white border border-transparent"
       }`}
     >

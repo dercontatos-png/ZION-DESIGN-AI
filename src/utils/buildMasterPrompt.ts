@@ -11,11 +11,13 @@ export const buildMasterPrompt = (config: ProjectConfig): string => {
   const isProduct = config.tipoPainel === "PRODUCT";
   const isLogo = config.tipoPainel === "LOGO";
   const isGcTv = config.tipoPainel === "GC_TV";
+  const isFoto = config.tipoPainel === "FOTO";
   
   // 1. MASTER DIRECTIVE & STYLE
   let promptParts: string[] = [
     isLogo ? "Professional logo design masterpiece, vector graphic style, high contrast, clean minimalist, flat, scalable, white background, high quality, flawless colors, no pixelation."
            : isGcTv ? "Professional Television Broadcast Graphic (GC / Lower Third / Character Generator) overlay for TV shows, news, sports, and podcasts. Ultra-high resolution 8K, crisp broadcast typography, modern lower-third graphic bar, high-contrast TV studio production value, flawless colors, no pixelation."
+           : isFoto ? "Professional Photo Editing & Studio Retouching Masterpiece. High-end photography enhancement for portraits, people, food, and commercial subjects. Realistic photo finish, professional Adobe Lightroom color grading, 100% natural skin texture, crisp studio lighting, 8K ultra-realistic detail, sharp focus, flawless colors, zero synthetic AI artifacts."
            : "Premium graphic design masterpiece. Ultra-high resolution 8K, extreme detail, agency-level quality, sharp focus, cinematic lighting, flawless colors, perfectly smooth, no pixelation or artifacts.",
   ];
 
@@ -33,26 +35,42 @@ export const buildMasterPrompt = (config: ProjectConfig): string => {
     promptParts.push(`Themes: ${config.estilosVisuais.join(", ")}.`);
   }
 
+  if (config.enableEstiloVisual && config.estiloVisualCustom?.trim()) {
+    promptParts.push(`Custom Aesthetic Atmosphere: ${config.estiloVisualCustom.trim()}.`);
+  }
+
   if (isGcTv) {
     promptParts.push("TV Broadcast Overlay Specifications: Lower Third TV Bar / Gerador de Caracteres. Include a clean graphical banner bar across the lower section of the screen, with crisp high-legibility broadcast typography for presenter/guest names, titles, badges, and TV station branding.");
   }
 
   // 3. DIMENSIONS & COMPOSITION
   const ratio = config.dimensao || "1:1";
-  promptParts.push(`Aspect ratio: ${ratio}.`);
+  promptParts.push(`Aspect ratio: ${ratio}. Target render fidelity: ${config.resolucao || "1K"} HD.`);
 
   if (config.formatoExportacao === "PNG") {
     promptParts.push("Color fidelity: 32-bit RGBA depth, ultra-smooth lossless gradient transitions, high dynamic range color precision.");
   }
 
-  // 4. SUBJECT / PRODUCT FOCUS (Integrating References)
+  // 4. SUBJECT / PRODUCT FOCUS (Positioning, Framing, Gender, Pose)
   if (isLogo) {
     promptParts.push(`Central subject: Brand name '${config.additionalPrompt || "Company Name"}', iconic logo concept.`);
   } else if (config.desativarSujeito) {
     promptParts.push("Focus: Background atmosphere, typography, atmospheric elements.");
   } else {
-    const poseText = config.poseDescription?.trim() ? `, ${config.poseDescription.trim()}` : "";
-    promptParts.push(`Central subject / People in Photo${poseText}: The exact person/people/subjects from the attached reference photo(s) ('Referência do Sujeito Principal' / 'Referência de Design/Layout'). ABSOLUTE CRITICAL FACIAL IDENTITY, INDIVIDUAL EXPRESSION & POSE PRESERVATION MANDATE: Preserve 100% of the EXACT faces, facial features, expressions, eyes, nose, mouth posture, individual smile state (do NOT force a smile or teeth on any individual with a closed-mouth or subtle expression), hair, skin tone, clothing, physical body poses, spatial ordering, and exact positions of ALL people/subjects in the reference photo. YOU ARE STRICTLY FORBIDDEN from altering, redesigning, changing facial features, changing individual facial expressions, swapping faces, recreating different individuals, changing poses, or moving people to different positions! Each person MUST maintain their exact individual facial expression and mouth appearance as shown in the reference photo.`);
+    const poseText = config.poseDescription?.trim() ? `, Pose/Clothing: ${config.poseDescription.trim()}` : "";
+    let finalPlacement = config.positioning ? config.positioning.toUpperCase() : "CENTER";
+    if (config.composicaoCustom?.trim()) {
+      if (/centro|center/i.test(config.composicaoCustom)) finalPlacement = "CENTER";
+      else if (/esquerda|left/i.test(config.composicaoCustom)) finalPlacement = "LEFT";
+      else if (/direita|right/i.test(config.composicaoCustom)) finalPlacement = "RIGHT";
+    }
+    const posText = `, Horizontal Placement: Place the subject strictly in the ${finalPlacement} of canvas`;
+    const compText = (config.composicaoCustom?.trim() || config.composicao) ? `, Shot Framing & Custom Composition: ${config.composicaoCustom?.trim() || config.composicao}` : "";
+    const genderText = config.multiplesPersons 
+      ? `, Multiple Subjects: ${config.gendersDescription?.trim() || config.gender || 'Group'}` 
+      : (config.gender ? `, Gender: ${config.gender}` : "");
+
+    promptParts.push(`Central Subject & Framing Directives${poseText}${posText}${compText}${genderText}: The exact person/people/subjects from the attached reference photo(s) ('Referência do Sujeito Principal' / 'Referência de Design/Layout'). ABSOLUTE CRITICAL FACIAL IDENTITY, INDIVIDUAL EXPRESSION & POSE PRESERVATION MANDATE: Preserve 100% of the EXACT faces, facial features, expressions, eyes, nose, mouth posture, individual smile state (do NOT force a smile or teeth on any individual with a closed-mouth or subtle expression), hair, skin tone, clothing, physical body poses, spatial ordering, and exact positions of ALL people/subjects in the reference photo. YOU ARE STRICTLY FORBIDDEN from altering, redesigning, changing facial features, changing individual facial expressions, swapping faces, recreating different individuals, changing poses, or moving people to different positions! Each person MUST maintain their exact individual facial expression and mouth appearance as shown in the reference photo.`);
   }
 
   // 5. SCENARIO / BACKGROUND ENVIRONMENT
@@ -61,8 +79,14 @@ export const buildMasterPrompt = (config: ProjectConfig): string => {
   if (isLogo) {
     promptParts.push("Background: Solid white, clean and minimalist.");
   } else if (hasRefImage) {
+    const isExplicitScenarioPhoto = !!(config.cenarioBase64 || (config.cenariosBase64List && config.cenariosBase64List.length > 0) || config.useEnvRef);
     const cenarioText = config.promptCenario?.trim() ? ` Additional background details: ${config.promptCenario.trim()}.` : "";
-    promptParts.push(`Background & Environment: STRICT ORIGINAL BACKGROUND & ROOM PRESERVATION MANDATE: Preserve 100% of the exact original background scene, room, walls, architecture, furniture, textures, and lighting from the attached reference photo ('Referência de Design/Layout' / 'Referência de Cenário'). Do NOT replace, change, redesign, or substitute the background with a new generated room, studio set, or different backdrop! Keep the exact same room, walls, and setting from the reference photo, applying ONLY the specific edits requested (such as erasing cast shadows from the wall/behind subjects, removing clutter/objects from tables, or adjusting exposure/blur).${cenarioText}`);
+    
+    if (isExplicitScenarioPhoto) {
+      promptParts.push(`Background & Environment: STRICT ATTACHED SCENARIO PHOTO USE MANDATE: You MUST render and use the EXACT background scene, room, landscape, architecture, texture, and environment from the attached scenario reference image ('Referência de Cenário' / 'Additional Scenario Reference'). YOU ARE ABSOLUTELY FORBIDDEN FROM HALLUCINATING, INVENTING, OR GENERATING A RANDOM OR NEW BACKGROUND. Place the subjects and texts directly in front of the exact backdrop from the attached scenario image.${cenarioText}`);
+    } else {
+      promptParts.push(`Background & Environment: STRICT ORIGINAL BACKGROUND & ROOM PRESERVATION MANDATE: Preserve 100% of the exact original background scene, room, walls, architecture, furniture, textures, and lighting from the attached reference photo ('Referência de Design/Layout' / 'Referência de Cenário'). Do NOT replace, change, redesign, or substitute the background with a new generated room, studio set, or different backdrop! Keep the exact same room, walls, and setting from the reference photo, applying ONLY the specific edits requested.${cenarioText}`);
+    }
   } else if (config.promptCenario?.trim()) {
     promptParts.push(`Background: ${config.promptCenario.trim()}.`);
   } else {
@@ -79,30 +103,88 @@ export const buildMasterPrompt = (config: ProjectConfig): string => {
     promptParts.push(`Color Palette Dominant override: The dominant theme color, main background color, AND any text container box backgrounds MUST BE EXACTLY HEX ${config.corDominante}. Apply this specific hex value as the primary background color and container fill color with high, rich vibrance and zero color drift. Do not deviate from this exact hex value.`);
   }
 
-  // 8. TYPOGRAPHY & TEXT LAYOUT (The true Flyer BR magic)
+  // 7. ATMOSPHERIC GRADIENTS, BLUR & FLOATING DEPTH ELEMENTS
+  if (config.degradeLeitura) {
+    promptParts.push("Typography Contrast Vignette: Render a smooth, high-contrast dark vignette gradient overlay behind text areas in the footer/header to guarantee 100% legibility.");
+  }
+  if (config.lateralGradient) {
+    promptParts.push("Side Vignette Shadows: Render soft dark gradient shadow borders along the left and right edges for cinematic framing.");
+  }
+  if (config.enableBlur) {
+    promptParts.push("Depth of Field: Apply soft background depth-of-field blur behind the subject to create sharp visual separation.");
+  }
+  if (config.floatingElementsMode === "custom" && config.floatingElementsCustom?.trim()) {
+    promptParts.push(`Floating Depth Elements: ${config.floatingElementsCustom.trim()}.`);
+  } else if (config.floatingElementsMode === "auto") {
+    promptParts.push("Floating Depth Elements: Render subtle thematic floating elements (if any) with moderation for realistic depth. DO NOT render particles, sparkles, dust, embers, confetti, glitter, or lens flares.");
+  }
+
+  // Helper to sanitize placeholder brackets
+  const sanitizeText = (str?: string): string => {
+    if (!str) return "";
+    let cleaned = str.replace(/\[(headline|subtítulo|subtitulo|chamada|texto|cta|inserir|digite|seu texto|sua frase|conteúdo|conteudo|rodapé|rodape|logo|logotipo|imagem|nome|data|telefone|whatsapp|instagram|endereço|endereco|título|titulo|apoio|secundári[oa]|principal|slogan|tagline|description|title|subtitle|footer|header|body|content|image|date|phone|address|name|your text|insert|type)[^\]]*\]/gi, '').trim();
+    if (/^\[.*\]$/.test(cleaned) || /^\[.*\]$/.test(str.trim())) return "";
+    const purePlaceholders = /^(headline principal|chamada secund[áa]ria|texto de apoio|rodap[ée]|subt[ií]tulo|cta|call to action|seu t[ií]tulo|seu texto|inserir texto)$/i;
+    if (purePlaceholders.test(cleaned)) return "";
+    return cleaned;
+  };
+
+  // 8. TYPOGRAPHY & TEXT LAYOUT (With Exact Font Family, Hex Colors, Global Alignment & Layer Order)
   if (config.camadasTexto && config.camadasTexto.length > 0) {
-    const activeLayers = config.camadasTexto.filter(l => l.conteudo?.trim());
+    const activeLayers = config.camadasTexto
+      .map(l => ({ ...l, conteudo: sanitizeText(l.conteudo) }))
+      .filter(l => l.conteudo?.trim());
+
     if (activeLayers.length > 0) {
-      const formattedTexts = activeLayers.map(l => {
-        const funcao = l.funcao ? `[${l.funcao.toUpperCase()}]` : '[TEXTO]';
-        return `${funcao}: "${l.conteudo.trim()}"`;
-      }).join(", ");
+      const globalPosText = config.typographyPosition ? `Global Alignment: ${config.typographyPosition.toUpperCase()}` : "Global Alignment: CENTERED";
+      const formattedTexts = activeLayers.map((l, idx) => {
+        const funcao = l.funcao ? `[${l.funcao.toUpperCase()}]` : `[CAMADA #${idx + 1}]`;
+        const fontStr = l.fonte ? `, Font style: "${l.fonte}"` : '';
+        const colorStr = l.cor ? `, Hex Color: ${l.cor}` : '';
+        return `Layer #${idx + 1} ${funcao}${fontStr}${colorStr}: "${l.conteudo.trim()}"`;
+      }).join("\n");
       
-      promptParts.push(`\n=== MANDATORY CUSTOM TEXT LAYERS (ERASE ALL REFERENCE TEXT) ===\nRender ONLY these new custom text layers on the canvas: ${formattedTexts}.\nCRITICAL TEXT OVERWRITE RULE: You MUST completely ERASE and OVERWRITE 100% of the original text, titles, dates, handles, and numbers from the Design Layout Reference image. Do NOT keep or copy any words from the reference photo. Print ONLY these new custom text layers!`);
+      promptParts.push(`\n=== MANDATORY CUSTOM TEXT LAYERS (EXACT FONT, COLOR, ORDER & ALIGNMENT) ===\n${globalPosText}\nRender ONLY these custom text layers in their EXACT numerical order:\n${formattedTexts}\nSTRICT FONT FAMILY & COLOR COMPLIANCE MANDATE: You MUST apply the specified Font style for each text layer (the font name is only a STYLING DIRECTIVE for the letterforms — the font name as a WORD must NEVER be printed, written, or rendered as text on the canvas) and use the exact Hex Text Color for the text glyphs. Render Layer #1 as the primary top headline, Layer #2 below as subtitle/detail, etc. Maintain generous line spacing.\nTEXT LANGUAGE MANDATE: ALL text rendered on the canvas MUST be written in BRAZILIAN PORTUGUESE, exactly as supplied by the client (which is already in Portuguese). NEVER translate the supplied texts, NEVER mix English words into the supplied texts, and NEVER add English filler words like "PREMIUM", "LIVE", "NEW", "BEST", "NOW", "SALE", "SPECIAL" or any other English words UNLESS the client's supplied text explicitly includes them.\nCRITICAL TEXT OVERWRITE RULE: You MUST completely ERASE and OVERWRITE 100% of original text, titles, dates, handles, and numbers from the Design Layout Reference image. Do NOT keep or copy any words from the reference photo. Print ONLY these custom text layers!\nSAFETY MARGINS & SPACING MANDATE: Maintain safe margins of at least 8% padding from all canvas borders.`);
     }
+  }
+
+  if (config.promptTipografia?.trim() || config.tipografiaRefBase64 || (config.tipografiaRefsList && config.tipografiaRefsList.length > 0)) {
+    const typoExtractText = config.promptTipografia?.trim() ? ` Notes: ${config.promptTipografia.trim()}` : "";
+    promptParts.push(`\n=== TYPOGRAPHY REFERENCE EXTRACTION MANDATE ===\nAnalyze the attached Typography Reference Print ('Referência de Tipografia'). Copy the exact lettering style, font weight, text effects, and placement style from the reference print.${typoExtractText}`);
   }
 
   // 9. LOGO & DESIGN FIDELITY
   if (config.useLogo || config.logoBase64 || config.logosList?.length) {
-    promptParts.push(`NATIVE BRAND LOGO INTEGRATION (MANDATORY & EXACT POSITIONING):
-Draw and embed the client's provided brand logo ("Referência de Logotipo") natively directly onto the image canvas.
-- POSITIONING & HAIR/FACE AVOIDANCE (CRITICAL): The logo MUST NEVER be rendered on top of the subject's hair, head, face, or body. If the subject's hair or head extends near the top center, place the brand logo in clean negative background space in the top-left or top-right corner, ensuring zero collision or overlap with the subject's hair, head, face, or body.
-- SEAMLESS INTEGRATION: Render the logo cleanly onto the background. DO NOT draw an artificial black box, dark container rectangle, or inverted background box around the logo unless those shapes are part of the original logo file.
-- FIDELITY & NO DUPLICATE TEXT: Replicate 100% of the original logo's shapes, symbols, numbers, typography, and original colors without inverting or distorting any details. Do NOT print the logo's name as a separate text layer or headline in typography.`);
+    if (config.logoInclusionType === "overlay") {
+      promptParts.push(`DIGITAL LOGO OVERLAY MODE (EXACT POST-PROCESS INSTALLATION):
+The client's brand logo ("Referência de Logotipo da Marca") will be installed digitally with 100% pixel-exact fidelity AFTER the image generation.
+- ABSOLUTE NO-LOGO RENDERING MANDATE (CRITICAL): YOU ARE STRICTLY FORBIDDEN FROM DRAWING, RENDERING, PAINTING, OR HALLUCINATING ANY LOGO, BRAND EMBLEM, SYMBOL, OR "PREMIUM/DESIGNER WATERMARK" ANYWHERE ON THE CANVAS!
+- ABSOLUTE REFERENCE OLD LOGO ERASE MANDATE (CRITICAL): You MUST COMPLETELY ERASE, OMIT, AND REMOVE 100% OF ANY OLD LOGO, BRAND EMBLEM, OR SYMBOL PRESENT IN THE DESIGN LAYOUT REFERENCE PHOTO ('Referência de Design/Layout'). YOU ARE STRICTLY FORBIDDEN FROM COPYING, TRACING, DRAWING, OR KEEPING THE OLD LOGO FROM THE REFERENCE CARD PHOTO!
+- RESERVED CLEAN LOGO SPACE: Leave the designated logo area (top-left or top-right corner, away from subject hair/face/body, in clean continuous background) completely empty, clean, and unobstructed so the digital logo can be overlaid there without any visual collision.`);
+    } else {
+      promptParts.push(`NATIVE BRAND LOGO INTEGRATION (EXACT SINGLE INSTANCE & REFERENCE LOGO REPLACEMENT):
+Draw and embed the client's provided brand logo ("Referência de Logotipo da Marca") natively directly onto the image canvas.
+- ABSOLUTE REFERENCE LOGO ERASE MANDATE (CRITICAL): You MUST COMPLETELY ERASE, OMIT, AND REMOVE 100% OF ANY OLD LOGO, BRAND EMBLEM, OR SYMBOL PRESENT IN THE DESIGN LAYOUT REFERENCE PHOTO ('Referência de Design/Layout'). YOU ARE STRICTLY FORBIDDEN FROM COPYING, TRACING, DRAWING, OR KEEPING THE OLD LOGO FROM THE REFERENCE CARD PHOTO! Render STRICTLY AND ONLY the client's uploaded brand logo ('Referência de Logotipo da Marca').
+- SINGLE INSTANCE MANDATE (CRITICAL): Draw EXACTLY ONE SINGLE INSTANCE of the brand logo on the entire artwork. Absolute prohibition against duplicate logos, double logos, twin logos, extra logo placements, or repeating the logo anywhere else on the canvas.
+- LOGO NATURAL ASPECT RATIO MANDATE (CRITICAL): Preserve 100% of the original width-to-height natural aspect ratio of the brand logo. YOU ARE STRICTLY FORBIDDEN from stretching, distorting, squishing, compressing, or warping the logo horizontally or vertically to force it into any container box.
+- LOGO CONTRAST & LEGIBILITY MANDATE (CRITICAL): If the logo contains black or dark text and is rendered over a dark background, automatically apply a clean subtle light/white glow/halo backdrop behind the logo text so that dark logo typography stands out with 100% crisp contrast and legibility. If the background is light, ensure dark logo text is crisp. The logo MUST be 100% readable.
+- POSITIONING & HAIR/FACE AVOIDANCE (CRITICAL): The logo MUST NEVER be rendered on top of the subject's hair, head, face, or body. If the subject's hair or head extends near the top center, place the single brand logo in clean negative background space in the top-left or top-right corner, ensuring zero collision or overlap with the subject's hair, head, face, or body.
+- SEAMLESS INTEGRATION: Render the logo cleanly onto the background. DO NOT draw an artificial black box, dark container rectangle, or inverted background box around the logo unless those shapes are part of the original logo file.`);
+    }
   }
 
   if (config.designRefBase64 || config.designRefsList?.length || config.useEnvRef || config.cenarioBase64) {
-    promptParts.push("Layout & Reference Fidelity: Maintain 100% fidelity to the original photo's composition, background setting, room, furniture, spatial positioning, faces, and body poses of all subjects. Do NOT remove, erase, or replace the background environment. Do NOT alter facial features, do NOT change poses, and do NOT swap people's positions. Keep the exact same room/background setting and exact same people/poses from the reference photo.");
+    const designExtractNotes = config.promptDesign?.trim() ? ` Layout extraction notes: ${config.promptDesign.trim()}.` : "";
+    promptParts.push(`Layout & Reference Fidelity: Maintain 100% MAXIMUM FIDELITY to the attached reference photo's design layout ('Referência de Design/Layout'). Replicate the exact grid composition, card panel divisions, frame borders, background setting, room architecture, spatial positioning, subject faces, and body poses of all subjects. Do NOT redesign the layout grid! Do NOT change panel shapes! Keep 100% of the composition grid, cards, and structure identical to the reference image.${designExtractNotes}`);
+    const userHasProvidedHandle = (config.camadasTexto || []).some(l => l.conteudo && l.conteudo.includes("@")) ||
+      (config.additionalPrompt && config.additionalPrompt.includes("@"));
+
+    if (userHasProvidedHandle) {
+      promptParts.push("INSTAGRAM @ HANDLE PLACEMENT & EXACT FORMAT: Place the user's provided Instagram handle in the footer area with clean spacing. Format it STRICTLY as a single '@' followed by the username in lowercase (e.g. '@sispumumc'). ABSOLUTELY NEVER PRINT DUPLICATE '@@' SYMBOLS OR EXTRA '@' ICONS!");
+    } else {
+      promptParts.push("ZERO UNREQUESTED PROFILE HANDLES MANDATE (CRITICAL): You ARE STRICTLY FORBIDDEN from adding, inventing, generating, or rendering any Instagram @ handle, profile username (such as @perfil, @seu.perfil, @instagram, @usuario, or any fictional @handle), or profile text on the image canvas unless explicitly provided by the user in the custom text parameters! Completely erase any @ handle from reference photos. Keep the footer area completely clean of unrequested handles.");
+    }
+    promptParts.push("STRICT SOCIAL MEDIA ICONS & USER EXCLUSIONS MANDATE: If social media handles or icons are requested, render STRICTLY and ONLY the exact social media icons requested by the user. You MUST completely ERASE, EXCLUDE, AND REMOVE any unrequested social media icons originally present in the reference image (such as TikTok, YouTube, WhatsApp, Twitter/X, LinkedIn). Do NOT copy unrequested social media icons from the reference image. DO NOT print duplicate '@' symbols next to icons.");
     promptParts.push("LIGHTROOM PHOTO RETOUCHING & SHADOW ERASURE ENGINE: Completely erase and dissolve all harsh camera flash cast shadows on walls behind people, dark shadow outlines, and unwanted shadows on background surfaces. Apply full Adobe Lightroom treatment: balanced exposure/highlights/shadows, natural temperature/tint, vibrant skin tones, Texture/Clarity/Dehaze definition, fine S-curve tone curve, HSL color balance, subtle split-toning color grading, sharpening with luminance noise reduction, subtle vignette, and AI subject/face masking for crisp, professional, clean cinematic clarity.");
   }
 
@@ -121,14 +203,61 @@ Draw and embed the client's provided brand logo ("Referência de Logotipo") nati
 
   // 11. ADDITIONAL USER INSTRUCTIONS & MANDATORY PHOTO EDITING DIRECTIVES
   if (config.additionalPrompt?.trim()) {
-    promptParts.push(`\n=== CRITICAL USER PHOTO EDITING & MODIFICATION DIRECTIVES (HIGH PRIORITY) ===\n${config.additionalPrompt.trim()}\nEXPLICIT MANDATE: Execute EVERY SINGLE edit, object removal, lighting fix, color correction, skin retouch, background blur, shadow removal, and table/surface cleanup listed above with 100% precision.`);
+    const isRefinementReq = config.additionalPrompt.includes("EXPLICIT INSTRUCTION FOR THIS REFINEMENT:");
+    if (isRefinementReq) {
+      promptParts.unshift(`=== ABSOLUTE IMAGE CORRECTION, ULTRA-VIBRANCE & PRESERVE EVERYTHING ELSE MANDATE ===
+THIS IS A PRECISE LOCAL CORRECTION REQUEST ON THE PREVIOUSLY GENERATED IMAGE ('Imagem Gerada Anterior').
+YOU ARE STRICTLY MANDATED TO PERFORM AN EXACT IMAGE-TO-IMAGE CORRECTION:
+1. PRESERVE 100% OF THE PREVIOUS IMAGE'S COMPOSITION, LAYOUT, TEXTS, LOGOS, SUBJECTS, FACES, BACKGROUND, LIGHTING, CONTRAST, AND RICH COLOR SATURATION.
+2. ULTRA-VIBRANCE & SATURATION LOCK: Maintain 100% of the dynamic color saturation and warmth. YOU ARE STRICTLY FORBIDDEN FROM DULLING, DESATURATING, FADING, OR WASHING OUT COLORS.
+3. MODIFY ONLY AND EXCLUSIVELY WHAT IS REQUESTED IN THIS CORRECTION DIRECTIVE: "${config.additionalPrompt.trim()}".
+4. DO NOT REDESIGN THE CANVAS, DO NOT REGENERATE A DIFFERENT BACKDROP, AND DO NOT ALTER ANY UNREQUESTED ELEMENT.`);
+    }
+
+    promptParts.push(`\n=== CRITICAL USER PHOTO EDITING & MODIFICATION DIRECTIVES (HIGH PRIORITY) ===\n${config.additionalPrompt.trim()}\nEXPLICIT MANDATE: Execute EVERY SINGLE edit, icon restriction, object removal, lighting fix, color correction, skin retouch, background blur, shadow removal, and table/surface cleanup listed above with 100% precision.`);
   }
 
-  if (config.negativePrompt?.trim()) {
-    promptParts.push(`\n=== STRICT UNWANTED ELEMENTS & NEGATIVE CONSTRAINTS (MUST REMOVE / DO NOT RENDER) ===\n${config.negativePrompt.trim()}\nEXPLICIT NEGATIVE DIRECTIVE: Do NOT include, render, or keep any of the unwanted items listed above. You must completely erase and dissolve all dark cast shadows on walls, specifically the dark shadow outline behind the second person on the right. HOWEVER, DO NOT REMOVE THE ORIGINAL BACKGROUND AND DO NOT MAKE THE BACKGROUND WHITE! Replace all shadow areas strictly by cloning the clean, flat wall texture/color matching the rest of the illuminated wall in the reference.`);
+  // Add default anti-duplicate logo, photo & anti-unrequested icon constraints
+  const defaultAntiDuplicate = "duplicate logos, double logos, twin logos, multiple logos, repeated brand logos, extra logo placements, unrequested social media icons, tiktok icon, tiktok logo, musical.ly logo, invented @ handles, unrequested instagram handles, @perfil, @seu.perfil, @instagram, unrequested profile usernames, duplicate photos, repeated background image, repeating same image in multiple panels, same subject repeated in background and card, duplicate image boxes, dull colors, faded colors, desaturated colors, washed out contrast, particles, floating particles, dust particles, sparkles, glitter, confetti, glowing embers, lens flares, light leaks, floating sparks, bokeh spots, floating light dots";
+  const finalNegativePrompt = config.negativePrompt?.trim() 
+    ? `${config.negativePrompt.trim()}, ${defaultAntiDuplicate}`
+    : defaultAntiDuplicate;
+
+  promptParts.push(`\n=== STRICT UNWANTED ELEMENTS & NEGATIVE CONSTRAINTS (MUST REMOVE / DO NOT RENDER) ===\n${finalNegativePrompt}\nEXPLICIT NEGATIVE DIRECTIVE: Do NOT include, render, or keep any of the unwanted items or duplicate logos listed above. Render EXACTLY 1 single logo and ONLY the requested social media icons.`);
+
+  promptParts.push(`\n=== ABSOLUTE ZERO DUPLICATE IMAGES & UNIQUE PANEL ASSIGNMENT MANDATE (CRITICAL) ===
+1. STRICT ZERO REPEATED/DUPLICATE IMAGES RULE: You are STRICTLY FORBIDDEN from repeating, duplicating, or re-using the SAME photo or image in multiple places on the canvas!
+2. DISTINCT BACKGROUND vs. CARD PANELS: The background image MUST BE COMPLETELY DIFFERENT from the images used inside individual card panels, frames, or subject boxes. NEVER put the same image in the background AND inside a card box.
+3. UNIQUE PHOTO ASSIGNMENT: If multiple reference photos are provided ('Referência do Sujeito Principal', 'Referência de Cenário', 'Referência de Design/Layout'), assign a DIFFERENT, UNIQUE photo to each distinct card/panel box. Each image block on the layout MUST show a different photo with ZERO repetition.`);
+
+  const isRemovalOrCountRequest = /remov|tir|apag|sem|excluir|delet|limp|não adici|nao adici|mesma quantid|sem extra|sem adici|igual a referencia|mude todas|duplic|repet/i.test(
+    `${config.additionalPrompt || ''} ${config.negativePrompt || ''}`
+  );
+
+  if (isRemovalOrCountRequest) {
+    promptParts.push(`\n=== STRICT REMOVAL & EXACT IMAGE COUNT PRESERVATION DIRECTIVE ===
+1. REMOVE SPECIFIED OBJECTS / PANELS: Completely erase, delete, and remove the specified unwanted elements: ${finalNegativePrompt}.
+2. PRESERVE EXACT IMAGE COUNT: Do NOT add extra photos, extra image cards, extra panels, extra frames, or extra subjects. Maintain the exact same number of images/photos as shown in the reference design.
+3. NO DUPLICATE IMAGES ACROSS PANELS: Do NOT repeat the same image in the background and inside a card box. Keep background image and panel images completely distinct.
+4. DO NOT ALTER OR SWAP UNRELATED IMAGES: Keep 100% of all other existing images, faces, subjects, and layout elements untouched. Modifying unrequested images on the canvas is STRICTLY FORBIDDEN.`);
   }
 
-  promptParts.push(`\n=== FINAL EXPLICIT MANDATE ===\n1. FACES, EXPRESSIONS AND POSES MUST REMAIN 100% IDENTICAL TO THE REFERENCE PHOTO.\n2. STRICT BACKGROUND PRESERVATION: DO NOT MAKE THE BACKGROUND WHITE. YOU MUST PRESERVE THE EXACT ORIGINAL WALL TEXTURE AND COLOR FROM THE REFERENCE. ALL SHADOWS ON THE WALL (ESPECIALLY THE DARK CAST SHADOW BEHIND THE SECOND PERSON ON THE RIGHT) MUST BE COMPLETELY PAINTED OVER USING THE SAME ORIGINAL WALL COLOR, BLENDING SEAMLESSLY. DO NOT RENDER ANY SHADOWS BEHIND THE PEOPLE.`);
+  promptParts.push(`\n=== REAL PHOTOGRAPH EMBEDDING & NO RECREATION MANDATE (CRITICAL) ===
+When a real photograph is attached ('Referência do Sujeito Principal', 'Referência de Cenário', 'Referência de Design/Layout' - such as a church, building, facade, landscape, person, product, or scenery), you MUST USE AND EMBED THAT REAL PHOTOGRAPH DIRECTLY inside the artwork composition and background! YOU ARE STRICTLY FORBIDDEN from redrawing, re-rendering, illustrating, 3D animating, cartoonifying, or recreating real photographs as digital drawings or AI illustrations. The real photograph MUST maintain 100% authentic photographic realism, real-world textures, lighting, and real architectural details.
+
+=== ZERO HALLUCINATED TEXT, UNREQUESTED HANDLES & UNREQUESTED ICONS MANDATE (CRITICAL) ===
+1. ZERO HALLUCINATED TEXT & UNREQUESTED HANDLES: You MUST ONLY print, write, and render the custom texts explicitly supplied by the client in the text parameters! NEVER invent, hallucinate, write, or add any unrequested titles, subtitles, dates, event names, addresses, or random words! DO NOT invent or render any @ handles, profile usernames, or @perfil text unless explicitly provided by the client in the text parameters!
+2. ZERO UNREQUESTED ICONS: You MUST NOT draw unrequested social media icons (such as TikTok, YouTube, WhatsApp, Twitter/X, LinkedIn). Render ONLY the exact social media icons requested by the user.
+
+=== ${config.logoInclusionType === "overlay" && (config.useLogo || config.logoBase64 || config.logosList?.length) ? "DIGITAL LOGO OVERLAY MODE — ABSOLUTE NO-LOGO RENDERING MANDATE (CRITICAL)" : "STRICT ORIGINAL BRAND LOGO MANDATE (CRITICAL)"} ===
+${config.logoInclusionType === "overlay" && (config.useLogo || config.logoBase64 || config.logosList?.length)
+  ? "YOU ARE STRICTLY FORBIDDEN FROM DRAWING, RENDERING, PAINTING, OR HALLUCINATING ANY LOGO, BRAND EMBLEM, SYMBOL, OR WATERMARK ANYWHERE ON THE CANVAS! You MUST completely ERASE and REMOVE any old logo present in the reference design photo. Leave the designated logo area (top-left or top-right corner) clean, empty and unobstructed — the client's real logo will be installed digitally with 100% pixel-exact fidelity after generation."
+  : "Draw and embed the client's provided brand logo ('Referência de Logotipo') with 100% PERFECT EXACT COLOR AND SHAPE FIDELITY. You ARE STRICTLY FORBIDDEN from changing the logo's colors, modifying logo typography or symbols, warping or stretching logo proportions, or adding artificial dark container boxes around it."}
+
+=== SURGICAL REFINEMENT & UNRELATED ELEMENT PRESERVATION MANDATE (CRITICAL) ===
+When the user requests a specific edit or refinement, apply ONLY that specific requested change! You ARE STRICTLY FORBIDDEN from modifying, altering, redesigning, or replacing unrelated elements, background photos, church facades, logos, or text layers. Keep 100% of all unmentioned elements completely untouched. Preserve 100% of rich color saturation and dynamic contrast.`);
+
+  promptParts.push(`\n=== FINAL EXPLICIT MANDATE ===\n1. REAL PHOTOGRAPHS (CHURCHES, SCENERY, PEOPLE, PRODUCTS) MUST BE EMBEDDED DIRECTLY AS REAL PHOTOS - NEVER RECREATED AS DRAWINGS.\n2. FACES, EXPRESSIONS AND POSES MUST REMAIN 100% IDENTICAL TO THE REFERENCE PHOTO.\n3. ${config.logoInclusionType === "overlay" && (config.useLogo || config.logoBase64 || config.logosList?.length) ? "NEVER DRAW ANY LOGO ON THE CANVAS (DIGITAL OVERLAY MODE): The real client logo is installed digitally after generation — leave the logo area empty and erase any old logo from the reference." : "RENDER EXACTLY 1 SINGLE BRAND LOGO WITH 100% ORIGINAL COLORS AND SHAPE (ZERO DUPLICATE LOGOS, ZERO LOGO MODIFICATIONS)."}\n4. RENDER STRICTLY ONLY THE SOCIAL MEDIA ICONS REQUESTED (ERASE TIKTOK OR OTHER UNREQUESTED ICONS FROM REFERENCE).\n5. ABSOLUTE ANTI-HALLUCINATION TEXT & HANDLE MANDATE: NEVER invent unrequested dates, titles, text, or @ handles (@perfil, @seu.perfil, etc.). If no @ handle is explicitly provided by the user in the text parameters, DO NOT RENDER ANY @ HANDLE OR PROFILE NAME ON THE CANVAS. NEVER render text containing brackets like [HEADLINE], [SUBTÍTULO], [CHAMADA], [RODAPÉ], [CTA]. NEVER print font names as text (words like "Montserrat", "Bebas Neue", "Outfit", "Anton", "Cinzel" are STYLE COMMANDS for the letterforms, NOT words to be written on the canvas). ALL text rendered on the canvas MUST be real, final custom content explicitly provided.\n6. ALL PORTUGUESE TEXT MUST BE GRAMMATICALLY PERFECT: Zero spelling errors, zero accent errors, zero concordance errors. Proper capitalization of names, cities and brands. ALL displayed text MUST be in BRAZILIAN PORTUGUESE. NEVER mix English words (like PREMIUM, LIVE, NEW, SALE, BEST, NOW, SPECIAL) into the displayed texts unless the client supplied text literally contains them.\n7. ULTRA-VIBRANCE LOCK: Maintain high contrast and vibrant color saturation; zero dull, faded, or washed-out tones.`);
 
   let masterPrompt = promptParts.join(" ");
   return masterPrompt;

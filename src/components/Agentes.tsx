@@ -1,9 +1,11 @@
 import React, { useState } from "react";
 import { motion } from "motion/react";
-import { Search, Filter, Play, Zap, FileText, Layout, PenTool, Image as ImageIcon, Code, MessageSquare, BrainCircuit, BarChart3, Music, Volume2, Mic, Sliders } from "lucide-react";
+import { Search, Filter, Play, Zap, FileText, Layout, PenTool, Image as ImageIcon, Code, MessageSquare, BrainCircuit, BarChart3, Music, Volume2, Mic, Sliders, Instagram } from "lucide-react";
 import { useProjectStore } from "../store/useProjectStore";
+import { t } from "../utils/i18n";
 
 const getIcon = (id: string, category: string) => {
+  if (id === "copy-legendas-instagram") return <Instagram size={24} />;
   switch (category) {
     case "Copy": return <PenTool size={24} />;
     case "Design": return <ImageIcon size={24} />;
@@ -14,12 +16,13 @@ const getIcon = (id: string, category: string) => {
 };
 
 export const Agentes: React.FC = () => {
-  const [activeFilter, setActiveFilter] = useState("Todas ferramentas");
+  const [activeFilter, setActiveFilter] = useState("Todas as ferramentas");
   const { setChatActiveAssistantId, setChatDrawerOpen } = useProjectStore();
 
-  const filters = ["Todas ferramentas", "Copy", "Layout", "Design", "Áudio"];
+  const filters = ["Todas as ferramentas", "Copywriting", "Layout", "Design", "Áudio"];
 
   const agents = [
+    { id: "copy-legendas-instagram", title: "Legendas Instagram (Hashtags & Engajamento)", description: "Crie legendas envolventes para Instagram com emojis, CTAs e hashtags de alto engajamento automáticas.", category: "Copy" },
     { id: "analise-estrategica", title: "Análise Estratégica", description: "Investigue seu lead a fundo, descubra dores reais e entre com vantagem estratégica.", category: "Copy" },
     { id: "icp", title: "ICP e Posicionamento", description: "Fortaleça seu posicionamento, transmita autoridade e atraia clientes prontos para comprar.", category: "Copy" },
     { id: "atendimento", title: "Atendimento e Negociação", description: "Feche mais projetos com conversas estratégicas que geram confiança e conduzem ao sim.", category: "Copy" },
@@ -29,9 +32,9 @@ export const Agentes: React.FC = () => {
     { id: "estrutura-sites", title: "Estrutura Sites [IA]", description: "Esse agente entende o seu briefing e cria a estrutura do site como um mestre.", category: "Layout" },
     { id: "easy-copy", title: "Easy Copy", description: "Crie copys de alta conversão para sites/lps de qualquer nicho com alta qualidade.", category: "Copy" },
     { id: "diretor-criativo", title: "Diretor Cr[IA]tivo", description: "Saia da tela em branco com maestria e torne seu design ainda mais incrível.", category: "Design" },
-    { id: "easy-image", title: "Easy Image", description: "Gere imagens e extraia prompts com uma maior nível de detalhes e assertividade.", category: "Design" },
-    { id: "easy-coder", title: "Easy Coder", description: "Crie e faça alteração nos códigos dos seus projetos de maneira fácil e otimizada.", category: "Layout" },
-    { id: "analisador-paginas", title: "Analisador de Páginas", description: "Receba opiniões profissionais de uma IA treinada pra extrair seu melhor.", category: "Layout" },
+    { id: "easy-image", title: "Easy Image", description: "Gere imagens e extraia prompts com um maior nível de detalhes e assertividade.", category: "Design" },
+    { id: "easy-coder", title: "Easy Coder", description: "Crie e faça alterações nos códigos dos seus projetos de maneira fácil e otimizada.", category: "Layout" },
+    { id: "analisador-paginas", title: "Analisador de Páginas", description: "Receba opiniões profissionais de uma IA treinada para extrair seu melhor.", category: "Layout" },
     { id: "engenheiro-som", title: "Engenheiro de Som (SFX)", description: "Gere efeitos sonoros imersivos, foleys realistas e ambiências com máxima definição.", category: "Áudio" },
     { id: "diretor-musical", title: "Diretor Musical (Lyria)", description: "Produza trilhas cinematográficas, comerciais ou instrumentais com foco em progressão e emoção.", category: "Áudio" },
     { id: "locucao-tts", title: "Especialista em Voz / Locução & TTS", description: "Configure parâmetros de locução, narração corporativa e suporte a 32 idiomas.", category: "Áudio" },
@@ -40,7 +43,7 @@ export const Agentes: React.FC = () => {
     { id: "deep-work", title: "Deep Work", description: "Playlist para você trabalhar para aumentar sua produtividade e criatividade.", category: "Layout" }
   ];
 
-  const filteredAgents = activeFilter === "Todas ferramentas" 
+  const filteredAgents = activeFilter === "Todas as ferramentas" 
     ? agents 
     : agents.filter(a => a.category === activeFilter);
 
@@ -51,8 +54,8 @@ export const Agentes: React.FC = () => {
       className="w-full h-full flex flex-col p-8 overflow-y-auto bg-black"
     >
       <div className="flex flex-col gap-2 mb-10">
-        <h2 className="text-2xl font-bold text-zinc-100">Ferramentas e Agentes</h2>
-        <p className="text-zinc-500">Selecione uma ferramenta para começar a otimizar seu processo.</p>
+        <h2 className="text-2xl font-bold text-zinc-100">{t("agentes_title")}</h2>
+        <p className="text-zinc-500">{t("agentes_subtitle")}</p>
       </div>
 
       <div className="flex items-center gap-2 mb-8 mt-4 bg-black p-2 rounded-2xl border border-white/5 w-fit max-w-full overflow-x-auto py-3 px-2.5 my-2 scrollbar-none">

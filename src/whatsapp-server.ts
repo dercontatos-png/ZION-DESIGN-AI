@@ -1,5 +1,5 @@
 import makeWASocket, { useMultiFileAuthState, DisconnectReason, downloadContentFromMessage } from "@whiskeysockets/baileys";
-import { supabase } from "./supabase.js";
+import { supabase } from "./supabase";
 import { GoogleGenAI } from "@google/genai";
 import QRCode from "qrcode";
 import fs from "fs";

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { GoogleGenAI } from "@google/genai";
 import ReactMarkdown from "react-markdown";
+import { checkAdminOrOpenPlan, getAuthHeaders } from "../utils/userAuth";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import {
@@ -37,6 +38,7 @@ import {
   Sparkle
 } from "lucide-react";
 import { FunilVisual } from "./FunilVisual";
+import { t } from "../utils/i18n";
 
 interface CopilotoAgenciaProps {
   customApiKey?: string;
@@ -263,10 +265,14 @@ export const CopilotoAgencia: React.FC<CopilotoAgenciaProps> = ({
 
     try {
       const apiKey = getEffectiveApiKey();
+      if (!checkAdminOrOpenPlan(apiKey)) {
+        setIsTyping(false);
+        return;
+      }
 
       const res = await fetch("/api/chat-agentes", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders(apiKey) },
         body: JSON.stringify({
           assistantId: "copiloto-agencia",
           message: text,
@@ -314,7 +320,7 @@ export const CopilotoAgencia: React.FC<CopilotoAgenciaProps> = ({
   const handleAiPreencherOrcamento = async () => {
     setFormError(null);
     if (!orcamento.clienteNome || !orcamento.clienteNicho) {
-      setFormError("Por favor, informe pelo menos o Nome do Cliente e o Nicho do Negócio para a IA gerar a proposta.");
+      setFormError("Por favor, informe pelo menos o nome do cliente e o nicho do negócio para a IA gerar a proposta.");
       return;
     }
 
@@ -335,9 +341,14 @@ Retorne um JSON estrito com o seguinte formato:
   "termosLegais": "Termos de contrato, propriedade intelectual dos arquivos e condições de rescisão amigável"
 }`;
 
+      if (!checkAdminOrOpenPlan(apiKey)) {
+        setIsAiFilling(false);
+        return;
+      }
+
       const res = await fetch("/api/chat-agentes", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders(apiKey) },
         body: JSON.stringify({
           assistantId: "copiloto-agencia",
           message: prompt,
@@ -493,14 +504,14 @@ Retorne um JSON estrito com o seguinte formato:
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-base font-black text-white uppercase tracking-wider">
-                Copiloto da Agência
+                {t("copiloto_title")}
               </h1>
               <span className="bg-[#c5a880]/20 text-[#c5a880] border border-[#c5a880]/30 text-[9px] font-black uppercase px-2 py-0.5 rounded-full">
                 Zion AI Hub
               </span>
             </div>
             <p className="text-xs text-zinc-400">
-              Atração, Vendas, Onboarding, Gerador de Propostas em PDF e Organograma Visual do Funil
+              {t("copiloto_subtitle")}
             </p>
           </div>
         </div>
@@ -605,7 +616,7 @@ Retorne um JSON estrito com o seguinte formato:
                   <span>Dica Zion</span>
                 </div>
                 <p className="text-[10.5px] text-zinc-400 leading-snug">
-                  Combine o gerador de imagem da aba **Design Builder** para criar os mockups e use este chat para afiar seu discurso de vendas!
+                  Combine o gerador de imagem da aba Design Builder para criar os mockups e use este chat para afiar seu discurso de vendas!
                 </p>
               </div>
             </div>
@@ -878,7 +889,7 @@ Retorne um JSON estrito com o seguinte formato:
 
                 <div>
                   <label className="block text-xs font-bold text-zinc-400 mb-1 uppercase tracking-wider">
-                    Investimento Setup (R$)
+                    Investimento Inicial (R$)
                   </label>
                   <input
                     type="text"
@@ -1035,7 +1046,7 @@ Retorne um JSON estrito com o seguinte formato:
                     <div className="grid grid-cols-2 gap-3">
                       <div className="p-4 rounded-xl bg-black border border-white/5 text-center">
                         <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
-                          Setup & Estruturação
+                          Estruturação Inicial
                         </span>
                         <span className="text-base font-black text-white mt-1 block">
                           R$ {orcamento.investimentoSetup || "0,00"}
@@ -1173,7 +1184,7 @@ Retorne um JSON estrito com o seguinte formato:
                       </div>
 
                       <div className="pt-2 border-t border-white/5 flex items-center justify-between text-[10px] font-extrabold text-[#c5a880]">
-                        <span>Ver Checklist & Scripts</span>
+                        <span>Ver Checklist & Roteiros</span>
                         <ChevronRight size={12} />
                       </div>
                     </div>
@@ -1252,7 +1263,7 @@ Retorne um JSON estrito com o seguinte formato:
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 text-xs font-black text-[#c5a880] uppercase tracking-wider">
                         <MessageSquare size={16} />
-                        <span>Scripts e Roteiros de Conversa Validados</span>
+                        <span>Roteiros de Conversa Validados</span>
                       </div>
                     </div>
 

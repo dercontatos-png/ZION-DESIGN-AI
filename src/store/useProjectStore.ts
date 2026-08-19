@@ -8,6 +8,7 @@ interface ProjectStoreState extends ProjectConfig {
   activeImageIndex: number;
   isGenerating: boolean;
   generatingProjectIds: Record<string, boolean>;
+  projectGenerationStartTimes: Record<string, number>;
   apiStatus: "Online" | "Offline";
   projectsList: { id: string; name: string; config: ProjectConfig; galeria: string[] }[];
   activeProjectId: string | null;
@@ -120,11 +121,12 @@ const defaultConfig: ProjectConfig = {
   gendersDescription: "",
   modoCriacao: "Criativo",
   nivelCriativo: 50,
-  floatingElementsMode: "auto",
+  floatingElementsMode: "off",
   floatingElementsCustom: "",
   somentePrompt: false,
   enableEstiloVisual: true,
-  estiloVisualCustom: ""
+  estiloVisualCustom: "",
+  modelId: "nanobanana-pro"
 };
 
 const getFreshDefaultConfig = (): ProjectConfig => JSON.parse(JSON.stringify(defaultConfig));
@@ -143,6 +145,7 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
   activeImageIndex: 0,
   isGenerating: false,
   generatingProjectIds: {},
+  projectGenerationStartTimes: {},
   apiStatus: "Online",
   projectsList: [],
   activeProjectId: null,
@@ -385,21 +388,35 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
     const currentId = state.activeProjectId;
     if (!currentId) return { isGenerating: val };
     const updatedMap = { ...state.generatingProjectIds, [currentId]: val };
-    if (!val) delete updatedMap[currentId];
+    const updatedTimes = { ...state.projectGenerationStartTimes };
+    if (val) {
+      updatedTimes[currentId] = updatedTimes[currentId] || Date.now();
+    } else {
+      delete updatedMap[currentId];
+      delete updatedTimes[currentId];
+    }
     return {
       isGenerating: val,
-      generatingProjectIds: updatedMap
+      generatingProjectIds: updatedMap,
+      projectGenerationStartTimes: updatedTimes
     };
   }),
 
   setIsProjectGenerating: (projectId, isGenerating) => set((state) => {
     const updatedMap = { ...state.generatingProjectIds, [projectId]: isGenerating };
-    if (!isGenerating) delete updatedMap[projectId];
+    const updatedTimes = { ...state.projectGenerationStartTimes };
+    if (isGenerating) {
+      updatedTimes[projectId] = updatedTimes[projectId] || Date.now();
+    } else {
+      delete updatedMap[projectId];
+      delete updatedTimes[projectId];
+    }
 
     const isCurrentGenerating = state.activeProjectId ? !!updatedMap[state.activeProjectId] : false;
 
     return {
       generatingProjectIds: updatedMap,
+      projectGenerationStartTimes: updatedTimes,
       isGenerating: isCurrentGenerating
     };
   }),
@@ -565,6 +582,7 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
           projectsList: list,
           activeProjectId: list[0].id,
           ...list[0].config,
+          logoInclusionType: "embedded",
           galeriaImages: list[0].galeria || [],
           activeImageIndex: 0
         });
@@ -573,6 +591,17 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
     } catch (e) {
       console.error("Error loading project list:", e);
     }
-    get().createProject();
+    // Sem projetos salvos: conta zerada — NUNCA cria projeto automaticamente.
+    // O usuário cria pelo botão "+" do próprio DesignBuilder.
+    const freshConfig = getFreshDefaultConfig();
+    set({
+      projectsList: [],
+      activeProjectId: null,
+      ...freshConfig,
+      galeriaImages: [],
+      activeImageIndex: 0,
+      lastGeneratedPrompt: "",
+      lastSystemInstruction: ""
+    });
   }
 }));
