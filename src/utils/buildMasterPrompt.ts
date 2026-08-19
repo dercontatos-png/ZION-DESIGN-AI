@@ -17,9 +17,14 @@ export const buildMasterPrompt = (config: ProjectConfig): string => {
   let promptParts: string[] = [
     isLogo ? "Professional logo design masterpiece, vector graphic style, high contrast, clean minimalist, flat, scalable, white background, high quality, flawless colors, no pixelation."
            : isGcTv ? "Professional Television Broadcast Graphic (GC / Lower Third / Character Generator) overlay for TV shows, news, sports, and podcasts. Ultra-high resolution 8K, crisp broadcast typography, modern lower-third graphic bar, high-contrast TV studio production value, flawless colors, no pixelation."
-           : isFoto ? "Professional Photo Editing & Studio Retouching Masterpiece. High-end photography enhancement for portraits, people, food, and commercial subjects. Realistic photo finish, professional Adobe Lightroom color grading, 100% natural skin texture, crisp studio lighting, 8K ultra-realistic detail, sharp focus, flawless colors, zero synthetic AI artifacts."
-           : "Premium graphic design masterpiece. Ultra-high resolution 8K, extreme detail, agency-level quality, sharp focus, cinematic lighting, flawless colors, perfectly smooth, no pixelation or artifacts.",
+           : isFoto ? "Professional Ultra-Realistic Studio Portrait & Editorial Masterpiece. Shot on Sony A1 / Canon EOS R5 with 85mm f/1.4 GM lens at f/2.0, 3-layer Subsurface Scattering (SSS) on skin, micro-displacement pore detail, natural tactile skin texture, authentic specular highlights, precise catchlights in eyes, zero beauty filter, zero plastic smoothing. True cinematic depth, directional studio lighting with controlled black clipping, and professional color grading."
+           : "Premium agency graphic design and cinematic photography masterpiece. 8K resolution, photorealistic textures, 3-layer Subsurface Scattering on skin, tactile fabric textures, cinematic depth of field, sharp focus, professional color grading, flawless colors, zero AI artifacts.",
   ];
+
+  // CINEMATOGRAPHY & LIGHT PHYSICS DIRECTIVES
+  promptParts.push(`[OPTICS & SENSOR SIMULATION] Full-frame camera sensor with 85mm f/1.4 G-Master prime lens, tack-sharp focal plane on subject's eyes, organic circular bokeh with natural cat-eye edge falloff, zero chromatic distortion, zero synthetic smoothing.
+[LIGHTING & DERMAL PHYSICS] 3-layer Subsurface Scattering (epidermis, dermis, subcutaneous) for authentic biological skin translucency. Micro-displacement pores and fine skin grain visible under directional key light. Strategic chiaroscuro with controlled black clipping in deepest shadow crevices (zero fill light, 100% shadow opacity for deep contrast). Authentic tactile fabric friction (wool knits, cotton twill, linen textures).
+[ANATOMY & KINESIOLOGY LAW] Strictly normal, anatomically correct human proportions: EXACTLY 2 arms, 2 hands with 5 fingers each, natural joint articulation. Body-to-head torque with subtle tension in neck muscles (sternocleidomastoid) aligning gaze vector directly with optical lens axis. Tactile dermal deformation where fingers touch fabric, objects, or skin.`);
 
   // 2. VISUAL AESTHETICS & CREATIVE LEVEL
   const creativeWeight = config.nivelCriativo ?? 50;
