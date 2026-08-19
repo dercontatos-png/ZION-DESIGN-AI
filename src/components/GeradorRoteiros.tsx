@@ -1905,8 +1905,8 @@ ${activeScript.content}`;
               onChange={(e) => setSelectedModel(e.target.value)}
               className="bg-[#1e1f20] hover:bg-zinc-800 border border-zinc-700/50 text-zinc-200 text-xs font-medium rounded-full px-3 py-1.5 focus:outline-none transition-colors cursor-pointer"
             >
+              <option value="gemini-3.7-flash">Gemini 3.7 Flash</option>
               <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro Preview</option>
-              <option value="gemini-3.6-flash">Gemini 3.6</option>
               <option value="gemini-3.5-pro">Gemini 3.5 Pro</option>
             </select>
 

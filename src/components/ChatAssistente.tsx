@@ -2186,7 +2186,7 @@ Exemplo de JSON de saída:
               <div className="space-y-1">
                 {[
                   { id: "gemini-3.1-pro-preview", label: "Gemini Pro 3.1", desc: "Melhor para Design e Raciocínio", icon: <Zap size={13} /> },
-                  { id: "gemini-3.6-flash", label: "Gemini Flash 3.6", desc: "Ultra-rápido para Copys e Textos", icon: <Sparkles size={13} /> },
+                  { id: "gemini-3.7-flash", label: "Gemini Flash 3.7", desc: "Ultra-rápido com Raciocínio Híbrido", icon: <Sparkles size={13} /> },
                   { id: "gemini-3-pro-image", label: "Gemini Image Pro", desc: "Engenharia de Prompts Visuais", icon: <ImageIcon size={13} /> }
                 ].map(m => (
                   <button
