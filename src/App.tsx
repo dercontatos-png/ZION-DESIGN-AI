@@ -86,6 +86,7 @@ import { CopilotoAgencia } from "./components/CopilotoAgencia";
 import AudioStudio from "./components/AudioStudio";
 import GeradorOmniFlash from "./components/GeradorOmniFlash";
 import VideoAnalysis from "./components/VideoAnalysis";
+import { ApiKeyManagerTab } from "./components/ApiKeyManagerTab";
 import { safeStorageSetItem, getStorageStats, cleanImageStorage } from "./utils/imageStorageManager";
 
 
@@ -1170,6 +1171,7 @@ export default function App() {
   }, [currentUser]);
 
   const [activeTab, setActiveTab] = useState("ai-tools");
+  const [profileSubTab, setProfileSubTab] = useState<string>("chave");
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   React.useEffect(() => {
@@ -1954,6 +1956,17 @@ export default function App() {
       date: new Date().toISOString().split("T")[0],
       read: false,
       type: "success",
+    };
+    setNotifications((prev) => [notif, ...prev]);
+  };
+
+  const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') => {
+    const notif: NotificationItem = {
+      id: Date.now(),
+      message,
+      date: new Date().toISOString().split("T")[0],
+      read: false,
+      type: type === 'error' ? 'warning' : type === 'info' ? 'system' : type as any,
     };
     setNotifications((prev) => [notif, ...prev]);
   };
@@ -4592,115 +4605,275 @@ ${textContent}`
                 </div>
               </div>
 
-              {/* Navegação de Abas Horizontais Zion */}
+              {/* Navegação de Abas Horizontais Zion (Idêntica à Referência) */}
               <div className="flex items-center gap-2 border-b border-white/10 overflow-x-auto pb-3 scrollbar-none">
                 {[
-                  { id: "pessoais", label: "Editar Perfil", active: true },
-                  { id: "chave", label: "Chave API", active: false },
-                  { id: "dados", label: "Seus Dados (Exportar)", active: false },
-                  { id: "perigo", label: "Segurança", active: false },
-                ].map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => {
-                      document.getElementById(item.id)?.scrollIntoView({ behavior: "smooth", block: "center" });
-                    }}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-                      item.active
-                        ? "bg-[#c5a880]/20 text-[#c5a880] border border-[#c5a880]/40 shadow-md"
-                        : "text-zinc-400 hover:text-white hover:bg-white/5"
-                    }`}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Bloco do Feed (Card Principal Gravyx) */}
-              <div id="feed" className="bg-[#0d131f] border border-white/5 rounded-2xl p-6 sm:p-8 space-y-6 shadow-2xl">
-                <div>
-                  <h2 className="text-xl font-extrabold text-white">Feed</h2>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Suas contribuições aprovadas na Comunidade e imagens que você salvou.
-                  </p>
-                </div>
-
-                {/* Sub-abas de Contribuições / Salvos */}
-                {(() => {
-                  const allProfileImages = Array.from(
-                    new Set(
-                      (projectStore.projectsList || [])
-                        .flatMap((p: any) => p.galeria || [])
-                        .concat(projectStore.galeriaImages || [])
-                        .concat(savedCards || [])
-                    )
-                  ).filter(Boolean);
-
+                  { id: "feed", label: "Feed" },
+                  { id: "dashboard", label: "Dashboard" },
+                  { id: "pessoais", label: "Editar Perfil" },
+                  { id: "chave", label: "Chave API" },
+                  { id: "mcp", label: "Claude (MCP)" },
+                  { id: "usuarios", label: "Usuários" },
+                  { id: "seguranca", label: "Segurança" },
+                ].map((item) => {
+                  const isActive = profileSubTab === item.id;
                   return (
-                    <>
-                      <div className="flex items-center justify-between border-b border-white/5 pb-3">
-                        <div className="flex items-center gap-2">
-                          <button className="bg-[#182234] border border-[#2563eb]/40 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm">
-                            <span>📷 Minhas Criações ({allProfileImages.length})</span>
-                          </button>
-                        </div>
-                        {allProfileImages.length > 0 && (
-                          <span className="text-xs text-zinc-400 font-medium hidden sm:inline">
-                            Clique em qualquer arte para abrir no Estúdio Criativo
-                          </span>
-                        )}
-                      </div>
-
-                      {allProfileImages.length === 0 ? (
-                        <div className="bg-[#090d16] border border-white/5 rounded-xl p-12 flex flex-col items-center justify-center text-center space-y-4 min-h-[260px]">
-                          <div className="w-16 h-16 rounded-2xl bg-[#101622] border border-white/10 flex items-center justify-center text-slate-500 shadow-inner">
-                            <ImageIcon size={32} className="opacity-50" />
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-sm font-bold text-zinc-300">Nenhuma imagem gerada ainda</p>
-                            <p className="text-xs text-zinc-500">Gere artes no Gerador de Fotos para vê-las sincronizadas no seu perfil.</p>
-                          </div>
-                          <button
-                            onClick={() => setActiveTab("ai-tools")}
-                            className="px-4 py-2 bg-[#c5a880] hover:bg-[#b08e58] text-black font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md cursor-pointer"
-                          >
-                            Ir para o Gerador de Fotos
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                          {allProfileImages.map((img, idx) => (
-                            <div
-                              key={idx}
-                              onClick={() => {
-                                projectStore.setGaleriaImages((prev: string[]) => {
-                                  const next = [img, ...prev.filter((i) => i !== img)];
-                                  return next;
-                                });
-                                projectStore.setActiveImageIndex(0);
-                                setActiveTab("ai-tools");
-                              }}
-                              className="group relative bg-[#090d16] border border-white/10 hover:border-[#c5a880]/50 rounded-xl overflow-hidden cursor-pointer shadow-lg hover:shadow-2xl hover:scale-[1.02] transition-all aspect-[3/4]"
-                            >
-                              <img
-                                src={img}
-                                alt={`Criação ${idx + 1}`}
-                                className="w-full h-full object-cover"
-                                referrerPolicy="no-referrer"
-                              />
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
-                                <span className="text-xs font-bold text-white mb-1">Abrir no Estúdio</span>
-                                <span className="text-[10px] text-[#c5a880] font-medium">Ultra HD</span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </>
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setProfileSubTab(item.id)}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                        isActive
+                          ? "bg-[#c5a880]/20 text-[#c5a880] border border-[#c5a880]/40 shadow-md"
+                          : "text-zinc-400 hover:text-white hover:bg-white/5"
+                      }`}
+                    >
+                      {item.label}
+                    </button>
                   );
-                })()}
+                })}
               </div>
+
+              {/* Conteúdo da Aba: CHAVE API */}
+              {profileSubTab === "chave" && (
+                <ApiKeyManagerTab
+                  myProfile={myProfile}
+                  setMyProfile={setMyProfile}
+                  showToast={showToast}
+                />
+              )}
+
+              {/* Conteúdo da Aba: CLAUDE (MCP) */}
+              {profileSubTab === "mcp" && (
+                <div className="bg-[#0d131f] border border-white/5 rounded-2xl p-6 sm:p-8 space-y-5 shadow-2xl animate-fade-in">
+                  <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                      <Sparkles size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-white">Integração Claude (Model Context Protocol - MCP)</h3>
+                      <p className="text-xs text-zinc-400">Conecte o Claude Desktop ou servidores MCP diretamente ao seu Zion Studio.</p>
+                    </div>
+                  </div>
+                  <div className="p-4 bg-[#090d15] border border-white/5 rounded-xl text-xs text-zinc-300 space-y-3">
+                    <p className="font-semibold text-white">Configuração do Servidor MCP:</p>
+                    <pre className="p-3 bg-black/60 rounded-lg text-emerald-400 font-mono text-[11px] overflow-x-auto border border-white/5">
+{`{
+  "mcpServers": {
+    "zion-studio": {
+      "command": "node",
+      "args": ["${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'}/api/mcp"],
+      "env": {
+        "ZION_API_KEY": "${myProfile?.geminiApiKey || 'SUA_CHAVE_API'}"
+      }
+    }
+  }
+}`}
+                    </pre>
+                    <p className="text-zinc-500 text-[11px]">
+                      Cole esta configuração no seu arquivo <code className="text-[#c5a880]">claude_desktop_config.json</code> para habilitar o Zion como ferramenta no Claude Desktop.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Conteúdo da Aba: USUÁRIOS */}
+              {profileSubTab === "usuarios" && (
+                <div className="bg-[#0d131f] border border-white/5 rounded-2xl p-6 sm:p-8 space-y-5 shadow-2xl animate-fade-in">
+                  <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                    <div>
+                      <h3 className="text-base font-bold text-white">Membros da Equipe & Permissões</h3>
+                      <p className="text-xs text-zinc-400">Gerencie os acessos de designers e clientes ao seu workspace.</p>
+                    </div>
+                    <span className="px-3 py-1 bg-[#c5a880]/10 border border-[#c5a880]/30 text-[#c5a880] text-xs font-bold rounded-lg">
+                      1 Usuário Ativo
+                    </span>
+                  </div>
+                  <div className="divide-y divide-white/5">
+                    <div className="py-3 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-[#c5a880] text-black font-bold flex items-center justify-center text-sm">
+                          {(myProfile?.name || "R").substring(0, 1)}
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-white">{myProfile?.name || "Ricardo"}</p>
+                          <p className="text-[11px] text-zinc-500">{currentUser?.email || "der.contatos@gmail.com"}</p>
+                        </div>
+                      </div>
+                      <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
+                        Proprietário / Admin
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Conteúdo da Aba: EDITAR PERFIL */}
+              {profileSubTab === "pessoais" && (
+                <div className="bg-[#0d131f] border border-white/5 rounded-2xl p-6 sm:p-8 space-y-5 shadow-2xl animate-fade-in">
+                  <h3 className="text-base font-bold text-white border-b border-white/5 pb-3">Informações Pessoais</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-zinc-400">Nome de Exibição</label>
+                      <input
+                        type="text"
+                        value={myProfile?.name || ""}
+                        onChange={(e) => setMyProfile({ ...myProfile, name: e.target.value })}
+                        className="w-full bg-[#050810] border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-[#c5a880]"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-zinc-400">E-mail</label>
+                      <input
+                        type="text"
+                        disabled
+                        value={currentUser?.email || ""}
+                        className="w-full bg-[#050810]/50 border border-white/5 rounded-xl px-3.5 py-2 text-xs text-zinc-500 cursor-not-allowed"
+                      />
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => showToast("Perfil atualizado com sucesso! ✅", "success")}
+                    className="px-5 py-2 bg-[#c5a880] hover:bg-[#b08e58] text-black font-bold text-xs rounded-xl transition-all shadow-md cursor-pointer"
+                  >
+                    Salvar Alterações
+                  </button>
+                </div>
+              )}
+
+              {/* Conteúdo da Aba: SEGURANÇA */}
+              {profileSubTab === "seguranca" && (
+                <div className="bg-[#0d131f] border border-white/5 rounded-2xl p-6 sm:p-8 space-y-5 shadow-2xl animate-fade-in">
+                  <h3 className="text-base font-bold text-white border-b border-white/5 pb-3">Segurança da Conta</h3>
+                  <p className="text-xs text-zinc-400">Sua sessão está autenticada com segurança via criptografia SHA-256 e Supabase Auth.</p>
+                  <div className="flex items-center gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        supabase.auth.signOut();
+                        setCurrentUser(null);
+                        showToast("Sessão encerrada com segurança.", "info");
+                      }}
+                      className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-xs font-bold rounded-xl transition-all"
+                    >
+                      Encerrar Sessão
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Conteúdo da Aba: DASHBOARD */}
+              {profileSubTab === "dashboard" && (
+                <div className="bg-[#0d131f] border border-white/5 rounded-2xl p-6 sm:p-8 space-y-5 shadow-2xl animate-fade-in">
+                  <h3 className="text-base font-bold text-white border-b border-white/5 pb-3">Resumo da Conta</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="bg-[#090d15] border border-white/5 rounded-xl p-4 space-y-1">
+                      <span className="text-xs text-zinc-400">Status do Plano</span>
+                      <p className="text-lg font-bold text-[#c5a880]">Iniciante (Free)</p>
+                    </div>
+                    <div className="bg-[#090d15] border border-white/5 rounded-xl p-4 space-y-1">
+                      <span className="text-xs text-zinc-400">Gerações Hoje</span>
+                      <p className="text-lg font-bold text-emerald-400">Ilimitadas</p>
+                    </div>
+                    <div className="bg-[#090d15] border border-white/5 rounded-xl p-4 space-y-1">
+                      <span className="text-xs text-zinc-400">Provedor Ativo</span>
+                      <p className="text-lg font-bold text-white">Google Gemini</p>
+                    </div>
+                    <div className="bg-[#090d15] border border-white/5 rounded-xl p-4 space-y-1">
+                      <span className="text-xs text-zinc-400">Resolução Máx.</span>
+                      <p className="text-lg font-bold text-blue-400">4K Ultra HD</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Conteúdo da Aba: FEED (Galeria de Criações) */}
+              {profileSubTab === "feed" && (
+                <div id="feed" className="bg-[#0d131f] border border-white/5 rounded-2xl p-6 sm:p-8 space-y-6 shadow-2xl animate-fade-in">
+                  <div>
+                    <h2 className="text-xl font-extrabold text-white">Feed</h2>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Suas contribuições aprovadas na Comunidade e imagens que você salvou.
+                    </p>
+                  </div>
+
+                  {/* Sub-abas de Contribuições / Salvos */}
+                  {(() => {
+                    const allProfileImages = Array.from(
+                      new Set(
+                        (projectStore.projectsList || [])
+                          .flatMap((p: any) => p.galeria || [])
+                          .concat(projectStore.galeriaImages || [])
+                          .concat(savedCards || [])
+                      )
+                    ).filter(Boolean);
+
+                    return (
+                      <>
+                        <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                          <div className="flex items-center gap-2">
+                            <button className="bg-[#182234] border border-[#2563eb]/40 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm">
+                              <span>📷 Minhas Criações ({allProfileImages.length})</span>
+                            </button>
+                          </div>
+                          {allProfileImages.length > 0 && (
+                            <span className="text-xs text-zinc-400 font-medium hidden sm:inline">
+                              Clique em qualquer arte para abrir no Estúdio Criativo
+                            </span>
+                          )}
+                        </div>
+
+                        {allProfileImages.length === 0 ? (
+                          <div className="bg-[#090d16] border border-white/5 rounded-xl p-12 flex flex-col items-center justify-center text-center space-y-4 min-h-[260px]">
+                            <div className="w-16 h-16 rounded-2xl bg-[#101622] border border-white/10 flex items-center justify-center text-slate-500 shadow-inner">
+                              <ImageIcon size={32} className="opacity-50" />
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-sm font-bold text-zinc-300">Nenhuma imagem gerada ainda</p>
+                              <p className="text-xs text-zinc-500">Gere artes no Gerador de Fotos para vê-las sincronizadas no seu perfil.</p>
+                            </div>
+                            <button
+                              onClick={() => setActiveTab("ai-tools")}
+                              className="px-4 py-2 bg-[#c5a880] hover:bg-[#b08e58] text-black font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md cursor-pointer"
+                            >
+                              Ir para o Gerador de Fotos
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                            {allProfileImages.map((img, idx) => (
+                              <div
+                                key={idx}
+                                onClick={() => {
+                                  projectStore.setGaleriaImages((prev: string[]) => {
+                                    const next = [img, ...prev.filter((i) => i !== img)];
+                                    return next;
+                                  });
+                                  projectStore.setActiveImageIndex(0);
+                                  setActiveTab("ai-tools");
+                                }}
+                                className="group relative bg-[#090d16] border border-white/10 hover:border-[#c5a880]/50 rounded-xl overflow-hidden cursor-pointer shadow-lg hover:shadow-2xl hover:scale-[1.02] transition-all aspect-[3/4]"
+                              >
+                                <img
+                                  src={img}
+                                  alt={`Criação ${idx + 1}`}
+                                  className="w-full h-full object-cover"
+                                  referrerPolicy="no-referrer"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
+                                  <span className="text-xs font-bold text-white mb-1">Abrir no Estúdio</span>
+                                  <span className="text-[10px] text-[#c5a880] font-medium">Ultra HD</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
             </motion.div>
           )}
 
