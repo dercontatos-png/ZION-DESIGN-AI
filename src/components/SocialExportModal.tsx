@@ -357,7 +357,11 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
 
   // Handle Download Action
   const handleDownload = async () => {
-    if (!optimizedImage) return;
+    const srcToUse = optimizedImage || activeImage;
+    if (!srcToUse) {
+      showToast("Nenhuma imagem selecionada para download.", "error");
+      return;
+    }
 
     const platformLabel = platform === "whatsapp" ? "WhatsApp_Status" : "Instagram_Feed";
     const typeLabel = imageType !== "auto" ? imageType : "HD";
@@ -365,76 +369,95 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
     const baseName = `Zion_Otimizado_${platformLabel}_${typeLabel}_${Date.now().toString().slice(-4)}`;
 
     const appendToGallery = () => {
-      if (onOptimizeSuccess) {
+      if (onOptimizeSuccess && optimizedImage) {
         onOptimizeSuccess(optimizedImage);
       }
     };
 
-    const img = new Image();
-    img.onload = async () => {
-      try {
-        const canvas = document.createElement("canvas");
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          throw new Error("canvas unavailable");
-        }
-        ctx.drawImage(img, 0, 0);
+    try {
+      // 1. If it's already a clean data URL or remote URL, fetch as blob first
+      let blob: Blob | null = null;
+      let ext = "png";
 
-        if (isInstagram) {
-          // Instagram: ALWAYS exactly 30.0 MB (31,457,280 bytes), never more, never less
-          const targetBytes = 30 * 1024 * 1024;
-
-          let dataUrl = canvas.toDataURL("image/png");
-          let blob: Blob = await (await fetch(dataUrl)).blob();
-          let ext = "png";
-
-          if (blob.size > targetBytes) {
-            // PNG is too big: fall back to JPEG, progressively lowering quality until it fits
-            for (let q = 0.95; q >= 0.15; q -= 0.05) {
-              const jpegUrl = canvas.toDataURL("image/jpeg", q);
-              const jpegBlob = await (await fetch(jpegUrl)).blob();
-              if (jpegBlob.size <= targetBytes) {
-                blob = jpegBlob;
-                ext = "jpg";
-                break;
-              }
-            }
+      if (srcToUse.startsWith("data:")) {
+        const res = await fetch(srcToUse);
+        blob = await res.blob();
+        ext = blob.type.includes("jpeg") || blob.type.includes("jpg") ? "jpg" : "png";
+      } else if (srcToUse.startsWith("/") || srcToUse.startsWith("http")) {
+        try {
+          const res = await fetch(srcToUse, { mode: "cors" });
+          if (res.ok) {
+            blob = await res.blob();
+            ext = blob.type.includes("jpeg") || blob.type.includes("jpg") ? "jpg" : "png";
           }
-
-          const bytes = new Uint8Array(await blob.arrayBuffer());
-          const padded = ext === "png"
-            ? padPngToExact(bytes, targetBytes)
-            : padJpegToExact(bytes, targetBytes);
-
-          if (padded && padded.length === targetBytes) {
-            triggerBlobDownload(new Blob([padded], { type: ext === "png" ? "image/png" : "image/jpeg" }), `${baseName}.${ext}`);
-            appendToGallery();
-            showToast("Download iniciado: Instagram 30MB exatos (arquivo válido) e imagem salva na galeria!", "success");
-          } else {
-            throw new Error("Não foi possível atingir o tamanho exato.");
-          }
-        } else {
-          // WhatsApp: lossless PNG at natural resolution
-          const pngUrl = canvas.toDataURL("image/png");
-          const pngBlob = await (await fetch(pngUrl)).blob();
-          triggerBlobDownload(pngBlob, `${baseName}.png`);
-          appendToGallery();
-          showToast("Download iniciado (PNG sem perdas) e imagem salva na galeria!", "success");
+        } catch {
+          // fallback to image element below
         }
-      } catch {
-        triggerBlobDownload(new Blob([optimizedImage], { type: "image/png" }), `${baseName}.png`);
-        appendToGallery();
-        showToast("Download iniciado e imagem salva na galeria!", "success");
       }
-    };
-    img.onerror = () => {
-      triggerBlobDownload(new Blob([optimizedImage], { type: "image/png" }), `${baseName}.png`);
+
+      // If we got a direct valid blob, download directly
+      if (blob && blob.size > 0) {
+        triggerBlobDownload(blob, `${baseName}.${ext}`);
+        appendToGallery();
+        showToast(`Download concluído: ${isInstagram ? "Formato Instagram" : "Formato WhatsApp"} salvo! ✅`, "success");
+        return;
+      }
+
+      // 2. Fallback via Image element and Canvas
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        try {
+          const canvas = document.createElement("canvas");
+          canvas.width = img.naturalWidth || img.width || 1080;
+          canvas.height = img.naturalHeight || img.height || 1080;
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.drawImage(img, 0, 0);
+            canvas.toBlob((cBlob) => {
+              if (cBlob) {
+                triggerBlobDownload(cBlob, `${baseName}.png`);
+                appendToGallery();
+                showToast(`Download concluído: ${isInstagram ? "Formato Instagram" : "Formato WhatsApp"} salvo! ✅`, "success");
+              } else {
+                throw new Error("Blob conversion failed");
+              }
+            }, "image/png");
+          }
+        } catch (e) {
+          // Direct fallback link click
+          const link = document.createElement("a");
+          link.href = srcToUse;
+          link.download = `${baseName}.png`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          appendToGallery();
+          showToast("Download da imagem iniciado! ✅", "success");
+        }
+      };
+      img.onerror = () => {
+        const link = document.createElement("a");
+        link.href = srcToUse;
+        link.download = `${baseName}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        appendToGallery();
+        showToast("Download da imagem iniciado! ✅", "success");
+      };
+      img.src = srcToUse;
+    } catch (err) {
+      // Last-resort anchor download
+      const link = document.createElement("a");
+      link.href = srcToUse;
+      link.download = `${baseName}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
       appendToGallery();
-      showToast("Download iniciado e imagem salva na galeria!", "success");
-    };
-    img.src = optimizedImage;
+      showToast("Download da imagem iniciado! ✅", "success");
+    }
   };
 
   // Get description depending on active preview mode

@@ -3568,6 +3568,20 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
     onGenerateImage={generatePremiumImage}
   />
 
+  <SocialExportModal
+    isOpen={isSocialExportModalOpen}
+    onClose={() => setIsSocialExportModalOpen(false)}
+    activeImage={activeImage}
+    resolucao={store.resolucao || "1K"}
+    showToast={showToast}
+    onOptimizeSuccess={(newUrl) => {
+      if (newUrl) {
+        store.setGaleriaImages((prev: string[]) => [newUrl, ...prev]);
+        store.setActiveImageIndex(0);
+      }
+    }}
+  />
+
   {comparingImages && (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4 sm:p-8 backdrop-blur-sm animate-in fade-in duration-300">
       <div className="relative w-full max-w-5xl h-full max-h-[85vh] bg-black rounded-2xl border border-white/5 flex flex-col overflow-hidden shadow-2xl">
