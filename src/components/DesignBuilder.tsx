@@ -2491,7 +2491,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
             <div className="grid grid-cols-2 gap-2.5">
               {[
                 { id: "nanobanana-pro", name: "Nano Banana Pro", desc: "Qualidade 4K", icon: <Banana size={18} /> },
-                { id: "nanobanana-2", name: "Nano Banana 2", desc: "Ultra Rápido", icon: <Banana size={18} /> },
+                { id: "gemini-3.7", name: "Gemini 3.7 Flash", desc: "Raciocínio & Visão", icon: <Sparkles size={18} /> },
                 { id: "gemini-3.6", name: "Gemini 3.6", desc: "Alta Precisão", icon: <Sparkles size={18} /> },
                 { id: "gemini-3.5-pro", name: "Gemini 3.5 Pro", desc: "Ultra Qualidade", icon: <Sparkles size={18} /> }
               ].map((model) => {

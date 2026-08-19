@@ -962,6 +962,9 @@ async function executeGenerateContentWithFallbacks(
 ): Promise<{ response: any; modelUsed: string; clientUsed: string }> {
   // Map friendly names to actual model identifiers
   const mappedModelNames = modelNames.map(m => {
+    if (m === "gemini-3.7" || m === "gemini-3.7-flash" || m === "3.7") {
+      return "gemini-3.7-flash";
+    }
     if (m === "gemini-3.6" || m === "gemini-3.6-flash" || m === "3.6") {
       return "gemini-3.6-flash";
     }
@@ -975,7 +978,7 @@ async function executeGenerateContentWithFallbacks(
   const candidateClients = getCandidateClients(customApiKey);
   candidateClients.push({ name: "Primary Client", instance: client });
 
-  // Gemini models (gemini-3.1-pro-preview, gemini-3.6-flash, etc.) live on the "global"
+  // Gemini models (gemini-3.7-flash, gemini-3.1-pro-preview, gemini-3.6-flash, etc.) live on the "global"
   // Vertex AI endpoint or Developer API Key. Prioritize global and API Key clients first
   // to avoid regional 404 round-trips.
   candidateClients.sort((a, b) => {
@@ -987,8 +990,9 @@ async function executeGenerateContentWithFallbacks(
   });
 
   // Fallback models: developer API names first, then Vertex AI native names
-  // gemini-3.1-pro-preview works on developer API; gemini-2.0-flash-001/gemini-1.5-pro work on Vertex AI
+  // gemini-3.7-flash and gemini-3.1-pro-preview work on developer API
   const fallbackList = [
+    "gemini-3.7-flash",         // Developer API (Mais recente)
     "gemini-3.1-pro-preview",   // Developer API
     "gemini-3.6-flash",         // Developer API
     "gemini-2.0-flash-001",     // Vertex AI native
