@@ -56,15 +56,20 @@ export const buildMasterPrompt = (config: ProjectConfig): string => {
     "spatial_layout_zones": {
       "top_center_header": {
         "status": userHasProvidedHandle ? "ACTIVE" : "INACTIVE",
-        "elements": userHasProvidedHandle ? ["official_instagram_glyph", "official_facebook_glyph", (rawLayers.find(l => l.conteudo.includes("@"))?.conteudo || "@sispumumc").toLowerCase()] : [],
+        "elements": userHasProvidedHandle ? [
+          "official_rounded_instagram_camera_glyph",
+          "official_circular_facebook_f_glyph",
+          (rawLayers.find(l => l.conteudo.includes("@"))?.conteudo || "@sispumumc").toLowerCase()
+        ] : [],
         "alignment": "HORIZONTAL_CENTER_TOP",
+        "icon_rendering": "Clean, official brand glyphs (Instagram rounded square camera + Facebook circular 'f') in solid high-contrast monochrome or brand styling with crisp geometry. Never render plain bracketed text letters like [O] or [f]",
         "styling": {
           "color": config.cores?.recorte || "#102a43",
           "font_family": "Montserrat",
           "font_weight": "Bold",
           "case": "strictly_lowercase"
         },
-        "exclusions": ["no_tiktok_icon", "no_youtube_icon", "no_unrequested_icons", "no_duplicate_at_symbols"]
+        "exclusions": ["no_tiktok_icon", "no_youtube_icon", "no_unrequested_icons", "no_duplicate_at_symbols", "no_bracketed_letters"]
       },
       "top_left_headline": {
         "title_stack": rawLayers.filter(l => !l.conteudo.includes("@") && (l.funcao?.includes("Headline") || l.funcao?.includes("Título") || rawLayers.indexOf(l) === 0)).map((l, idx) => ({
@@ -72,7 +77,7 @@ export const buildMasterPrompt = (config: ProjectConfig): string => {
           "text": l.conteudo,
           "font_family": l.fonte || "Montserrat",
           "font_weight": "Black_Extra_Bold_900",
-          "hex_color": l.cor || (idx % 2 === 0 ? (config.cores?.complementar || "#d1aa3a") : (config.cores?.recorte || "#102a43"))
+          "hex_color": l.cor || (idx === 0 ? "#008744" : idx === 1 ? "#D9381E" : (config.cores?.complementar || "#F37021"))
         })),
         "alignment": config.typographyPosition ? config.typographyPosition.toUpperCase() : "LEFT",
         "scale": "MASSIVE_HERO_IMPACT"
@@ -93,12 +98,13 @@ export const buildMasterPrompt = (config: ProjectConfig): string => {
         "status": hasLogo ? "ACTIVE" : "INACTIVE",
         "logo_mode": isLogoOverlay ? "DIGITAL_POST_OVERLAY" : "NATIVE_CANVAS_EMBEDDED",
         "exact_spatial_position": "BOTTOM_LEFT_CORNER_BELOW_TEXT",
-        "description": "Exact client brand logo featuring a circular group of colorful 3D clay-like human figures hugging in a circle (yellow, red, purple, light blue, green) with bold clean dark navy blue typography underneath: 'SISPUMUMC' and 'MORRO DO CHAPÉU-BA'",
+        "rendering_directive": "STRICT_LOGO_FIDELITY: You MUST faithfully reproduce the exact official 2D/vector logo provided in the logo reference image without redesigning, reshaping, or converting it into miniature clay toys in isometric view. Replicate the ring of colorful human silhouettes with linked arms (yellow, orange, red, magenta, violet, blue, green) and the clean, bold sans-serif text 'SISPUMUMC' and 'MORRO DO CHAPÉU-BA' directly below it.",
         "rules": [
           "Embed strictly in bottom-left footer under the body text layers",
           "NEVER place the logo in the top header or over the subject",
           "Preserve 100% original shapes, colors, and natural aspect ratio",
-          "Zero dark container boxes or artificial black borders"
+          "Zero dark container boxes or artificial black borders",
+          "Zero isometric clay toy transformations"
         ]
       },
       "bottom_right_quadrant_subject": {
@@ -183,12 +189,14 @@ export const buildMasterSystemInstruction = (config: ProjectConfig): string => {
           : hasLogo
           ? "NATIVE_LOGO_MIRRORING: Embed the client's official brand logo at the EXACT spatial location (e.g. bottom-left footer) where the reference logo was located. Never move a footer logo to the top header"
           : "NO_LOGO: Erase any logos from reference images; do not invent new logos",
-        "fidelity": "100% preservation of logo shapes, colors, and natural aspect ratio without dark container boxes"
+        "fidelity": "100% exact reproduction of original logo graphic emblem and typography. NEVER render the logo as miniature clay toys, 3D figurines, or isometric props. Keep it as clean graphic branding.",
+        "prohibition": "Zero miniature toy transformations, zero container boxes, zero artificial borders"
       },
       "7_anti_hallucination_law": {
         "mandates": [
           "Render ONLY explicitly provided custom text layers",
           "Erase 100% of old reference text, dates, handles, and logos",
+          "Render social media header with official Instagram camera glyph and Facebook 'f' glyph — never render bracketed plain letters like [O] or [f]",
           "Zero unrequested social media icons (no TikTok, no YouTube unless requested)",
           "Zero duplicate words or duplicate @ symbols"
         ]
