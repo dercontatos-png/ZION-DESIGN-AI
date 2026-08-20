@@ -2639,27 +2639,14 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
               )}
             </button>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <button
-                onClick={handleDuplicateConfig}
-                className="w-full flex items-center justify-center gap-2 py-2.5 px-3 bg-[#111116] hover:bg-[#181822] border border-white/10 hover:border-[#c5a880]/50 text-zinc-200 hover:text-[#c5a880] rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer active:scale-[0.98] shadow-sm group"
-                title="Abre um novo projeto duplicando todas as configurações e referências atuais"
-              >
-                <Copy size={13} className="text-[#c5a880] group-hover:scale-110 transition-transform" />
-                <span>Duplicar Config</span>
-              </button>
-
-              <button
-                onClick={handleCopyPrompt}
-                className={`w-full flex items-center justify-center gap-2 py-2.5 px-3 bg-[#111116] hover:bg-[#181822] border border-white/10 hover:border-zinc-700 text-zinc-300 hover:text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer active:scale-[0.98] ${
-                  isCopied ? "bg-[#c5a880]/15 border-[#c5a880]/40 text-[#c5a880]" : ""
-                }`}
-                title="Copiar prompt final construído"
-              >
-                {isCopied ? <CheckCircle size={13} className="text-[#c5a880]" /> : <Terminal size={13} className="text-[#c5a880]" />}
-                <span>{isCopied ? "Prompt Copiado!" : "Copiar Prompt"}</span>
-              </button>
-            </div>
+            <button
+              onClick={handleDuplicateConfig}
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-3 bg-[#111116] hover:bg-[#181822] border border-white/10 hover:border-[#c5a880]/50 text-zinc-200 hover:text-[#c5a880] rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer active:scale-[0.98] shadow-sm group"
+              title="Abre um novo projeto duplicando todas as configurações e referências atuais"
+            >
+              <Copy size={14} className="text-[#c5a880] group-hover:scale-110 transition-transform" />
+              <span>Duplicar Configurações</span>
+            </button>
           </div>
           </>
           )}
