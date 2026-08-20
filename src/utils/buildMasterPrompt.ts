@@ -98,13 +98,12 @@ export const buildMasterPrompt = (config: ProjectConfig): string => {
         "status": hasLogo ? "ACTIVE" : "INACTIVE",
         "logo_mode": isLogoOverlay ? "DIGITAL_POST_OVERLAY" : "NATIVE_CANVAS_EMBEDDED",
         "exact_spatial_position": "BOTTOM_LEFT_CORNER_BELOW_TEXT",
-        "rendering_directive": "STRICT_LOGO_FIDELITY: You MUST faithfully reproduce the exact official 2D/vector logo provided in the logo reference image without redesigning, reshaping, or converting it into miniature clay toys in isometric view. Replicate the ring of colorful human silhouettes with linked arms (yellow, orange, red, magenta, violet, blue, green) and the clean, bold sans-serif text 'SISPUMUMC' and 'MORRO DO CHAPÉU-BA' directly below it.",
+        "rendering_directive": "EXACT_1_TO_1_LOGO_CLONE: Replicate the EXACT client brand logo from the attached logo reference image with 100% fidelity. The logo consists of a 3D circle of colorful sculpted figures with arms around each other's shoulders (red, magenta, purple, blue, green, yellow, orange), positioned directly above the bold black condensed typography: 'SISPUMUMC' on the top line and 'MORRO DO CHAPÉU-BA' on the bottom line. Position this exact logo in the bottom-left footer under the body text. Do NOT simplify into a flat 2D wheel, do NOT alter the 3D sculpted figures, and do NOT change the typography.",
         "rules": [
           "Embed strictly in bottom-left footer under the body text layers",
           "NEVER place the logo in the top header or over the subject",
-          "Preserve 100% original shapes, colors, and natural aspect ratio",
-          "Zero dark container boxes or artificial black borders",
-          "Zero isometric clay toy transformations"
+          "Preserve 100% of original 3D sculpted figure circle and exact black typography",
+          "Zero dark container boxes or artificial black borders"
         ]
       },
       "bottom_right_quadrant_subject": {
@@ -187,10 +186,10 @@ export const buildMasterSystemInstruction = (config: ProjectConfig): string => {
         "spatial_rule": isLogoOverlay
           ? "DIGITAL_OVERLAY_MODE: Leave logo space clean; real logo is overlaid post-generation"
           : hasLogo
-          ? "NATIVE_LOGO_MIRRORING: Embed the client's official brand logo at the EXACT spatial location (e.g. bottom-left footer) where the reference logo was located. Never move a footer logo to the top header"
+          ? "NATIVE_LOGO_MIRRORING: Embed the client's official brand logo at the EXACT spatial location (bottom-left footer) where the reference logo was located. Never move a footer logo to the top header"
           : "NO_LOGO: Erase any logos from reference images; do not invent new logos",
-        "fidelity": "100% exact reproduction of original logo graphic emblem and typography. NEVER render the logo as miniature clay toys, 3D figurines, or isometric props. Keep it as clean graphic branding.",
-        "prohibition": "Zero miniature toy transformations, zero container boxes, zero artificial borders"
+        "fidelity": "100% exact 1:1 visual clone of the attached logo image (reproducing the circular group of colorful 3D sculpted figures with arms around each other's shoulders and the exact bold black condensed 'SISPUMUMC' and 'MORRO DO CHAPÉU-BA' typography underneath). Zero flat 2D reinterpretation, zero shape alteration.",
+        "prohibition": "Zero unrequested logo transformations, zero container boxes, zero artificial borders"
       },
       "7_anti_hallucination_law": {
         "mandates": [
