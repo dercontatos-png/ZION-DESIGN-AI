@@ -1385,14 +1385,14 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                 </div>
 
                 {/* 2. SELETOR DE MÓDULO (DESIGNER | PRODUCT | LOGO | FOTO | GC TV) */}
-                <div className="p-2.5 border-b border-white/5 bg-black/60 space-y-1.5">
+                <div className="p-3 border-b border-white/5 bg-black/70 space-y-2">
                   <div className="flex items-center justify-between px-1">
-                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#c5a880] animate-pulse" />
+                    <span className="text-[11px] font-extrabold uppercase tracking-wider text-zinc-400 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-[#c5a880] shadow-[0_0_8px_rgba(197,168,128,0.6)] animate-pulse" />
                       Módulo: <span className="text-[#c5a880] font-black">{store.tipoPainel === "GC_TV" ? "Tarja de TV" : store.tipoPainel === "FOTO" ? "Foto (Edição)" : store.tipoPainel === "DESIGNER" ? "Designer" : store.tipoPainel === "PRODUCT" ? "Produto" : store.tipoPainel === "LOGO" ? "Logotipo" : store.tipoPainel}</span>
                     </span>
                   </div>
-                  <div className="grid grid-cols-4 gap-1 p-1 bg-black rounded-xl border border-white/5">
+                  <div className="grid grid-cols-4 gap-1.5 p-1 bg-[#09090c] rounded-xl border border-white/10">
                     {[
                       { label: "Designer", value: "DESIGNER" },
                       { label: "Produto", value: "PRODUCT" },
@@ -1404,10 +1404,10 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                         <button
                           key={pnl.value}
                           onClick={() => store.updateConfig({ tipoPainel: pnl.value as any })}
-                          className={`py-1.5 text-[9px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer text-center truncate ${
+                          className={`py-2 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all duration-200 cursor-pointer text-center truncate ${
                             isSel
-                              ? "bg-[#c5a880] text-black font-extrabold shadow-sm"
-                              : "text-zinc-400 hover:text-white hover:bg-[#111]/50"
+                              ? "bg-gradient-to-r from-[#c5a880] to-[#b08e58] text-zinc-950 font-extrabold shadow-md shadow-[#c5a880]/20"
+                              : "text-zinc-400 hover:text-white hover:bg-white/5"
                           }`}
                           title={pnl.value === "FOTO" ? "Módulo Foto — Edição de fotos de pessoas, alimentos, retratos e retoque realista" : pnl.label}
                         >
@@ -1419,32 +1419,33 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                 </div>
 
                 {/* 3. BARRA DE REFINAMENTO / CORREÇÃO PONTUAL */}
-                <div className="p-3 bg-black/50 border-t border-b border-white/5 space-y-2">
+                <div className="p-3.5 bg-black/60 border-t border-b border-white/5 space-y-2.5">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-300">
-                      <Wand2 size={13} className="text-[#c5a880]" />
-                      <span>Correção da Imagem</span>
+                    <div className="flex items-center gap-2 text-xs font-bold text-zinc-200">
+                      <Wand2 size={14} className="text-[#c5a880]" />
+                      <span>Correção Pontual / Refinamento</span>
                     </div>
                     {store.galeriaImages && store.galeriaImages.length > 0 && (
-                      <span className="text-[9px] font-black uppercase bg-[#c5a880]/15 text-[#c5a880] border border-[#c5a880]/30 px-2 py-0.5 rounded-full">
+                      <span className="text-[10px] font-black uppercase bg-[#c5a880]/15 text-[#c5a880] border border-[#c5a880]/30 px-2.5 py-0.5 rounded-full">
                         Arte Ativa
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-1.5 bg-black border border-white/10 rounded-xl px-3 py-1.5 focus-within:border-[#c5a880] transition-colors shadow-inner">
+                  <div className="flex items-center gap-2 bg-[#0d0d12] border border-white/10 rounded-xl px-3 py-1.5 focus-within:border-[#c5a880]/60 transition-colors shadow-inner">
                     <input
                       type="text"
                       placeholder='Ex: "Mude a cor da camisa para azul mantendo todo o resto igual"'
                       value={refineQuery}
                       onChange={(e) => setRefineQuery(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && handleRefine()}
-                      className="w-full bg-transparent text-xs text-zinc-100 placeholder:text-zinc-500 focus:outline-none"
+                      className="w-full bg-transparent text-xs text-zinc-100 placeholder:text-zinc-500 focus:outline-none py-1"
                     />
                     <button
                       onClick={handleRefine}
-                      className="px-3 py-1 bg-[#c5a880] hover:bg-[#b39873] text-black text-[11px] font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer shrink-0 shadow-md active:scale-95"
+                      className="px-3.5 py-1.5 bg-[#c5a880] hover:bg-[#b39873] text-black text-xs font-extrabold uppercase tracking-wider rounded-lg transition-all cursor-pointer shrink-0 shadow-md active:scale-95 flex items-center gap-1.5"
                     >
-                      Corrigir
+                      <Wand2 size={12} />
+                      <span>Corrigir</span>
                     </button>
                   </div>
                 </div>
@@ -1452,27 +1453,27 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
               </div>
 
               {/* Scrollable Form */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-7 custom-scrollbar">
+              <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6 custom-scrollbar">
           
           {activeMenuTab === "Design Builder" && (
             <>
               {/* Category Segmented Tabs for Clean Studio Organization */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar shrink-0 bg-black/60 p-2 rounded-xl border border-white/5">
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar shrink-0 bg-[#09090d] p-2 rounded-2xl border border-white/10">
                 {[
-                  { id: "all", label: "Todos", icon: <Layers size={11} /> },
-                  { id: "subject", label: "👤 Sujeito", icon: <User size={11} /> },
-                  { id: "style", label: "🎨 Estilo & Luz", icon: <Palette size={11} /> },
-                  { id: "layout", label: "📐 Formato & Fundo", icon: <Layout size={11} /> },
-                  { id: "typography", label: "✍️ Texto & Logo", icon: <Type size={11} /> },
-                  { id: "ai", label: "⚡ IA & Qualidade", icon: <Zap size={11} /> }
+                  { id: "all", label: "Todos", icon: <Layers size={13} /> },
+                  { id: "subject", label: "👤 Sujeito", icon: <User size={13} /> },
+                  { id: "style", label: "🎨 Estilo & Luz", icon: <Palette size={13} /> },
+                  { id: "layout", label: "📐 Formato & Fundo", icon: <Layout size={13} /> },
+                  { id: "typography", label: "✍️ Texto & Logo", icon: <Type size={13} /> },
+                  { id: "ai", label: "⚡ IA & Qualidade", icon: <Zap size={13} /> }
                 ].map(tab => (
                   <button
                     key={tab.id}
                     type="button"
                     onClick={() => setBuilderSectionTab(tab.id as any)}
-                    className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
+                    className={`px-3 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-2 ${
                       builderSectionTab === tab.id
-                        ? "bg-[#c5a880] text-zinc-950 font-extrabold shadow-sm"
+                        ? "bg-gradient-to-r from-[#c5a880] to-[#b08e58] text-zinc-950 font-extrabold shadow-md shadow-[#c5a880]/20"
                         : "bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10"
                     }`}
                   >
@@ -1558,8 +1559,8 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                               <button
                                 key={gen.key}
                                 onClick={() => store.updateConfig({ gender: gen.key })}
-                                className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                  isSelected ? "bg-[#c5a880] text-zinc-950 shadow-sm" : "text-zinc-400 hover:text-white"
+                                className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                  isSelected ? "bg-gradient-to-r from-[#c5a880] to-[#b08e58] text-zinc-950 font-extrabold shadow-sm" : "text-zinc-400 hover:text-white hover:bg-white/5"
                                 }`}
                               >
                                 {gen.label}
@@ -1593,8 +1594,8 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                           <button
                             key={pos.key}
                             onClick={() => store.updateConfig({ positioning: pos.key })}
-                            className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                              isSelected ? "bg-[#c5a880] text-zinc-950 shadow-sm" : "text-zinc-400 hover:text-white"
+                            className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                              isSelected ? "bg-gradient-to-r from-[#c5a880] to-[#b08e58] text-zinc-950 font-extrabold shadow-sm" : "text-zinc-400 hover:text-white hover:bg-white/5"
                             }`}
                           >
                             {pos.label}
@@ -1873,8 +1874,8 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                           key={pos}
                           type="button"
                           onClick={() => store.updateConfig({ typographyPosition: pos })}
-                          className={`flex-1 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                            isSel ? "bg-[#c5a880] text-zinc-950 shadow-sm" : "text-zinc-400 hover:text-white"
+                          className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                            isSel ? "bg-gradient-to-r from-[#c5a880] to-[#b08e58] text-zinc-950 font-extrabold shadow-sm" : "text-zinc-400 hover:text-white hover:bg-white/5"
                           }`}
                         >
                           {pos}
@@ -2538,8 +2539,8 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                         key={q}
                         type="button"
                         onClick={() => store.updateConfig({ resolucao: q })}
-                        className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                          isSelected ? "bg-[#c5a880] text-zinc-950 shadow-sm font-extrabold" : "text-zinc-400 hover:text-white"
+                        className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          isSelected ? "bg-gradient-to-r from-[#c5a880] to-[#b08e58] text-zinc-950 shadow-sm font-extrabold" : "text-zinc-400 hover:text-white hover:bg-white/5"
                         }`}
                       >
                         {q}
@@ -2559,8 +2560,8 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                         key={num}
                         type="button"
                         onClick={() => store.updateConfig({ variations: num })}
-                        className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                          isSelected ? "bg-[#c5a880] text-zinc-950 shadow-sm font-extrabold" : "text-zinc-400 hover:text-white"
+                        className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          isSelected ? "bg-gradient-to-r from-[#c5a880] to-[#b08e58] text-zinc-950 shadow-sm font-extrabold" : "text-zinc-400 hover:text-white hover:bg-white/5"
                         }`}
                       >
                         {num}
@@ -2615,24 +2616,23 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
           </div>
           )}
 
-          <div className="pt-2 flex flex-col gap-3">
+          <div className="pt-3 flex flex-col gap-2.5">
             <button
               onClick={() => generatePremiumImage()}
               disabled={isGenerating}
-              className="w-full bg-[#c5a880] hover:bg-[#b39873] border-none disabled:opacity-50 text-black font-bold py-4 rounded-lg text-sm transition-all shadow-md active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2.5 relative overflow-hidden group hover:shadow-[0_4px_15px_rgba(201,155,59,0.3)]"
+              className="w-full bg-gradient-to-r from-[#c5a880] via-[#d4bc97] to-[#b08e58] hover:from-[#d4bc97] hover:to-[#c5a880] disabled:opacity-50 text-zinc-950 font-black py-3.5 px-4 rounded-xl text-sm uppercase tracking-wider transition-all shadow-lg shadow-[#c5a880]/20 active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2.5 relative overflow-hidden group hover:shadow-[0_6px_20px_rgba(197,168,128,0.35)]"
             >
               {isGenerating ? (
                 <>
-                  <RefreshCw size={13} className="animate-spin text-black" />
-                  <span className="text-black font-bold">
+                  <RefreshCw size={15} className="animate-spin text-zinc-950" />
+                  <span className="text-zinc-950 font-extrabold">
                     {store.somentePrompt ? "Gerando Prompt & Instrução..." : "Gerando Arte..."}
                   </span>
-                  <span className="absolute inset-0 bg-black/10 backdrop-blur-[0.5px]" />
                 </>
               ) : (
                 <>
-                  <Sparkles size={13} className="text-black group-hover:scale-110 transition-transform" />
-                  <span>
+                  <Sparkles size={16} className="text-zinc-950 group-hover:scale-110 transition-transform" />
+                  <span className="text-zinc-950 font-black">
                     {store.somentePrompt ? "Gerar Prompt & Instrução" : "Gerar Arte"}
                   </span>
                 </>
@@ -2642,21 +2642,21 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <button
                 onClick={handleDuplicateConfig}
-                className="w-full flex items-center justify-center gap-2 p-3 bg-zinc-900 hover:bg-[#c5a880]/20 border border-white/10 hover:border-[#c5a880]/50 text-zinc-200 hover:text-[#c5a880] rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer active:scale-[0.98] shadow-sm group"
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-3 bg-[#111116] hover:bg-[#181822] border border-white/10 hover:border-[#c5a880]/50 text-zinc-200 hover:text-[#c5a880] rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer active:scale-[0.98] shadow-sm group"
                 title="Abre um novo projeto duplicando todas as configurações e referências atuais"
               >
-                <Copy size={14} className="text-[#c5a880] group-hover:scale-110 transition-transform" />
-                <span>Duplicar Configurações</span>
+                <Copy size={13} className="text-[#c5a880] group-hover:scale-110 transition-transform" />
+                <span>Duplicar Config</span>
               </button>
 
               <button
                 onClick={handleCopyPrompt}
-                className={`w-full flex items-center justify-center gap-2 p-3 bg-black hover:bg-black/50 border border-white/5 hover:border-zinc-800 text-zinc-400 hover:text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer active:scale-[0.98] ${
-                  isCopied ? "bg-[#c5a880]/10 border-[#c5a880]/20 text-[#c5a880]" : ""
+                className={`w-full flex items-center justify-center gap-2 py-2.5 px-3 bg-[#111116] hover:bg-[#181822] border border-white/10 hover:border-zinc-700 text-zinc-300 hover:text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer active:scale-[0.98] ${
+                  isCopied ? "bg-[#c5a880]/15 border-[#c5a880]/40 text-[#c5a880]" : ""
                 }`}
                 title="Copiar prompt final construído"
               >
-                {isCopied ? <CheckCircle size={14} /> : <Terminal size={14} />}
+                {isCopied ? <CheckCircle size={13} className="text-[#c5a880]" /> : <Terminal size={13} className="text-[#c5a880]" />}
                 <span>{isCopied ? "Prompt Copiado!" : "Copiar Prompt"}</span>
               </button>
             </div>
