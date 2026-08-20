@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useProjectStore } from "../store/useProjectStore";
 import { useGenerateImage } from "../hooks/useGenerateImage";
-import { buildMasterPrompt } from "../utils/buildMasterPrompt";
+import { buildMasterPrompt, buildMasterSystemInstruction } from "../utils/buildMasterPrompt";
 import { downloadImage } from "../utils/downloadImage";
 import { checkAdminOrOpenPlan, getAuthHeaders } from "../utils/userAuth";
 import { ImageUploader } from "./ImageUploader";
@@ -3162,11 +3162,12 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                     {/* Instruction Box */}
                     <div className="bg-black/80 border border-white/5 p-4 rounded-xl space-y-2.5 flex flex-col min-h-0 h-full">
                       <div className="flex justify-between items-center shrink-0">
-                        <span className="text-xs font-bold text-white uppercase tracking-wider">Instrução da IA</span>
+                        <span className="text-xs font-bold text-white uppercase tracking-wider">Instrução da IA (Diretriz Suprema)</span>
                         <button
                           onClick={() => {
-                            navigator.clipboard.writeText(store.lastSystemInstruction);
-                            showToast("Instrução copiada!", "success");
+                            const fullInstructionText = store.lastSystemInstruction || buildMasterSystemInstruction(store);
+                            navigator.clipboard.writeText(fullInstructionText);
+                            showToast("Instrução da IA copiada!", "success");
                           }}
                           className="px-3 py-1 bg-white/5 hover:bg-white/10 text-zinc-300 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
                         >
@@ -3175,7 +3176,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                       </div>
                       <div className="flex-1 bg-black/60 rounded-lg border border-white/5 p-3 overflow-y-auto custom-scrollbar">
                         <p className="text-xs text-zinc-300 font-mono leading-relaxed select-all whitespace-pre-wrap">
-                          {store.lastSystemInstruction}
+                          {store.lastSystemInstruction || buildMasterSystemInstruction(store)}
                         </p>
                       </div>
                     </div>

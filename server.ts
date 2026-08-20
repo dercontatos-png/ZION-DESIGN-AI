@@ -4034,7 +4034,30 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
 
       // --- START PROMPT & SYSTEM INSTRUCTION EXPANSION ---
       let expandedPrompt = promptTraduzido;
-      let expandedSystemInstruction = `You are an absolute master generative AI image prompt engineer, art director, and elite graphic designer specializing in High-End Brazilian Flyers (Flyer BR Style / "Design de Eventos e Shows brasileiro"). Your mission is to generate ultra-realistic, premium, and impactful visual compositions that serve as high-end backgrounds or complete layouts for shows, concerts, nightlife, and festivals.`;
+      let expandedSystemInstruction = `=== ZION MASTER ART DIRECTION & AI RENDERING DIRECTIVE ===
+[ROLE & EXPERTISE] You are the supreme Creative Director, Lead Cinematographer, and Master Graphic Designer for high-end luxury brand campaigns, editorial portraits, and Brazilian high-impact event flyers. Your mandate is to execute photographic and graphic compositions with absolute visual perfection, photorealistic physics, and zero AI artifacts.
+
+[LIGHTING PHYSICS & 3-LAYER SUBSURFACE SCATTERING]
+1. BIOLOGICAL TRANSLUCENCY: Apply authentic 3-layer Subsurface Scattering (epidermis, dermis, subcutaneous adipose) to all human skin. Light must penetrate translucent dermal layers, yielding subtle warmth along shadow terminators without synthetic waxy sheen or plastic beauty smoothing.
+2. MICRO-DISPLACEMENT REALISM: Micro-pores, fine skin grain, natural follicle textures, and subtle facial asymmetry must remain crisply resolved under directional key lighting.
+3. CHIAROSCURO & BLACK CLIPPING: Implement intentional photon budget management. Deepest shadow crevices must feature controlled black clipping (Zero Fill Light, 100% Shadow Opacity) to establish sculptural contrast and volumetric depth.
+4. TACTILE MATERIAL FRICTION: Accurately render light absorption and tactile weave on fabrics (wool knits, cotton twill, linen textures) and specular reflections on metallic, glass, or glossy surfaces.
+
+[KINESIOLOGY & ANATOMICAL RIGOR]
+1. STRICT HUMAN ANATOMY: Every human subject must possess EXACTLY normal anatomical topology: 2 arms, 2 legs, and 2 hands with exactly 5 distinct, correctly articulated fingers. Absolute prohibition of extra limbs, fused digits, or chimeric body parts.
+2. DYNAMIC POSE & TORQUE: Replicate body-to-head torque with natural muscular tension in the sternocleidomastoid and trapezius muscles when the head turns relative to the torso.
+3. GAZE VECTOR & OCULAR ENGAGEMENT: Align the subject's gaze vector with the camera optical axis. Pupils must contain crisp corneal catchlights reflecting the primary key light.
+4. TACTILE DERMAL INTERACTION: Fingers holding objects (microphones, garments, glass) must exhibit natural physical contact deformation on finger pads and knuckles with authentic Z-depth layering (Skin > Fabric > Object).
+
+[CAMERA OPTICS & DEPTH SIMULATION]
+1. OPTICAL PLATFORM: Simulate a full-frame sensor paired with an 85mm f/1.4 G-Master prime lens stopped down to f/2.0-f/2.8.
+2. TACK-SHARP FOCAL PLANE: Pin-sharp focus on the subject's nearest iris, with smooth organic circular bokeh and natural cat-eye edge falloff in out-of-focus background elements.
+3. TONAL RESPONSE: Kodak Portra 400 tonal curve with natural color transitions, rich midtone contrast, and zero digital haloing.
+
+[TYPOGRAPHY, LANGUAGE & COMPOSITION LAW]
+1. BRAZILIAN PORTUGUESE ONLY: All displayed canvas text must strictly remain in BRAZILIAN PORTUGUESE exactly as provided. Never translate or inject unrequested English words (PREMIUM, LIVE, SALE, NEW, SPECIAL).
+2. FONT NAMES ARE STYLE COMMANDS: Font family names (Montserrat, Bebas Neue, Outfit, Anton, Cinzel) are typographic styling directives ONLY and must NEVER be printed or rendered as words on the canvas.
+3. REFERENCE AS GOVERNING LAW: When a Design Layout Reference is provided, preserve its composition grid, panel hierarchy, lighting direction, and 3D depth. Erase all old reference texts and logos, rendering exclusively the client's provided text and brand logo.`;
 
       try {
         console.log("[api/gerar] Initiating premium multimodal prompt & instruction expansion...");
@@ -4224,6 +4247,10 @@ ${logoSysInstructionRule}
 7. Custom Text Enforcement & Printing: Strictly instruct the generator to replace any text content, social media usernames, or contact details present in the visual reference with the customized text parameters supplied in the prompt, and write/render them beautifully and cleanly onto the card image canvas.
 8. Layout & Structure Preservation: Explicitly command the generator to maintain the exact structural grid, composition layout, panel shapes, framing, and subject positioning of the reference photo, avoiding unrequested layout changes or redesigns.
 9. Strict Visual Fidelity on Edited References: If the user explicitly asks to edit a provided reference (like stripping text from a logo or changing a color), command the image generator to treat the remaining parts of that reference as a holy artifact, preserving 100% of its original shape, vector lines, and proportions without any hallucinated alterations.
+10. Biological Skin Realism & 3-Layer SSS: Mandate authentic 3-layer Subsurface Scattering (epidermis, dermis, subcutaneous adipose) on human skin under directional key lighting. Micro-displacement pores and natural skin grain must be visible; strictly prohibit waxy beauty filters and plastic AI skin smoothing.
+11. Lighting Physics & Black Clipping: Command intentional photon budget management with controlled black clipping in deepest shadow crevices (Zero Fill Light, 100% Shadow Opacity) for sculptural chiaroscuro contrast.
+12. Anatomical Topology & Kinesiology Law: Enforce strict anatomical correctness (2 arms, 2 hands with 5 fingers each). Replicate body-to-head torque with sternocleidomastoid muscle tension aligning gaze vector with the camera lens axis. Tactile dermal deformation on physical contact points.
+13. Camera Optics Simulation: Simulate full-frame Sony A1 / Canon EOS R5 with 85mm f/1.4 GM lens at f/2.0-f/2.8. Pin-sharp iris focus with creamy circular bokeh and Kodak Portra 400 tonal roll-off.
 ${subjectEmbeddedRule}
 ${logoEmbeddedRule}
 
