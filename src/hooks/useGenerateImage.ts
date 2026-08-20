@@ -228,7 +228,7 @@ const currentActiveImg = store.galeriaImages?.[store.activeImageIndex] || "";
       }
 
       const data = await response.json();
-      const promptToStore = data.prompt || masterPrompt;
+      const promptToStore = (masterPrompt && masterPrompt.length >= (data.prompt || "").length) ? masterPrompt : (data.prompt || masterPrompt);
       if (promptToStore && store.activeProjectId === targetProjectId) store.setLastGeneratedPrompt(promptToStore);
       if (data.systemInstruction && store.activeProjectId === targetProjectId) store.setLastSystemInstruction(data.systemInstruction);
       

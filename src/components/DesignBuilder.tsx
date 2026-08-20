@@ -3139,7 +3139,9 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                         <span className="text-xs font-bold text-white uppercase tracking-wider">Prompt Mestre (Completo)</span>
                         <button
                           onClick={() => {
-                            const fullPromptText = store.lastGeneratedPrompt || buildMasterPrompt(store);
+                            const fullPromptText = (store.lastGeneratedPrompt && store.lastGeneratedPrompt.length >= buildMasterPrompt(store).length)
+                              ? store.lastGeneratedPrompt
+                              : buildMasterPrompt(store);
                             navigator.clipboard.writeText(fullPromptText);
                             showToast("Prompt Mestre completo copiado!", "success");
                           }}
@@ -3150,7 +3152,9 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                       </div>
                       <div className="flex-1 bg-black/60 rounded-lg border border-white/5 p-3 overflow-y-auto custom-scrollbar">
                         <p className="text-xs text-zinc-300 font-mono leading-relaxed select-all whitespace-pre-wrap">
-                          {store.lastGeneratedPrompt || buildMasterPrompt(store)}
+                          {(store.lastGeneratedPrompt && store.lastGeneratedPrompt.length >= buildMasterPrompt(store).length)
+                            ? store.lastGeneratedPrompt
+                            : buildMasterPrompt(store)}
                         </p>
                       </div>
                     </div>

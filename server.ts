@@ -4482,11 +4482,12 @@ ${logoMandatoryRule}`;
       }
 
       if (somentePrompt) {
+        const masterFullPrompt = (promptTraduzido && promptTraduzido.length > 50) ? promptTraduzido : (fullPrompt || expandedPrompt);
         return res.json({
           image: "",
-          prompt: fullPrompt || expandedPrompt,
+          prompt: masterFullPrompt,
           systemInstruction: expandedSystemInstruction || mandatorySuffix,
-          modelUsed: "Zion AI (Premium Prompt Generator)",
+          modelUsed: "Zion AI (Master Prompt Generator)",
           requestedResolution: resolutionInput,
           returnedWidth: 0,
           returnedHeight: 0
