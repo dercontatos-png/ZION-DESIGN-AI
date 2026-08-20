@@ -1030,8 +1030,15 @@ async function executeGenerateContentWithFallbacks(
           break; // null response — move to next model
         } catch (err: any) {
           const rawMsg = err?.message || String(err);
+          const isAuthError = rawMsg.includes("invalid_grant") || rawMsg.includes("Invalid JWT") || rawMsg.includes("API key not valid") || rawMsg.includes("UNAUTHENTICATED") || rawMsg.includes("PERMISSION_DENIED");
           const isQuota = rawMsg.includes("429") || rawMsg.includes("RESOURCE_EXHAUSTED") || rawMsg.includes("quota") || rawMsg.includes("Resource exhausted") || rawMsg.includes("depleted");
           const isEmptyOutput = rawMsg.toLowerCase().includes("model output") || rawMsg.toLowerCase().includes("output text") || rawMsg.toLowerCase().includes("tool calls");
+
+          if (isAuthError) {
+            console.warn(`[generateContent-fallback] Client ${cItem.name} authentication failed (${sanitizeLogMessage(rawMsg)}). Skipping this client...`);
+            lastError = err;
+            break; // skip this model
+          }
 
           if (isQuota && attempt < maxContentAttempts) {
             await new Promise(r => setTimeout(r, 600));
@@ -1050,6 +1057,9 @@ async function executeGenerateContentWithFallbacks(
           lastError = err;
           break; // non-retryable error — move to next model
         }
+      }
+      if (lastError && (lastError.message || String(lastError)).includes("invalid_grant")) {
+        break; // skip all other models for this broken client
       }
     }
   }
