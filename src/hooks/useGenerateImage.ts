@@ -228,12 +228,12 @@ const currentActiveImg = store.galeriaImages?.[store.activeImageIndex] || "";
       }
 
       const data = await response.json();
-      if (data.thought && store.activeProjectId === targetProjectId) store.setLastGeneratedPrompt(data.thought);
-      if (data.prompt && store.activeProjectId === targetProjectId) store.setLastGeneratedPrompt(data.prompt);
+      const promptToStore = data.prompt || masterPrompt;
+      if (promptToStore && store.activeProjectId === targetProjectId) store.setLastGeneratedPrompt(promptToStore);
       if (data.systemInstruction && store.activeProjectId === targetProjectId) store.setLastSystemInstruction(data.systemInstruction);
       
       if (store.somentePrompt) {
-        showToast("Prompt e Instrução gerados com sucesso!", "success");
+        showToast("Prompt Mestre e Instrução gerados com sucesso!", "success");
         onSuccess?.();
         return;
       }

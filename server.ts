@@ -4484,8 +4484,8 @@ ${logoMandatoryRule}`;
       if (somentePrompt) {
         return res.json({
           image: "",
-          prompt: expandedPrompt,
-          systemInstruction: expandedSystemInstruction,
+          prompt: fullPrompt || expandedPrompt,
+          systemInstruction: expandedSystemInstruction || mandatorySuffix,
           modelUsed: "Zion AI (Premium Prompt Generator)",
           requestedResolution: resolutionInput,
           returnedWidth: 0,

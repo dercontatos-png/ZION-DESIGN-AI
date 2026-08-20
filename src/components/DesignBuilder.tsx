@@ -3136,11 +3136,12 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                     {/* Prompt Box */}
                     <div className="bg-black/80 border border-white/5 p-4 rounded-xl space-y-2.5 flex flex-col min-h-0 h-full">
                       <div className="flex justify-between items-center shrink-0">
-                        <span className="text-xs font-bold text-white uppercase tracking-wider">Prompt Mestre</span>
+                        <span className="text-xs font-bold text-white uppercase tracking-wider">Prompt Mestre (Completo)</span>
                         <button
                           onClick={() => {
-                            navigator.clipboard.writeText(store.lastGeneratedPrompt);
-                            showToast("Prompt copiado!", "success");
+                            const fullPromptText = store.lastGeneratedPrompt || buildMasterPrompt(store);
+                            navigator.clipboard.writeText(fullPromptText);
+                            showToast("Prompt Mestre completo copiado!", "success");
                           }}
                           className="px-3 py-1 bg-white/5 hover:bg-white/10 text-zinc-300 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
                         >
@@ -3149,7 +3150,7 @@ export default function DesignBuilder({ customApiKey, myProfile }: DesignBuilder
                       </div>
                       <div className="flex-1 bg-black/60 rounded-lg border border-white/5 p-3 overflow-y-auto custom-scrollbar">
                         <p className="text-xs text-zinc-300 font-mono leading-relaxed select-all whitespace-pre-wrap">
-                          {store.lastGeneratedPrompt}
+                          {store.lastGeneratedPrompt || buildMasterPrompt(store)}
                         </p>
                       </div>
                     </div>
