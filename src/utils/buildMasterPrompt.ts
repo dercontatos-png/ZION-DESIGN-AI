@@ -57,29 +57,30 @@ export const buildMasterPrompt = (config: ProjectConfig): string => {
       "top_center_header": {
         "status": userHasProvidedHandle ? "ACTIVE" : "INACTIVE",
         "elements": userHasProvidedHandle ? [
-          "instagram_glyph_in_red_circular_badge",
-          "facebook_glyph_in_red_circular_badge",
-          "tiktok_glyph_in_red_circular_badge",
+          "official_instagram_camera_glyph",
+          "official_facebook_f_glyph",
           (rawLayers.find(l => l.conteudo.includes("@"))?.conteudo || "@sispumumc").toLowerCase()
         ] : [],
         "alignment": "HORIZONTAL_CENTER_TOP",
-        "icon_rendering": "Social media icons inside solid vibrant red circular badges (#E52421) with clean white glyphs inside (Instagram camera, Facebook 'f', TikTok), followed by the handle text '@sispumumc' in clean black typography.",
+        "icon_rendering": "Exactly TWO social media icons in circular badges (#102A43 or #E52421) with white glyphs inside (Instagram camera + Facebook 'f'), followed by the handle text '@sispumumc' in clean typography. STRICT PROHIBITION: ZERO TikTok icon, do NOT render TikTok unless explicitly requested.",
         "styling": {
-          "color": "#111111",
+          "color": config.cores?.recorte || "#102A43",
           "font_family": "Montserrat",
           "font_weight": "Bold",
           "case": "strictly_lowercase"
         },
-        "exclusions": ["no_unrequested_icons", "no_duplicate_at_symbols", "no_bracketed_letters"]
+        "exclusions": ["no_tiktok_icon", "no_youtube_icon", "no_unrequested_icons", "no_duplicate_at_symbols", "no_bracketed_letters"]
       },
       "top_left_headline": {
-        "typography_style": "Chunky bold display font with retro editorial curves (Cooper Black / Recoleta style)",
+        "font_family": "Montserrat",
+        "font_weight": "Black_Extra_Bold_900",
+        "typography_style": "Pure clean geometric sans-serif Montserrat Black 900 (modern, heavy, zero serifs, ultra-bold)",
         "title_stack": rawLayers.filter(l => !l.conteudo.includes("@") && (l.funcao?.includes("Headline") || l.funcao?.includes("Título") || rawLayers.indexOf(l) === 0)).map((l, idx) => ({
           "line_number": idx + 1,
           "text": l.conteudo,
-          "font_family": "Chunky_Bold_Display_Serif",
-          "font_weight": "Extra_Bold_Black_900",
-          "hex_color": l.cor || (idx === 0 ? "#00A650" : idx === 1 ? "#E52421" : "#FF5A00")
+          "font_family": "Montserrat",
+          "font_weight": "Black_900",
+          "hex_color": l.cor || (idx % 2 === 0 ? (config.cores?.complementar || "#D4A836") : (config.cores?.recorte || "#102A43"))
         })),
         "alignment": config.typographyPosition ? config.typographyPosition.toUpperCase() : "LEFT",
         "scale": "MASSIVE_HERO_IMPACT"
@@ -88,9 +89,9 @@ export const buildMasterPrompt = (config: ProjectConfig): string => {
         "text_blocks": rawLayers.filter(l => !l.conteudo.includes("@") && (!l.funcao?.includes("Headline") && !l.funcao?.includes("Título") && rawLayers.indexOf(l) > 0)).map((l, idx) => ({
           "block_number": idx + 1,
           "text": l.conteudo,
-          "font_family": l.fonte || "Montserrat",
+          "font_family": "Montserrat",
           "font_weight": "SemiBold_600",
-          "hex_color": l.cor || "#111111",
+          "hex_color": l.cor || config.cores?.recorte || "#102A43",
           "has_checkmark": l.conteudo.includes("✓") || l.conteudo.includes("Mas para continuar")
         })),
         "alignment": config.typographyPosition ? config.typographyPosition.toUpperCase() : "LEFT",
@@ -112,31 +113,30 @@ export const buildMasterPrompt = (config: ProjectConfig): string => {
         "status": config.desativarSujeito ? "INACTIVE" : "ACTIVE",
         "casting_directive": isCastingSwapRequested ? "NEW_PROFESSIONAL_MODEL" : "PRESERVE_REFERENCE_SUBJECT",
         "subject_profile": {
-          "description": config.poseDescription || "Young Black Brazilian woman with natural short afro curly hair, wearing bright orange long-sleeve top and red hoop earrings",
-          "wardrobe": "Vibrant orange long-sleeve knit top with red hoop earrings",
-          "pose": "Thoughtful, reflective posture holding a dark smartphone in both hands and looking upwards to the left toward the headline",
+          "description": config.poseDescription || "Young Black Brazilian businesswoman with short natural afro curly hair and golden hoop earrings (#D4A836)",
+          "wardrobe": "Tailored Navy Blue corporate blazer (#102A43) with subtle gold buttons (#D4A836) over crisp white blouse (#FFFFFF)",
+          "pose": "Thoughtful questioning gesture with right hand raised and index finger touching chin/lower lip, head tilted looking up to the left toward the headline",
+          "smartphone_details": "Holding a modern premium dark smartphone with visible authentic square camera bump module featuring 3 circular glass lenses and LED flash facing the camera, held naturally by the fingers",
           "framing": "Medium shot / bust from waist up",
           "quadrant": finalPlacement
         }
       }
     },
     "background_and_optics": {
-      "background_type": "WHITE_WITH_SUBTLE_WAVY_DOODLE_LINES",
-      "base_color_hex": "#FFFFFF",
-      "texture_details": "Pristine white canvas with subtle, delicate light-gray wavy doodle line patterns throughout the background for depth and institutional modern design feel.",
+      "background_type": "100%_FLAT_SOLID_PURE_WHITE",
+      "base_color_hex": config.cores?.ambiente || "#FFFFFF",
+      "texture_details": "100% flat solid pure white (#FFFFFF) digital fill, zero textures, zero wave patterns, zero doodle lines, zero gradients, zero shadows on canvas. Completely smooth, clean, solid uniform white background.",
       "camera_optics": {
         "sensor": "Full-frame 8K",
         "lens": "85mm f/1.4 G-Master Prime (stopped down to f/2.0)",
-        "lighting": "Commercial studio softbox key light with delicate rim light separation from background",
+        "lighting": "Commercial studio softbox key light with delicate rim light separation from white background",
         "dermal_physics": "Authentic 3-layer Subsurface Scattering (SSS) with visible micro-pores, zero beauty filter smoothing"
       }
     },
     "color_palette_lock": {
-      "ambient_background": "#FFFFFF",
-      "green_headline": "#00A650",
-      "red_headline_and_badges": "#E52421",
-      "orange_headline_and_outfit": "#FF5A00",
-      "dark_text": "#111111"
+      "ambient_background": config.cores?.ambiente || "#FFFFFF",
+      "primary_navy": config.cores?.recorte || "#102A43",
+      "accent_gold": config.cores?.complementar || "#D4A836"
     },
     "strict_governing_rules": {
       "language_lock": "pt-BR (Strictly Brazilian Portuguese)",
