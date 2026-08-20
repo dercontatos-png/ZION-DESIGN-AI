@@ -1802,19 +1802,32 @@ Exemplo de JSON de saída:
         const singleMappingVal = jsonMapKeys.length === 1 ? jsonImageMap[jsonMapKeys[0]] : null;
         const singleStyleDescVal = jsonStyleDescKeys.length === 1 ? jsonStyleDescMap[jsonStyleDescKeys[0]] : null;
 
-        const hasExplicitLogo = imagesOnly.some(img => img.category === "logo");
+        const hasExplicitLogo = imagesOnly.some(img => {
+          const nl = (img.name || "").toLowerCase();
+          return img.category === "logo" || nl.includes("logo") || nl.includes("marca") || nl.includes("logomarca") || nl.includes("logotipo");
+        });
 
         imagesOnly.forEach(img => {
           let styleDescription = "Referência de estilo gerada pelo assistente.";
-          let targetType = "style";
+          let targetType = "design";
 
           const nameLower = (img.name || "").toLowerCase();
 
-          // 1. Categoria selecionada explicitamente pelo usuário no anexador
-          if (img.category && img.category !== "info" && (img.category as string) !== "auto") {
+          // 1. PRIORIDADE ABSOLUTA: Detecção estrita por nome de arquivo (heurística determinística)
+          if (nameLower.includes("logo") || nameLower.includes("marca") || nameLower.includes("logomarca") || nameLower.includes("logotipo") || nameLower.includes("10anos") || nameLower.includes("symbol")) {
+            targetType = "logo";
+          } else if (nameLower.includes("fundo") || nameLower.includes("cenario") || nameLower.includes("cenário") || nameLower.includes("background") || nameLower.includes("bg") || nameLower.includes("scene") || nameLower.includes("ambiente")) {
+            targetType = "scene";
+          } else if (nameLower.includes("pessoa") || nameLower.includes("modelo") || nameLower.includes("sujeito") || nameLower.includes("homem") || nameLower.includes("mulher") || nameLower.includes("face") || nameLower.includes("portrait")) {
+            targetType = "subject";
+          } else if (nameLower.includes("texto") || nameLower.includes("tipografia") || nameLower.includes("font") || nameLower.includes("lettering")) {
+            targetType = "typography";
+          }
+          // 2. Categoria selecionada explicitamente pelo usuário no botão de anexo
+          else if (img.category && img.category !== "info" && (img.category as string) !== "auto") {
             targetType = img.category;
           } 
-          // 2. Mapeamento retornado pela IA no JSON para este arquivo específico
+          // 3. Mapeamento retornado pela IA no JSON para este arquivo específico por nome
           else {
             let matchedKey = null;
             if (img.name && jsonImageMap[img.name]) {
@@ -1826,36 +1839,18 @@ Exemplo de JSON de saída:
             if (matchedKey && jsonImageMap[matchedKey]) {
               targetType = jsonImageMap[matchedKey];
             } else if (hasExplicitLogo && img.category !== "logo") {
-              // Se outra imagem já foi marcada EXPLICITAMENTE como logo, esta imagem NUNCA deve ser logo!
-              targetType = "design,scene,subject,style";
+              // Se outra imagem já foi identificada como logo, esta imagem é a referência de design/layout
+              targetType = "design";
             } else if (imagesOnly.length === 1 && singleMappingVal) {
               targetType = singleMappingVal;
             } else if (jsonImageMap["*"]) {
               targetType = jsonImageMap["*"];
             } else if (parsedConfigJson?.imagemAnexadaTipo) {
               targetType = parsedConfigJson.imagemAnexadaTipo;
-            }
-            // 3. Detecção por nome do arquivo
-            else if (nameLower.includes("logo") || nameLower.includes("marca") || nameLower.includes("logomarca") || nameLower.includes("logotipo") || nameLower.includes("10anos") || nameLower.includes("icon") || nameLower.includes("symbol")) {
-              targetType = "logo";
-            } else if (nameLower.includes("estilo") || nameLower.includes("style")) {
-              targetType = "style";
-            } else if (nameLower.includes("texto") || nameLower.includes("tipografia") || nameLower.includes("font")) {
-              targetType = "typography";
-            } else if (!hasExplicitLogo && imagesOnly.length === 1 && (textLower.includes("logo") || textLower.includes("marca") || textLower.includes("logomarca") || textLower.includes("logotipo"))) {
-              // Apenas mapear por texto se houver APENAS UMA ÚNICA imagem enviada e nenhuma marcada como logo
-              targetType = "logo";
             } else if (textLower.includes("estilo") || textLower.includes("style") || textLower.includes("vibe")) {
               targetType = "style";
-            }
-            // 4. Mapeamento Multicampo para Referência Completa (Design + Cenário + Sujeito)
-            else {
-              const isSubjectDisabled = updates.desativarSujeito === true || (updates.desativarSujeito === undefined && store.desativarSujeito === true);
-              if (isSubjectDisabled) {
-                targetType = "design,scene,style";
-              } else {
-                targetType = "design,scene,subject,style";
-              }
+            } else {
+              targetType = "design";
             }
           }
           
@@ -1961,13 +1956,17 @@ Exemplo de JSON de saída:
         }
         
         if (logCount > 0 || hasExplicitLogo) {
-          const explicitLogoObj = imagesOnly.find(img => img.category === "logo");
+          const explicitLogoObj = imagesOnly.find(img => {
+            const nl = (img.name || "").toLowerCase();
+            return img.category === "logo" || nl.includes("logo") || nl.includes("marca") || nl.includes("logomarca") || nl.includes("logotipo");
+          });
           let rawLogoBase64 = explicitLogoObj 
             ? (explicitLogoObj.data.startsWith("data:") ? explicitLogoObj.data : `data:${explicitLogoObj.type || "image/jpeg"};base64,${explicitLogoObj.data}`)
             : (newLogos.length > 0 ? newLogos[newLogos.length - 1] : store.logoBase64);
 
           if (rawLogoBase64) {
             store.setLogosList([rawLogoBase64]);
+            store.setLogoBase64(rawLogoBase64);
             store.updateConfig({ logoBase64: rawLogoBase64, useLogo: true });
             filledItems.push(`Logo da Marca (${explicitLogoObj ? explicitLogoObj.name : "Selecionada"})`);
           }
@@ -1977,6 +1976,7 @@ Exemplo de JSON de saída:
           const currentList = isReplaceMode ? [] : (store.tipografiaRefsList || []);
           const uniqueList = Array.from(new Set([...currentList, ...newTypographies]));
           store.setTipografiaRefsList(uniqueList);
+          if (uniqueList[0]) store.setTipografiaRefBase64(uniqueList[0]);
           filledItems.push(`${typoCount} Ref. Texto`);
         }
         
@@ -1984,12 +1984,11 @@ Exemplo de JSON de saída:
           const currentList = isReplaceMode ? [] : (store.designRefsList || []);
           const uniqueList = Array.from(new Set([...currentList, ...newDesigns]));
           store.setDesignRefsList(uniqueList);
+          if (uniqueList[0]) store.setDesignRefBase64(uniqueList[0]);
           filledItems.push(`${desCount} Design(s)`);
         }
 
         if (desCount > 0) {
-  
-          // A referência de design agora atua APENAS como design/layout. Não duplicamos a imagem para logo, sujeito, etc.
           const defaultDesignPrompt = parsedConfigJson?.promptDesign || updates.promptDesign || "Copiar a proporção dos espaços vazios, o grid estrutural, e o posicionamento de composição de elementos deste card de referência.";
           store.updateConfig({ promptDesign: defaultDesignPrompt });
         }
