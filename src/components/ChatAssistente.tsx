@@ -24,6 +24,7 @@ import {
   Trash2,
   File,
   Check,
+  CheckCircle2,
   Plus,
   FolderOpen,
   Maximize2, Settings,
@@ -260,6 +261,52 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedModel, setSelectedModel] = useState<string>("gemini-3.7-flash");
   const [showModelSettings, setShowModelSettings] = useState(false);
+  const [isCheckingModels, setIsCheckingModels] = useState(false);
+  const [modelStatuses, setModelStatuses] = useState<Record<string, { status: string; statusText: string; latencyMs?: number | null }>>({
+    "gemini-3.7-flash": { status: "online", statusText: "Online 🟢", latencyMs: 800 },
+    "gemini-3.6-flash": { status: "online", statusText: "Online 🟢", latencyMs: 650 },
+    "gemini-3.1-pro-preview": { status: "online", statusText: "Online 🟢", latencyMs: 1100 },
+    "gemini-3-pro-image": { status: "online", statusText: "Online 🟢", latencyMs: 1400 },
+    "gemini-2.5-flash": { status: "online", statusText: "Online 🟢", latencyMs: 600 }
+  });
+
+  const checkModelsStatus = async () => {
+    setIsCheckingModels(true);
+    try {
+      const res = await fetch("/api/check-models-status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders(customApiKey) },
+        body: JSON.stringify({ customApiKey })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.models && Array.isArray(data.models)) {
+          const map: Record<string, { status: string; statusText: string; latencyMs?: number | null }> = {};
+          data.models.forEach((m: any) => {
+            map[m.id] = {
+              status: m.status,
+              statusText: m.statusText,
+              latencyMs: m.latencyMs
+            };
+          });
+          setModelStatuses(map);
+          showToast("Status dos modelos atualizado!", "success");
+        }
+      }
+    } catch (e) {
+      console.error("Erro ao checar status dos modelos:", e);
+    } finally {
+      setIsCheckingModels(false);
+    }
+  };
+
+  useEffect(() => {
+    // Executa verificação inicial de status de modelos ao abrir
+    if (chatDrawerOpen) {
+      checkModelsStatus();
+    }
+  }, [chatDrawerOpen]);
+
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
@@ -2170,14 +2217,23 @@ Exemplo de JSON de saída:
 
             {/* Ações Rápidas da Barra Superior */}
             <div className="flex items-center gap-1 shrink-0">
-              {/* Modelo de IA */}
+              {/* Modelo de IA com Indicador de Status */}
               <button
                 onClick={() => { setShowModelSettings(!showModelSettings); setIsDropdownOpen(false); setIsAttachMenuOpen(false); }}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white text-[10px] font-semibold transition-all cursor-pointer"
-                title="Configurar Modelo de IA"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white text-[10px] font-semibold transition-all cursor-pointer"
+                title="Configurar Modelo de IA e Ver Status"
               >
                 <Zap size={11} className="text-[#c5a880] fill-[#c5a880]" />
-                <span>{selectedModel.includes("flash") ? "Modelo: Flash" : selectedModel.includes("image") ? "Modelo: Image" : "Modelo: Pro"}</span>
+                <span className="truncate max-w-[100px]">
+                  {selectedModel === "gemini-3.7-flash" ? "3.7 Flash" :
+                   selectedModel === "gemini-3.6-flash" ? "3.6 Flash" :
+                   selectedModel === "gemini-3.1-pro-preview" ? "3.1 Pro" :
+                   selectedModel === "gemini-3-pro-image" ? "3 Pro Image" : "2.5 Flash"}
+                </span>
+                <span className={`w-1.5 h-1.5 rounded-full ${
+                  modelStatuses[selectedModel]?.status === "online" ? "bg-emerald-400" :
+                  modelStatuses[selectedModel]?.status === "busy" ? "bg-amber-400" : "bg-red-400"
+                }`} />
                 <ChevronDown size={10} className="text-zinc-500" />
               </button>
 
@@ -2225,35 +2281,69 @@ Exemplo de JSON de saída:
             </div>
           </div>
 
-          {/* Popover de Modelos de IA */}
+          {/* Popover de Modelos de IA com Status em Tempo Real */}
           {showModelSettings && (
-            <div className="absolute top-14 right-4 z-50 bg-[#101218] border border-[#c5a880]/30 rounded-2xl shadow-2xl p-3 w-64 animate-in fade-in slide-in-from-top-2 duration-150">
+            <div className="absolute top-14 right-4 z-50 bg-[#101218] border border-[#c5a880]/30 rounded-2xl shadow-2xl p-3 w-80 animate-in fade-in slide-in-from-top-2 duration-150">
               <div className="flex justify-between items-center mb-2 pb-1.5 border-b border-white/10">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#c5a880]">Modelo de IA</span>
-                <button onClick={() => setShowModelSettings(false)} className="text-zinc-500 hover:text-white"><X size={11} /></button>
-              </div>
-              <div className="space-y-1">
-                {[
-                  { id: "gemini-3.1-pro-preview", label: "Gemini Pro 3.1", desc: "Melhor para Design e Raciocínio", icon: <Zap size={13} /> },
-                  { id: "gemini-3.7-flash", label: "Gemini Flash 3.7", desc: "Ultra-rápido com Raciocínio Híbrido", icon: <Sparkles size={13} /> },
-                  { id: "gemini-3-pro-image", label: "Gemini Image Pro", desc: "Engenharia de Prompts Visuais", icon: <ImageIcon size={13} /> }
-                ].map(m => (
-                  <button
-                    key={m.id}
-                    onClick={() => { setSelectedModel(m.id); setShowModelSettings(false); showToast(`Modelo: ${m.label}`, "success"); }}
-                    className={`w-full flex items-center gap-2.5 p-2 rounded-xl text-left transition-all cursor-pointer border ${
-                      selectedModel === m.id 
-                        ? "bg-[#c5a880]/15 text-[#c5a880] border-[#c5a880]/40 font-bold" 
-                        : "bg-black/40 text-zinc-300 hover:bg-white/5 border-transparent"
-                    }`}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#c5a880]">Modelos de IA (3.1+)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={checkModelsStatus} 
+                    disabled={isCheckingModels}
+                    className="flex items-center gap-1 text-[9px] text-zinc-400 hover:text-[#c5a880] transition-colors cursor-pointer"
+                    title="Testar Conexão dos Modelos"
                   >
-                    <span className="text-[#c5a880]">{m.icon}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold truncate leading-none">{m.label}</p>
-                      <p className="text-[9px] text-zinc-500 truncate mt-0.5">{m.desc}</p>
-                    </div>
+                    <RefreshCw size={10} className={isCheckingModels ? "animate-spin text-[#c5a880]" : ""} />
+                    <span>{isCheckingModels ? "Testando..." : "Testar Status"}</span>
                   </button>
-                ))}
+                  <button onClick={() => setShowModelSettings(false)} className="text-zinc-500 hover:text-white"><X size={11} /></button>
+                </div>
+              </div>
+              <div className="space-y-1 max-h-72 overflow-y-auto custom-scrollbar pr-1">
+                {[
+                  { id: "gemini-3.7-flash", label: "Gemini 3.7 Flash", tag: "Mais Avançado", desc: "Raciocínio híbrido e alta velocidade", icon: <Sparkles size={13} /> },
+                  { id: "gemini-3.6-flash", label: "Gemini 3.6 Flash", tag: "Ultra Rápido", desc: "Leitura visual instantânea e estabilidade", icon: <Zap size={13} /> },
+                  { id: "gemini-3.1-pro-preview", label: "Gemini 3.1 Pro Preview", tag: "Pro 3.1", desc: "Raciocínio analítico avançado", icon: <Layers size={13} /> },
+                  { id: "gemini-3-pro-image", label: "Gemini 3 Pro Image", tag: "Nano Banana Pro", desc: "Engenharia e geração de imagens fotorrealistas", icon: <ImageIcon size={13} /> },
+                  { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash", tag: "Estável", desc: "Linha de produção segura", icon: <CheckCircle2 size={13} /> }
+                ].map(m => {
+                  const statusInfo = modelStatuses[m.id];
+                  const isOnline = statusInfo?.status === "online";
+                  const isBusy = statusInfo?.status === "busy";
+                  const isQuota = statusInfo?.status === "quota_exceeded";
+                  const isSelected = selectedModel === m.id;
+
+                  return (
+                    <button
+                      key={m.id}
+                      onClick={() => { setSelectedModel(m.id); setShowModelSettings(false); showToast(`Modelo selecionado: ${m.label}`, "success"); }}
+                      className={`w-full flex items-center gap-2.5 p-2 rounded-xl text-left transition-all cursor-pointer border ${
+                        isSelected 
+                          ? "bg-[#c5a880]/15 text-[#c5a880] border-[#c5a880]/40 font-bold" 
+                          : "bg-black/40 text-zinc-300 hover:bg-white/5 border-transparent"
+                      }`}
+                    >
+                      <span className={isSelected ? "text-[#c5a880]" : "text-zinc-400"}>{m.icon}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-1">
+                          <p className="text-xs font-semibold truncate leading-none">{m.label}</p>
+                          {/* Badge de Status em Tempo Real */}
+                          <span className={`text-[8px] px-1.5 py-0.5 rounded-full font-bold uppercase shrink-0 ${
+                            isOnline ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" :
+                            isBusy ? "bg-amber-500/20 text-amber-300 border border-amber-500/30" :
+                            isQuota ? "bg-red-500/20 text-red-300 border border-red-500/30" :
+                            "bg-zinc-800 text-zinc-400"
+                          }`}>
+                            {statusInfo?.statusText || "Testando..."}
+                          </span>
+                        </div>
+                        <p className="text-[9px] text-zinc-500 truncate mt-0.5">{m.desc}</p>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}

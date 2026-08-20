@@ -5454,7 +5454,11 @@ Sempre avise no texto de forma natural se identificou uma logo ou foto de sujeit
         throw lastError;
       }
 
-      res.json({ response: responseText || "" });
+      res.json({ 
+        response: responseText || "",
+        modelUsed: fallbackRes?.modelUsed || modelId || "gemini-3.7-flash",
+        clientUsed: fallbackRes?.clientUsed
+      });
     } catch (error: any) {
       console.error("Chat Assistente Error:", error);
       const errorMsg = error.message || String(error);
@@ -5469,6 +5473,91 @@ Sempre avise no texto de forma natural se identificou uma logo ou foto de sujeit
       }
       
       res.status(status).json({ error: userMessage });
+    }
+  });
+
+  app.post("/api/check-models-status", async (req: Request, res: Response) => {
+    try {
+      const customApiKey = req.body?.customApiKey || (req.headers["x-custom-api-key"] as string) || undefined;
+      const currentAi = getAiClient(customApiKey);
+      const candidates = getCandidateClients(customApiKey);
+      const primaryClient = candidates[0]?.instance || currentAi;
+
+      const modelsToCheck = [
+        { id: "gemini-3.7-flash", label: "Gemini 3.7 Flash", category: "text", desc: "Mais avançado com raciocínio híbrido" },
+        { id: "gemini-3.6-flash", label: "Gemini 3.6 Flash", category: "text", desc: "Ultra-rápido e estável" },
+        { id: "gemini-3.1-pro-preview", label: "Gemini 3.1 Pro Preview", category: "text", desc: "Raciocínio analítico avançado" },
+        { id: "gemini-3-pro-image", label: "Gemini 3 Pro Image (Nano Banana Pro)", category: "image", desc: "Geração de imagens fotorrealistas" },
+        { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash", category: "text", desc: "Linha de produção estável" }
+      ];
+
+      const results = await Promise.all(
+        modelsToCheck.map(async (m) => {
+          const start = Date.now();
+          try {
+            if (m.category === "image") {
+              const testRes = await primaryClient.models.generateContent({
+                model: m.id,
+                contents: "A blue circle",
+                config: { responseModalities: ["IMAGE"] }
+              });
+              const latency = Date.now() - start;
+              return {
+                id: m.id,
+                label: m.label,
+                desc: m.desc,
+                category: m.category,
+                status: "online",
+                statusText: "Online 🟢",
+                latencyMs: latency
+              };
+            } else {
+              const testRes = await primaryClient.models.generateContent({
+                model: m.id,
+                contents: "ping"
+              });
+              const latency = Date.now() - start;
+              return {
+                id: m.id,
+                label: m.label,
+                desc: m.desc,
+                category: m.category,
+                status: "online",
+                statusText: "Online 🟢",
+                latencyMs: latency
+              };
+            }
+          } catch (err: any) {
+            const rawMsg = err?.message || String(err);
+            let status = "error";
+            let statusText = "Indisponível 🔴";
+            if (rawMsg.includes("503") || rawMsg.includes("UNAVAILABLE") || rawMsg.includes("high demand")) {
+              status = "busy";
+              statusText = "Alta Demanda (503) 🟡";
+            } else if (rawMsg.includes("429") || rawMsg.includes("RESOURCE_EXHAUSTED") || rawMsg.includes("quota")) {
+              status = "quota_exceeded";
+              statusText = "Cota 429 🔴";
+            } else if (rawMsg.includes("404") || rawMsg.includes("NOT_FOUND")) {
+              status = "not_found";
+              statusText = "Indisponível ⚪";
+            }
+            return {
+              id: m.id,
+              label: m.label,
+              desc: m.desc,
+              category: m.category,
+              status,
+              statusText,
+              latencyMs: null,
+              error: sanitizeLogMessage(rawMsg.substring(0, 100))
+            };
+          }
+        })
+      );
+
+      res.json({ models: results });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Erro ao checar modelos." });
     }
   });
 
