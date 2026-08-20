@@ -550,6 +550,51 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
     if (textareaRef.current) textareaRef.current.style.height = "auto";
     setIsTyping(true);
 
+    // Mapeamento determinístico instantâneo dos arquivos enviados para os slots do editor
+    if (filesToSend.length > 0) {
+      const imagesOnly = filesToSend.filter(f => f.type.startsWith("image/"));
+      const newLogos: string[] = [];
+      const newDesigns: string[] = [];
+      const newScenes: string[] = [];
+      const newSubjects: string[] = [];
+
+      imagesOnly.forEach(img => {
+        const nameLower = (img.name || "").toLowerCase();
+        const rawBase64 = img.data.startsWith("data:") ? img.data : `data:${img.type || "image/jpeg"};base64,${img.data}`;
+        
+        if (nameLower.includes("logo") || nameLower.includes("marca") || nameLower.includes("logomarca") || nameLower.includes("logotipo") || img.category === "logo") {
+          newLogos.push(rawBase64);
+        } else if (nameLower.includes("fundo") || nameLower.includes("cenario") || nameLower.includes("cenário") || nameLower.includes("background") || nameLower.includes("bg") || img.category === "scene") {
+          newScenes.push(rawBase64);
+        } else if (nameLower.includes("pessoa") || nameLower.includes("modelo") || nameLower.includes("sujeito") || img.category === "subject") {
+          newSubjects.push(rawBase64);
+        } else {
+          newDesigns.push(rawBase64);
+        }
+      });
+
+      if (newLogos.length > 0) {
+        store.setLogosList(newLogos);
+        store.setLogoBase64(newLogos[0]);
+        store.updateConfig({ logoBase64: newLogos[0], useLogo: true });
+      }
+      if (newScenes.length > 0) {
+        store.setCenarioBase64List(newScenes);
+        store.setCenarioBase64(newScenes[0]);
+        store.updateConfig({ cenarioBase64: newScenes[0], useEnvRef: true });
+      }
+      if (newSubjects.length > 0) {
+        store.setSujeitoBase64List(newSubjects);
+        store.setSujeitoBase64(newSubjects[0]);
+        store.updateConfig({ sujeitoBase64: newSubjects[0], desativarSujeito: false, noPeople: false });
+      }
+      if (newDesigns.length > 0) {
+        store.setDesignRefsList(newDesigns);
+        store.setDesignRefBase64(newDesigns[0]);
+        store.updateConfig({ designRefBase64: newDesigns[0] });
+      }
+    }
+
     let currentActiveClientId = activeClientId;
     if (!currentActiveClientId) {
        const lowerText = (userMsg.content || "").toLowerCase();
@@ -743,7 +788,7 @@ Exemplo OBRIGATÓRIO de JSON no final da sua resposta (use o bloco \`\`\`json):
   "somentePrompt": false
 }
 \`\`\`
-Lembre-se: converse como humano primeiro e só anexe o JSON no final se for necessário alterar a interface!`;
+MANDATO RIGOROSO: Converse amigavelmente como Diretor de Arte primeiro E, no final da resposta, inclua OBRIGATORIAMENTE o bloco de código \`\`\`json {...} com 100% de todos os campos preenchidos, incluindo o OCR de todos os textos da imagem em 'camadasTexto', 'promptDesign', 'promptTipografia', 'cores', 'poseDescription' e 'additionalPrompt'!`;
 
     if (!checkAdminOrOpenPlan(customApiKey)) return;
     try {
