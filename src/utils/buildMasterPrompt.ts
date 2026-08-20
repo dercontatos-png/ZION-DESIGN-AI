@@ -63,7 +63,7 @@ export const buildMasterPrompt = (config: ProjectConfig): string => {
     promptParts.push("Focus: Background atmosphere, typography, atmospheric elements.");
   } else {
     const poseText = config.poseDescription?.trim() ? `, Pose/Clothing: ${config.poseDescription.trim()}` : "";
-    let finalPlacement = config.positioning ? config.positioning.toUpperCase() : "CENTER";
+    let finalPlacement = config.positioning ? config.positioning.toUpperCase() : "RIGHT";
     if (config.composicaoCustom?.trim()) {
       if (/centro|center/i.test(config.composicaoCustom)) finalPlacement = "CENTER";
       else if (/esquerda|left/i.test(config.composicaoCustom)) finalPlacement = "LEFT";
@@ -75,7 +75,13 @@ export const buildMasterPrompt = (config: ProjectConfig): string => {
       ? `, Multiple Subjects: ${config.gendersDescription?.trim() || config.gender || 'Group'}` 
       : (config.gender ? `, Gender: ${config.gender}` : "");
 
-    promptParts.push(`Central Subject & Framing Directives${poseText}${posText}${compText}${genderText}: The exact person/people/subjects from the attached reference photo(s) ('Referência do Sujeito Principal' / 'Referência de Design/Layout'). ABSOLUTE CRITICAL FACIAL IDENTITY, INDIVIDUAL EXPRESSION & POSE PRESERVATION MANDATE: Preserve 100% of the EXACT faces, facial features, expressions, eyes, nose, mouth posture, individual smile state (do NOT force a smile or teeth on any individual with a closed-mouth or subtle expression), hair, skin tone, clothing, physical body poses, spatial ordering, and exact positions of ALL people/subjects in the reference photo. YOU ARE STRICTLY FORBIDDEN from altering, redesigning, changing facial features, changing individual facial expressions, swapping faces, recreating different individuals, changing poses, or moving people to different positions! Each person MUST maintain their exact individual facial expression and mouth appearance as shown in the reference photo.`);
+    const isCastingSwapRequested = /mude|troque|outra mulher|nova modelo|diferente|substituir|novo modelo|new model|change woman|swap/i.test(`${config.poseDescription || ""} ${config.additionalPrompt || ""}`);
+
+    if (isCastingSwapRequested) {
+      promptParts.push(`Central Subject & Casting Replacement Directives${poseText}${posText}${compText}${genderText}: NEW PROFESSIONAL MODEL CASTING. Render a fresh, distinct, highly realistic professional model with the requested physical characteristics (radiant skin, modern styled hair, sharp corporate attire matching the brand color palette), positioned in the designated quadrant (${finalPlacement}) in a reflective pose holding a smartphone. Full 3-layer Subsurface Scattering, authentic skin micro-pores, natural joint anatomy, and cinematic commercial lighting.`);
+    } else {
+      promptParts.push(`Central Subject & Framing Directives${poseText}${posText}${compText}${genderText}: The exact person/people/subjects from the attached reference photo(s) ('Referência do Sujeito Principal' / 'Referência de Design/Layout'). ABSOLUTE CRITICAL FACIAL IDENTITY, INDIVIDUAL EXPRESSION & POSE PRESERVATION MANDATE: Preserve 100% of the EXACT faces, facial features, expressions, eyes, nose, mouth posture, individual smile state (do NOT force a smile or teeth on any individual with a closed-mouth or subtle expression), hair, skin tone, clothing, physical body poses, spatial ordering, and exact positions of ALL people/subjects in the reference photo.`);
+    }
   }
 
   // 5. SCENARIO / BACKGROUND ENVIRONMENT
@@ -90,7 +96,7 @@ export const buildMasterPrompt = (config: ProjectConfig): string => {
     if (isExplicitScenarioPhoto) {
       promptParts.push(`Background & Environment: STRICT ATTACHED SCENARIO PHOTO USE MANDATE: You MUST render and use the EXACT background scene, room, landscape, architecture, texture, and environment from the attached scenario reference image ('Referência de Cenário' / 'Additional Scenario Reference'). YOU ARE ABSOLUTELY FORBIDDEN FROM HALLUCINATING, INVENTING, OR GENERATING A RANDOM OR NEW BACKGROUND. Place the subjects and texts directly in front of the exact backdrop from the attached scenario image.${cenarioText}`);
     } else {
-      promptParts.push(`Background & Environment: STRICT ORIGINAL BACKGROUND & ROOM PRESERVATION MANDATE: Preserve 100% of the exact original background scene, room, walls, architecture, furniture, textures, and lighting from the attached reference photo ('Referência de Design/Layout' / 'Referência de Cenário'). Do NOT replace, change, redesign, or substitute the background with a new generated room, studio set, or different backdrop! Keep the exact same room, walls, and setting from the reference photo, applying ONLY the specific edits requested.${cenarioText}`);
+      promptParts.push(`Background & Environment: Clean, solid, high-contrast background matching the Design Layout Reference ('Referência de Design/Layout'). If the reference features a white background with subtle textured pattern, render a crisp solid white background with high clarity and zero clutter.${cenarioText}`);
     }
   } else if (config.promptCenario?.trim()) {
     promptParts.push(`Background: ${config.promptCenario.trim()}.`);
@@ -102,7 +108,7 @@ export const buildMasterPrompt = (config: ProjectConfig): string => {
   if (config.coresAutomaticas) {
     promptParts.push("Lighting/Colors: Cohesive, professional grading, balanced lighting for the subject only.");
   } else {
-    promptParts.push(`Lighting/Colors & Palette: The primary background color and overall ambient light of the entire composition MUST BE EXACTLY HEX ${config.cores?.ambiente || "#000000"}. The rim lighting, highlights, contour glow, and laser highlights on the subject MUST BE EXACTLY HEX ${config.cores?.recorte || "#ffffff"}. The auxiliary elements, glows, and secondary lights MUST BE EXACTLY HEX ${config.cores?.complementar || "#c5a880"}. Create a high-contrast theme strictly using this custom palette: ${config.cores?.ambiente || "#000000"} (background/ambient), ${config.cores?.recorte || "#ffffff"} (rim lights/accents), and ${config.cores?.complementar || "#c5a880"} (secondary glows).`);
+    promptParts.push(`Lighting/Colors & Palette: The primary background color and overall ambient light of the entire composition MUST BE EXACTLY HEX ${config.cores?.ambiente || "#ffffff"}. The rim lighting, highlights, contour glow, and laser highlights on the subject MUST BE EXACTLY HEX ${config.cores?.recorte || "#102a43"}. The auxiliary elements, glows, and secondary lights MUST BE EXACTLY HEX ${config.cores?.complementar || "#d1aa3a"}. Create a high-contrast theme strictly using this custom palette: ${config.cores?.ambiente || "#ffffff"} (background/ambient), ${config.cores?.recorte || "#102a43"} (navy blue / accents), and ${config.cores?.complementar || "#d1aa3a"} (gold / secondary highlights).`);
   }
   if (config.corDominante && config.corDominante !== "#000000" && config.corDominante !== "transparent") {
     promptParts.push(`Color Palette Dominant override: The dominant theme color, main background color, AND any text container box backgrounds MUST BE EXACTLY HEX ${config.corDominante}. Apply this specific hex value as the primary background color and container fill color with high, rich vibrance and zero color drift. Do not deviate from this exact hex value.`);
@@ -141,21 +147,21 @@ export const buildMasterPrompt = (config: ProjectConfig): string => {
       .filter(l => l.conteudo?.trim());
 
     if (activeLayers.length > 0) {
-      const globalPosText = config.typographyPosition ? `Global Alignment: ${config.typographyPosition.toUpperCase()}` : "Global Alignment: CENTERED";
+      const globalPosText = config.typographyPosition ? `Global Alignment: ${config.typographyPosition.toUpperCase()}` : "Global Alignment: LEFT";
       const formattedTexts = activeLayers.map((l, idx) => {
         const funcao = l.funcao ? `[${l.funcao.toUpperCase()}]` : `[CAMADA #${idx + 1}]`;
-        const fontStr = l.fonte ? `, Font style: "${l.fonte}"` : '';
+        const fontStr = l.fonte ? `, Font style: "${l.fonte} Extra-Bold/Black"` : ', Font style: "Montserrat Black"';
         const colorStr = l.cor ? `, Hex Color: ${l.cor}` : '';
         return `Layer #${idx + 1} ${funcao}${fontStr}${colorStr}: "${l.conteudo.trim()}"`;
       }).join("\n");
       
-      promptParts.push(`\n=== MANDATORY CUSTOM TEXT LAYERS (EXACT FONT, COLOR, ORDER & ALIGNMENT) ===\n${globalPosText}\nRender ONLY these custom text layers in their EXACT numerical order:\n${formattedTexts}\nSTRICT FONT FAMILY & COLOR COMPLIANCE MANDATE: You MUST apply the specified Font style for each text layer (the font name is only a STYLING DIRECTIVE for the letterforms — the font name as a WORD must NEVER be printed, written, or rendered as text on the canvas) and use the exact Hex Text Color for the text glyphs. Render Layer #1 as the primary top headline, Layer #2 below as subtitle/detail, etc. Maintain generous line spacing.\nTEXT LANGUAGE MANDATE: ALL text rendered on the canvas MUST be written in BRAZILIAN PORTUGUESE, exactly as supplied by the client (which is already in Portuguese). NEVER translate the supplied texts, NEVER mix English words into the supplied texts, and NEVER add English filler words like "PREMIUM", "LIVE", "NEW", "BEST", "NOW", "SALE", "SPECIAL" or any other English words UNLESS the client's supplied text explicitly includes them.\nCRITICAL TEXT OVERWRITE RULE: You MUST completely ERASE and OVERWRITE 100% of original text, titles, dates, handles, and numbers from the Design Layout Reference image. Do NOT keep or copy any words from the reference photo. Print ONLY these custom text layers!\nSAFETY MARGINS & SPACING MANDATE: Maintain safe margins of at least 8% padding from all canvas borders.`);
+      promptParts.push(`\n=== MANDATORY CUSTOM TEXT LAYERS (EXACT FONT, COLOR, ORDER & ALIGNMENT) ===\n${globalPosText}\nRender ONLY these custom text layers in their EXACT numerical order:\n${formattedTexts}\nSTRICT FONT FAMILY & WEIGHT COMPLIANCE MANDATE: You MUST apply the specified Font style with EXTRA-BOLD / BLACK heavy font weight (Weight 900) for the main headline, creating bold, punchy, compact text lines matching the scale and impact of the Design Layout Reference. Use the exact Hex Text Color for the text glyphs. Render Layer #1 at the top-left headline position, Layer #2 below as subtitle/detail, etc. Maintain structured margin alignment on the left.\nTEXT LANGUAGE MANDATE: ALL text rendered on the canvas MUST be written in BRAZILIAN PORTUGUESE, exactly as supplied by the client (which is already in Portuguese). NEVER translate the supplied texts, NEVER mix English words into the supplied texts, and NEVER add English filler words like "PREMIUM", "LIVE", "NEW", "BEST", "NOW", "SALE", "SPECIAL" or any other English words UNLESS the client's supplied text explicitly includes them.\nCRITICAL TEXT OVERWRITE RULE: You MUST completely ERASE and OVERWRITE 100% of original text, titles, dates, handles, and numbers from the Design Layout Reference image. Do NOT keep or copy any words from the reference photo. Print ONLY these custom text layers!\nSAFETY MARGINS & SPACING MANDATE: Maintain safe margins of at least 8% padding from all canvas borders.`);
     }
   }
 
   if (config.promptTipografia?.trim() || config.tipografiaRefBase64 || (config.tipografiaRefsList && config.tipografiaRefsList.length > 0)) {
     const typoExtractText = config.promptTipografia?.trim() ? ` Notes: ${config.promptTipografia.trim()}` : "";
-    promptParts.push(`\n=== TYPOGRAPHY REFERENCE EXTRACTION MANDATE ===\nAnalyze the attached Typography Reference Print ('Referência de Tipografia'). Copy the exact lettering style, font weight, text effects, and placement style from the reference print.${typoExtractText}`);
+    promptParts.push(`\n=== TYPOGRAPHY REFERENCE EXTRACTION MANDATE ===\nAnalyze the attached Typography Reference Print ('Referência de Tipografia'). Copy the exact lettering style, heavy font weight, text effects, and placement style from the reference print.${typoExtractText}`);
   }
 
   // 9. LOGO & DESIGN FIDELITY
