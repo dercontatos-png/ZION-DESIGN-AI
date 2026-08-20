@@ -1002,8 +1002,8 @@ async function executeGenerateContentWithFallbacks(
   for (const cItem of candidateClients) {
     const curClient = cItem.instance;
     for (const modelName of combinedModels) {
-      // Retry com backoff exponencial em 429 — até 5 tentativas por modelo/client
-      const maxContentAttempts = 5;
+      // Retry rápido — até 2 tentativas por modelo/client para não travar a requisição
+      const maxContentAttempts = 2;
       for (let attempt = 1; attempt <= maxContentAttempts; attempt++) {
         try {
           console.log(`[generateContent-fallback] Trying model ${modelName} on client: ${cItem.name}${attempt > 1 ? ` (attempt ${attempt})` : ''}...`);
@@ -1034,15 +1034,14 @@ async function executeGenerateContentWithFallbacks(
           const isEmptyOutput = rawMsg.toLowerCase().includes("model output") || rawMsg.toLowerCase().includes("output text") || rawMsg.toLowerCase().includes("tool calls");
 
           if (isQuota && attempt < maxContentAttempts) {
-            // Exponential backoff: 1s → 2s → 4s → 8s → 16s
-            const sleptMs = await sleepWithExponentialBackoff(attempt, 1000, 16000);
-            console.info(`[generateContent-fallback] Model ${modelName} rate limit on ${cItem.name} (attempt ${attempt}/${maxContentAttempts}). Retrying after ${(sleptMs / 1000).toFixed(1)}s backoff...`);
+            await new Promise(r => setTimeout(r, 600));
+            console.info(`[generateContent-fallback] Model ${modelName} rate limit on ${cItem.name} (attempt ${attempt}/${maxContentAttempts}). Quick retry...`);
             lastError = err;
             continue; // retry same model/client
           }
 
           if (isQuota) {
-            console.info(`[generateContent-fallback] Model ${modelName} rate limit exhausted on ${cItem.name} after ${attempt} attempts.`);
+            console.info(`[generateContent-fallback] Model ${modelName} rate limit on ${cItem.name}, switching immediately to next client/model...`);
           } else if (isEmptyOutput) {
             console.info(`[generateContent-fallback] Model ${modelName} on ${cItem.name}: empty output, trying next model...`);
           } else {
