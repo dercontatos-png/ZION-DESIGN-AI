@@ -989,15 +989,15 @@ async function executeGenerateContentWithFallbacks(
     return 0;
   });
 
-  // Fallback models: fast stable production models first, then preview models
+  // Fallback models: Gemini 3.7 Flash as priority #1 for text & multimodal vision
   const fallbackList = [
-    "gemini-2.5-flash",         // Production fast stable
+    "gemini-3.7-flash",         // Priority #1: State-of-the-art multimodal vision & text
+    "gemini-2.5-flash",         // Production fast stable fallback
     "gemini-2.5-pro",           // Production high-intelligence stable
     "gemini-2.0-flash",         // Stable fast
     "gemini-2.0-flash-001",     // Stable Vertex AI
     "gemini-1.5-flash",         // High availability fallback
     "gemini-1.5-pro",           // High quality fallback
-    "gemini-3.7-flash",         // Developer preview
     "gemini-3.1-pro-preview",   // Developer preview
   ];
   const combinedModels = Array.from(new Set([...mappedModelNames, ...fallbackList]));
@@ -5423,8 +5423,8 @@ Sempre avise no texto de forma natural se identificou uma logo ou foto de sujeit
       }
 
       const textModels = modelId 
-        ? [modelId, "gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro", "gemini-3.7-flash"] 
-        : ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro", "gemini-3.7-flash"];
+        ? [modelId, "gemini-3.7-flash", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"] 
+        : ["gemini-3.7-flash", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
       let responseText = "";
       let lastError: any = null;
 
