@@ -273,10 +273,11 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
   const checkModelsStatus = async () => {
     setIsCheckingModels(true);
     try {
+      const activeKey = customApiKey || localStorage.getItem("custom_gemini_api_key") || "";
       const res = await fetch("/api/check-models-status", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders(customApiKey) },
-        body: JSON.stringify({ customApiKey })
+        headers: { "Content-Type": "application/json", ...getAuthHeaders(activeKey) },
+        body: JSON.stringify({ customApiKey: activeKey })
       });
       if (res.ok) {
         const data = await res.json();
@@ -290,11 +291,17 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
             };
           });
           setModelStatuses(map);
-          showToast("Status dos modelos atualizado!", "success");
+          showToast("Status dos modelos atualizado com sucesso!", "success");
+        } else {
+          showToast("Servidor retornou formato inesperado.", "warning");
         }
+      } else {
+        const err = await res.json().catch(() => ({}));
+        showToast(err.error || "Erro ao consultar status dos modelos.", "error");
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error("Erro ao checar status dos modelos:", e);
+      showToast("Não foi possível conectar ao servidor de verificação.", "error");
     } finally {
       setIsCheckingModels(false);
     }
