@@ -56,11 +56,12 @@ export const buildMasterPrompt = (config: ProjectConfig): string => {
     "spatial_layout_zones": {
       "top_center_header": {
         "status": userHasProvidedHandle ? "ACTIVE" : "INACTIVE",
-        "elements": userHasProvidedHandle ? ["instagram_icon", "facebook_icon", (rawLayers.find(l => l.conteudo.includes("@"))?.conteudo || "@sispumumc").toLowerCase()] : [],
+        "elements": userHasProvidedHandle ? ["official_instagram_glyph", "official_facebook_glyph", (rawLayers.find(l => l.conteudo.includes("@"))?.conteudo || "@sispumumc").toLowerCase()] : [],
         "alignment": "HORIZONTAL_CENTER_TOP",
         "styling": {
           "color": config.cores?.recorte || "#102a43",
           "font_family": "Montserrat",
+          "font_weight": "Bold",
           "case": "strictly_lowercase"
         },
         "exclusions": ["no_tiktok_icon", "no_youtube_icon", "no_unrequested_icons", "no_duplicate_at_symbols"]
@@ -92,7 +93,7 @@ export const buildMasterPrompt = (config: ProjectConfig): string => {
         "status": hasLogo ? "ACTIVE" : "INACTIVE",
         "logo_mode": isLogoOverlay ? "DIGITAL_POST_OVERLAY" : "NATIVE_CANVAS_EMBEDDED",
         "exact_spatial_position": "BOTTOM_LEFT_CORNER_BELOW_TEXT",
-        "description": "Official brand logo with colorful circular clay-figures hugging and 'SISPUMUMC MORRO DO CHAPÉU-BA' typography below",
+        "description": "Exact client brand logo featuring a circular group of colorful 3D clay-like human figures hugging in a circle (yellow, red, purple, light blue, green) with bold clean dark navy blue typography underneath: 'SISPUMUMC' and 'MORRO DO CHAPÉU-BA'",
         "rules": [
           "Embed strictly in bottom-left footer under the body text layers",
           "NEVER place the logo in the top header or over the subject",
@@ -104,8 +105,8 @@ export const buildMasterPrompt = (config: ProjectConfig): string => {
         "status": config.desativarSujeito ? "INACTIVE" : "ACTIVE",
         "casting_directive": isCastingSwapRequested ? "NEW_PROFESSIONAL_MODEL" : "PRESERVE_REFERENCE_SUBJECT",
         "subject_profile": {
-          "description": config.poseDescription || "Professional businesswoman with light brown wavy hair and warm skin tone",
-          "wardrobe": "Tailored Navy Blue corporate blazer (#102a43) over white inner blouse with subtle gold accents (#d1aa3a)",
+          "description": config.poseDescription || "Professional businesswoman with shoulder-length wavy honey-brown hair and warm skin tone",
+          "wardrobe": "Tailored Navy Blue corporate blazer (#102a43) over crisp white blouse with subtle gold accents (#d1aa3a)",
           "pose": "Analytical, confident, reflective posture looking upwards to the left toward the headline while holding a modern dark smartphone",
           "framing": "Medium shot / bust from waist up",
           "quadrant": finalPlacement
@@ -113,13 +114,13 @@ export const buildMasterPrompt = (config: ProjectConfig): string => {
       }
     },
     "background_and_optics": {
-      "background_type": "SOLID_CLEAN_WITH_SUBTLE_TEXTURE",
+      "background_type": "100%_FLAT_SOLID_PURE_WHITE",
       "base_color_hex": config.cores?.ambiente || "#FFFFFF",
-      "texture_details": config.promptCenario || "Clean solid white background with faint subtle wave doodle patterns",
+      "texture_details": "100% flat solid pure white (#FFFFFF) digital fill, zero textures, zero wave patterns, zero doodles, zero gradients, zero shadows on canvas",
       "camera_optics": {
         "sensor": "Full-frame 8K",
         "lens": "85mm f/1.4 G-Master Prime (stopped down to f/2.0)",
-        "lighting": "Commercial studio softbox key light with delicate rim light separation",
+        "lighting": "Commercial studio softbox key light with delicate rim light separation from white background",
         "dermal_physics": "Authentic 3-layer Subsurface Scattering (SSS) with visible micro-pores, zero beauty filter smoothing"
       }
     },
