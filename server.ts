@@ -5431,9 +5431,10 @@ Sempre avise no texto de forma natural se identificou uma logo ou foto de sujeit
         : ["gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.1-pro-preview"];
       let responseText = "";
       let lastError: any = null;
+      let fallbackRes: any = null;
 
       try {
-        const fallbackRes = await executeGenerateContentWithFallbacks(
+        fallbackRes = await executeGenerateContentWithFallbacks(
           currentAi,
           customApiKey,
           textModels,
@@ -5444,7 +5445,7 @@ Sempre avise no texto de forma natural se identificou uma logo ou foto de sujeit
             }
           }
         );
-        responseText = fallbackRes.response?.text || "";
+        responseText = fallbackRes?.response?.text || "";
       } catch (err: any) {
         console.warn(`[chat-agentes] All models failed:`, err?.message || err);
         lastError = err;
