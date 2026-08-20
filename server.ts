@@ -989,16 +989,16 @@ async function executeGenerateContentWithFallbacks(
     return 0;
   });
 
-  // Fallback models: developer API names first, then Vertex AI native names
-  // gemini-3.7-flash and gemini-3.1-pro-preview work on developer API
+  // Fallback models: fast stable production models first, then preview models
   const fallbackList = [
-    "gemini-3.7-flash",         // Developer API (Mais recente)
-    "gemini-3.1-pro-preview",   // Developer API
-    "gemini-3.6-flash",         // Developer API
-    "gemini-2.0-flash-001",     // Vertex AI native
-    "gemini-2.0-flash",         // Vertex AI native alias
-    "gemini-1.5-pro",           // Vertex AI stable
-    "gemini-1.5-flash",         // Vertex AI stable (fast)
+    "gemini-2.5-flash",         // Production fast stable
+    "gemini-2.5-pro",           // Production high-intelligence stable
+    "gemini-2.0-flash",         // Stable fast
+    "gemini-2.0-flash-001",     // Stable Vertex AI
+    "gemini-1.5-flash",         // High availability fallback
+    "gemini-1.5-pro",           // High quality fallback
+    "gemini-3.7-flash",         // Developer preview
+    "gemini-3.1-pro-preview",   // Developer preview
   ];
   const combinedModels = Array.from(new Set([...mappedModelNames, ...fallbackList]));
 
@@ -5422,7 +5422,9 @@ Sempre avise no texto de forma natural se identificou uma logo ou foto de sujeit
         sanitizedContents.shift();
       }
 
-      const textModels = modelId ? [modelId, "gemini-3.1-pro-preview", "gemini-3.1-pro-preview"] : ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"];
+      const textModels = modelId 
+        ? [modelId, "gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro", "gemini-3.7-flash"] 
+        : ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro", "gemini-3.7-flash"];
       let responseText = "";
       let lastError: any = null;
 
