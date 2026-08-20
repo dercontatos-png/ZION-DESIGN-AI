@@ -57,27 +57,29 @@ export const buildMasterPrompt = (config: ProjectConfig): string => {
       "top_center_header": {
         "status": userHasProvidedHandle ? "ACTIVE" : "INACTIVE",
         "elements": userHasProvidedHandle ? [
-          "official_rounded_instagram_camera_glyph",
-          "official_circular_facebook_f_glyph",
+          "instagram_glyph_in_red_circular_badge",
+          "facebook_glyph_in_red_circular_badge",
+          "tiktok_glyph_in_red_circular_badge",
           (rawLayers.find(l => l.conteudo.includes("@"))?.conteudo || "@sispumumc").toLowerCase()
         ] : [],
         "alignment": "HORIZONTAL_CENTER_TOP",
-        "icon_rendering": "Clean, official brand glyphs (Instagram rounded square camera + Facebook circular 'f') in solid high-contrast monochrome or brand styling with crisp geometry. Never render plain bracketed text letters like [O] or [f]",
+        "icon_rendering": "Social media icons inside solid vibrant red circular badges (#E52421) with clean white glyphs inside (Instagram camera, Facebook 'f', TikTok), followed by the handle text '@sispumumc' in clean black typography.",
         "styling": {
-          "color": config.cores?.recorte || "#102a43",
+          "color": "#111111",
           "font_family": "Montserrat",
           "font_weight": "Bold",
           "case": "strictly_lowercase"
         },
-        "exclusions": ["no_tiktok_icon", "no_youtube_icon", "no_unrequested_icons", "no_duplicate_at_symbols", "no_bracketed_letters"]
+        "exclusions": ["no_unrequested_icons", "no_duplicate_at_symbols", "no_bracketed_letters"]
       },
       "top_left_headline": {
+        "typography_style": "Chunky bold display font with retro editorial curves (Cooper Black / Recoleta style)",
         "title_stack": rawLayers.filter(l => !l.conteudo.includes("@") && (l.funcao?.includes("Headline") || l.funcao?.includes("Título") || rawLayers.indexOf(l) === 0)).map((l, idx) => ({
           "line_number": idx + 1,
           "text": l.conteudo,
-          "font_family": l.fonte || "Montserrat",
-          "font_weight": "Black_Extra_Bold_900",
-          "hex_color": l.cor || (idx === 0 ? "#008744" : idx === 1 ? "#D9381E" : (config.cores?.complementar || "#F37021"))
+          "font_family": "Chunky_Bold_Display_Serif",
+          "font_weight": "Extra_Bold_Black_900",
+          "hex_color": l.cor || (idx === 0 ? "#00A650" : idx === 1 ? "#E52421" : "#FF5A00")
         })),
         "alignment": config.typographyPosition ? config.typographyPosition.toUpperCase() : "LEFT",
         "scale": "MASSIVE_HERO_IMPACT"
@@ -88,7 +90,7 @@ export const buildMasterPrompt = (config: ProjectConfig): string => {
           "text": l.conteudo,
           "font_family": l.fonte || "Montserrat",
           "font_weight": "SemiBold_600",
-          "hex_color": l.cor || config.cores?.recorte || "#102a43",
+          "hex_color": l.cor || "#111111",
           "has_checkmark": l.conteudo.includes("✓") || l.conteudo.includes("Mas para continuar")
         })),
         "alignment": config.typographyPosition ? config.typographyPosition.toUpperCase() : "LEFT",
@@ -110,29 +112,31 @@ export const buildMasterPrompt = (config: ProjectConfig): string => {
         "status": config.desativarSujeito ? "INACTIVE" : "ACTIVE",
         "casting_directive": isCastingSwapRequested ? "NEW_PROFESSIONAL_MODEL" : "PRESERVE_REFERENCE_SUBJECT",
         "subject_profile": {
-          "description": config.poseDescription || "Professional businesswoman with shoulder-length wavy honey-brown hair and warm skin tone",
-          "wardrobe": "Tailored Navy Blue corporate blazer (#102a43) over crisp white blouse with subtle gold accents (#d1aa3a)",
-          "pose": "Analytical, confident, reflective posture looking upwards to the left toward the headline while holding a modern dark smartphone",
+          "description": config.poseDescription || "Young Black Brazilian woman with natural short afro curly hair, wearing bright orange long-sleeve top and red hoop earrings",
+          "wardrobe": "Vibrant orange long-sleeve knit top with red hoop earrings",
+          "pose": "Thoughtful, reflective posture holding a dark smartphone in both hands and looking upwards to the left toward the headline",
           "framing": "Medium shot / bust from waist up",
           "quadrant": finalPlacement
         }
       }
     },
     "background_and_optics": {
-      "background_type": "100%_FLAT_SOLID_PURE_WHITE",
-      "base_color_hex": config.cores?.ambiente || "#FFFFFF",
-      "texture_details": "100% flat solid pure white (#FFFFFF) digital fill, zero textures, zero wave patterns, zero doodles, zero gradients, zero shadows on canvas",
+      "background_type": "WHITE_WITH_SUBTLE_WAVY_DOODLE_LINES",
+      "base_color_hex": "#FFFFFF",
+      "texture_details": "Pristine white canvas with subtle, delicate light-gray wavy doodle line patterns throughout the background for depth and institutional modern design feel.",
       "camera_optics": {
         "sensor": "Full-frame 8K",
         "lens": "85mm f/1.4 G-Master Prime (stopped down to f/2.0)",
-        "lighting": "Commercial studio softbox key light with delicate rim light separation from white background",
+        "lighting": "Commercial studio softbox key light with delicate rim light separation from background",
         "dermal_physics": "Authentic 3-layer Subsurface Scattering (SSS) with visible micro-pores, zero beauty filter smoothing"
       }
     },
     "color_palette_lock": {
-      "ambient_background": config.cores?.ambiente || "#FFFFFF",
-      "primary_navy": config.cores?.recorte || "#102a43",
-      "accent_gold": config.cores?.complementar || "#d1aa3a"
+      "ambient_background": "#FFFFFF",
+      "green_headline": "#00A650",
+      "red_headline_and_badges": "#E52421",
+      "orange_headline_and_outfit": "#FF5A00",
+      "dark_text": "#111111"
     },
     "strict_governing_rules": {
       "language_lock": "pt-BR (Strictly Brazilian Portuguese)",
