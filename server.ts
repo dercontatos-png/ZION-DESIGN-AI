@@ -88,25 +88,6 @@ function getServiceAccountCredentials(): any | null {
     }
   }
 
-  const pathsToTry = [
-    path.join(process.cwd(), "chave-vertex.json"),
-    path.join(os.tmpdir(), "chave-vertex.json")
-  ];
-  for (const p of pathsToTry) {
-    if (fs.existsSync(p)) {
-      try {
-        const fileContent = fs.readFileSync(p, "utf8");
-        const parsed = JSON.parse(fileContent);
-        if (parsed && typeof parsed === "object" && parsed.private_key) {
-          if (typeof parsed.private_key === "string") {
-            parsed.private_key = parsed.private_key.replace(/\\n/g, "\n");
-          }
-          return parsed;
-        }
-      } catch (e) {}
-    }
-  }
-
   return null;
 }
 
