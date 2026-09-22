@@ -154,25 +154,32 @@ export const useGenerateImage = (
       // Brand Identity / Logotipos da Marca (Órion Pro e Design Builder)
       const allLogos: string[] = [];
       if (store.logoBase64 && store.logoBase64.trim()) {
-        allLogos.push(store.logoBase64);
+        allLogos.push(store.logoBase64.trim());
       }
       if (Array.isArray(store.logosList)) {
         for (const l of store.logosList) {
-          const lStr = typeof l === "string" ? l : ((l as any)?.url || (l as any)?.data || "");
+          const lStr = typeof l === "string" ? l.trim() : (((l as any)?.url || (l as any)?.data || "") as string).trim();
           if (lStr && !allLogos.includes(lStr)) {
+            // Se já temos logoBase64 e a lista só tem 1 item, trata-se do mesmo logo
+            if (allLogos.length > 0 && store.logosList.length === 1) {
+              continue;
+            }
             allLogos.push(lStr);
           }
         }
       }
-      for (let i = 0; i < allLogos.length; i++) {
-        const file = await imageSourceToFile(allLogos[i], `brand_logo_${i}`);
+      // DEDUPLICAÇÃO INTELIGENTE DE LOGO:
+      // Para campanhas padrão, apenas 1 logotipo principal deve ser enviado para evitar que a IA desenhe logos gêmeos/duplos.
+      const finalLogos = allLogos.slice(0, 1);
+      for (let i = 0; i < finalLogos.length; i++) {
+        const file = await imageSourceToFile(finalLogos[i], `brand_logo_${i}`);
         if (file) {
           formData.append("brand_identity_images", file);
           console.log(`[FRONT] Anexado brand_identity_images #${i + 1}: ${file.name} (${file.size} bytes)`);
         }
       }
-      if (allLogos.length > 0) {
-        formData.append("brand_identity_images_descriptions", JSON.stringify(allLogos.map(() => "Logotipo oficial da marca")));
+      if (finalLogos.length > 0) {
+        formData.append("brand_identity_images_descriptions", JSON.stringify(finalLogos.map(() => "Logotipo oficial da marca")));
       }
 
       // Campo 2: quantidade
@@ -577,16 +584,20 @@ export const useGenerateImage = (
 
       const allLogos: string[] = [];
       if (store.logoBase64 && store.logoBase64.trim()) {
-        allLogos.push(store.logoBase64);
+        allLogos.push(store.logoBase64.trim());
       }
       if (Array.isArray(store.logosList)) {
         for (const l of store.logosList) {
-          const lStr = typeof l === "string" ? l : ((l as any)?.url || (l as any)?.data || "");
+          const lStr = typeof l === "string" ? l.trim() : (((l as any)?.url || (l as any)?.data || "") as string).trim();
           if (lStr && !allLogos.includes(lStr)) {
+            if (allLogos.length > 0 && store.logosList.length === 1) {
+              continue;
+            }
             allLogos.push(lStr);
           }
         }
       }
+      const finalLogos = allLogos.slice(0, 1);
 
       const [optSujeito, optCenario, optSujeitosList, optCenariosList] = await Promise.all([
         optimizeBase64Image(store.sujeitoBase64 || allSubjectPhotos[0] || "", maxDim, quality),
@@ -600,9 +611,9 @@ export const useGenerateImage = (
         sujeitosBase64List: optSujeitosList,
         base64DoCenario: optCenario || optCenariosList[0] || "",
         cenariosBase64List: optCenariosList,
-        logoBase64: store.logoBase64 || allLogos[0] || "",
-        logosList: allLogos,
-        useLogo: allLogos.length > 0,
+        logoBase64: store.logoBase64 || finalLogos[0] || "",
+        logosList: finalLogos,
+        useLogo: finalLogos.length > 0,
         referenciasEstilo: store.referenciasEstilo || [],
         designRefBase64: store.designRefBase64 || "",
         promptTraduzido: masterPrompt,

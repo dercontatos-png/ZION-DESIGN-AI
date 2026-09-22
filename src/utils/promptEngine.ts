@@ -151,8 +151,11 @@ CRITICAL COMPOSITION & SAFE MARGIN LAW (HIGHEST PRIORITY):
   * Typography, logos, and icons MUST float seamlessly and cleanly directly over the scene/background with natural contrast and subtle depth, exactly like top-tier commercial advertising and modern high-end posters.
 - COLLAGE / MULTI-IMAGE REFERENCES: If any attached reference image contains a grid, split-screen, or multiple images, treat it as a collection of style inspirations. Render ONE (1) cohesive single full-canvas artwork — NEVER replicate a split-screen or multi-box grid!
 - ABSOLUTE BAN ON GLUING TO BORDERS: Maintain a generous minimum padding/margin of 8% to 12% inward from ALL 4 outer canvas borders. Elements must never touch or be clipped by the borders.
-- BRAND LOGO PLACEMENT: Position the brand logo/emblem with generous breathing room (typically top-center or upper section). Maintain at least 10% margin from borders.
-- TOP & BOTTOM HEADROOM: Top handle/header must float with at least 6% to 8% margin from the top edge. Bottom contact info must float with at least 7% to 10% margin from the bottom edge.`;
+- BRAND LOGO PLACEMENT (EXACTLY ONE SINGLE LOGO):
+  * Render EXACTLY ONE (1) single brand logo on the entire canvas, centered horizontally in the top header with at least 8% to 10% margin from borders.
+  * ABSOLUTE PROHIBITION AGAINST DUPLICATE LOGOS: ZERO duplicate logos, ZERO twin logos side by side, ZERO repeated crests! NEVER render more than one logo on the entire artwork!
+- TOP & BOTTOM HEADROOM: Top handle/header must float with at least 6% to 8% margin from the top edge. Bottom contact info must float with at least 7% to 10% margin from the bottom edge.
+- NEGATIVE RESTRICTIONS: ZERO duplicate logos, ZERO twin logos, ZERO multiple crests, ZERO empty canvas voids, ZERO awkward gaps between cards and footer.`;
 
 // ─── ANATOMY SAFETY ───────────────────────────────────────────────────
 
@@ -446,7 +449,12 @@ export function buildEnhancedPrompt(params: PromptEngineParams): string {
 
   if (userRequestedNoPerson || (!params.hasSubjectPhotos && params.categoria === "livre")) {
     parts.push(`ABSOLUTE PROHIBITION OF HUMAN MODELS: ZERO people, ZERO women, ZERO nurses, ZERO doctors, ZERO human figures! The user explicitly did not attach a person photo and requested empty boxes for later insertion. Do NOT paint any human model into the artwork!
-Photo Slots: Render exactly THREE (3) clean, prominent, large white rectangular placeholder boxes arranged horizontally side-by-side across the middle of the canvas ("um do lado do outro no meio grande") with clean rounded corners and pure solid white fill.`);
+Photo Slots & Gap Elimination (Zero Dead Space):
+- Render exactly THREE (3) clean, prominent, large white rectangular placeholder boxes arranged horizontally side-by-side ("um do lado do outro no meio grande") with clean rounded corners and pure solid white fill (#FFFFFF).
+- VERTICAL HARMONY & GAP ELIMINATION: The composition MUST NOT have any vacant dead space or empty gap between the photo boxes and the bottom footer contact bar!
+- If the technical course bullet points are positioned above the three boxes, the three white boxes MUST be tall portrait cards (aspect ratio 3:4) that extend with generous vertical height downwards to sit comfortably right above the footer contact bar (maintaining only 6% to 8% safe breathing room above the WhatsApp phone and social handle), completely eliminating any empty void beneath them!
+- If the technical course bullet points are positioned below the three boxes, they must neatly occupy and balance the lower-middle zone, bridging smoothly into the bottom footer contact bar.
+- ZERO EMPTY VOIDS: Every vertical section of the canvas must have balanced purpose and presence!`);
   } else {
     const isGroupSubject = /todos|grupo|equipe|turma|pessoas|foto/i.test(params.subject_description || "");
     if (isGroupSubject) {

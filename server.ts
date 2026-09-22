@@ -2148,10 +2148,15 @@ MANDATORY: If the user explicitly requested white squares, cards, panels, or spe
             const hasHumanSubject = hasSubjectPhotos && !userRequestedNoPerson && !isLivreCategory;
 
             if (userRequestedNoPerson || !hasHumanSubject) {
-              fullPrompt += `\n\nSUBJECT RESTRICTION & PHOTO PLACEHOLDER SLOTS:
+              fullPrompt += `\n\nSUBJECT RESTRICTION, PHOTO PLACEHOLDER SLOTS & VERTICAL HARMONY:
 - ABSOLUTE PROHIBITION OF HUMAN MODELS: ZERO people, ZERO women, ZERO nurses, ZERO doctors! Do NOT paint any person or model into the artwork!`;
               if (/quadrado|caixa|box|espa[çc]o|slot/i.test(allPromptDirectives)) {
-                fullPrompt += `\n- THREE (3) CENTRAL PHOTO PLACEHOLDER BOXES: Render exactly three (3) large white rectangular placeholder boxes arranged horizontally side-by-side across the middle of the canvas ("um do lado do outro no meio grande") with clean rounded corners and pure white fill.`;
+                fullPrompt += `\n- THREE (3) PHOTO PLACEHOLDER SLOTS & GAP ELIMINATION (CRITICAL — ZERO DEAD SPACE):
+  * Render exactly THREE (3) clean, prominent, large white rectangular placeholder boxes arranged horizontally side-by-side ("um do lado do outro no meio grande") with clean rounded corners and pure solid white fill (#FFFFFF).
+  * VERTICAL HARMONY & GAP ELIMINATION (MANDATORY): The composition MUST NOT have any vacant dead space or empty gap between the photo boxes and the bottom footer contact bar!
+  * If the technical course bullet points are positioned above the three boxes, the three white boxes MUST be tall portrait cards (aspect ratio 3:4) that extend with generous vertical height downwards to sit comfortably right above the footer contact bar (maintaining only 6% to 8% safe breathing room above the WhatsApp phone and social handle), completely eliminating any empty void beneath them!
+  * If the technical course bullet points are positioned below the three boxes, they must neatly occupy and balance the lower-middle zone, bridging smoothly into the bottom footer contact bar.
+  * ZERO EMPTY VOIDS: Every vertical section of the canvas must have balanced purpose and presence!`;
               }
             }
 
@@ -2181,6 +2186,12 @@ MANDATORY: If the user explicitly requested white squares, cards, panels, or spe
 - PROHIBITION: DO NOT place the social handle at the top! DO NOT place the phone number on the left margin under the bullet points! Both must be centered at the bottom.`;
             }
 
+            fullPrompt += `\n\nNEGATIVE RESTRICTIONS & BANNED ARTIFACTS:
+- ZERO duplicate logos, ZERO twin logos side by side, ZERO repeated crests, ZERO multiple logos, ZERO floating duplicate emblems!
+- ZERO vacant dead space or awkward empty gaps between cards and footer!
+- ZERO human models, ZERO women, ZERO nurses (if no-person requested).
+- ZERO technical metadata tags ('H1', 'CTA', 'Bullets') painted as text.`;
+
             console.log(`[bff/generate ASYNC] Job ${jobId}: Built prompt (${fullPrompt.length} chars)`);
 
             // Update status: analyzing
@@ -2209,11 +2220,16 @@ MANDATORY: If the user explicitly requested white squares, cards, panels, or spe
 
             // 2. Logotipos / Identidade da Marca (Órion Pro e Design Builder)
             if (files.brand_identity_images && files.brand_identity_images.length > 0) {
-              for (let i = 0; i < files.brand_identity_images.length; i++) {
-                const f = files.brand_identity_images[i];
+              // Limitar ao logotipo principal oficial para evitar que a IA desenhe logos duplicados/gêmeos
+              const singleLogoFiles = files.brand_identity_images.slice(0, 1);
+              for (let i = 0; i < singleLogoFiles.length; i++) {
+                const f = singleLogoFiles[i];
                 const origMime = f.mimetype || "image/png";
                 const norm = await prepareLogoForGeminiVision(f.buffer, origMime);
-                parts.push({ text: `BRAND LOGO & EMBLEM REFERENCE #${i + 1} — Client official brand mark / coat of arms / insignia:
+                parts.push({ text: `BRAND LOGO & EMBLEM (EXACTLY ONE (1) SINGLE LOGO INSTANCE — COMPLETE LOCKUP FIDELITY):
+- EXACTLY ONE (1) SINGLE LOGO INSTANCE (MANDATORY — NON-NEGOTIABLE):
+  * Render EXACTLY ONE (1) single brand logo lockup on the entire canvas, centered horizontally in the top header.
+  * ABSOLUTE PROHIBITION AGAINST DUPLICATE LOGOS: ZERO duplicate logos, ZERO twin logos side by side, ZERO repeated crests! NEVER render more than one logo on the entire artwork!
 - COMPLETE LOGO LOCKUP INTEGRITY (CRITICAL — MANDATORY):
   * The attached logo reference contains TWO INTEGRATED VERTICAL ELEMENTS in one unified lockup:
     1) AT THE TOP: The brand name text "CEPAR" in clean, capital serif typography.
@@ -2221,8 +2237,8 @@ MANDATORY: If the user explicitly requested white squares, cards, panels, or spe
   * You MUST replicate the COMPLETE logo lockup together. NEVER crop out, cut off, or omit the name "CEPAR"!
   * NEVER alter or hallucinate the name (do NOT write "Centro CE-PAR" or anything other than "CEPAR").
   * Replicate both the name "CEPAR" at the top AND the coat of arms shield at the bottom as one cohesive institutional brand mark.
-- CONTRAST & INTEGRATION: The reference image is presented on a dark neutral backdrop solely so all white letters ("CEPAR") and colored shield lines are clearly visible. In your generated artwork, render ONLY the complete logo itself floating cleanly and seamlessly over the canvas environment without any artificial container box, sticker border, or card behind it!
-- PROFESSIONAL INSTITUTIONAL PLACEMENT: Position the complete logo lockup in the header (top-left or top-center with clean margin) OR in the footer endorsement bar. NEVER position the logo floating in the middle of the body text or awkwardly centered between the headline and content! Maintain at least 8% safe margin from canvas borders.` });
+- CONTRAST & INTEGRATION: Render ONLY the complete logo itself floating cleanly and seamlessly over the canvas environment without any artificial container box, sticker border, or card behind it!
+- PROFESSIONAL INSTITUTIONAL PLACEMENT: Position the ONE official brand logo centered horizontally in the top header (with 8% to 10% safe top margin). NEVER render duplicate or twin logos! Maintain at least 8% safe margin from canvas borders.` });
                 parts.push({ inlineData: { data: norm.buffer.toString("base64"), mimeType: norm.mime } });
               }
             }

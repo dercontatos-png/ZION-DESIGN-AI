@@ -273,12 +273,15 @@ Normal, symmetric, anatomically correct human proportions. Zero AI hallucination
         : `at ${config.positioning?.toLowerCase() || "center"} of the frame`;
       blocks.push(`POSE & SPATIAL PLACEMENT — Standing or seated composedly ${subjectSpatialPlacement}. ${pose} Weight settled, shoulders relaxed and dropped. Torso naturally oriented with subtle organic angle.`);
       blocks.push(`EXPRESSION — Genuine, confident, approachable expression. The brows sit level and untensed. The eyes are warm, open and steady, holding the lens with clear catchlights. The mouth features an authentic, unforced expression engaging the cheeks with subtle natural creasing at the eye corners. The face reads as human, charismatic, and authentic.`);
-    } else if (userRequestedBoxesOrCards) {
-      blocks.push(`PHOTO PLACEHOLDER SLOTS (SOVEREIGN DIRECTIVE — IN PLACE OF HUMAN MODEL):
+      blocks.push(`PHOTO PLACEHOLDER SLOTS & VERTICAL HARMONY (ZERO DEAD SPACE):
 - ABSOLUTE PROHIBITION OF HUMAN MODELS: ZERO people, ZERO women, ZERO nurses, ZERO doctors, ZERO human figures! The user explicitly did not attach a person photo and requested empty boxes for later insertion. Do NOT paint any human model into the artwork!
-- THREE (3) HORIZONTAL PHOTO SLOTS: Render exactly THREE (3) clean, large white rectangular placeholder boxes arranged horizontally side-by-side across the middle of the canvas ("um do lado do outro no meio grande").
+- THREE (3) HORIZONTAL PHOTO SLOTS: Render exactly THREE (3) clean, prominent, large white rectangular placeholder boxes arranged horizontally side-by-side across the middle of the canvas ("um do lado do outro no meio grande").
 - Appearance: Pure solid white fill (#FFFFFF) with subtle elegant rounded corners and clean soft contact shadows separating them from the background.
-- Arrangement: Equidistant spacing between the 3 boxes, centered horizontally, reserved for manual post-generation photo placement.`);
+- Arrangement: Equidistant spacing between the 3 boxes, centered horizontally, reserved for manual post-generation photo placement.
+- VERTICAL BALANCE & GAP ELIMINATION (CRITICAL):
+  * PROPORTIONAL VERTICAL DISTRIBUTION: The canvas must NOT have any awkward vacant gaps or empty voids!
+  * If the technical course bullet points are positioned below the three boxes, they must neatly occupy and balance the lower-middle zone, bridging smoothly into the bottom footer contact bar.
+  * If the technical course bullet points are positioned above the three boxes, the three white boxes MUST extend with generous vertical height downwards to sit comfortably right above the footer contact bar (maintaining only 6% to 8% safe breathing room above the contact phone/@), eliminating any empty void beneath them!`);
     } else {
       blocks.push(`SCENE ENVIRONMENT (NO HUMAN MODEL):
 - Clean, refined commercial institutional atmosphere without human models. Full-bleed edge-to-edge depth, architectural lighting, and pristine commercial clarity.`);
@@ -425,17 +428,20 @@ ${handleDirective}
 - Target Color: Render the emblem in ${logoColorTarget} with a clean, luxurious, and sharp finish.`);
   } else if (hasLogo && !isLogoOverlay) {
     const logoTextColor = isDarkCanvas ? "pure solid white (#FFFFFF)" : "brand authentic color";
-    blocks.push(`BRAND LOGO & EMBLEM INTEGRATION (COMPLETE LOCKUP FIDELITY & SAFE MARGINS):
+    blocks.push(`BRAND LOGO & EMBLEM INTEGRATION (EXACTLY ONE SINGLE LOGO — COMPLETE LOCKUP FIDELITY):
+- EXACTLY ONE (1) SINGLE LOGO INSTANCE (MANDATORY — NON-NEGOTIABLE):
+  * Render EXACTLY ONE (1) single brand logo lockup on the entire canvas, centered horizontally in the top header.
+  * ABSOLUTE PROHIBITION AGAINST DUPLICATE LOGOS: ZERO duplicate logos, ZERO twin logos side by side! NEVER render more than one logo on the entire artwork!
 - COMPLETE LOCKUP PRESERVATION: The logo asset consists of TWO INTEGRATED VERTICAL ELEMENTS in one unified lockup:
   1) TOP: The brand name "CEPAR" in clean capital serif lettering.
   2) BOTTOM: The coat of arms shield with laurel wreath, book, graduation cap, and pencil.
   * You MUST replicate the COMPLETE lockup together: BOTH the name "CEPAR" at the top AND the emblem shield at the bottom.
   * DO NOT cut off, crop out, or drop the name "CEPAR"! DO NOT mutate or hallucinate the name to "Centro CE-PAR" or anything other than "CEPAR".
-- INSTITUTIONAL PLACEMENT: Position the official brand logo/emblem in the top header (top-left or top-center with safe margin) OR in the footer endorsement bar. NEVER place the logo in the middle of the body text or floating awkwardly between headline lines!
+- INSTITUTIONAL PLACEMENT: Position the ONE official brand logo centered horizontally in the top header (with 8% to 10% safe top margin). NEVER place the logo in the middle of the body text or floating awkwardly between headline lines!
 - ABSOLUTE PROHIBITION against placing the logo touching or glued to the canvas borders or bottom edge (minimum 8% to 10% safe margins).
 - EMBLEM & GRAPHIC MARK FIDELITY: Replicate the EXACT graphic mark geometry, shield/escudo contours, laurel wreath, book, graduation cap, and symbols from the attached logo reference image.
 - BRAND TYPOGRAPHY: Render the brand name "CEPAR" in ${logoTextColor} with crisp vector sharpness.
-- TRANSPARENCY: Render the logo cleanly floating directly over the canvas environment with sharp, crisp contrast and subtle depth, without any artificial white card, pill box, or sticker background behind it.`);
+- TRANSPARENCY: Render the single logo cleanly floating directly over the canvas environment with sharp, crisp contrast and subtle depth, without any artificial white card, pill box, or sticker background behind it.`);
   } else if (isLogoOverlay) {
     blocks.push(`BRAND LOGO DIRECTIVE:
 DIGITAL OVERLAY MODE: Leave the designated logo area clean with ample negative space; the official high-resolution vector logo will be overlaid post-generation.`);
@@ -468,7 +474,7 @@ DIGITAL OVERLAY MODE: Leave the designated logo area clean with ample negative s
 
   const negPrompt = config.negativePrompt?.trim()
     ? config.negativePrompt
-    : `${antiHumanSubject}${antiCardBox}${antiMetadataLabels}${antiFontHallucination}${antiLogoBox}distorted logo, black text on dark background, unreadable text, TikTok icon, blurry text, displaced elements, extra limbs, extra fingers, three arms, floating hands, low resolution.`;
+    : `duplicate logo, two logos, multiple logos, twin logos, double logo, repeated brand emblem, two crests, floating duplicate logo, ${antiHumanSubject}${antiCardBox}${antiMetadataLabels}${antiFontHallucination}${antiLogoBox}distorted logo, black text on dark background, unreadable text, TikTok icon, blurry text, displaced elements, extra limbs, extra fingers, three arms, floating hands, low resolution.`;
 
   blocks.push(`NEGATIVE PROMPT:\n${negPrompt}`);
 
