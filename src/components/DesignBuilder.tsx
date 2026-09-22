@@ -422,17 +422,19 @@ export default function DesignBuilder({
         }));
       }
 
-      let pos = "Centro";
-      const rawPos = (fd.subject_position || "").toLowerCase();
-      if (rawPos === "right" || rawPos === "direita") pos = "Direita";
-      else if (rawPos === "left" || rawPos === "esquerda") pos = "Esquerda";
-
-      const gen = fd.genero === "female" || fd.gender === "Feminino" ? "Feminino" : "Masculino";
-
       let typoPos = "Centro";
       const rawTypo = (fd.posicao_do_texto || "").toLowerCase();
       if (rawTypo.includes("left") || rawTypo.includes("esq")) typoPos = "Esquerda";
       else if (rawTypo.includes("right") || rawTypo.includes("dir")) typoPos = "Direita";
+
+      let pos = "Centro";
+      const rawPos = (fd.subject_position || "").toLowerCase();
+      if (rawPos === "right" || rawPos === "direita") pos = "Direita";
+      else if (rawPos === "left" || rawPos === "esquerda") pos = "Esquerda";
+      else if (typoPos === "Esquerda") pos = "Direita";
+      else if (typoPos === "Direita") pos = "Esquerda";
+
+      const gen = fd.genero === "female" || fd.gender === "Feminino" ? "Feminino" : "Masculino";
 
       const updates: Partial<any> = {
         dimensao: targetDim,

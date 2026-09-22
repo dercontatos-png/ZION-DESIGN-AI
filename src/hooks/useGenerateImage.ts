@@ -186,9 +186,24 @@ export const useGenerateImage = (
       // Campo 4: subject_description
       formData.append("subject_description", store.poseDescription || store.composicaoCustom || "");
 
+      // Determinação antecipada do alinhamento do texto para balanceamento espacial do sujeito
+      const rawTextPos = (store.typographyPosition || "").toLowerCase();
+      const hasLeftBlock = (store.camadasTexto || []).some((c: any) => /left|esq/i.test(c.posicao || ""));
+      const hasRightBlock = (store.camadasTexto || []).some((c: any) => /right|dir/i.test(c.posicao || ""));
+      const isLeft = rawTextPos.includes("esq") || rawTextPos.includes("left") || hasLeftBlock;
+      const isRight = rawTextPos.includes("dir") || rawTextPos.includes("right") || hasRightBlock;
+      const mappedTextPos = isLeft ? "align-left" : isRight ? "align-right" : "align-center";
+      const defaultBlockPos = isLeft ? "left" : isRight ? "right" : "center";
+
       // Campo 5: subject_position ("left" | "right" | "center")
       const rawPos = (store.positioning || "Centro").toLowerCase();
-      const mappedPos = rawPos.includes("esq") || rawPos === "left" ? "left" : rawPos.includes("dir") || rawPos === "right" ? "right" : "center";
+      let mappedPos = rawPos.includes("esq") || rawPos === "left" ? "left" : rawPos.includes("dir") || rawPos === "right" ? "right" : "center";
+      if (isLeft) {
+        // Regra de ouro da composição: se o texto é à esquerda, o sujeito DEVE ficar à direita para não haver colisão nem deslocamento
+        mappedPos = "right";
+      } else if (isRight) {
+        mappedPos = "left";
+      }
       formData.append("subject_position", mappedPos);
 
       // Campo 6: dimensions ("1:1", "4:5", "9:16", "16:9")
@@ -236,14 +251,6 @@ export const useGenerateImage = (
       }
 
       // Campo 11: text_blocks (JSON array com { type, weight, content } exato do HAR)
-      const rawTextPos = (store.typographyPosition || "").toLowerCase();
-      const hasLeftBlock = (store.camadasTexto || []).some((c: any) => /left|esq/i.test(c.posicao || ""));
-      const hasRightBlock = (store.camadasTexto || []).some((c: any) => /right|dir/i.test(c.posicao || ""));
-      const isLeft = rawTextPos.includes("esq") || rawTextPos.includes("left") || hasLeftBlock;
-      const isRight = rawTextPos.includes("dir") || rawTextPos.includes("right") || hasRightBlock;
-      const mappedTextPos = isLeft ? "align-left" : isRight ? "align-right" : "align-center";
-      const defaultBlockPos = isLeft ? "left" : isRight ? "right" : "center";
-
       const textBlocks = (store.camadasTexto || [])
         .filter((c: any) => c.conteudo && c.conteudo.trim())
         .map((c: any) => {
@@ -257,7 +264,9 @@ export const useGenerateImage = (
           else type = "text";
 
           let pos = c.posicao;
-          if (!pos) pos = defaultBlockPos;
+          if (isLeft) pos = "left";
+          else if (isRight) pos = "right";
+          else if (!pos) pos = defaultBlockPos;
           else if (/left|esq/i.test(pos)) pos = "left";
           else if (/right|dir/i.test(pos)) pos = "right";
           else if (/cen/i.test(pos)) pos = "center";

@@ -410,6 +410,22 @@ export function buildEnhancedPrompt(params: PromptEngineParams): string {
   const isInstitutional = /sa[uú]de|curso|ensino|escola|faculdade|educa|institucional|prefeitura|m[ée]dic|hospital/i.test(params.nicho_projeto || "") ||
     /sa[uú]de|curso|ensino|escola|faculdade|educa|institucional|prefeitura|m[ée]dic|hospital/i.test(params.prompt_adicional || "");
 
+  // Determinação prévia do alinhamento para balanceamento espacial
+  const validTextBlocksList = (params.text_blocks || []).filter((b: any) => b && typeof b === "object" && String(b.content || b.text || "").trim());
+  const rawTextPosMode = (params.posicao_do_texto || "").toLowerCase();
+  const hasLeftBlockCheck = validTextBlocksList.some((b: any) => /left|esq/i.test(b.position || ""));
+  const hasRightBlockCheck = validTextBlocksList.some((b: any) => /right|dir/i.test(b.position || ""));
+  const isLeftAlign = rawTextPosMode.includes("left") || rawTextPosMode.includes("esq") || hasLeftBlockCheck;
+  const isRightAlign = rawTextPosMode.includes("right") || rawTextPosMode.includes("dir") || hasRightBlockCheck;
+  const alignmentModeGlobal = isLeftAlign ? "left" : isRightAlign ? "right" : "center";
+
+  let effectiveSubjectPosition = params.subject_position || "center";
+  if (alignmentModeGlobal === "left") {
+    effectiveSubjectPosition = "strictly on the RIGHT SIDE of the frame (occupying the right 55% of canvas width, leaving the left 45% clear for the typography stack)";
+  } else if (alignmentModeGlobal === "right") {
+    effectiveSubjectPosition = "strictly on the LEFT SIDE of the frame (occupying the left 55% of canvas width, leaving the right 45% clear for the typography stack)";
+  }
+
   const parts: string[] = [];
 
   // ── OPENING ──
@@ -427,7 +443,7 @@ export function buildEnhancedPrompt(params: PromptEngineParams): string {
   // ── SUBJECT ──
   const isGroupSubject = /todos|grupo|equipe|turma|pessoas|foto/i.test(params.subject_description || "") || (params.categoria === "livre");
   if (isGroupSubject) {
-    parts.push(`Main subjects / Group: ${params.subject_description || "Replicate all people from the reference photo"}. Ensure all individuals from the photo appear naturally in the composition, positioned at ${params.subject_position || "center"} of the frame.`);
+    parts.push(`Main subjects / Group: ${params.subject_description || "Replicate all people from the reference photo"}. Ensure all individuals from the photo appear naturally in the composition, positioned at ${effectiveSubjectPosition}.`);
   } else {
     const subDesc = (params.subject_description || "").toLowerCase();
     const hasFemaleClue = /mulher|feminina?|garota|menina|m[ée]dica|doutora|enfermeira|atriz|modelo\s*feminina|woman|female|girl/i.test(subDesc);
@@ -445,7 +461,7 @@ export function buildEnhancedPrompt(params: PromptEngineParams): string {
     }
 
     if (subjectText) {
-      parts.push(`MANDATORY PROMINENT SUBJECT: The composition MUST prominently feature the main subject: ${subjectText}, positioned at ${params.subject_position || "center"} of the frame, naturally and realistically integrated into the scene and dressed in attire appropriate for the context (e.g. professional uniform, work clothes, or context-appropriate apparel). DO NOT omit or hide the subject!`);
+      parts.push(`MANDATORY PROMINENT SUBJECT: The composition MUST prominently feature the main subject: ${subjectText}, positioned ${effectiveSubjectPosition}, naturally and realistically integrated into the scene and dressed in attire appropriate for the context (e.g. professional uniform, work clothes, or context-appropriate apparel). DO NOT omit or hide the subject!`);
     }
   }
 
@@ -531,13 +547,17 @@ export function buildEnhancedPrompt(params: PromptEngineParams): string {
 
       let alignmentCommand = "";
       if (alignmentMode === "left") {
-        alignmentCommand = `MANDATORY TEXT ALIGNMENT MANDATE (CRITICAL PRIORITY — STRICT COMPOSITION LAW):
+        alignmentCommand = `MANDATORY TEXT ALIGNMENT & TWO-COLUMN CANVAS DIVISION (HIGHEST COMPOSITION PRIORITY):
 - ALIGNMENT: STRICTLY LEFT-ALIGNED (FLUSH LEFT).
-- CANVAS POSITION: All headlines, subheadlines, bullet points, and CTAs MUST be anchored firmly on the LEFT SIDE (occupying the left 40%-50% horizontal area) of the canvas!
-- PROHIBITION: NEVER center-align and NEVER right-align this text! DO NOT place text in the middle!
-- COMPOSITION: The main subject or graphic elements must balance on the opposite (right) side or background, leaving clean, uncluttered negative space on the left specifically for this left-aligned typography.`;
+- TWO-COLUMN SPATIAL DIVISION (NON-NEGOTIABLE):
+  * LEFT 45% OF CANVAS: Reserved EXCLUSIVELY for all typography (Headlines, Subheadlines, Bullets, CTA button). Every line must start flush from the left margin (8% safe margin).
+  * RIGHT 55% OF CANVAS: Reserved for the human subject / model (e.g. nurse/doctor/person).
+- ABSOLUTE PROHIBITION:
+  * NEVER place the headline or text in the horizontal center! NEVER right-align!
+  * The subject is STRICTLY FORBIDDEN from being placed on the left side of the frame, because the subject would displace the left-aligned typography.
+  * DO NOT push bullet points or CTA to the right or center. The entire text column must remain anchored flush-left.`;
       } else if (alignmentMode === "right") {
-        alignmentCommand = `MANDATORY TEXT ALIGNMENT MANDATE (CRITICAL PRIORITY — STRICT COMPOSITION LAW):
+        alignmentCommand = `MANDATORY TEXT ALIGNMENT & TWO-COLUMN CANVAS DIVISION (HIGHEST COMPOSITION PRIORITY):
 - ALIGNMENT: STRICTLY RIGHT-ALIGNED (FLUSH RIGHT).
 - CANVAS POSITION: All headlines, subheadlines, bullet points, and CTAs MUST be anchored firmly on the RIGHT SIDE (occupying the right 40%-50% horizontal area) of the canvas!
 - PROHIBITION: NEVER center-align and NEVER left-align this text!
@@ -554,8 +574,8 @@ CRITICAL TEXT GOVERNING RULES:
 1. Render ONLY the exact text enclosed in quotation marks! ABSOLUTE BAN: NEVER paint technical metadata labels like 'H1', 'H2', 'CTA', 'Bullets' anywhere on the graphic!
 2. Render bullet items with clean bullet symbols (•) and crisp legible font.
 3. The Call-to-Action and social handle/phone must be rendered with high visual contrast.
-4. ABSOLUTE BAN ON ENCLOSING RECTANGLES / CARDS: DO NOT place this text inside a white card, box, container, or rounded rectangle in the middle of the screen! The text must be rendered seamlessly integrated directly into the image composition (over subtle vignette or clean negative space), never trapped inside a card!
-5. ABSOLUTE BAN ON EMPTY BOXES OR COLLAGE PANELS: DO NOT paint empty white boxes, placeholder rectangles, or sub-photo collage grids from layout references! Render one continuous full-bleed scene.`);
+4. UNPROMPTED CONTAINERS: DO NOT place text inside an unprompted white card, box, or container in the middle of the screen UNLESS the user explicitly requested white squares, cards, or boxes in additional instructions. Any visual elements explicitly requested by the user take highest priority!
+5. ABSOLUTE BAN ON EMPTY PLACEHOLDER BOXES FROM TEMPLATES: DO NOT paint empty white boxes, placeholder rectangles, or sub-photo collage grids from layout references! Render one continuous full-bleed scene.`);
 
       if (String(params.degrade).toLowerCase() === "true") {
         parts.push(`Gradient behind text for optimal readability.`);

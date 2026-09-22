@@ -285,10 +285,18 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
         posicao: b.posicao || posicaoTexto
       }));
     if (camadas.length > 0) {
-      const anyLeft = camadas.some(c => c.posicao === "Esquerda");
-      const anyRight = camadas.some(c => c.posicao === "Direita");
+      const anyLeft = camadas.some(c => c.posicao === "Esquerda") || posicaoTexto === "Esquerda";
+      const anyRight = camadas.some(c => c.posicao === "Direita") || posicaoTexto === "Direita";
       const effectivePos = anyLeft ? "Esquerda" : anyRight ? "Direita" : posicaoTexto;
-      store.updateConfig({ camadasTexto: camadas, typographyPosition: effectivePos });
+      const updates: any = { camadasTexto: camadas, typographyPosition: effectivePos };
+      if (effectivePos === "Esquerda" && store.positioning !== "Direita") {
+        updates.positioning = "Direita";
+        setSubjectPos("Direita");
+      } else if (effectivePos === "Direita" && store.positioning !== "Esquerda") {
+        updates.positioning = "Esquerda";
+        setSubjectPos("Esquerda");
+      }
+      store.updateConfig(updates);
     }
   }, [textBlocks, posicaoTexto]);
 
@@ -1643,6 +1651,10 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
                       onClick={() => {
                         setPosicaoTexto("Esquerda");
                         setTextBlocks(prev => prev.map(b => ({ ...b, posicao: "Esquerda" })));
+                        if (subjectPos !== "Direita") {
+                          setSubjectPos("Direita");
+                          store.updateConfig({ positioning: "Direita" });
+                        }
                       }}
                       className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${
                         posicaoTexto === "Esquerda" ? "pb-ctrl-active text-white" : "text-zinc-200"
@@ -1703,6 +1715,10 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
                       onClick={() => {
                         setPosicaoTexto("Direita");
                         setTextBlocks(prev => prev.map(b => ({ ...b, posicao: "Direita" })));
+                        if (subjectPos !== "Esquerda") {
+                          setSubjectPos("Esquerda");
+                          store.updateConfig({ positioning: "Esquerda" });
+                        }
                       }}
                       className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${
                         posicaoTexto === "Direita" ? "pb-ctrl-active text-white" : "text-zinc-200"

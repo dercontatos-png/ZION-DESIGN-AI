@@ -1817,6 +1817,30 @@ async function startServer() {
     }
   };
 
+  /**
+   * Prepara logotipos para visão computacional do Gemini.
+   * Se o logo contiver canal alfa (transparência), sobrepõe sobre um fundo escuro elegante (#121826)
+   * para evitar que elementos/letras em branco puro (como "CEPAR") fiquem 100% invisíveis (branco sobre branco)
+   * na esteira de ingestão interna do modelo multimodal.
+   */
+  const prepareLogoForGeminiVision = async (buf: Buffer, origMime?: string): Promise<{ buffer: Buffer; mime: string }> => {
+    try {
+      const meta = await sharp(buf).metadata();
+      if (meta.hasAlpha) {
+        const flattened = await sharp(buf)
+          .flatten({ background: { r: 18, g: 24, b: 38 } })
+          .png({ compressionLevel: 6 })
+          .toBuffer();
+        return { buffer: flattened, mime: "image/png" };
+      }
+      const converted = await sharp(buf).png({ compressionLevel: 6 }).toBuffer();
+      return { buffer: converted, mime: "image/png" };
+    } catch (err) {
+      console.warn("[prepareLogoForGeminiVision] Warning, falling back to original buffer:", err);
+      return { buffer: buf, mime: origMime || "image/png" };
+    }
+  };
+
   // Core Generation Endpoint (Express / Vite Dev Server)
   app.post(
     "/api/bff/api/generate",
@@ -1989,6 +2013,20 @@ async function startServer() {
 
         const colorsRepr = Object.entries(parsedColorPalette).map(([k, v]) => `${k}: ${v}`).join(", ") || "natural ambient lighting";
 
+        // Spatial balance: if text is left-aligned, subject balances on the right
+        const isLeftTextLayout = (body.posicao_do_texto || "").includes("left") ||
+          (body.posicao_do_texto || "").includes("esq") ||
+          (validTextBlocks && validTextBlocks.some((b: any) => /left|esq/i.test(b.position || "")));
+        const isRightTextLayout = (body.posicao_do_texto || "").includes("right") ||
+          (body.posicao_do_texto || "").includes("dir") ||
+          (validTextBlocks && validTextBlocks.some((b: any) => /right|dir/i.test(b.position || "")));
+
+        if (isLeftTextLayout) {
+          body.subject_position = "right";
+        } else if (isRightTextLayout) {
+          body.subject_position = "left";
+        }
+
         const structuredPrompt = `[Style]: ${body.estilo_visual || "cinematic"}. [Framing]: ${body.plano || "medium"}. ` +
           `[Scene Background]: ${body.scene_description || ""}. ` +
           `[Main Subject]: ${body.subject_description || ""} (${body.genero || ""}), positioned at ${body.subject_position || "center"}. ` +
@@ -2075,7 +2113,7 @@ async function startServer() {
                 plano: body.plano,
                 genero: body.genero,
                 subject_description: body.subject_description,
-                subject_position: body.subject_position,
+                subject_position: body.subject_position || "center",
                 scene_description: body.scene_description,
                 nicho_projeto: body.nicho_projeto,
                 prompt_adicional: body.prompt_adicional,
@@ -2096,6 +2134,21 @@ async function startServer() {
               });
             }
 
+            // Diretivas Livres do Usuário com Prioridade Soberana (ex.: 3 quadrados brancos pedidos no prompt)
+            if (body.prompt_adicional && body.prompt_adicional.trim()) {
+              const userCustomPrompt = body.prompt_adicional.trim();
+              fullPrompt += `\n\nUSER CUSTOM DIRECTIVES (SOVEREIGN HIGHEST AUTHORITY — OVERRIDES ALL GENERIC CONSTRAINTS):
+${userCustomPrompt}
+MANDATORY: If the user explicitly requested white squares, cards, panels, or specific visual elements, you MUST render them exactly as requested! Generic rules against central containers apply only to unprompted default containers, NEVER to elements explicitly requested here.`;
+            }
+
+            // Se o texto for alinhado à esquerda, reforça a divisão estrita em 2 colunas
+            if (isLeftTextLayout) {
+              fullPrompt += `\n\nSTRICT SPATIAL COMPOSITION LAW (LEFT ALIGNMENT & TWO COLUMNS):
+- LEFT COLUMN (0% to 45% canvas width): Dedicated EXCLUSIVELY to all typography (headline, subheadline, bullet points, CTA). All lines must be flush-left aligned with clean margin.
+- RIGHT COLUMN (45% to 100% canvas width): Dedicated to the main subject/person (e.g. nurse/professional). The subject MUST be positioned strictly on the RIGHT side facing inward, leaving the entire left column free for text. The subject MUST NOT be placed on the left side!`;
+            }
+
             console.log(`[bff/generate ASYNC] Job ${jobId}: Built prompt (${fullPrompt.length} chars)`);
 
             // Update status: analyzing
@@ -2104,7 +2157,6 @@ async function startServer() {
             jobRecord.message = "Processando referências e construindo prompt...";
             jobRecord.updated_at = Date.now();
 
-            // Build multimodal parts (text + reference images)
             // Build multimodal parts (text + reference images)
             const parts: any[] = [{ text: fullPrompt }];
 
@@ -2128,11 +2180,17 @@ async function startServer() {
               for (let i = 0; i < files.brand_identity_images.length; i++) {
                 const f = files.brand_identity_images[i];
                 const origMime = f.mimetype || "image/png";
-                const norm = await normalizeImageForAi(f.buffer, origMime);
+                const norm = await prepareLogoForGeminiVision(f.buffer, origMime);
                 parts.push({ text: `BRAND LOGO & EMBLEM REFERENCE #${i + 1} — Client official brand mark / coat of arms / insignia:
-- EXACT REPLICATION: Replicate the EXACT graphic mark geometry, shield/escudo contours, laurel wreath, book, symbols, and authentic colors from this reference image. Do NOT alter, distort, or simplify the emblem, and DO NOT hallucinate or invent new text around it.
-- PROFESSIONAL INSTITUTIONAL PLACEMENT: Position the logo mark in a professional institutional header position (e.g. top-left or top-center with clean margin) OR in the footer endorsement bar. NEVER position the logo floating in the middle of the body text or awkwardly centered between the headline and content!
-- TRANSPARENCY & INTEGRATION: Render the logo cleanly floating directly over the canvas environment with sharp, crisp contrast and subtle depth, without any artificial white card, pill box, or sticker background behind it. Maintain at least 8% safe margin from canvas borders.` });
+- COMPLETE LOGO LOCKUP INTEGRITY (CRITICAL — MANDATORY):
+  * The attached logo reference contains TWO INTEGRATED VERTICAL ELEMENTS in one unified lockup:
+    1) AT THE TOP: The brand name text "CEPAR" in clean, capital serif typography.
+    2) AT THE BOTTOM: The coat of arms / shield with laurel wreath, open book, graduation cap, and pencil.
+  * You MUST replicate the COMPLETE logo lockup together. NEVER crop out, cut off, or omit the name "CEPAR"!
+  * NEVER alter or hallucinate the name (do NOT write "Centro CE-PAR" or anything other than "CEPAR").
+  * Replicate both the name "CEPAR" at the top AND the coat of arms shield at the bottom as one cohesive institutional brand mark.
+- CONTRAST & INTEGRATION: The reference image is presented on a dark neutral backdrop solely so all white letters ("CEPAR") and colored shield lines are clearly visible. In your generated artwork, render ONLY the complete logo itself floating cleanly and seamlessly over the canvas environment without any artificial container box, sticker border, or card behind it!
+- PROFESSIONAL INSTITUTIONAL PLACEMENT: Position the complete logo lockup in the header (top-left or top-center with clean margin) OR in the footer endorsement bar. NEVER position the logo floating in the middle of the body text or awkwardly centered between the headline and content! Maintain at least 8% safe margin from canvas borders.` });
                 parts.push({ inlineData: { data: norm.buffer.toString("base64"), mimeType: norm.mime } });
               }
             }
@@ -7016,12 +7074,36 @@ ${logoMandatoryRule}`;
           }
         } else {
           if (logoBase64) {
-            addImagePart(logoBase64, "LOGOTIPO DA MARCA DO CLIENTE (MANDATÓRIO: SUBSTITUA a logo antiga presente na FOTO DE REFERÊNCIA DE DESIGN pela SUA logo, no MESMO local e com tamanho aproximado onde a logo original da referência aparece. Estampe este emblema nativamente na arte, sem caixas, sem fundo atrás da logo, com as cores e formas EXATAS do arquivo enviado. COMPLETAMENTE APAGAR E IGNORAR QUALQUER OUTRA LOGO ANTIGA DA FOTO DE REFERÊNCIA DE DESIGN!).");
+            let preparedLogoInput = logoBase64;
+            try {
+              const rawParsed = parseBase64Part(logoBase64);
+              if (rawParsed && rawParsed.data) {
+                const prepared = await prepareLogoForGeminiVision(Buffer.from(rawParsed.data, "base64"), rawParsed.mimeType);
+                preparedLogoInput = `data:${prepared.mime};base64,${prepared.buffer.toString("base64")}`;
+              }
+            } catch (e) {
+              console.warn("[/api/gerar] prepareLogoForGeminiVision warning:", e);
+            }
+            addImagePart(preparedLogoInput, `LOGOTIPO DA MARCA DO CLIENTE (MANDATÓRIO — COMPLETE LOGO LOCKUP INTEGRITY):
+- COMPLETE LOGO LOCKUP INTEGRITY: Replicate the COMPLETE official brand lockup together: BOTH the brand name "CEPAR" in clean capital serif typography at the top AND the coat of arms / shield with laurel wreath below it.
+- PROHIBITION: NEVER cut off or crop out the name "CEPAR"! NEVER mutate or change the name to "Centro CE-PAR".
+- Render the complete brand lockup cleanly floating over the canvas with sharp, crisp contrast, without any artificial background container box.`);
           }
           if (Array.isArray(logosList)) {
-            logosList.forEach((ref: any, idx: number) => {
-              if (ref) addImagePart(ref, `LOGOTIPO DA MARCA DO CLIENTE Adicional ${idx + 1}`);
-            });
+            for (let idx = 0; idx < logosList.length; idx++) {
+              const ref = logosList[idx];
+              if (ref) {
+                let preparedRefInput = ref;
+                try {
+                  const rawParsed = parseBase64Part(ref);
+                  if (rawParsed && rawParsed.data) {
+                    const prepared = await prepareLogoForGeminiVision(Buffer.from(rawParsed.data, "base64"), rawParsed.mimeType);
+                    preparedRefInput = `data:${prepared.mime};base64,${prepared.buffer.toString("base64")}`;
+                  }
+                } catch (e) {}
+                addImagePart(preparedRefInput, `LOGOTIPO DA MARCA DO CLIENTE Adicional ${idx + 1} (COMPLETE LOCKUP INTEGRITY: Preservar nome e escudo juntos sem cortes)`);
+              }
+            }
           }
         }
       }

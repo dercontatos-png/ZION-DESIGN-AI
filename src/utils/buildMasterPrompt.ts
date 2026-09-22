@@ -79,6 +79,19 @@ export const buildMasterPrompt = (config: ProjectConfig): string => {
   const mainFont = headlineLayers[0]?.fonte || rawLayers[0]?.fonte || "Montserrat";
   const isSansSerif = !/serif|cinzel|playfair|bodoni|garamond/i.test(mainFont);
 
+  // Determinação antecipada do modo de alinhamento para balanceamento espacial estrito
+  const rawTypoPos = (config.typographyPosition || "").toLowerCase();
+  const anyBlockLeft = (config.camadasTexto || []).some((c: any) => /left|esq/i.test(c.posicao || ""));
+  const anyBlockRight = (config.camadasTexto || []).some((c: any) => /right|dir/i.test(c.posicao || ""));
+  let alignmentMode: "left" | "right" | "center" = "center";
+  if (rawTypoPos.includes("esq") || rawTypoPos.includes("left") || anyBlockLeft) {
+    alignmentMode = "left";
+  } else if (rawTypoPos.includes("dir") || rawTypoPos.includes("right") || anyBlockRight) {
+    alignmentMode = "right";
+  }
+
+  const userRequestedBoxesOrCards = /quadrad|box|card|caixa|ret[âa]ngul|painel|container/i.test(config.additionalPrompt || "");
+
   const blocks: string[] = [];
 
   // ── BLOCO 1: GOVERNING LAW & SWAP SLOTS ──
@@ -102,7 +115,7 @@ export const buildMasterPrompt = (config: ProjectConfig): string => {
     }
   }
   if (hasLogo && !isLogoOverlay) {
-    imageBindingRules.push("- SWAP SLOT — THE BRANDING & LOGO FIDELITY: Every logo, coat of arms, insignia, and printed mark comes from the reference files supplied. Replicate the EXACT brand logo asset and graphic emblem (shield, laurel wreath, open book, graduation cap, pencil, insignia). Preserve 100% of the graphic mark geometry with the requested colors. NEVER invent lettering, hallucinated words, or unrequested logo artwork. Position the logo in the institutional header (top-left or top-center with safe margin) OR in the footer endorsement bar. NEVER place the logo in the middle under headlines.");
+    imageBindingRules.push("- SWAP SLOT — THE BRANDING & LOGO FIDELITY: Every logo, coat of arms, and insignia comes from the reference files supplied. The reference logo contains the COMPLETE brand lockup: BOTH the brand name 'CEPAR' in clean capital serif typography at the top AND the coat of arms emblem (shield, laurel wreath, open book, graduation cap, pencil) below it. You MUST replicate the ENTIRE lockup together. NEVER crop out, cut off, or drop the name 'CEPAR'! NEVER alter or hallucinate the name (do not change 'CEPAR' to 'Centro CE-PAR'). Replicate 100% of the graphic mark geometry with the requested colors. Position the complete logo in the institutional header (top-left or top-center with safe margin) OR in the footer endorsement bar. NEVER place the logo in the middle under headlines.");
     if (isDarkCanvas) {
       imageBindingRules.push("- LOGO CONTRAST & ADAPTATION LAW: On dark background canvas, render the brand logo in high-contrast vibrant colors or requested clean white/metallic finish without background boxes or stickers.");
     }
@@ -148,7 +161,9 @@ export const buildMasterPrompt = (config: ProjectConfig): string => {
     directiveItems.push(`Campaign Niche / Project Theme: ${config.nicho.trim()}`);
   }
   if (config.additionalPrompt && config.additionalPrompt.trim()) {
-    directiveItems.push(`Custom Directives: ${config.additionalPrompt.trim()}`);
+    directiveItems.push(`USER CUSTOM DIRECTIVES (SOVEREIGN HIGHEST AUTHORITY — OVERRIDES ALL GENERIC CONSTRAINTS):
+${config.additionalPrompt.trim()}
+MANDATORY: If the user explicitly requested white squares, cards, panels, or specific visual elements above, you MUST render them faithfully exactly as instructed! Generic layout constraints against central cards apply only to unprompted default containers, NEVER to elements explicitly requested by the user.`);
   }
   if (directiveItems.length > 0) {
     blocks.push(`USER MANDATORY DIRECTIVES & CAMPAIGN SPECIFICATIONS:\n${directiveItems.join("\n")}`);
@@ -196,9 +211,13 @@ Normal, symmetric, anatomically correct human proportions. Zero AI hallucination
 
   // ── BLOCO 7: POSE & EXPRESSION ──
   if (!isLogo && hasSubject) {
-    const subjectPos = (config.positioning || "center").toLowerCase();
     const pose = config.poseDescription || "Professional, engaging, composed posture naturally integrated into the composition.";
-    blocks.push(`POSE — Standing or seated composedly at ${subjectPos} of the frame. ${pose} Weight settled, shoulders relaxed and dropped. Torso naturally oriented with subtle organic angle.`);
+    const subjectSpatialPlacement = alignmentMode === "left"
+      ? "strictly on the RIGHT SIDE of the frame (occupying the right 55% of canvas width, facing slightly inward, leaving the left 45% of the canvas completely free for the left-aligned typography column)"
+      : alignmentMode === "right"
+      ? "strictly on the LEFT SIDE of the frame (occupying the left 55% of canvas width, facing slightly inward, leaving the right 45% of the canvas completely free for the right-aligned typography column)"
+      : `at ${config.positioning?.toLowerCase() || "center"} of the frame`;
+    blocks.push(`POSE & SPATIAL PLACEMENT — Standing or seated composedly ${subjectSpatialPlacement}. ${pose} Weight settled, shoulders relaxed and dropped. Torso naturally oriented with subtle organic angle.`);
     blocks.push(`EXPRESSION — Genuine, confident, approachable expression. The brows sit level and untensed. The eyes are warm, open and steady, holding the lens with clear catchlights. The mouth features an authentic, unforced expression engaging the cheeks with subtle natural creasing at the eye corners. The face reads as human, charismatic, and authentic.`);
   }
 
@@ -224,16 +243,6 @@ Horizontally centered at the upper section of the layout with at least 8% margin
   }
 
   // ── BLOCO 10: TIPOGRAFIA DE HEADLINE E TÍTULOS ──
-  const rawTypoPos = (config.typographyPosition || "").toLowerCase();
-  const anyBlockLeft = (config.camadasTexto || []).some((c: any) => /left|esq/i.test(c.posicao || ""));
-  const anyBlockRight = (config.camadasTexto || []).some((c: any) => /right|dir/i.test(c.posicao || ""));
-  let alignmentMode: "left" | "right" | "center" = "center";
-  if (rawTypoPos.includes("esq") || rawTypoPos.includes("left") || anyBlockLeft) {
-    alignmentMode = "left";
-  } else if (rawTypoPos.includes("dir") || rawTypoPos.includes("right") || anyBlockRight) {
-    alignmentMode = "right";
-  }
-
   if (!isLogo && headlineLayers.length > 0) {
     const headlineLines = headlineLayers.map((l, idx) => {
       const weightLabel = l.pesoVisual ? ` [Visual Weight: ${l.pesoVisual}/5]` : "";
@@ -247,13 +256,17 @@ Horizontally centered at the upper section of the layout with at least 8% margin
 
     let spatialDirectives = "";
     if (alignmentMode === "left") {
-      spatialDirectives = `STRICT SPATIAL ALIGNMENT (CRITICAL PRIORITY — ABSOLUTE COMPOSITION LAW):
+      spatialDirectives = `STRICT SPATIAL ALIGNMENT & TWO-COLUMN CANVAS DIVISION (HIGHEST COMPOSITION LAW):
 - ALIGNMENT: STRICTLY LEFT-ALIGNED (FLUSH LEFT).
-- CANVAS POSITION: The entire typography headline stack MUST be anchored firmly on the LEFT SIDE of the canvas, occupying the left 40% to 50% horizontal area.
-- PROHIBITION: NEVER place the headline in the horizontal center! NEVER right-align! DO NOT scatter headlines across the center or right!
-- BALANCE & COMPOSITION: The main subject or graphic imagery must balance on the RIGHT side or deep background to leave clean, open, high-contrast negative space on the LEFT specifically for this left-aligned typography stack.`;
+- TWO-COLUMN SPATIAL DIVISION (NON-NEGOTIABLE):
+  * LEFT 45% OF CANVAS: Reserved EXCLUSIVELY for all typography (Headlines, Subheadlines, Bullets, CTA button). Every line must start flush from the left margin (8% safe margin).
+  * RIGHT 55% OF CANVAS: Reserved for the human subject / model (e.g. nurse/doctor/person).
+- ABSOLUTE PROHIBITIONS:
+  * NEVER place the headline in the horizontal center! NEVER right-align! DO NOT scatter headlines across the center or right!
+  * The human subject / model is STRICTLY FORBIDDEN from being placed on the left side of the frame, because the subject would displace the left-aligned typography.
+  * DO NOT push bullet points or CTA to the right or center. The entire text column must remain anchored flush-left.`;
     } else if (alignmentMode === "right") {
-      spatialDirectives = `STRICT SPATIAL ALIGNMENT (CRITICAL PRIORITY — ABSOLUTE COMPOSITION LAW):
+      spatialDirectives = `STRICT SPATIAL ALIGNMENT & TWO-COLUMN CANVAS DIVISION (HIGHEST COMPOSITION LAW):
 - ALIGNMENT: STRICTLY RIGHT-ALIGNED (FLUSH RIGHT).
 - CANVAS POSITION: The entire typography headline stack MUST be anchored firmly on the RIGHT SIDE of the canvas, occupying the right 40% to 50% horizontal area.
 - PROHIBITION: NEVER place the headline in the center! NEVER left-align!
@@ -309,11 +322,10 @@ ${textItems || "Clean structured content"}${bulletDetail}${floatingAccentDesc}`)
   // ── BLOCO 12: LEI SUPREMA DE COMPOSIÇÃO FULL-BLEED & BANIMENTO DE CARDS ──
   blocks.push(`CRITICAL COMPOSITION & FULL-BLEED LAW (HIGHEST PRIORITY):
 - FULL-BLEED EDGE-TO-EDGE ARTWORK: The entire composition, background environment, and scene MUST fill the full canvas edge-to-edge. Never render the artwork as a miniature card sitting inside a border!
-- ABSOLUTE BAN ON RECTANGULAR CARDS, BOXES, OR ENCLOSING CONTAINERS (CRITICAL — NON-NEGOTIABLE):
-  * NEVER draw a floating rounded rectangle card, white box, dialog popup container, or framed outline panel in the middle of the canvas!
-  * NEVER enclose headlines, text blocks, bullet points, or logos inside a central card or container box!
-  * Typography, logos, and icons MUST float seamlessly and cleanly directly over the scene/background with natural contrast and subtle depth, exactly like top-tier commercial advertising and modern high-end posters.
-- PROHIBITION OF COLLAGES & EMPTY BOXES: If the reference layout contains multiple photo panels or a grid of images, DO NOT draw multiple empty white boxes, empty rectangular frames, or blank squares! Render ONE unified, full-bleed, continuous photographic scene.
+- BAN ON UNPROMPTED RECTANGULAR CARDS OR CONTAINERS:
+  * NEVER draw an unprompted floating rounded rectangle card, white box, or container in the middle of the canvas UNLESS explicitly requested by the user in their custom directives. If the user explicitly requested white squares, panels, or boxes, you MUST render them faithfully with highest priority!
+  * Typography and logos must float seamlessly and cleanly directly over the scene/background with natural contrast and subtle depth.
+- PROHIBITION OF COLLAGES & EMPTY PLACEHOLDER BOXES: Do NOT draw empty placeholder frames or unrequested collage grids from reference templates.
 - SAFE MARGINS: Maintain at least 8% to 12% safe padding from all 4 canvas borders. Elements must never touch or be clipped by the edges.`);
 
   // ── BLOCO 13: BRAND LOGO / EMBLEMA ──
@@ -326,11 +338,16 @@ ${textItems || "Clean structured content"}${bulletDetail}${floatingAccentDesc}`)
 - Target Color: Render the emblem in ${logoColorTarget} with a clean, luxurious, and sharp finish.`);
   } else if (hasLogo && !isLogoOverlay) {
     const logoTextColor = isDarkCanvas ? "pure solid white (#FFFFFF)" : "brand authentic color";
-    blocks.push(`BRAND LOGO & EMBLEM INTEGRATION (NEGATIVE SPACE & SAFE MARGINS):
+    blocks.push(`BRAND LOGO & EMBLEM INTEGRATION (COMPLETE LOCKUP FIDELITY & SAFE MARGINS):
+- COMPLETE LOCKUP PRESERVATION: The logo asset consists of TWO INTEGRATED VERTICAL ELEMENTS in one unified lockup:
+  1) TOP: The brand name "CEPAR" in clean capital serif lettering.
+  2) BOTTOM: The coat of arms shield with laurel wreath, book, graduation cap, and pencil.
+  * You MUST replicate the COMPLETE lockup together: BOTH the name "CEPAR" at the top AND the emblem shield at the bottom.
+  * DO NOT cut off, crop out, or drop the name "CEPAR"! DO NOT mutate or hallucinate the name to "Centro CE-PAR" or anything other than "CEPAR".
 - INSTITUTIONAL PLACEMENT: Position the official brand logo/emblem in the top header (top-left or top-center with safe margin) OR in the footer endorsement bar. NEVER place the logo in the middle of the body text or floating awkwardly between headline lines!
 - ABSOLUTE PROHIBITION against placing the logo touching or glued to the canvas borders or bottom edge (minimum 8% to 10% safe margins).
-- EMBLEM & GRAPHIC MARK FIDELITY: Replicate the EXACT graphic mark geometry, shield/escudo contours, laurel wreath, book, graduation cap, and symbols from the attached logo reference image. Do NOT alter the shapes, do NOT distort the proportions, and DO NOT hallucinate or invent new text/words around it.
-- BRAND TYPOGRAPHY: Render the brand name and subtitle in ${logoTextColor} with crisp vector sharpness.
+- EMBLEM & GRAPHIC MARK FIDELITY: Replicate the EXACT graphic mark geometry, shield/escudo contours, laurel wreath, book, graduation cap, and symbols from the attached logo reference image.
+- BRAND TYPOGRAPHY: Render the brand name "CEPAR" in ${logoTextColor} with crisp vector sharpness.
 - TRANSPARENCY: Render the logo cleanly floating directly over the canvas environment with sharp, crisp contrast and subtle depth, without any artificial white card, pill box, or sticker background behind it.`);
   } else if (isLogoOverlay) {
     blocks.push(`BRAND LOGO DIRECTIVE:
@@ -349,15 +366,16 @@ DIGITAL OVERLAY MODE: Leave the designated logo area clean with ample negative s
   const antiFontHallucination = isSansSerif ? "slab-serif font, serif font, slab brackets, chunky slab typography, " : "";
   const antiLogoBox = isDarkCanvas ? "white circular badge behind logo, white container box behind logo, dark unreadable logo text on dark background, " : "";
   const antiMetadataLabels = "H1, H2, CTA, Bullets, Headline, Subheadline, [H1], [CTA], [BULLETS], [H2], bracketed tags, metadata labels, technical tags painted as text, ";
-  const antiCardBox = "floating rectangular card in center, white card container, rounded rectangle box around text, popup dialog box, central card panel, ";
+  const antiCardBox = userRequestedBoxesOrCards ? "" : "floating rectangular card in center, white card container, rounded rectangle box around text, popup dialog box, central card panel, ";
 
   blocks.push(`STRICT GOVERNING RULES:
 1. LANGUAGE: 100% Brazilian Portuguese (pt-BR). Never translate words to English.
 2. TEXT FIDELITY & METADATA BAN: Render ONLY the exact text enclosed in quotation marks! ABSOLUTE BAN: NEVER paint or write words like 'H1', 'H2', 'CTA', 'Bullets', 'Headline', 'Subheadline', '[H1]', '[CTA]', '[BULLETS]' on the image! Those words are technical tags for formatting only, NOT text to be displayed. Erase 100% of old reference text and dates.
 3. FONT ENFORCEMENT: Strictly use the specified font family (${mainFont}). Do NOT copy unrequested font styles or serif/slab serifs from the reference layout.
 4. ANTI-HALLUCINATION: Zero duplicate words, zero system alignment keywords rendered as text, zero unrequested TikTok icons.
-5. NO RECTANGULAR CARDS: Typography and elements MUST float directly on the canvas without any white or framed card box in the center!
-6. SAFE MARGINS & BORDER PADDING: Maintain at least 8% to 12% safe padding from all 4 borders. ABSOLUTE BAN on gluing or slicing text, logos, or contact badges against canvas edges!`);
+5. NO UNPROMPTED RECTANGULAR CARDS: Typography and elements MUST float directly on the canvas without unprompted card boxes in the center (unless explicitly requested by user).
+6. SAFE MARGINS & BORDER PADDING: Maintain at least 8% to 12% safe padding from all 4 borders. ABSOLUTE BAN on gluing or slicing text, logos, or contact badges against canvas edges!
+7. TEXT ALIGNMENT ENFORCEMENT: If left alignment ('Esquerda') is selected, ALL text elements (headline, bullet items, CTA) MUST be anchored flush-left on the left 45% of the canvas. The subject MUST balance on the right 55%. Centering left-aligned text or moving it to the right is STRICTLY FORBIDDEN.`);
 
   const negPrompt = config.negativePrompt?.trim()
     ? config.negativePrompt

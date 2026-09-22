@@ -530,11 +530,29 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
     const estiloDescText = estiloImages.filter(e => e.desc && e.desc.trim()).map((e, i) => `Referência de Estilo #${i + 1}: ${e.desc.trim()}`).join(". ");
     const ambienteDescText = ambienteImages.filter(a => a.desc && a.desc.trim()).map((a, i) => `Cenário/Ambiente #${i + 1}: ${a.desc.trim()}`).join(". ");
 
+    const calculatedTypoPos = (() => {
+      const headlineOrFirst = textBlocks.find(b => b.type === "H1") || textBlocks[0];
+      const primaryPos = headlineOrFirst?.position || "";
+      if (primaryPos.includes("left")) return "Esquerda";
+      if (primaryPos.includes("right")) return "Direita";
+      if (textBlocks.some(b => b.position?.includes("left"))) return "Esquerda";
+      if (textBlocks.some(b => b.position?.includes("right"))) return "Direita";
+      return "Centro";
+    })();
+
+    const effectiveSubjectPos = (() => {
+      if (subjectPosition === "left") return "Esquerda";
+      if (subjectPosition === "right") return "Direita";
+      if (calculatedTypoPos === "Esquerda") return "Direita";
+      if (calculatedTypoPos === "Direita") return "Esquerda";
+      return "Centro";
+    })();
+
     store.updateConfig({
       dimensao: dimensao,
       resolucao: quality,
       gender: categoria === "Pessoa" ? "Masculino" : "Livre",
-      positioning: subjectPosition === "left" ? "Esquerda" : subjectPosition === "right" ? "Direita" : "Centro",
+      positioning: effectiveSubjectPos,
       poseDescription: subjectDescription,
       promptCenario: [
         nichoProjeto ? `Nicho/Projeto: ${nichoProjeto}` : "",
@@ -575,15 +593,7 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
         complementar: activeDestaque ? corDestaque : "",
         paleta: [activeAmbiente && corAmbiente, activeLuz && luzComplementar, activeDestaque && corDestaque].filter(Boolean) as string[]
       },
-      typographyPosition: (() => {
-        const headlineOrFirst = textBlocks.find(b => b.type === "H1") || textBlocks[0];
-        const primaryPos = headlineOrFirst?.position || "";
-        if (primaryPos.includes("left")) return "Esquerda";
-        if (primaryPos.includes("right")) return "Direita";
-        if (textBlocks.some(b => b.position?.includes("left"))) return "Esquerda";
-        if (textBlocks.some(b => b.position?.includes("right"))) return "Direita";
-        return "Centro";
-      })(),
+      typographyPosition: calculatedTypoPos,
       camadasTexto: textBlocks.map((b) => ({
         id: b.id,
         conteudo: b.text,
@@ -3059,6 +3069,24 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
               type="button"
               disabled={isGenerating || isGeneratingPrompt}
               onClick={() => {
+                const calculatedTypoPos = (() => {
+                  const headlineOrFirst = textBlocks.find(b => b.type === "H1") || textBlocks[0];
+                  const primaryPos = headlineOrFirst?.position || "";
+                  if (primaryPos.includes("left")) return "Esquerda";
+                  if (primaryPos.includes("right")) return "Direita";
+                  if (textBlocks.some(b => b.position?.includes("left"))) return "Esquerda";
+                  if (textBlocks.some(b => b.position?.includes("right"))) return "Direita";
+                  return "Centro";
+                })();
+
+                const effectiveSubjectPos = (() => {
+                  if (subjectPosition === "left") return "Esquerda";
+                  if (subjectPosition === "right") return "Direita";
+                  if (calculatedTypoPos === "Esquerda") return "Direita";
+                  if (calculatedTypoPos === "Direita") return "Esquerda";
+                  return "Centro";
+                })();
+
                 store.updateConfig({
                   qualidade: quality,
                   resolucao: quality,
@@ -3070,7 +3098,8 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
                   additionalPrompt: promptAdicional,
                   nicho: nichoProjeto,
                   estiloVisual: estiloVisual,
-                  positioning: subjectPosition === "left" ? "Esquerda" : subjectPosition === "right" ? "Direita" : "Centro",
+                  positioning: effectiveSubjectPos,
+                  typographyPosition: calculatedTypoPos,
                   composicao: plano,
                   elementosFlutuantes: elementosFlutuantes,
                   floatingElementsCustom: elementosFlutuantesText,
