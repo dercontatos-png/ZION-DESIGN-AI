@@ -459,11 +459,14 @@ export const useImageStore = create<ImageStoreState>((set, get) => ({
   setBackgroundSettings: (settings) => set({ backgroundSettings: settings }),
 
   createProject: () => {
-    const { imgConfig, backgroundSettings, personRefs, envRefs, styleRefs, logoRefs } = get();
-    
+    const { imgConfig, backgroundSettings, personRefs, envRefs, styleRefs, logoRefs, projects } = get();
+    if (projects.length >= 3) {
+      return projects[0];
+    }
+    const nextIdx = projects.length + 1;
     const newProject: DesignProject = {
       id: `proj_${Date.now()}`,
-      name: `Projeto ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}`,
+      name: `Aba ${nextIdx}`,
       thumbnail: get().generatedImages[0] || null,
       config: JSON.parse(JSON.stringify(imgConfig)),
       backgroundSettings: JSON.parse(JSON.stringify(backgroundSettings)),
@@ -510,7 +513,7 @@ export const useImageStore = create<ImageStoreState>((set, get) => ({
     
     const projectData: DesignProject = {
       id: projectId,
-      name: projects.find(p => p.id === projectId)?.name || `Projeto ${new Date().toLocaleDateString('pt-BR')}`,
+      name: projects.find(p => p.id === projectId)?.name || `Aba ${projects.length + 1}`,
       thumbnail: thumbnail,
       config: imgConfig,
       backgroundSettings,

@@ -1,3 +1,5 @@
+import { deductCredit } from "./creditsManager";
+
 export interface UsageStats {
   generatedToday: number;
   generatedTotal: number;
@@ -63,6 +65,14 @@ export function recordImageGeneration(count = 1): UsageStats {
   stats.lastDate = getTodayString();
   stats.lastGenerationTimestamp = Date.now();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(stats));
+  
+  // Deduz créditos reais em tempo real
+  try {
+    deductCredit(count);
+  } catch (e) {
+    console.error("Erro ao deduzir créditos:", e);
+  }
+
   return stats;
 }
 

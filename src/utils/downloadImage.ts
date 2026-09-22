@@ -146,16 +146,18 @@ export function generateSmartFileName(
   // 3. Resolution / Mode
   let qualityPart = "";
   const targetRes = meta?.targetResolution;
-  if (targetRes === "16MP" || targetRes === 16) {
-    qualityPart = "WhatsApp_HD";
-  } else if (targetRes === "4K" || targetRes === 30) {
+  if (targetRes === "16MB" || targetRes === "16MP" || targetRes === 16) {
+    qualityPart = "WhatsApp_HD_16MB";
+  } else if (targetRes === "30MB" || targetRes === 30) {
+    qualityPart = "Instagram_HD_30MB";
+  } else if (targetRes === "4K") {
     qualityPart = "4K_UltraHD";
   } else if (targetRes === "2K") {
     qualityPart = "2K_HD";
   } else if (targetRes === "1K") {
     qualityPart = "1K";
-  } else if (targetRes === "ORIGINAL" || !targetRes) {
-    qualityPart = "Nativo";
+  } else if (targetRes === "ORIGINAL" || targetRes === "NATIVO" || !targetRes) {
+    qualityPart = "Nativo_Original";
   } else {
     qualityPart = `${targetRes}`;
   }
@@ -167,7 +169,11 @@ export function generateSmartFileName(
 /**
  * Downloads image directly with maximum resolution & fidelity,
  * eliminating loss or compression artifacts.
- * Supports native API resolution output ('ORIGINAL') or upscaling to 16 Megapixels (WhatsApp HD) and 4K Ultra HD.
+ * Supports:
+ *  - 'NATIVO' / 'ORIGINAL': Pure raw byte download from API without canvas re-encode (zero loss)
+ *  - '16MB' / '16MP': WhatsApp HD locked at EXACTLY 16,777,216 bytes (16MB travado)
+ *  - '30MB': Instagram HD locked at EXACTLY 31,457,280 bytes (30MB travado)
+ *  - '4K', '2K', '1K': High resolution canvas rendering in PNG, AVIF, JPEG, WEBP
  */
 export const downloadImage = (
   base64Data: string,
@@ -175,13 +181,13 @@ export const downloadImage = (
   logoConfig?: any,
   typographyConfig?: any,
   backgroundColor?: string,
-  targetResolution?: "16MP" | "4K" | "2K" | "1K" | "ORIGINAL" | "30MB" | number,
+  targetResolution?: "16MP" | "16MB" | "30MB" | "4K" | "2K" | "1K" | "ORIGINAL" | "NATIVO" | number,
   metaInfo?: DownloadMetaInfo
 ): Promise<void> => {
   return new Promise(async (resolve, reject) => {
     try {
       const hasBgColor = backgroundColor && backgroundColor !== "transparent";
-      const isOriginalMode = targetResolution === "ORIGINAL" || !targetResolution;
+      const isOriginalMode = targetResolution === "ORIGINAL" || targetResolution === "NATIVO" || formatoSelecionado === "NATIVO";
 
       // Extract original filename from a URL path (e.g. /generated-images/img_xxx.png) when available
       let originalName: string | null = null;
@@ -201,35 +207,28 @@ export const downloadImage = (
       if (isOriginalMode && !hasBgColor) {
         const isUrl = base64Data.startsWith("http") || base64Data.startsWith("/");
         const isBase64 = base64Data.startsWith("data:");
-        const isPngSource = base64Data.startsWith("data:image/png");
 
         if (isUrl || isBase64) {
           try {
             const res = await fetch(base64Data);
             const blob = await res.blob();
 
-            // Guard: if the fetched bytes are not an image (HTML error page, etc.),
-            // abort instead of saving a broken file.
             if (!blob.type.startsWith("image/") && !isBase64) {
               throw new Error("Resposta não é uma imagem.");
             }
 
-            // PNG lossless fast path: only if source is already PNG (zero re-encode = zero loss)
-            if (blob.type === "image/png" || (isPngSource && !blob.type)) {
-              const blobUrl = URL.createObjectURL(blob);
-              const link = document.createElement("a");
-              link.href = blobUrl;
-              link.download = originalName || generateSmartFileName({ ...metaInfo, targetResolution: metaInfo?.targetResolution || targetResolution }, "png");
-              document.body.appendChild(link);
-              link.click();
-              document.body.removeChild(link);
-              setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
-              resolve();
-              return;
-            }
-
-            // Non-PNG source: fall through to canvas re-encode (lossless PNG)
-            console.warn("Fonte não é PNG, reconvertendo para PNG sem perdas via canvas:", blob.type);
+            // Pure native fast path (zero re-encode = zero loss)
+            const extFromMime = blob.type.split("/")[1] || "png";
+            const blobUrl = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = blobUrl;
+            link.download = originalName || generateSmartFileName({ ...metaInfo, targetResolution: "NATIVO" }, extFromMime);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+            resolve();
+            return;
           } catch (fetchErr) {
             console.warn("Fetch de bytes originais falhou, caindo para canvas nativo:", fetchErr);
           }
@@ -248,7 +247,8 @@ export const downloadImage = (
           let targetW = origW;
           let targetH = origH;
 
-          let isWhatsAppHD = targetResolution === "16MP" || targetResolution === 16;
+          let isWhatsAppHD = targetResolution === "16MP" || targetResolution === "16MB" || targetResolution === 16;
+          let isInstagram30MB = targetResolution === "30MB" || targetResolution === 30;
 
           // Calculate target width and height based on requested quality/mode
           if (isWhatsAppHD) {
@@ -256,8 +256,8 @@ export const downloadImage = (
             const totalPixels = 16_000_000;
             targetW = Math.round(Math.sqrt(totalPixels * aspectRatio));
             targetH = Math.round(Math.sqrt(totalPixels / aspectRatio));
-          } else if (targetResolution === "4K" || targetResolution === 30) {
-            // 4K Resolution = 3840px max dimension
+          } else if (isInstagram30MB || targetResolution === "4K") {
+            // 4K Ultra HD base resolution
             if (aspectRatio >= 1) {
               targetW = 3840;
               targetH = Math.round(3840 / aspectRatio);
@@ -274,12 +274,16 @@ export const downloadImage = (
               targetW = Math.round(2048 * aspectRatio);
             }
           } else if (targetResolution === "1K") {
-            if (aspectRatio >= 1) {
+            // Se a imagem ja veio na resolucao nativa 1K (<= 1536), preserva os pixels reais sem re-escalar
+            if (origW<= 1536 && origH <= 1536) {
+              targetW = origW;
+              targetH = origH;
+            } else if (aspectRatio >= 1) {
               targetW = 1024;
               targetH = Math.round(1024 / aspectRatio);
             } else {
-              targetH = 1024;
-              targetW = Math.round(1024 * aspectRatio);
+              targetH = 1350;
+              targetW = Math.round(1350 * aspectRatio);
             }
           } else {
             // "ORIGINAL" or default: maintain exact natural API dimensions
@@ -310,9 +314,8 @@ export const downloadImage = (
           ctx.drawImage(img, 0, 0, targetW, targetH);
 
           // 3. Determine MIME type and extension
-          // Native (ORIGINAL) and WhatsApp HD (16MP) always export LOSSESS PNG.
-          // Other target resolutions honor the selected export format.
-          const forceLosslessPng = isOriginalMode || isWhatsAppHD;
+          // Native (ORIGINAL), WhatsApp HD (16MB), and Instagram (30MB) default to lossless PNG
+          const forceLosslessPng = isOriginalMode || isWhatsAppHD || isInstagram30MB;
           let extension = forceLosslessPng ? "png" : (formatoSelecionado ? formatoSelecionado.toLowerCase() : "png");
           let mimeType = "image/png";
 
@@ -341,13 +344,15 @@ export const downloadImage = (
           const res = await fetch(dataUrl);
           let outputBlob = await res.blob();
 
-          // WhatsApp HD: ALWAYS exactly 16.0 MB (16,777,216 bytes), never more, never less
-          if (isWhatsAppHD) {
-            const targetBytes = 16 * 1024 * 1024;
+          // TRAVAMENTO DE BYTES EXATO:
+          // WhatsApp HD: SEMPRE exatamente 16.0 MB (16,777,216 bytes) — nem mais, nem menos
+          // Instagram HD: SEMPRE exatamente 30.0 MB (31,457,280 bytes) — nem mais, nem menos
+          if (isWhatsAppHD || isInstagram30MB) {
+            const targetBytes = isWhatsAppHD ? 16 * 1024 * 1024 : 30 * 1024 * 1024;
             let bytes = new Uint8Array(await outputBlob.arrayBuffer());
 
             if (bytes.length > targetBytes) {
-              // PNG is too big: flatten on white and re-encode as JPEG, lowering quality until it fits
+              // PNG é maior que o alvo: converte para JPEG otimizado diminuindo compressão até caber
               const whiteCanvas = document.createElement("canvas");
               whiteCanvas.width = targetW;
               whiteCanvas.height = targetH;
@@ -356,7 +361,7 @@ export const downloadImage = (
                 wctx.fillStyle = "#ffffff";
                 wctx.fillRect(0, 0, targetW, targetH);
                 wctx.drawImage(img, 0, 0, targetW, targetH);
-                for (let q = 0.95; q >= 0.15; q -= 0.05) {
+                for (let q = 0.98; q >= 0.15; q -= 0.05) {
                   const jpegUrl = whiteCanvas.toDataURL("image/jpeg", q);
                   const jpegBlob = await (await fetch(jpegUrl)).blob();
                   if (jpegBlob.size <= targetBytes) {

@@ -65,7 +65,7 @@ export const Agentes: React.FC = () => {
             onClick={() => setActiveFilter(filter)}
             className={`px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all whitespace-nowrap my-0.5 ${
               activeFilter === filter
-                ? "bg-[#c5a880] text-zinc-950 font-bold shadow-sm shadow-amber-500/10"
+                ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-bold shadow-sm shadow-violet-600/10"
                 : "text-zinc-400 hover:text-zinc-200 hover:bg-white/5"
             }`}
           >
@@ -79,7 +79,7 @@ export const Agentes: React.FC = () => {
           <motion.div 
             key={agent.id} 
             whileHover={{ y: -4 }}
-            className="group flex flex-col p-6 rounded-2xl bg-black border border-white/5 hover:border-amber-500/30 transition-all cursor-pointer shadow-lg hover:shadow-amber-500/5" 
+            className="group flex flex-col p-6 rounded-2xl bg-black border border-white/5 hover:border-violet-500/30 transition-all cursor-pointer shadow-lg hover:shadow-violet-600/5" 
             onClick={() => {
               if (agent.id === "deep-work") {
                 window.open("https://open.spotify.com/playlist/37i9dQZF1DWZeKCadgRdKQ", "_blank");
@@ -89,10 +89,10 @@ export const Agentes: React.FC = () => {
               }
             }}
           >
-            <div className="w-12 h-12 mb-6 rounded-xl bg-[#111]/50 flex items-center justify-center text-zinc-400 group-hover:text-amber-500 group-hover:bg-amber-500/10 transition-colors">
+            <div className="w-12 h-12 mb-6 rounded-xl bg-[#111]/50 flex items-center justify-center text-zinc-400 group-hover:text-violet-400 group-hover:bg-violet-500/10 transition-colors">
                {getIcon(agent.id, agent.category)}
             </div>
-            <h3 className="text-base font-bold text-zinc-100 mb-2 group-hover:text-amber-400 transition-colors">{agent.title}</h3>
+            <h3 className="text-base font-bold text-zinc-100 mb-2 group-hover:text-violet-400 transition-colors">{agent.title}</h3>
             <p className="text-xs text-zinc-500 leading-relaxed">{agent.description}</p>
           </motion.div>
         ))}

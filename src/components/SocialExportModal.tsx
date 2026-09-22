@@ -399,7 +399,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
       if (blob && blob.size > 0) {
         triggerBlobDownload(blob, `${baseName}.${ext}`);
         appendToGallery();
-        showToast(`Download concluído: ${isInstagram ? "Formato Instagram" : "Formato WhatsApp"} salvo! ✅`, "success");
+        showToast(`Download concluído: ${isInstagram ? "Formato Instagram" : "Formato WhatsApp"} salvo! `, "success");
         return;
       }
 
@@ -418,7 +418,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
               if (cBlob) {
                 triggerBlobDownload(cBlob, `${baseName}.png`);
                 appendToGallery();
-                showToast(`Download concluído: ${isInstagram ? "Formato Instagram" : "Formato WhatsApp"} salvo! ✅`, "success");
+                showToast(`Download concluído: ${isInstagram ? "Formato Instagram" : "Formato WhatsApp"} salvo! `, "success");
               } else {
                 throw new Error("Blob conversion failed");
               }
@@ -433,7 +433,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
           link.click();
           document.body.removeChild(link);
           appendToGallery();
-          showToast("Download da imagem iniciado! ✅", "success");
+          showToast("Download da imagem iniciado! ", "success");
         }
       };
       img.onerror = () => {
@@ -444,7 +444,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
         link.click();
         document.body.removeChild(link);
         appendToGallery();
-        showToast("Download da imagem iniciado! ✅", "success");
+        showToast("Download da imagem iniciado! ", "success");
       };
       img.src = srcToUse;
     } catch (err) {
@@ -456,7 +456,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
       link.click();
       document.body.removeChild(link);
       appendToGallery();
-      showToast("Download da imagem iniciado! ✅", "success");
+      showToast("Download da imagem iniciado! ", "success");
     }
   };
 
@@ -483,7 +483,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
          <div className={`flex-1 bg-black p-4 md:p-6 flex flex-col justify-between border-b md:border-b-0 md:border-r border-zinc-900 min-h-0 overflow-y-auto ${currentTab === "preview" ? "flex" : "hidden md:flex"}`}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-black uppercase tracking-widest text-[#ad8330] bg-[#ad8330]/10 px-2 py-1 rounded">
+              <span className="text-[10px] font-black uppercase tracking-widest text-[#7c3aed] bg-[#7c3aed]/10 px-2 py-1 rounded">
                 EXPORTAÇÃO PRO
               </span>
               <h3 className="text-xs font-bold text-zinc-300 uppercase tracking-wider">Comparador de Compressão</h3>
@@ -494,7 +494,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
               <button 
                 onClick={() => setCurrentTab("preview")}
                 className={`px-3 py-1 text-[10px] font-bold uppercase rounded-md transition-all ${
-                  currentTab === "preview" ? "bg-[#ad8330] text-black" : "text-zinc-400 hover:text-white"
+                  currentTab === "preview" ? "bg-[#7c3aed] text-black" : "text-zinc-400 hover:text-white"
                 }`}
               >
                 Visualizar
@@ -502,7 +502,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
               <button 
                 onClick={() => setCurrentTab("settings")}
                 className={`px-3 py-1 text-[10px] font-bold uppercase rounded-md transition-all md:hidden ${
-                  currentTab === "settings" ? "bg-[#ad8330] text-black" : "text-zinc-400 hover:text-white"
+                  currentTab === "settings" ? "bg-[#7c3aed] text-black" : "text-zinc-400 hover:text-white"
                 }`}
               >
                 Ajustes
@@ -520,14 +520,14 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
           >
             {isProcessing && (
               <div className="absolute inset-0 z-20 bg-black/85 backdrop-blur-sm flex flex-col items-center justify-center space-y-4 p-6 text-center">
-                <Loader2 size={28} className="text-[#ad8330] animate-spin" />
+                <Loader2 size={28} className="text-[#7c3aed] animate-spin" />
                 <div className="space-y-1.5 w-full max-w-xs">
                   <span className="text-[10px] font-black uppercase tracking-widest text-zinc-300 block">
                     Otimizando imagem para {platform === "instagram" ? "Instagram" : "WhatsApp"}...
                   </span>
                   <div className="w-full h-1 bg-[#111] rounded-full overflow-hidden">
                     <div 
-                      className="h-full bg-[#ad8330] transition-all duration-300" 
+                      className="h-full bg-[#7c3aed] transition-all duration-300" 
                       style={{ width: `${processingProgress}%` }}
                     />
                   </div>
@@ -587,7 +587,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
                       setZoom(1);
                       setPanOffset({ x: 0, y: 0 });
                     }}
-                    className="ml-1 px-1.5 py-0.5 rounded bg-[#ad8330]/20 hover:bg-[#ad8330]/30 text-[8px] font-black text-[#ad8330] uppercase transition-all cursor-pointer"
+                    className="ml-1 px-1.5 py-0.5 rounded bg-[#7c3aed]/20 hover:bg-[#7c3aed]/30 text-[8px] font-black text-[#7c3aed] uppercase transition-all cursor-pointer"
                   >
                     Redefinir
                   </button>
@@ -619,7 +619,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
               <button
                 onClick={() => setPreviewMode("simulated")}
                 className={`px-3.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
-                  previewMode === "simulated" ? "bg-[#ad8330]/20 border border-[#ad8330]/30 text-[#ad8330]" : "text-zinc-500 hover:text-zinc-300"
+                  previewMode === "simulated" ? "bg-[#7c3aed]/20 border border-[#7c3aed]/30 text-[#7c3aed]" : "text-zinc-500 hover:text-zinc-300"
                 }`}
               >
                 Simular Upload (Rede Social)
@@ -629,15 +629,15 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
             {/* Displaying Image according to Mode with Zoom and Pan */}
             <div className="relative w-full flex-1 flex items-center justify-center min-h-0 overflow-hidden">
               {!baseImage && !activeImage ? (
-                <label className="flex flex-col items-center justify-center gap-3 p-8 border border-dashed border-zinc-800 hover:border-[#ad8330]/40 hover:bg-[#ad8330]/5 rounded-2xl cursor-pointer max-w-sm text-center transition-all bg-black/25">
-                  <ImageIcon size={32} className="text-[#ad8330]" />
+                <label className="flex flex-col items-center justify-center gap-3 p-8 border border-dashed border-zinc-800 hover:border-[#7c3aed]/40 hover:bg-[#7c3aed]/5 rounded-2xl cursor-pointer max-w-sm text-center transition-all bg-black/25">
+                  <ImageIcon size={32} className="text-[#7c3aed]" />
                   <div className="space-y-1">
                     <span className="text-[10px] font-black text-zinc-300 uppercase tracking-widest block">Nenhuma imagem carregada</span>
                     <p className="text-[9px] text-zinc-500 uppercase tracking-wider leading-relaxed">
                       Arraste um arquivo de imagem para esta tela ou clique aqui para selecionar do computador.
                     </p>
                   </div>
-                  <span className="px-3 py-1.5 bg-[#ad8330]/10 hover:bg-[#ad8330]/25 text-[8.5px] font-black uppercase text-[#ad8330] rounded-lg border border-[#ad8330]/20 transition-all mt-1">
+                  <span className="px-3 py-1.5 bg-[#7c3aed]/10 hover:bg-[#7c3aed]/25 text-[8.5px] font-black uppercase text-[#7c3aed] rounded-lg border border-[#7c3aed]/20 transition-all mt-1">
                     Selecionar Arquivo
                   </span>
                   <input 
@@ -703,7 +703,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
                       ) : (
                         <div className="text-center p-6 text-zinc-500 flex flex-col items-center gap-2 select-none">
                           <ImageIcon size={28} className="stroke-[1.5px] text-zinc-600 animate-pulse" />
-                          <p className="text-xs">Clique no botão <strong className="text-[#ad8330]">"OTIMIZAR IMAGEM COM IA"</strong> para iniciar o processamento.</p>
+                          <p className="text-xs">Clique no botão <strong className="text-[#7c3aed]">"OTIMIZAR IMAGEM COM IA"</strong> para iniciar o processamento.</p>
                         </div>
                       )}
                     </div>
@@ -730,14 +730,14 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
                             className="max-h-[300px] md:max-h-[360px] object-contain rounded-lg border border-orange-900/20 shadow-2xl transition-transform duration-100 ease-out select-none pointer-events-none"
                             referrerPolicy="no-referrer"
                           />
-                          <span className="absolute bottom-2 right-2 text-[8px] bg-[#ad8330]/95 border border-[#ad8330]/30 text-black px-2 py-1 rounded font-black uppercase tracking-widest flex items-center gap-1 select-none">
+                          <span className="absolute bottom-2 right-2 text-[8px] bg-[#7c3aed]/95 border border-[#7c3aed]/30 text-black px-2 py-1 rounded font-black uppercase tracking-widest flex items-center gap-1 select-none">
                             <Eye size={10} className="stroke-[3px]" />
                             Simulador de Upload ({platform === "instagram" ? "Instagram 60%" : "WhatsApp 50%"})
                           </span>
                         </>
                       ) : (
                         <div className="text-center p-6 text-zinc-500 flex flex-col items-center gap-2 select-none">
-                          <Loader2 size={24} className="text-[#ad8330] animate-spin" />
+                          <Loader2 size={24} className="text-[#7c3aed] animate-spin" />
                           <p className="text-xs">Gerando simulação de compressão...</p>
                         </div>
                       )}
@@ -798,8 +798,8 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
                 Origem da Imagem
               </span>
               <div className="flex flex-col gap-2">
-                <label className="flex items-center justify-center gap-2 p-2.5 rounded-xl border border-dashed border-zinc-800 hover:border-[#ad8330]/40 hover:bg-[#ad8330]/5 bg-black/20 text-zinc-400 hover:text-zinc-200 cursor-pointer transition-all text-[10px] font-black uppercase tracking-wider">
-                  <ImageIcon size={13} className="text-[#ad8330]" />
+                <label className="flex items-center justify-center gap-2 p-2.5 rounded-xl border border-dashed border-zinc-800 hover:border-[#7c3aed]/40 hover:bg-[#7c3aed]/5 bg-black/20 text-zinc-400 hover:text-zinc-200 cursor-pointer transition-all text-[10px] font-black uppercase tracking-wider">
+                  <ImageIcon size={13} className="text-[#7c3aed]" />
                   <span>Escolher qualquer Imagem</span>
                   <input 
                     type="file" 
@@ -835,7 +835,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
                   onClick={() => setPlatform("instagram")}
                   className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-all ${
                     platform === "instagram"
-                    ? "bg-gradient-to-br from-[#c5a880]/20 via-[#ad8330]/10 to-[#ad8330]/15 border-[#ad8330] text-[#ad8330]"
+                    ? "bg-gradient-to-br from-[#a855f7]/20 via-[#7c3aed]/10 to-[#7c3aed]/15 border-[#7c3aed] text-[#7c3aed]"
                     : "bg-black/50 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200"
                   }`}
                 >
@@ -876,13 +876,13 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
                     onClick={() => setImageType(item.id as any)}
                     className={`w-full flex items-start gap-2.5 p-2.5 rounded-xl border text-left transition-all ${
                       imageType === item.id
-                      ? "bg-black border-[#ad8330] text-zinc-100"
+                      ? "bg-black border-[#7c3aed] text-zinc-100"
                       : "bg-black/30 border-zinc-800/80 text-zinc-400 hover:border-zinc-800 hover:text-zinc-300"
                     }`}
                   >
                     <div className="mt-0.5">
                       {imageType === item.id ? (
-                        <div className="w-3.5 h-3.5 rounded-full bg-[#ad8330] flex items-center justify-center">
+                        <div className="w-3.5 h-3.5 rounded-full bg-[#7c3aed] flex items-center justify-center">
                           <Check size={8} className="text-black stroke-[3px]" />
                         </div>
                       ) : (
@@ -919,7 +919,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
                   type="checkbox" 
                   checked={recreateBackground}
                   onChange={(e) => setRecreateBackground(e.target.checked)}
-                  className="w-4 h-4 rounded border-zinc-700 bg-[#111] text-[#ad8330] focus:ring-[#ad8330]"
+                  className="w-4 h-4 rounded border-zinc-700 bg-[#111] text-[#7c3aed] focus:ring-[#7c3aed]"
                 />
               </div>
 
@@ -992,7 +992,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
                       type="checkbox" 
                       checked={autoParameters}
                       onChange={(e) => setAutoParameters(e.target.checked)}
-                      className="w-3.5 h-3.5 rounded border-zinc-700 bg-[#111] text-[#ad8330] focus:ring-[#ad8330]"
+                      className="w-3.5 h-3.5 rounded border-zinc-700 bg-[#111] text-[#7c3aed] focus:ring-[#7c3aed]"
                     />
                   </div>
 
@@ -1000,7 +1000,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
                   <div className={`space-y-1 ${autoParameters ? "opacity-60" : ""}`}>
                     <div className="flex items-center justify-between">
                       <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-wider">Suavização da Máscara</span>
-                      <span className="text-[9px] font-bold text-[#ad8330]">{featherWidth}px {autoParameters && "(Automático)"}</span>
+                      <span className="text-[9px] font-bold text-[#7c3aed]">{featherWidth}px {autoParameters && "(Automático)"}</span>
                     </div>
                     <input 
                       type="range" 
@@ -1010,7 +1010,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
                       value={featherWidth}
                       disabled={autoParameters}
                       onChange={(e) => setFeatherWidth(Number(e.target.value))}
-                      className="w-full h-1 bg-[#111] rounded-lg appearance-none cursor-pointer accent-[#ad8330] disabled:cursor-not-allowed"
+                      className="w-full h-1 bg-[#111] rounded-lg appearance-none cursor-pointer accent-[#7c3aed] disabled:cursor-not-allowed"
                     />
                   </div>
 
@@ -1018,7 +1018,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
                   <div className={`space-y-1 ${autoParameters ? "opacity-60" : ""}`}>
                     <div className="flex items-center justify-between">
                       <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-wider">Suavização de Borda</span>
-                      <span className="text-[9px] font-bold text-[#ad8330]">{edgeSmoothing} {autoParameters && "(Automático)"}</span>
+                      <span className="text-[9px] font-bold text-[#7c3aed]">{edgeSmoothing} {autoParameters && "(Automático)"}</span>
                     </div>
                     <input 
                       type="range" 
@@ -1028,7 +1028,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
                       value={edgeSmoothing}
                       disabled={autoParameters}
                       onChange={(e) => setEdgeSmoothing(Number(e.target.value))}
-                      className="w-full h-1 bg-[#111] rounded-lg appearance-none cursor-pointer accent-[#ad8330] disabled:cursor-not-allowed"
+                      className="w-full h-1 bg-[#111] rounded-lg appearance-none cursor-pointer accent-[#7c3aed] disabled:cursor-not-allowed"
                     />
                   </div>
                 </div>
@@ -1044,7 +1044,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
                   type="checkbox" 
                   checked={localCorrections}
                   onChange={(e) => setLocalCorrections(e.target.checked)}
-                  className="w-4 h-4 rounded border-zinc-700 bg-[#111] text-[#ad8330] focus:ring-[#ad8330]"
+                  className="w-4 h-4 rounded border-zinc-700 bg-[#111] text-[#7c3aed] focus:ring-[#7c3aed]"
                 />
               </div>
             </div>
@@ -1066,10 +1066,10 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
 
                 {/* Global Pixel Healer & Denoiser Status Alert */}
                 {typeof metadata.globalHealCount === "number" && (
-                  <div className="mb-2 p-2 bg-[#ad8330]/10 border border-[#ad8330]/30 rounded-lg flex items-start gap-1.5">
-                    <Sparkles size={13} className="text-[#ad8330] mt-0.5 flex-shrink-0 animate-pulse" />
+                  <div className="mb-2 p-2 bg-[#7c3aed]/10 border border-[#7c3aed]/30 rounded-lg flex items-start gap-1.5">
+                    <Sparkles size={13} className="text-[#7c3aed] mt-0.5 flex-shrink-0 animate-pulse" />
                     <div>
-                      <span className="text-[8px] font-black text-[#ad8330] uppercase tracking-wider block">Restauração de Pixels & Redutor de Ruído</span>
+                      <span className="text-[8px] font-black text-[#7c3aed] uppercase tracking-wider block">Restauração de Pixels & Redutor de Ruído</span>
                       <span className="text-[9px] text-zinc-300 font-bold leading-tight">
                         {metadata.globalHealCount > 0 
                           ? `${metadata.globalHealCount} quadradinhos de cores anômalas corrigidos uniformemente. Ruído suavizado com aspecto de imagem lisa.`
@@ -1081,14 +1081,14 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
 
                 {/* Gemini Vision Diagnostics */}
                 {metadata.detectedIssues && metadata.detectedIssues.length > 0 && (
-                  <div className="mb-2 p-2 bg-[#c5a880]/20 border border-[#c5a880]/30 rounded-lg space-y-1">
-                    <span className="text-[8px] font-black text-[#c5a880] uppercase tracking-wider block">Diagnóstico Gemini Vision</span>
+                  <div className="mb-2 p-2 bg-violet-500/20 border border-violet-500/30 rounded-lg space-y-1">
+                    <span className="text-[8px] font-black text-violet-400 uppercase tracking-wider block">Diagnóstico Gemini Vision</span>
                     <div className="space-y-1 max-h-[80px] overflow-y-auto">
                       {metadata.detectedIssues.map((issue: any, idx: number) => (
                         <div key={idx} className="flex items-start gap-1 text-[8px] text-zinc-300 font-medium">
-                          <span className="inline-block w-1 h-1 rounded-full bg-[#c5a880] mt-1 flex-shrink-0" />
+                          <span className="inline-block w-1 h-1 rounded-full bg-[#a855f7] mt-1 flex-shrink-0" />
                           <span>
-                            <strong className="text-[#c5a880] uppercase">{issue.label}</strong>: {issue.desc} (Corrigido Localmente)
+                            <strong className="text-violet-400 uppercase">{issue.label}</strong>: {issue.desc} (Corrigido Localmente)
                           </span>
                         </div>
                       ))}
@@ -1097,7 +1097,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
                 )}
 
                 <div className="flex items-center gap-1.5 mb-1.5">
-                  <Sliders size={11} className="text-[#ad8330]" />
+                  <Sliders size={11} className="text-[#7c3aed]" />
                   <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest">
                     Parâmetros em Tempo Real
                   </span>
@@ -1144,7 +1144,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
             <button
               onClick={handleRunPipeline}
               disabled={isProcessing || (!baseImage && !activeImage)}
-              className="w-full flex items-center justify-center gap-2 p-3.5 rounded-xl bg-gradient-to-r from-[#ad8330] to-[#8c6722] hover:brightness-110 active:scale-95 text-black text-xs font-black uppercase tracking-wider transition-all disabled:opacity-40 disabled:pointer-events-none shadow-xl shadow-[#ad8330]/10"
+              className="w-full flex items-center justify-center gap-2 p-3.5 rounded-xl bg-gradient-to-r from-[#7c3aed] to-[#8c6722] hover:brightness-110 active:scale-95 text-black text-xs font-black uppercase tracking-wider transition-all disabled:opacity-40 disabled:pointer-events-none shadow-xl shadow-[#7c3aed]/10"
             >
               {isProcessing ? (
                 <Loader2 size={13} className="animate-spin" />

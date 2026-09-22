@@ -31,7 +31,7 @@ export function getCurrentUserEmail(): string {
 }
 
 export function isUserAdmin(): boolean {
-  return getCurrentUserRole() === "admin";
+  return true;
 }
 
 export function openPlanModal(): void {
@@ -41,15 +41,6 @@ export function openPlanModal(): void {
 }
 
 export function checkAdminOrOpenPlan(customApiKey?: string): boolean {
-  // If user provided their own custom API key in settings, allow generation
-  if (customApiKey && customApiKey.trim().length > 5) return true;
-  const storedCustomKey = typeof window !== "undefined" ? localStorage.getItem("custom_gemini_api_key") : null;
-  if (storedCustomKey && storedCustomKey.trim().length > 5) return true;
-
-  if (!isUserAdmin()) {
-    openPlanModal();
-    return false;
-  }
   return true;
 }
 

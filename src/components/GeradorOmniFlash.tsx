@@ -366,19 +366,19 @@ export const GeradorOmniFlash: React.FC<GeradorOmniFlashProps> = ({ customApiKey
     <div className="w-full h-full bg-[#09090b] text-zinc-100 flex flex-col overflow-y-auto custom-scrollbar p-4 md:p-6 lg:p-8 space-y-8">
       
       {/* Header Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-purple-950/70 via-zinc-900 to-[#1c160c] border border-white/10 p-6 md:p-8 shadow-2xl">
-        <div className="absolute top-0 right-0 -mt-8 -mr-8 w-64 h-64 bg-[#c5a880]/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-1/3 -mb-10 w-72 h-72 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-black via-[#0f0e0c] to-[#1a160f] border border-violet-500/20 p-6 md:p-8 shadow-2xl">
+        <div className="absolute top-0 right-0 -mt-8 -mr-8 w-64 h-64 bg-violet-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-1/3 -mb-10 w-72 h-72 bg-[#7c3aed]/5 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2 max-w-2xl">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-widest bg-[#c5a880]/20 text-[#c5a880] border border-[#c5a880]/30 flex items-center gap-1.5 shadow-sm">
+              <span className="px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-widest bg-violet-500/20 text-violet-400 border border-violet-500/30 flex items-center gap-1.5 shadow-sm">
                 <Clapperboard size={12} />
                 gemini-omni-flash-preview
               </span>
-              <span className="px-3 py-1 rounded-full text-[11px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30 flex items-center gap-1">
-                <Video size={12} />
+              <span className="px-3 py-1 rounded-full text-[11px] font-bold bg-violet-500/10 text-zinc-300 border border-violet-500/25 flex items-center gap-1">
+                <Video size={12} className="text-violet-400" />
                 Análise de Vídeo & Visão Multimodal
               </span>
             </div>
@@ -386,7 +386,7 @@ export const GeradorOmniFlash: React.FC<GeradorOmniFlashProps> = ({ customApiKey
               Gerador de Prompts Cinematográficos Omni Flash
             </h1>
             <p className="text-sm md:text-base text-zinc-400 leading-relaxed">
-              Envie seu <strong className="text-amber-300 font-semibold">arquivo de vídeo</strong> para a IA ver e entender a cena, ou escolha opções cinematográficas profissionais de direção, enquadramento e iluminação otimizadas para o <strong className="text-zinc-200">Gemini Omni Flash</strong>.
+              Envie seu <strong className="text-violet-400 font-semibold">arquivo de vídeo</strong> para a IA ver e entender a cena, ou escolha opções cinematográficas profissionais de direção, enquadramento e iluminação otimizadas para o <strong className="text-zinc-200">Gemini Omni Flash</strong>.
             </p>
           </div>
 
@@ -396,7 +396,7 @@ export const GeradorOmniFlash: React.FC<GeradorOmniFlashProps> = ({ customApiKey
               onClick={() => setSelectedTab("builder")}
               className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
                 selectedTab === "builder" 
-                  ? "bg-[#c5a880] text-zinc-950 shadow-lg shadow-[#c5a880]/20 font-extrabold" 
+                  ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-600/20 font-extrabold" 
                   : "text-zinc-400 hover:text-white"
               }`}
             >
@@ -407,7 +407,7 @@ export const GeradorOmniFlash: React.FC<GeradorOmniFlashProps> = ({ customApiKey
               onClick={() => setSelectedTab("presets")}
               className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
                 selectedTab === "presets" 
-                  ? "bg-[#c5a880] text-zinc-950 shadow-lg shadow-[#c5a880]/20 font-extrabold" 
+                  ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-600/20 font-extrabold" 
                   : "text-zinc-400 hover:text-white"
               }`}
             >
@@ -418,7 +418,7 @@ export const GeradorOmniFlash: React.FC<GeradorOmniFlashProps> = ({ customApiKey
               onClick={() => setSelectedTab("saved")}
               className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
                 selectedTab === "saved" 
-                  ? "bg-[#c5a880] text-zinc-950 shadow-lg shadow-[#c5a880]/20 font-extrabold" 
+                  ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-600/20 font-extrabold" 
                   : "text-zinc-400 hover:text-white"
               }`}
             >
@@ -434,7 +434,7 @@ export const GeradorOmniFlash: React.FC<GeradorOmniFlashProps> = ({ customApiKey
         <div className="space-y-4 animate-in fade-in duration-300">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <Sparkle size={18} className="text-[#c5a880]" />
+              <Sparkle size={18} className="text-violet-400" />
               Biblioteca de Presets Cinematográficos
             </h2>
             <p className="text-xs text-zinc-400">Clique em qualquer preset para carregar as configurações no gerador</p>
@@ -444,16 +444,16 @@ export const GeradorOmniFlash: React.FC<GeradorOmniFlashProps> = ({ customApiKey
             {PRESET_TEMPLATES.map((preset) => (
               <div 
                 key={preset.id}
-                className="bg-[#121215] border border-white/5 hover:border-[#c5a880]/40 rounded-2xl p-5 flex flex-col justify-between space-y-4 transition-all hover:shadow-xl hover:shadow-[#c5a880]/5 group"
+                className="bg-[#121215] border border-white/5 hover:border-violet-500/40 rounded-2xl p-5 flex flex-col justify-between space-y-4 transition-all hover:shadow-xl hover:shadow-violet-600/5 group"
               >
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider bg-white/5 text-[#c5a880] px-2.5 py-1 rounded-md border border-white/5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider bg-white/5 text-violet-400 px-2.5 py-1 rounded-md border border-white/5">
                       {preset.category}
                     </span>
-                    <Film size={15} className="text-zinc-600 group-hover:text-[#c5a880] transition-colors" />
+                    <Film size={15} className="text-zinc-600 group-hover:text-violet-400 transition-colors" />
                   </div>
-                  <h3 className="font-bold text-white text-base group-hover:text-[#c5a880] transition-colors">
+                  <h3 className="font-bold text-white text-base group-hover:text-violet-400 transition-colors">
                     {preset.title}
                   </h3>
                   <p className="text-xs text-zinc-400 leading-relaxed">
@@ -469,7 +469,7 @@ export const GeradorOmniFlash: React.FC<GeradorOmniFlashProps> = ({ customApiKey
 
                 <button
                   onClick={() => handleApplyPreset(preset)}
-                  className="w-full bg-zinc-900 hover:bg-[#c5a880] text-zinc-300 hover:text-zinc-950 font-bold text-xs py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2 group-hover:shadow-md"
+                  className="w-full bg-zinc-900 hover:bg-violet-600 text-zinc-300 hover:text-zinc-950 font-bold text-xs py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2 group-hover:shadow-md"
                 >
                   <Wand2 size={14} />
                   Usar Este Preset
@@ -484,7 +484,7 @@ export const GeradorOmniFlash: React.FC<GeradorOmniFlashProps> = ({ customApiKey
         <div className="space-y-4 animate-in fade-in duration-300">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <Bookmark size={18} className="text-[#c5a880]" />
+              <Bookmark size={18} className="text-violet-400" />
               Prompts Cinematográficos Salvos
             </h2>
             <span className="text-xs text-zinc-400">{savedPrompts.length} prompt(s) no seu acervo</span>
@@ -522,7 +522,7 @@ export const GeradorOmniFlash: React.FC<GeradorOmniFlashProps> = ({ customApiKey
                     <span className="text-[10px] text-zinc-500">{saved.cameraSettings}</span>
                     <button
                       onClick={() => handleCopy(saved.englishPrompt, `saved-${index}`)}
-                      className="bg-[#c5a880]/10 hover:bg-[#c5a880] text-[#c5a880] hover:text-zinc-950 font-bold text-xs px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5"
+                      className="bg-violet-500/10 hover:bg-violet-600 text-violet-400 hover:text-zinc-950 font-bold text-xs px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5"
                     >
                       {copiedType === `saved-${index}` ? <Check size={13} /> : <Copy size={13} />}
                       Copiar Prompt
@@ -539,13 +539,13 @@ export const GeradorOmniFlash: React.FC<GeradorOmniFlashProps> = ({ customApiKey
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-in fade-in duration-300">
           
           {/* Controls Column (Left) */}
-          <div className="lg:col-span-6 space-y-6 bg-[#121215] border border-white/10 p-6 rounded-3xl shadow-xl">
+          <div className="lg:col-span-6 space-y-6 bg-black border border-violet-500/20 p-6 rounded-3xl shadow-xl">
             
             {/* Video & Multimodal File Upload Card */}
-            <div className="space-y-2 bg-gradient-to-b from-purple-950/40 to-black/80 p-5 rounded-2xl border border-purple-500/30 shadow-lg">
+            <div className="space-y-2 bg-[#0c0d12] p-5 rounded-2xl border border-violet-500/20 shadow-lg">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-black text-purple-200 uppercase tracking-wider flex items-center gap-2">
-                  <FileVideo size={16} className="text-purple-400" />
+                <label className="text-xs font-black text-zinc-200 uppercase tracking-wider flex items-center gap-2">
+                  <FileVideo size={16} className="text-violet-400" />
                   1. Enviar Vídeo de Referência (Opcional)
                 </label>
                 {uploadedMediaUrl && (
@@ -560,7 +560,7 @@ export const GeradorOmniFlash: React.FC<GeradorOmniFlashProps> = ({ customApiKey
               </div>
 
               {!uploadedMediaUrl ? (
-                <div className="relative border-2 border-dashed border-purple-500/30 hover:border-purple-400/80 rounded-2xl p-5 text-center bg-black/60 transition-all cursor-pointer group">
+                <div className="relative border-2 border-dashed border-violet-500/30 hover:border-violet-500/70 rounded-2xl p-5 text-center bg-black/60 transition-all cursor-pointer group">
                   <input
                     type="file"
                     accept="video/*,image/*"
@@ -568,12 +568,12 @@ export const GeradorOmniFlash: React.FC<GeradorOmniFlashProps> = ({ customApiKey
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                   />
                   <div className="py-2 space-y-2">
-                    <Upload size={28} className="mx-auto text-purple-400 group-hover:scale-110 transition-transform" />
+                    <Upload size={28} className="mx-auto text-violet-400 group-hover:scale-110 transition-transform" />
                     <div>
-                      <p className="text-xs font-bold text-purple-100">
+                      <p className="text-xs font-bold text-zinc-200">
                         Clique ou arraste seu vídeo de referência (MP4, WEBM, MOV)
                       </p>
-                      <p className="text-[10px] text-zinc-400 mt-1">
+                      <p className="text-[10px] text-zinc-500 mt-1">
                         A IA vai assistir ao vídeo e capturar os detalhes visuais automaticamente!
                       </p>
                     </div>
@@ -581,18 +581,18 @@ export const GeradorOmniFlash: React.FC<GeradorOmniFlashProps> = ({ customApiKey
                 </div>
               ) : (
                 <div className="space-y-3 pt-1">
-                  <div className="relative rounded-xl overflow-hidden bg-black border border-purple-500/40 max-h-52 flex items-center justify-center">
+                  <div className="relative rounded-xl overflow-hidden bg-black border border-violet-500/30 max-h-52 flex items-center justify-center">
                     {uploadedMediaType === "video" ? (
                       <video src={uploadedMediaUrl} controls className="w-full max-h-52 object-contain" />
                     ) : (
                       <img src={uploadedMediaUrl} alt="Preview" className="w-full max-h-52 object-contain" />
                     )}
                   </div>
-                  <div className="bg-purple-950/50 p-2.5 rounded-xl border border-purple-500/30 text-[11px] text-purple-200 flex items-center justify-between">
+                  <div className="bg-[#121216] p-2.5 rounded-xl border border-violet-500/20 text-[11px] text-zinc-300 flex items-center justify-between">
                     <span className="truncate font-mono font-semibold max-w-[260px]">
-                      🎥 {uploadedMediaName}
+                      {uploadedMediaName}
                     </span>
-                    <span className="text-[10px] bg-purple-500/30 text-purple-200 px-2.5 py-1 rounded font-black uppercase tracking-wider">
+                    <span className="text-[10px] bg-violet-500/20 text-violet-400 px-2.5 py-1 rounded font-black uppercase tracking-wider">
                       Vídeo Carregado
                     </span>
                   </div>
@@ -604,7 +604,7 @@ export const GeradorOmniFlash: React.FC<GeradorOmniFlashProps> = ({ customApiKey
             <div className="space-y-2.5">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-black text-zinc-200 uppercase tracking-wider flex items-center gap-1.5">
-                  <Sparkles size={14} className="text-[#c5a880]" />
+                  <Sparkles size={14} className="text-violet-400" />
                   2. Digite o que você quer na cena
                 </label>
                 
@@ -613,17 +613,17 @@ export const GeradorOmniFlash: React.FC<GeradorOmniFlashProps> = ({ customApiKey
                   type="button"
                   onClick={handleEnhancePrompt}
                   disabled={isEnhancing}
-                  className="bg-gradient-to-r from-amber-500/20 via-purple-500/20 to-amber-500/20 hover:from-amber-500/30 hover:to-purple-500/30 text-amber-300 hover:text-amber-200 border border-amber-500/30 font-bold text-xs px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 shadow-md active:scale-95"
+                  className="bg-gradient-to-r from-[#a855f7]/20 to-[#7c3aed]/20 hover:from-[#a855f7]/30 hover:to-[#7c3aed]/30 text-violet-400 hover:text-white border border-violet-500/30 font-bold text-xs px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 shadow-md active:scale-95 cursor-pointer"
                 >
                   {isEnhancing ? (
                     <>
-                      <RefreshCw size={13} className="animate-spin text-amber-300" />
+                      <RefreshCw size={13} className="animate-spin text-violet-400" />
                       <span>Melhorando Prompt...</span>
                     </>
                   ) : (
                     <>
-                      <Sparkles size={13} className="text-amber-400" />
-                      <span>✨ Melhorar Prompt com IA</span>
+                      <Sparkles size={13} className="text-violet-400" />
+                      <span>Melhorar Prompt com IA</span>
                     </>
                   )}
                 </button>
@@ -634,17 +634,17 @@ export const GeradorOmniFlash: React.FC<GeradorOmniFlashProps> = ({ customApiKey
                 onChange={(e) => setConcept(e.target.value)}
                 rows={4}
                 placeholder="Exemplo: Um carro esportivo acelerando no asfalto molhado à noite com luzes neon e chuva..."
-                className="w-full bg-black/70 border border-white/10 rounded-2xl p-4 text-xs md:text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-[#c5a880] transition-colors resize-none custom-scrollbar"
+                className="w-full bg-black/70 border border-white/10 rounded-2xl p-4 text-xs md:text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-violet-500 transition-colors resize-none custom-scrollbar"
               />
               <p className="text-[10px] text-zinc-400">
-                Escreva uma ideia simples e clique em <strong className="text-amber-300">"Melhorar Prompt com IA"</strong> para a IA enriquecer o prompt automaticamente antes de gerar!
+                Escreva uma ideia simples e clique em <strong className="text-violet-400">"Melhorar Prompt com IA"</strong> para a IA enriquecer o prompt automaticamente antes de gerar!
               </p>
             </div>
 
             {/* Basic Configs Only (Aspect Ratio & Duration) */}
             <div className="bg-black/40 p-4 rounded-2xl border border-white/5 space-y-4">
               <h3 className="text-xs font-black text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
-                <Sliders size={14} className="text-[#c5a880]" />
+                <Sliders size={14} className="text-violet-400" />
                 3. Ajustes Básicos do Vídeo
               </h3>
 
@@ -658,7 +658,7 @@ export const GeradorOmniFlash: React.FC<GeradorOmniFlashProps> = ({ customApiKey
                       type="button"
                       onClick={() => setAspectRatio("16:9")}
                       className={`py-2 text-xs font-bold rounded-lg transition-all ${
-                        aspectRatio === "16:9" ? "bg-[#c5a880] text-zinc-950 font-black shadow-md" : "text-zinc-400 hover:text-white"
+                        aspectRatio === "16:9" ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-black shadow-md" : "text-zinc-400 hover:text-white"
                       }`}
                     >
                       16:9
@@ -667,7 +667,7 @@ export const GeradorOmniFlash: React.FC<GeradorOmniFlashProps> = ({ customApiKey
                       type="button"
                       onClick={() => setAspectRatio("9:16")}
                       className={`py-2 text-xs font-bold rounded-lg transition-all ${
-                        aspectRatio === "9:16" ? "bg-[#c5a880] text-zinc-950 font-black shadow-md" : "text-zinc-400 hover:text-white"
+                        aspectRatio === "9:16" ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-black shadow-md" : "text-zinc-400 hover:text-white"
                       }`}
                     >
                       9:16
@@ -676,7 +676,7 @@ export const GeradorOmniFlash: React.FC<GeradorOmniFlashProps> = ({ customApiKey
                       type="button"
                       onClick={() => setAspectRatio("1:1")}
                       className={`py-2 text-xs font-bold rounded-lg transition-all ${
-                        aspectRatio === "1:1" ? "bg-[#c5a880] text-zinc-950 font-black shadow-md" : "text-zinc-400 hover:text-white"
+                        aspectRatio === "1:1" ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-black shadow-md" : "text-zinc-400 hover:text-white"
                       }`}
                     >
                       1:1
@@ -693,7 +693,7 @@ export const GeradorOmniFlash: React.FC<GeradorOmniFlashProps> = ({ customApiKey
                       type="button"
                       onClick={() => setDuration("5s")}
                       className={`py-2 text-xs font-bold rounded-lg transition-all ${
-                        duration === "5s" ? "bg-[#c5a880] text-zinc-950 font-black shadow-md" : "text-zinc-400 hover:text-white"
+                        duration === "5s" ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-black shadow-md" : "text-zinc-400 hover:text-white"
                       }`}
                     >
                       5s
@@ -702,7 +702,7 @@ export const GeradorOmniFlash: React.FC<GeradorOmniFlashProps> = ({ customApiKey
                       type="button"
                       onClick={() => setDuration("10s")}
                       className={`py-2 text-xs font-bold rounded-lg transition-all ${
-                        duration === "10s" ? "bg-[#c5a880] text-zinc-950 font-black shadow-md" : "text-zinc-400 hover:text-white"
+                        duration === "10s" ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-black shadow-md" : "text-zinc-400 hover:text-white"
                       }`}
                     >
                       10s
@@ -718,7 +718,7 @@ export const GeradorOmniFlash: React.FC<GeradorOmniFlashProps> = ({ customApiKey
             <button
               onClick={handleGeneratePrompt}
               disabled={isGeneratingPrompt}
-              className="w-full bg-gradient-to-r from-[#c5a880] via-[#d8be98] to-[#c5a880] text-zinc-950 font-black py-4 px-6 rounded-2xl shadow-xl shadow-[#c5a880]/15 hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-2 text-sm uppercase tracking-wider"
+              className="w-full bg-gradient-to-r from-[#a855f7] via-[#d8be98] to-[#a855f7] text-zinc-950 font-black py-4 px-6 rounded-2xl shadow-xl shadow-violet-600/15 hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-2 text-sm uppercase tracking-wider"
             >
               {isGeneratingPrompt ? (
                 <>
@@ -739,8 +739,8 @@ export const GeradorOmniFlash: React.FC<GeradorOmniFlashProps> = ({ customApiKey
           <div className="lg:col-span-6 space-y-6">
             
             {!generatedResult && !isGeneratingPrompt && (
-              <div className="bg-[#121215] border border-dashed border-white/10 rounded-3xl p-10 text-center flex flex-col items-center justify-center space-y-4 min-h-[460px]">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#c5a880]/20 to-purple-500/10 border border-[#c5a880]/20 flex items-center justify-center text-[#c5a880] shadow-lg">
+              <div className="bg-black border border-dashed border-violet-500/20 rounded-3xl p-10 text-center flex flex-col items-center justify-center space-y-4 min-h-[460px]">
+                <div className="w-16 h-16 rounded-2xl bg-violet-500/10 border border-violet-500/30 flex items-center justify-center text-violet-400 shadow-lg">
                   <Clapperboard size={28} />
                 </div>
                 <div className="space-y-1 max-w-sm">
@@ -753,9 +753,9 @@ export const GeradorOmniFlash: React.FC<GeradorOmniFlashProps> = ({ customApiKey
             )}
 
             {isGeneratingPrompt && (
-              <div className="bg-[#121215] border border-white/10 rounded-3xl p-12 text-center flex flex-col items-center justify-center space-y-4 min-h-[460px]">
+              <div className="bg-black border border-violet-500/30 rounded-3xl p-12 text-center flex flex-col items-center justify-center space-y-4 min-h-[460px]">
                 <div className="relative">
-                  <div className="w-16 h-16 rounded-2xl bg-[#c5a880]/20 border border-[#c5a880]/40 flex items-center justify-center text-[#c5a880] animate-pulse">
+                  <div className="w-16 h-16 rounded-2xl bg-violet-500/20 border border-violet-500/40 flex items-center justify-center text-violet-400 animate-pulse">
                     <Sparkles size={28} />
                   </div>
                 </div>
@@ -772,7 +772,7 @@ export const GeradorOmniFlash: React.FC<GeradorOmniFlashProps> = ({ customApiKey
               <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-300">
                 
                 {/* Main Result Card */}
-                <div className="bg-[#121215] border border-[#c5a880]/30 rounded-3xl p-6 space-y-5 shadow-2xl relative overflow-hidden">
+                <div className="bg-black border border-violet-500/30 rounded-3xl p-6 space-y-5 shadow-2xl relative overflow-hidden">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-white/10 pb-4 gap-3">
                     <div className="flex items-center gap-2">
                       <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
@@ -784,14 +784,14 @@ export const GeradorOmniFlash: React.FC<GeradorOmniFlashProps> = ({ customApiKey
                     <div className="flex items-center gap-2 shrink-0">
                       <button
                         onClick={handleSavePrompt}
-                        className="bg-white/5 hover:bg-[#c5a880]/20 text-zinc-300 hover:text-[#c5a880] border border-white/10 font-bold text-xs px-3 py-2 rounded-xl transition-all flex items-center gap-1.5"
+                        className="bg-white/5 hover:bg-violet-500/20 text-zinc-300 hover:text-violet-400 border border-white/10 font-bold text-xs px-3 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
                       >
                         <Bookmark size={14} />
                         Salvar
                       </button>
                       <button
                         onClick={() => handleCopy(generatedResult.jsonPayload, "json")}
-                        className="bg-gradient-to-r from-[#c5a880] to-[#e6d0b3] hover:brightness-110 text-zinc-950 font-black text-xs px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 shadow-lg shadow-[#c5a880]/20 active:scale-95"
+                        className="bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:brightness-110 text-zinc-950 font-black text-xs px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 shadow-lg shadow-violet-600/20 active:scale-95 cursor-pointer"
                       >
                         {copiedType === "json" ? <Check size={14} className="text-zinc-950 font-bold" /> : <Copy size={14} />}
                         {copiedType === "json" ? "JSON Copiado!" : "Copiar Prompt JSON Completo"}
@@ -802,48 +802,46 @@ export const GeradorOmniFlash: React.FC<GeradorOmniFlashProps> = ({ customApiKey
                   {/* Primary Feature: Highlighted JSON Box */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-black uppercase tracking-wider text-[#c5a880] flex items-center gap-1.5">
+                      <span className="text-xs font-black uppercase tracking-wider text-violet-400 flex items-center gap-1.5">
                         <Code size={14} />
                         Prompt JSON Completo (Copiar e Colar no Flow / Omni)
                       </span>
                     </div>
                     <div className="relative group">
-                      <pre className="bg-black p-5 rounded-2xl border border-[#c5a880]/40 text-xs font-mono text-amber-200/90 leading-relaxed overflow-x-auto custom-scrollbar max-h-96 select-all shadow-inner">
+                      <pre className="bg-[#050507] p-5 rounded-2xl border border-violet-500/30 text-xs font-mono text-violet-400 leading-relaxed overflow-x-auto custom-scrollbar max-h-96 select-all shadow-inner">
                         {generatedResult.jsonPayload}
                       </pre>
                     </div>
                   </div>
-
-
 
                   {/* Direct Omni Flash Video Generation Test */}
                   <div className="pt-3 border-t border-white/5">
                     <button
                       onClick={handleSimulateOmniFlashVideo}
                       disabled={isSimulatingVideo}
-                      className="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs py-3.5 px-4 rounded-xl transition-all shadow-lg shadow-purple-600/20 flex items-center justify-center gap-2 uppercase tracking-wider"
+                      className="w-full bg-gradient-to-r from-[#a855f7] via-[#d8be98] to-[#7c3aed] hover:brightness-110 text-zinc-950 font-black text-xs py-3.5 px-4 rounded-xl transition-all shadow-lg shadow-violet-600/20 flex items-center justify-center gap-2 uppercase tracking-wider cursor-pointer"
                     >
                       {isSimulatingVideo ? (
                         <>
-                          <RefreshCw size={15} className="animate-spin" />
+                          <RefreshCw size={15} className="animate-spin text-zinc-950" />
                           <span>Processando na Interactions API...</span>
                         </>
                       ) : (
                         <>
-                          <Play size={15} />
+                          <Play size={15} className="fill-zinc-950" />
                           <span>Testar Renderização no Gemini Omni Flash</span>
                         </>
                       )}
                     </button>
 
                     {videoStatus && (
-                      <div className="mt-3 p-3 bg-purple-950/30 border border-purple-500/30 rounded-xl text-xs text-purple-200 text-center font-medium">
+                      <div className="mt-3 p-3 bg-[#111216] border border-violet-500/30 rounded-xl text-xs text-zinc-200 text-center font-medium">
                         {videoStatus}
                       </div>
                     )}
 
                     {generatedVideoUrl && (
-                      <div className="mt-4 rounded-2xl overflow-hidden border border-purple-500/30 bg-black">
+                      <div className="mt-4 rounded-2xl overflow-hidden border border-violet-500/30 bg-black">
                         <video src={generatedVideoUrl} controls autoPlay loop className="w-full h-auto" />
                       </div>
                     )}

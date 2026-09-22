@@ -86,7 +86,7 @@ export const ProfileCompletePopup: React.FC<ProfileCompletePopupProps> = ({
           </div>
         )}
         {savedMsg && (
-          <div className="mt-4 p-3 bg-[#c5a880]/15 border border-[#c5a880]/40 rounded-xl text-[#c5a880] text-xs text-center font-medium animate-in fade-in flex items-center justify-center gap-2">
+          <div className="mt-4 p-3 bg-violet-500/15 border border-violet-500/40 rounded-xl text-violet-400 text-xs text-center font-medium animate-in fade-in flex items-center justify-center gap-2">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
             <span>{savedMsg}</span>
           </div>
@@ -105,7 +105,7 @@ export const ProfileCompletePopup: React.FC<ProfileCompletePopupProps> = ({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Seu nome completo"
-                className="w-full bg-black border border-white/10 rounded-lg py-3 pl-10 pr-4 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-[#c5a880] focus:ring-1 focus:ring-[#c5a880]/50 transition-all"
+                className="w-full bg-black border border-white/10 rounded-lg py-3 pl-10 pr-4 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-[#a855f7]/50 transition-all"
               />
             </div>
           </div>
@@ -121,7 +121,7 @@ export const ProfileCompletePopup: React.FC<ProfileCompletePopupProps> = ({
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="(88) 99999-9999"
-                className="w-full bg-black border border-white/10 rounded-lg py-3 pl-10 pr-4 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-[#c5a880] focus:ring-1 focus:ring-[#c5a880]/50 transition-all"
+                className="w-full bg-black border border-white/10 rounded-lg py-3 pl-10 pr-4 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-[#a855f7]/50 transition-all"
               />
             </div>
           </div>
@@ -134,7 +134,7 @@ export const ProfileCompletePopup: React.FC<ProfileCompletePopupProps> = ({
               <select
                 value={occupation}
                 onChange={(e) => setOccupation(e.target.value)}
-                className={`w-full bg-black border border-white/10 rounded-lg py-3 pl-4 pr-10 text-sm appearance-none focus:outline-none focus:border-[#c5a880] focus:ring-1 focus:ring-[#c5a880]/50 transition-all cursor-pointer ${
+                className={`w-full bg-black border border-white/10 rounded-lg py-3 pl-4 pr-10 text-sm appearance-none focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-[#a855f7]/50 transition-all cursor-pointer ${
                   occupation ? "text-white" : "text-zinc-600"
                 }`}
               >
@@ -164,7 +164,7 @@ export const ProfileCompletePopup: React.FC<ProfileCompletePopupProps> = ({
           <button
             type="button"
             onClick={handleSave}
-            className="px-8 py-3 bg-gradient-to-r from-[#c5a880] via-[#d2b68c] to-[#b08e58] hover:from-[#d2b68c] hover:to-[#be9b62] text-white font-extrabold text-sm rounded-full shadow-lg shadow-[#c5a880]/20 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+            className="px-8 py-3 bg-gradient-to-r from-[#a855f7] via-[#c084fc] to-[#6d28d9] hover:from-[#c084fc] hover:to-[#be9b62] text-white font-extrabold text-sm rounded-full shadow-lg shadow-violet-600/20 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
           >
             Salvar
           </button>
@@ -174,7 +174,7 @@ export const ProfileCompletePopup: React.FC<ProfileCompletePopupProps> = ({
         <button
           type="button"
           onClick={onOpenProfile}
-          className="w-full mt-5 text-center text-xs text-zinc-300 hover:text-[#c5a880] transition-colors cursor-pointer font-medium"
+          className="w-full mt-5 text-center text-xs text-zinc-300 hover:text-violet-400 transition-colors cursor-pointer font-medium"
         >
           Prefiro preencher no Perfil completo
         </button>

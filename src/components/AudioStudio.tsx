@@ -266,12 +266,12 @@ export default function AudioStudio() {
   const quotaPercent = Math.min(100, Math.round((apiInfo.characterCount / (apiInfo.characterLimit || 10000)) * 100));
 
   return (
-    <div className="flex flex-col h-full bg-[#030304] text-zinc-100 font-sans selection:bg-[#c5a880]/30 selection:text-white">
+    <div className="flex flex-col h-full bg-[#030304] text-zinc-100 font-sans selection:bg-violet-500/30 selection:text-white">
       {/* Studio Top Navigation Bar */}
       <header className="p-4 md:p-6 border-b border-white/10 bg-[#0a0a0d] flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-xl">
         <div className="flex items-center gap-3.5">
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#c5a880]/20 to-emerald-500/10 border border-[#c5a880]/40 flex items-center justify-center shrink-0 shadow-lg shadow-[#c5a880]/10">
-            <Music size={22} className="text-[#c5a880]" />
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#a855f7]/20 to-emerald-500/10 border border-violet-500/40 flex items-center justify-center shrink-0 shadow-lg shadow-violet-600/10">
+            <Music size={22} className="text-violet-400" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-white tracking-tight flex items-center gap-2.5">
@@ -298,18 +298,18 @@ export default function AudioStudio() {
             }`}
           >
             <Mic size={14} />
-            🎤 Voz & Locução (IA)
+            Voz & Locução (IA)
           </button>
           <button
             onClick={() => switchMode("music")}
             className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 ${
               creationMode === "music"
-                ? "bg-[#c5a880] text-zinc-950 font-bold shadow-lg shadow-[#c5a880]/25 scale-[1.02]"
+                ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-bold shadow-lg shadow-violet-600/25 scale-[1.02]"
                 : "text-zinc-400 hover:text-zinc-100 hover:bg-white/5"
             }`}
           >
             <Music size={14} />
-            🎵 Trilha Musical
+            Trilha Musical
           </button>
           <button
             onClick={() => switchMode("sfx")}
@@ -320,7 +320,7 @@ export default function AudioStudio() {
             }`}
           >
             <Zap size={14} />
-            ⚡ Efeitos Sonoros (SFX)
+            Efeitos Sonoros (SFX)
           </button>
           <button
             onClick={() => switchMode("auto")}
@@ -331,7 +331,7 @@ export default function AudioStudio() {
             }`}
           >
             <Sparkles size={14} />
-            ✨ IA Automática (Livre)
+            IA Automática (Livre)
           </button>
         </div>
       </header>
@@ -344,7 +344,7 @@ export default function AudioStudio() {
           
           {/* Quick Preset Ideas Chips - Dependent on Creation Mode */}
           <div className="bg-[#0b0b0e] p-4 rounded-2xl border border-white/10 shadow-lg flex flex-col gap-2.5">
-            <span className="text-xs font-bold text-[#c5a880] flex items-center justify-between uppercase tracking-wider">
+            <span className="text-xs font-bold text-violet-400 flex items-center justify-between uppercase tracking-wider">
               <span className="flex items-center gap-1.5"><Sparkles size={14} /> Ideias para {creationMode === 'voice' ? 'Locução & Fala' : creationMode === 'music' ? 'Trilhas Musicais' : creationMode === 'sfx' ? 'Efeitos SFX' : 'Áudio em Geral'}:</span>
               <span className="text-[10px] text-zinc-500 font-normal">Clique para aplicar</span>
             </span>
@@ -372,7 +372,7 @@ export default function AudioStudio() {
                 <button
                   key={idx}
                   onClick={() => applyPromptPreset(chip)}
-                  className="bg-[#141419] hover:bg-[#c5a880]/20 hover:text-[#c5a880] hover:border-[#c5a880]/40 text-xs text-zinc-300 px-3 py-1.5 rounded-xl border border-white/10 transition-all text-left leading-relaxed shadow-sm"
+                  className="bg-[#141419] hover:bg-violet-500/20 hover:text-violet-400 hover:border-violet-500/40 text-xs text-zinc-300 px-3 py-1.5 rounded-xl border border-white/10 transition-all text-left leading-relaxed shadow-sm"
                 >
                   {chip}
                 </button>
@@ -421,7 +421,7 @@ export default function AudioStudio() {
                     ) : (
                       <>
                         <Sparkles size={13} className="text-emerald-400 animate-pulse" />
-                        <span>✨ Melhorar Roteiro</span>
+                        <span>Melhorar Roteiro</span>
                       </>
                     )}
                   </button>
@@ -436,12 +436,12 @@ export default function AudioStudio() {
                   
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {[
-                      { id: "EXAVITQu4vr4xnSDxMaL", name: "Pâmela / Bella", desc: "Feminina Jovem, Comercial", icon: "👩" },
-                      { id: "pNInz6obpgDQGcFmaJgB", name: "Adam", desc: "Masculino Grave, Narração", icon: "👨" },
-                      { id: "21m00Tcm4TlvDq8ikWAM", name: "Rachel", desc: "Feminina Suave, Documentário", icon: "👩" },
-                      { id: "ErXwobaYiN019PkySvjV", name: "Antoni", desc: "Masculino Firme, Dinâmico", icon: "👨" },
-                      { id: "AZnzlk1XvdvUeBnXmlld", name: "Domi", desc: "Feminina Forte, Apresentadora", icon: "👩" },
-                      { id: "TxGEqnHWrfWFTfGW9XjX", name: "Josh", desc: "Masculino Jovem & Cativante", icon: "👨" }
+                      { id: "EXAVITQu4vr4xnSDxMaL", name: "Pâmela / Bella", desc: "Feminina Jovem, Comercial", icon: "" },
+                      { id: "pNInz6obpgDQGcFmaJgB", name: "Adam", desc: "Masculino Grave, Narração", icon: "" },
+                      { id: "21m00Tcm4TlvDq8ikWAM", name: "Rachel", desc: "Feminina Suave, Documentário", icon: "" },
+                      { id: "ErXwobaYiN019PkySvjV", name: "Antoni", desc: "Masculino Firme, Dinâmico", icon: "" },
+                      { id: "AZnzlk1XvdvUeBnXmlld", name: "Domi", desc: "Feminina Forte, Apresentadora", icon: "" },
+                      { id: "TxGEqnHWrfWFTfGW9XjX", name: "Josh", desc: "Masculino Jovem & Cativante", icon: "" }
                     ].map((v) => (
                       <button
                         key={v.id}
@@ -480,13 +480,13 @@ export default function AudioStudio() {
 
             {/* MODE 2: MUSIC & TRACK MODE */}
             {creationMode === 'music' && (
-              <div className="bg-[#c5a880]/5 p-4 rounded-xl border border-[#c5a880]/20 flex flex-col gap-3">
+              <div className="bg-violet-500/5 p-4 rounded-xl border border-violet-500/20 flex flex-col gap-3">
                 <div className="flex items-center justify-between">
-                  <label className="text-sm font-bold text-[#c5a880] flex items-center gap-2">
+                  <label className="text-sm font-bold text-violet-400 flex items-center gap-2">
                     <Music size={16} />
                     Descrição da Trilha Musical / Estilo
                   </label>
-                  <span className="text-[10px] bg-[#c5a880]/20 text-[#c5a880] font-semibold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                  <span className="text-[10px] bg-violet-500/20 text-violet-400 font-semibold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
                     Modo Trilha Ativo
                   </span>
                 </div>
@@ -496,7 +496,7 @@ export default function AudioStudio() {
 
                 <div className="relative">
                   <textarea
-                    className="w-full bg-[#050507] border border-[#c5a880]/30 rounded-xl p-3.5 pr-36 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-[#c5a880] focus:ring-1 focus:ring-[#c5a880] transition-all resize-none min-h-[110px] leading-relaxed"
+                    className="w-full bg-[#050507] border border-violet-500/30 rounded-xl p-3.5 pr-36 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-[#a855f7] transition-all resize-none min-h-[110px] leading-relaxed"
                     placeholder='Exemplo: "Trilha sonora corporativa e inspiradora para propaganda de internet fibra óptica, estilo synth-pop com piano e batida animada"'
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
@@ -505,28 +505,28 @@ export default function AudioStudio() {
                     type="button"
                     onClick={() => handleEnhancePrompt('prompt')}
                     disabled={isImprovingPrompt || !prompt.trim()}
-                    className="absolute bottom-3 right-3 px-3 py-1.5 rounded-lg bg-[#c5a880]/20 hover:bg-[#c5a880]/35 border border-[#c5a880]/40 text-[#e6c687] text-xs font-bold transition-all flex items-center gap-1.5 shadow-md disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                    className="absolute bottom-3 right-3 px-3 py-1.5 rounded-lg bg-violet-500/20 hover:bg-violet-500/35 border border-violet-500/40 text-[#e879f9] text-xs font-bold transition-all flex items-center gap-1.5 shadow-md disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                     title="Aprimorar descrição da trilha com Inteligência Artificial"
                   >
                     {isImprovingPrompt ? (
                       <>
-                        <Loader2 size={13} className="animate-spin text-[#c5a880]" />
+                        <Loader2 size={13} className="animate-spin text-violet-400" />
                         <span>Aprimorando...</span>
                       </>
                     ) : (
                       <>
-                        <Sparkles size={13} className="text-[#c5a880] animate-pulse" />
-                        <span>✨ Melhorar Trilha</span>
+                        <Sparkles size={13} className="text-violet-400 animate-pulse" />
+                        <span>Melhorar Trilha</span>
                       </>
                     )}
                   </button>
                 </div>
 
                 {/* Duration Selector for Music */}
-                <div className="pt-2 border-t border-[#c5a880]/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="pt-2 border-t border-violet-500/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div className="flex flex-col gap-0.5">
                     <label className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
-                      <Clock size={14} className="text-[#c5a880]" />
+                      <Clock size={14} className="text-violet-400" />
                       Duração exata da trilha:
                     </label>
                     <span className="text-[10px] text-emerald-400 font-medium flex items-center gap-1">
@@ -541,7 +541,7 @@ export default function AudioStudio() {
                         onClick={() => setSelectedDurationSec(sec)}
                         className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                           selectedDurationSec === sec
-                            ? "bg-[#c5a880] text-zinc-950 font-bold shadow-md shadow-[#c5a880]/20"
+                            ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-bold shadow-md shadow-violet-600/20"
                             : "bg-[#050507] text-zinc-400 border border-white/10 hover:text-white"
                         }`}
                       >
@@ -552,7 +552,7 @@ export default function AudioStudio() {
                 </div>
 
                 {/* Music Engine choice */}
-                <div className="pt-2 border-t border-[#c5a880]/10 flex items-center justify-between gap-3">
+                <div className="pt-2 border-t border-violet-500/10 flex items-center justify-between gap-3">
                   <span className="text-xs font-semibold text-zinc-300">Motor de Geração:</span>
                   <div className="flex gap-2">
                     <button
@@ -560,7 +560,7 @@ export default function AudioStudio() {
                       onClick={() => setModel("lyria-3-pro-preview")}
                       className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
                         model === "lyria-3-pro-preview"
-                          ? "bg-[#c5a880] text-zinc-950 font-bold"
+                          ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-bold"
                           : "bg-[#050507] text-zinc-400 border border-white/10"
                       }`}
                     >
@@ -610,7 +610,7 @@ export default function AudioStudio() {
                     ) : (
                       <>
                         <Sparkles size={13} className="text-cyan-400 animate-pulse" />
-                        <span>✨ Melhorar SFX</span>
+                        <span>Melhorar SFX</span>
                       </>
                     )}
                   </button>
@@ -643,9 +643,9 @@ export default function AudioStudio() {
             )}
 
             {/* Reference File Dropzone */}
-            <div className="bg-[#050507] border border-dashed border-white/15 hover:border-[#c5a880]/50 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 transition-colors">
+            <div className="bg-[#050507] border border-dashed border-white/15 hover:border-violet-500/50 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 transition-colors">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0 text-[#c5a880]">
+                <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0 text-violet-400">
                   <FileVideo size={20} />
                 </div>
                 <div>
@@ -699,7 +699,7 @@ export default function AudioStudio() {
                   error.toLowerCase().includes("quota") ||
                   error.toLowerCase().includes("429")) && (
                   <div className="pt-2 border-t border-red-500/20 flex flex-col gap-2 bg-black/40 p-3 rounded-lg border border-red-500/20">
-                    <span className="text-[11px] font-bold text-[#c5a880] flex items-center gap-1.5">
+                    <span className="text-[11px] font-bold text-violet-400 flex items-center gap-1.5">
                       <Key size={13} /> Insira sua chave para continuar gerando sem limites:
                     </span>
                     <div className="flex flex-col sm:flex-row gap-2">
@@ -720,7 +720,7 @@ export default function AudioStudio() {
             <button
               onClick={handleGenerate}
               disabled={isGenerating}
-              className="w-full bg-[#c5a880] hover:bg-[#b59870] text-zinc-950 font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2.5 shadow-xl shadow-[#c5a880]/20 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed text-sm uppercase tracking-wider"
+              className="w-full bg-[#a855f7] hover:bg-[#b59870] text-zinc-950 font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2.5 shadow-xl shadow-violet-600/20 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed text-sm uppercase tracking-wider"
             >
               {isGenerating ? (
                 <>
@@ -759,12 +759,12 @@ export default function AudioStudio() {
               {isGenerating ? (
                 <div className="flex flex-col items-center gap-5 text-center">
                   <div className="relative">
-                    <div className="w-20 h-20 border-4 border-[#c5a880]/20 rounded-full" />
-                    <div className="w-20 h-20 border-4 border-[#c5a880] border-t-transparent rounded-full animate-spin absolute inset-0" />
-                    <AudioWaveform size={28} className="absolute inset-0 m-auto text-[#c5a880] animate-pulse" />
+                    <div className="w-20 h-20 border-4 border-violet-500/20 rounded-full" />
+                    <div className="w-20 h-20 border-4 border-violet-500 border-t-transparent rounded-full animate-spin absolute inset-0" />
+                    <AudioWaveform size={28} className="absolute inset-0 m-auto text-violet-400 animate-pulse" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-[#c5a880] mb-1">
+                    <h4 className="text-sm font-bold text-violet-400 mb-1">
                       {creationMode === 'music' ? "Compondo trilha em HD (Lyria 2)..." : "Processando áudio com IA..."}
                     </h4>
                     <p className="text-xs text-zinc-400 max-w-[280px] leading-relaxed">
@@ -776,8 +776,8 @@ export default function AudioStudio() {
                 </div>
               ) : audioUrl ? (
                 <div className="w-full flex flex-col items-center gap-6 my-auto">
-                  <div className="w-28 h-28 rounded-full bg-gradient-to-tr from-[#c5a880]/20 to-emerald-500/20 border border-[#c5a880]/40 flex items-center justify-center shadow-[0_0_50px_rgba(197,168,128,0.25)]">
-                    <Music size={44} className="text-[#c5a880]" />
+                  <div className="w-28 h-28 rounded-full bg-gradient-to-tr from-[#a855f7]/20 to-emerald-500/20 border border-violet-500/40 flex items-center justify-center shadow-[0_0_50px_rgba(188, 132, 35,0.25)]">
+                    <Music size={44} className="text-violet-400" />
                   </div>
 
                   <div className="w-full bg-[#0c0c0f] p-4 rounded-xl border border-white/10 shadow-inner">
@@ -785,8 +785,8 @@ export default function AudioStudio() {
                   </div>
 
                   {warningMessage && (
-                    <div className="w-full bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs p-3 rounded-lg flex items-start gap-2 shadow-inner">
-                      <AlertCircle size={16} className="text-amber-500 shrink-0 mt-0.5" />
+                    <div className="w-full bg-violet-500/10 border border-violet-500/30 text-violet-400 text-xs p-3 rounded-lg flex items-start gap-2 shadow-inner">
+                      <AlertCircle size={16} className="text-violet-400 shrink-0 mt-0.5" />
                       <p className="leading-relaxed">{warningMessage}</p>
                     </div>
                   )}
@@ -794,7 +794,7 @@ export default function AudioStudio() {
                   <a
                     href={audioUrl}
                     download={`audio-studio-${Date.now()}.mp3`}
-                    className="w-full bg-[#c5a880] hover:bg-[#b59870] text-zinc-950 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-wider shadow-lg shadow-[#c5a880]/20 active:scale-[0.99]"
+                    className="w-full bg-[#a855f7] hover:bg-[#b59870] text-zinc-950 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-wider shadow-lg shadow-violet-600/20 active:scale-[0.99]"
                   >
                     <Download size={16} /> Baixar Arquivo em Alta Qualidade
                   </a>
@@ -817,7 +817,7 @@ export default function AudioStudio() {
           {history.length > 0 && (
             <div className="bg-[#0c0c0f] p-4 rounded-2xl border border-white/10 shadow-xl flex flex-col gap-3">
               <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
-                <History size={14} className="text-[#c5a880]" />
+                <History size={14} className="text-violet-400" />
                 Histórico Recente de Áudios ({history.length})
               </h4>
               <div className="flex flex-col gap-2 max-h-[220px] overflow-y-auto custom-scrollbar pr-1">
@@ -829,7 +829,7 @@ export default function AudioStudio() {
                     <div className="flex items-center gap-2.5 overflow-hidden">
                       <button
                         onClick={() => setAudioUrl(item.audioUrl)}
-                        className="w-8 h-8 rounded-lg bg-[#c5a880]/20 text-[#c5a880] flex items-center justify-center shrink-0 hover:scale-105 transition-transform"
+                        className="w-8 h-8 rounded-lg bg-violet-500/20 text-violet-400 flex items-center justify-center shrink-0 hover:scale-105 transition-transform"
                       >
                         <Play size={14} />
                       </button>

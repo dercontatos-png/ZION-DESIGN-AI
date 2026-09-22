@@ -7,43 +7,97 @@ import sharp from "sharp";
 import path from "path";
 import fs from "fs";
 import os from "os";
+import { initWhatsAppEndpoints } from "./src/whatsapp-server";
+import { uploadToR2, downloadFromR2, isR2Active, deleteFromR2, deleteR2Prefix, listR2Objects } from "./src/utils/r2StorageService";
+import { buildEnhancedPrompt } from "./src/utils/promptEngine";
 
-let logFileStream: fs.WriteStream | null = null;
-try {
-  const logPath = path.join(os.tmpdir(), "app.log");
-  const stream = fs.createWriteStream(logPath, { flags: "a" });
-  stream.on("error", () => {
-    logFileStream = null;
-  });
-  logFileStream = stream;
-} catch (_) {
-  logFileStream = null;
+const logPath = path.join(os.tmpdir(), "app.log");
+function syncLog(type: string, ...args: any[]) {
+  try {
+    const msg = new Date().toISOString() + " " + type + ": " + args.map(a => typeof a === "object" ? (a?.stack || JSON.stringify(a)) : String(a)).join(" ") + "\n";
+    fs.appendFileSync(logPath, msg);
+  } catch (_) {}
 }
 
 const originalConsoleError = console.error;
 console.error = function (...args) {
-  if (logFileStream && logFileStream.writable) {
-    try {
-      logFileStream.write(new Date().toISOString() + " ERROR: " + args.map(a => typeof a === "object" ? JSON.stringify(a) : String(a)).join(" ") + "\n");
-    } catch (_) {}
-  }
+  syncLog("ERROR", ...args);
   originalConsoleError.apply(console, args);
 };
 
 const originalConsoleLog = console.log;
 console.log = function (...args) {
-  if (logFileStream && logFileStream.writable) {
-    try {
-      logFileStream.write(new Date().toISOString() + " LOG: " + args.map(a => typeof a === "object" ? JSON.stringify(a) : String(a)).join(" ") + "\n");
-    } catch (_) {}
-  }
+  syncLog("LOG", ...args);
   originalConsoleLog.apply(console, args);
 };
 
+process.on("uncaughtException", (err) => {
+  syncLog("FATAL uncaughtException", err);
+});
+process.on("unhandledRejection", (reason, promise) => {
+  syncLog("FATAL unhandledRejection", promise, reason);
+});
+process.on("exit", (code) => {
+  syncLog("PROCESS EXIT", "code=" + code);
+});
+process.on("SIGINT", () => {
+  syncLog("PROCESS SIGNAL", "SIGINT");
+});
+process.on("SIGTERM", () => {
+  syncLog("PROCESS SIGNAL", "SIGTERM");
+});
+process.on("beforeExit", (code) => {
+  syncLog("PROCESS beforeExit", "code=" + code);
+});
+
 import dotenv from "dotenv";
 import { GoogleAuth } from "google-auth-library";
+import { spawn } from "child_process";
 
 dotenv.config();
+
+/** Isolated background removal using a separate worker process to completely prevent GLib/ONNX crashes in the main server */
+async function runRemoveBgWorker(base64Image: string): Promise<string> {
+  const tmpDir = os.tmpdir();
+  const id = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const inputPath = path.join(tmpDir, `in_${id}.png`);
+  const outputPath = path.join(tmpDir, `out_${id}.png`);
+
+  try {
+    const { data: rawData } = resolveImageInput(base64Image);
+    if (!rawData) return base64Image;
+
+    await fs.promises.writeFile(inputPath, Buffer.from(rawData, "base64"));
+    const workerScript = path.join(process.cwd(), "scripts", "remove_bg_worker.cjs");
+
+    await new Promise((resolve, reject) => {
+      const child = spawn(process.execPath, [workerScript, inputPath, outputPath], {
+        stdio: ["ignore", "pipe", "pipe"],
+        windowsHide: true
+      });
+
+      child.on("close", (code) => {
+        if (code === 0 && fs.existsSync(outputPath)) {
+          resolve(true);
+        } else {
+          reject(new Error(`Worker exited with code ${code}`));
+        }
+      });
+      child.on("error", reject);
+    });
+
+    if (fs.existsSync(outputPath)) {
+      const outBuffer = await fs.promises.readFile(outputPath);
+      return `data:image/png;base64,${outBuffer.toString("base64")}`;
+    }
+  } catch (err: any) {
+    console.warn("[runRemoveBgWorker] Error:", err?.message || err);
+  } finally {
+    try { if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath); } catch (_) {}
+    try { if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath); } catch (_) {}
+  }
+  return base64Image;
+}
 
 /** Helper to safely load images into Jimp, bypassing WebP format issues using sharp */
 async function readJimpWithFallback(buffer: Buffer) {
@@ -67,6 +121,21 @@ const upload = multer({
 
 /** Safely extracts and parses Service Account JSON credentials from environment variables or disk */
 function getServiceAccountCredentials(): any | null {
+  const localPath = path.join(process.cwd(), "chave-vertex.json");
+  if (fs.existsSync(localPath)) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(localPath, "utf8"));
+      if (parsed && typeof parsed === "object" && parsed.private_key) {
+        if (typeof parsed.private_key === "string") {
+          parsed.private_key = parsed.private_key.replace(/\\n/g, "\n");
+        }
+        return parsed;
+      }
+    } catch (e) {
+      console.warn("[getServiceAccountCredentials] Error reading chave-vertex.json:", e);
+    }
+  }
+
   const rawEnv = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON || process.env.GOOGLE_APPLICATION_CREDENTIALS;
   if (rawEnv && typeof rawEnv === "string") {
     let cleaned = rawEnv.trim();
@@ -109,7 +178,7 @@ async function sleepWithExponentialBackoff(
 /** Limitador de cota de geração de imagens (janela deslizante de 60s).
  *  A cota típica do Vertex AI é ~5 imagens/minuto por projeto — cada despacho
  *  real ao Google é contabilizado para nunca estourar o limite e queimar 429s. */
-const MAX_IMAGE_DISPATCHES_PER_MIN = Number(process.env.ZION_IMAGE_RATE_LIMIT || 5);
+const MAX_IMAGE_DISPATCHES_PER_MIN = Number(process.env.ZION_IMAGE_RATE_LIMIT || 30);
 const imageDispatchTimestamps: number[] = [];
 
 /** Retorna quantos ms faltam até liberar um espaço na janela de 60s (0 = pode despachar). */
@@ -119,14 +188,14 @@ function getImageQuotaWaitMs(): number {
     imageDispatchTimestamps.shift();
   }
   if (imageDispatchTimestamps.length < MAX_IMAGE_DISPATCHES_PER_MIN) return 0;
-  return 60000 - (now - imageDispatchTimestamps[0]) + 300;
+  return Math.min(10000, 60000 - (now - imageDispatchTimestamps[0]) + 300);
 }
 
 /** Aguarda espaço na janela de cota e contabiliza o próximo despacho de imagem. */
 async function waitForImageQuotaSlot(): Promise<void> {
   const waitMs = getImageQuotaWaitMs();
-  if (waitMs > 0) {
-    console.warn(`[quota] Cota de ${MAX_IMAGE_DISPATCHES_PER_MIN} imagens/minuto atingida — aguardando ${Math.ceil(waitMs / 1000)}s para liberar espaço...`);
+  if (waitMs > 0 && waitMs <= 10000) {
+    console.warn(`[quota] Controlando fluxo de requisições (${MAX_IMAGE_DISPATCHES_PER_MIN}/min) — aguardando ${Math.ceil(waitMs / 1000)}s...`);
     await new Promise(r => setTimeout(r, waitMs));
   }
   imageDispatchTimestamps.push(Date.now());
@@ -470,6 +539,197 @@ export async function overlayLogoOnImage(
   }
 }
 
+export async function harmonizeSolidBackgroundBuffer(
+  imageBuffer: Buffer,
+  requestedHexColor?: string,
+  options: { tolerance?: number; forceTargetColor?: boolean } = {}
+): Promise<Buffer> {
+  const image = sharp(imageBuffer);
+  const metadata = await image.metadata();
+  const width = metadata.width;
+  const height = metadata.height;
+  const channels = metadata.channels || 3;
+
+  if (!width || !height) return imageBuffer;
+
+  const { data: rawPixels } = await image.raw().toBuffer({ resolveWithObject: true });
+
+  const getPixel = (x: number, y: number) => {
+    const idx = (Math.min(height - 1, Math.max(0, y)) * width + Math.min(width - 1, Math.max(0, x))) * channels;
+    return { r: rawPixels[idx], g: rawPixels[idx + 1], b: rawPixels[idx + 2], a: channels === 4 ? rawPixels[idx + 3] : 255 };
+  };
+
+  const colorDist = (c1: { r: number; g: number; b: number }, c2: { r: number; g: number; b: number }) => {
+    const dr = c1.r - c2.r;
+    const dg = c1.g - c2.g;
+    const db = c1.b - c2.b;
+    return Math.sqrt(dr * dr + dg * dg + db * db);
+  };
+
+  // 1. Robust perimeter sampling (top, left, right, upper border regions)
+  const borderSamples: { r: number; g: number; b: number }[] = [];
+  for (let x = 0; x < width; x += 5) {
+    borderSamples.push(getPixel(x, 0));
+    borderSamples.push(getPixel(x, 4));
+  }
+  for (let y = 0; y < Math.floor(height * 0.75); y += 5) {
+    borderSamples.push(getPixel(0, y));
+    borderSamples.push(getPixel(4, y));
+    borderSamples.push(getPixel(width - 1, y));
+    borderSamples.push(getPixel(width - 5, y));
+  }
+
+  // Filter out any bright non-background pixels (e.g. text, logos, white clothes)
+  const darkSamples = borderSamples.filter((s) => (s.r + s.g + s.b) / 3 < 120);
+  const validSamples = darkSamples.length > 10 ? darkSamples : borderSamples;
+
+  let sumR = 0, sumG = 0, sumB = 0;
+  validSamples.forEach((s) => { sumR += s.r; sumG += s.g; sumB += s.b; });
+  const detectedBgRGB = {
+    r: Math.round(sumR / validSamples.length),
+    g: Math.round(sumG / validSamples.length),
+    b: Math.round(sumB / validSamples.length),
+  };
+
+  console.log(`[SolidBgEngine] Detected Perimeter Background: RGB(${detectedBgRGB.r}, ${detectedBgRGB.g}, ${detectedBgRGB.b})`);
+
+  // 2. Parse requested color
+  let requestedRGB: { r: number; g: number; b: number } | null = null;
+  if (requestedHexColor && requestedHexColor !== "transparent") {
+    let hex = requestedHexColor.replace("#", "").trim();
+    if (hex.length === 3) hex = hex.split("").map((c) => c + c).join("");
+    if (hex.length === 6) {
+      requestedRGB = {
+        r: parseInt(hex.substring(0, 2), 16),
+        g: parseInt(hex.substring(2, 4), 16),
+        b: parseInt(hex.substring(4, 6), 16),
+      };
+    }
+  }
+
+  // Target output color:
+  // If user passed a color that is close to the detected color OR explicitly set, use it.
+  // If user passed a stale default (e.g. #000000 on a navy image), preserve the true detected background hue.
+  let targetOutputRGB = detectedBgRGB;
+  if (requestedRGB) {
+    const distToDetected = colorDist(requestedRGB, detectedBgRGB);
+    if (distToDetected < 50 || options.forceTargetColor) {
+      targetOutputRGB = requestedRGB;
+    } else {
+      console.log(`[SolidBgEngine] Requested hex (${requestedHexColor}) differs significantly from detected image background. Using detected image background RGB(${detectedBgRGB.r}, ${detectedBgRGB.g}, ${detectedBgRGB.b}) to avoid corruption.`);
+    }
+  }
+
+  const tolerance = options.tolerance || 30;
+  const hardTolerance = tolerance * 0.8;
+  const softTolerance = tolerance * 1.3;
+
+  const isBg = new Uint8Array(width * height);
+  const queue = new Int32Array(width * height);
+  let head = 0;
+  let tail = 0;
+
+  const pushPixel = (x: number, y: number) => {
+    const pos = y * width + x;
+    if (isBg[pos] === 0) {
+      const px = getPixel(x, y);
+      const dist = colorDist(px, detectedBgRGB);
+      if (dist <= softTolerance) {
+        isBg[pos] = 1;
+        queue[tail++] = pos;
+      }
+    }
+  };
+
+  // Seed from borders
+  for (let x = 0; x < width; x++) {
+    pushPixel(x, 0);
+    pushPixel(x, height - 1);
+  }
+  for (let y = 0; y < height; y++) {
+    pushPixel(0, y);
+    pushPixel(width - 1, y);
+  }
+
+  // BFS flood-fill from exterior inward
+  while (head < tail) {
+    const pos = queue[head++];
+    const x = pos % width;
+    const y = Math.floor(pos / width);
+    const currPx = getPixel(x, y);
+
+    const neighbors = [
+      x > 0 ? pos - 1 : -1,
+      x < width - 1 ? pos + 1 : -1,
+      y > 0 ? pos - width : -1,
+      y < height - 1 ? pos + width : -1,
+    ];
+
+    for (let i = 0; i < 4; i++) {
+      const nPos = neighbors[i];
+      if (nPos !== -1 && isBg[nPos] === 0) {
+        const nx = nPos % width;
+        const ny = Math.floor(nPos / width);
+        const nPx = getPixel(nx, ny);
+
+        const distToDetected = colorDist(nPx, detectedBgRGB);
+        const localGrad = colorDist(nPx, currPx);
+
+        if (distToDetected <= softTolerance && localGrad <= 25) {
+          isBg[nPos] = 1;
+          queue[tail++] = nPos;
+        }
+      }
+    }
+  }
+
+  // Handle enclosed background holes in letters
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 1; x < width - 1; x++) {
+      const pos = y * width + x;
+      if (isBg[pos] === 0) {
+        const px = getPixel(x, y);
+        const dist = colorDist(px, detectedBgRGB);
+        if (dist <= 16) {
+          isBg[pos] = 1;
+        }
+      }
+    }
+  }
+
+  const outputBuffer = Buffer.from(rawPixels);
+  let cleanedCount = 0;
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const pos = y * width + x;
+      const idx = pos * channels;
+
+      if (isBg[pos] === 1) {
+        const px = { r: rawPixels[idx], g: rawPixels[idx + 1], b: rawPixels[idx + 2] };
+        const dist = colorDist(px, detectedBgRGB);
+
+        if (dist <= hardTolerance) {
+          outputBuffer[idx] = targetOutputRGB.r;
+          outputBuffer[idx + 1] = targetOutputRGB.g;
+          outputBuffer[idx + 2] = targetOutputRGB.b;
+          cleanedCount++;
+        } else if (dist <= softTolerance) {
+          const factor = (softTolerance - dist) / (softTolerance - hardTolerance);
+          outputBuffer[idx] = Math.round(targetOutputRGB.r * factor + px.r * (1 - factor));
+          outputBuffer[idx + 1] = Math.round(targetOutputRGB.g * factor + px.g * (1 - factor));
+          outputBuffer[idx + 2] = Math.round(targetOutputRGB.b * factor + px.b * (1 - factor));
+          cleanedCount++;
+        }
+      }
+    }
+  }
+
+  console.log(`[SolidBgEngine] Successfully cleaned ${cleanedCount} background pixels (${Math.round((cleanedCount / (width * height)) * 100)}% of image). Subject and typography 100% preserved.`);
+
+  return sharp(outputBuffer, { raw: { width, height, channels } }).png({ compressionLevel: 8 }).toBuffer();
+}
+
 export async function applyUpscaleAndRefinement(
   base64Image: string,
   targetSize: string,
@@ -493,7 +753,7 @@ export async function applyUpscaleAndRefinement(
         textEdges?: number;
       };
     };
-  }
+  } | string
 ): Promise<string> {
   try {
     const { data: base64Data, mimeType } = resolveImageInput(base64Image);
@@ -517,124 +777,24 @@ export async function applyUpscaleAndRefinement(
 
     console.log(`[applyUpscaleAndRefinement] Non-destructive refinement for size ${targetSize} (${pW}x${pH} -> max ${targetWidth}px)...`);
 
-    // 1. Solid Vector-Like Background Harmonization (100% uniform, zero pixel noise, zero block artifacts)
-    const parseHexColor = (hexStr?: string) => {
-      if (!hexStr || typeof hexStr !== "string" || hexStr === "transparent") return null;
-      let hex = hexStr.replace("#", "").trim();
-      if (hex.length === 3) hex = hex.split("").map(c => c + c).join("");
-      if (hex.length === 6) {
-        return {
-          r: parseInt(hex.substring(0, 2), 16),
-          g: parseInt(hex.substring(2, 4), 16),
-          b: parseInt(hex.substring(4, 6), 16)
-        };
-      }
-      return null;
-    };
+    const parsedOptions = typeof options === "string" ? { corDominante: options } : options || {};
+    const userHex = parsedOptions.corDominante?.trim();
+    const effectiveHex = userHex && userHex !== "transparent" ? userHex : (parsedOptions.analysis?.dominantBackgroundHex || "");
 
-    // STRICT USER COLOR PRIORITY: user requested corDominante strictly overrides analysis color!
-    const userHex = options?.corDominante?.trim();
-    const parsedUserColor = parseHexColor(userHex);
-    const parsedAnalysisColor = parseHexColor(options?.analysis?.dominantBackgroundHex);
-    let targetColorRgb = parsedUserColor || parsedAnalysisColor;
-
-    // First upscale to target size if targetWidth > pW so pixel processing is natively at 1K, 2K, or 4K resolution!
     let workingBuffer = buffer;
-    if (targetWidth > pW) {
-      const targetHeight = Math.round(pH * (targetWidth / pW));
-      workingBuffer = await sharp(buffer)
-        .resize(targetWidth, targetHeight, {
-          kernel: sharp.kernel.lanczos3,
-          fastShrinkOnLoad: false
-        })
-        .toBuffer();
+
+    // Apply Edge-Connected Solid Background Harmonization ONLY when a solid background is explicitly requested or detected
+    if (effectiveHex || parsedOptions.analysis?.hasSolidBackground) {
+      try {
+        console.log(`[applyUpscaleAndRefinement] Applying Edge-Connected Solid Background Harmonization (${effectiveHex || "auto-detect"})...`);
+        workingBuffer = await harmonizeSolidBackgroundBuffer(workingBuffer, effectiveHex);
+        console.log(`[applyUpscaleAndRefinement] Solid background successfully harmonized without affecting subject details.`);
+      } catch (solidErr: any) {
+        console.warn("[applyUpscaleAndRefinement] Solid background harmonization error:", solidErr?.message || solidErr);
+      }
     }
 
     let pipeline = sharp(workingBuffer);
-    const isExplicitSolid = (options as any)?.isSolidBackgroundOnly === true || options?.analysis?.backgroundType === "solid_color" || !!options?.corDominante;
-
-    // Universal Background Noise Denoising & RGB Color Harmonization Engine
-    if (targetColorRgb || options?.improve) {
-      try {
-        const { data: rawPixels, info: rawInfo } = await sharp(workingBuffer).raw().toBuffer({ resolveWithObject: true });
-        const curChannels = rawInfo.channels;
-        const curW = rawInfo.width;
-        const curH = rawInfo.height;
-
-        const getPixelRgb = (x: number, y: number) => {
-          const idx = (Math.min(curH - 1, Math.max(0, y)) * curW + Math.min(curW - 1, Math.max(0, x))) * curChannels;
-          return { r: rawPixels[idx], g: rawPixels[idx + 1], b: rawPixels[idx + 2] };
-        };
-
-        const colorDist = (c1: { r: number; g: number; b: number }, c2: { r: number; g: number; b: number }) => {
-          const dr = c1.r - c2.r;
-          const dg = c1.g - c2.g;
-          const db = c1.b - c2.b;
-          return Math.sqrt(dr * dr + dg * dg + db * db);
-        };
-
-        // Sample border points around the frame to detect background color
-        const borderSamples: { r: number; g: number; b: number }[] = [
-          getPixelRgb(5, 5),
-          getPixelRgb(Math.round(curW / 2), 5),
-          getPixelRgb(curW - 6, 5),
-          getPixelRgb(5, Math.round(curH / 2)),
-          getPixelRgb(curW - 6, Math.round(curH / 2)),
-          getPixelRgb(5, curH - 6),
-          getPixelRgb(Math.round(curW / 2), curH - 6),
-          getPixelRgb(curW - 6, curH - 6)
-        ];
-
-        // Smart Chroma Difference Vectorizer
-        // Completely preserves fine text (@ handle, icons, typography) and logos with zero box artifacts
-        let sumR = 0, sumG = 0, sumB = 0;
-        borderSamples.forEach(s => { sumR += s.r; sumG += s.g; sumB += s.b; });
-        const targetRGB = targetColorRgb || {
-          r: Math.round(sumR / borderSamples.length),
-          g: Math.round(sumG / borderSamples.length),
-          b: Math.round(sumB / borderSamples.length)
-        };
-
-        const outputBuffer = Buffer.from(rawPixels);
-        let harmonizedCount = 0;
-
-        for (let y = 0; y < curH; y++) {
-          for (let x = 0; x < curW; x++) {
-            const idx = (y * curW + x) * curChannels;
-            const px = { r: rawPixels[idx], g: rawPixels[idx + 1], b: rawPixels[idx + 2] };
-
-            // Calculate minimum color distance to target background and border samples
-            let minDist = colorDist(px, targetRGB);
-            for (const sample of borderSamples) {
-              const sd = colorDist(px, sample);
-              if (sd < minDist) minDist = sd;
-            }
-
-            // Pure background region thresholding
-            if (minDist <= 32) {
-              harmonizedCount++;
-              outputBuffer[idx] = targetRGB.r;
-              outputBuffer[idx + 1] = targetRGB.g;
-              outputBuffer[idx + 2] = targetRGB.b;
-            } else if (minDist <= 45) {
-              // Smooth anti-aliased transition for background-adjacent pixels
-              harmonizedCount++;
-              const factor = (45 - minDist) / 13;
-              outputBuffer[idx] = Math.round(targetRGB.r * factor + px.r * (1 - factor));
-              outputBuffer[idx + 1] = Math.round(targetRGB.g * factor + px.g * (1 - factor));
-              outputBuffer[idx + 2] = Math.round(targetRGB.b * factor + px.b * (1 - factor));
-            }
-          }
-        }
-
-        if (harmonizedCount > 0) {
-          pipeline = sharp(outputBuffer, { raw: { width: curW, height: curH, channels: curChannels } });
-          console.log(`[applyUpscaleAndRefinement] Vectorized 100% silky smooth solid background (${harmonizedCount} pixels) to target RGB (${targetRGB.r}, ${targetRGB.g}, ${targetRGB.b}).`);
-        }
-      } catch (toneErr: any) {
-        console.warn("[applyUpscaleAndRefinement] Background pixel harmonization error:", toneErr?.message || toneErr);
-      }
-    }
 
     // Apply high quality Lanczos3 resize for high-resolution target sizes
     const currentMeta = await pipeline.metadata();
@@ -647,7 +807,7 @@ export async function applyUpscaleAndRefinement(
     }
 
     // Apply subtle non-destructive detail sharpening for crisp edges and text
-    pipeline = pipeline.sharpen({ sigma: 0.8 });
+    pipeline = pipeline.sharpen({ sigma: 0.65, m1: 0.5, m2: 2.0 });
 
     // Output uncompressed PNG buffer without artificial filters
     let processedBuffer = await pipeline
@@ -672,27 +832,22 @@ export async function applyUpscaleAndRefinement(
 export async function fixSolidBackground(
   baseImageBase64: string,
   targetHexColor: string,
-  tolerance: number = 240
+  tolerance: number = 30
 ): Promise<string> {
   try {
-    if (!baseImageBase64 || !targetHexColor || targetHexColor === "transparent") {
+    if (!baseImageBase64 || targetHexColor === "transparent") {
       return baseImageBase64;
     }
 
-    console.log("[fixSolidBackground] Removing background entirely to leave only elements and text...");
-    const { removeBackground } = await import('@imgly/background-removal-node');
-
     const { data: base64Data, mimeType } = resolveImageInput(baseImageBase64);
-    const buffer = Buffer.from(base64Data, "base64");
-    const blob = new Blob([buffer], { type: mimeType || "image/jpeg" });
+    if (!base64Data) return baseImageBase64;
 
-    const resultBlob = await removeBackground(blob);
-    const arrayBuffer = await resultBlob.arrayBuffer();
-    const transparentBuffer = Buffer.from(arrayBuffer);
+    const inputBuffer = Buffer.from(base64Data, "base64");
+    const cleanedBuffer = await harmonizeSolidBackgroundBuffer(inputBuffer, targetHexColor, { tolerance });
 
-    return `data:image/png;base64,${transparentBuffer.toString("base64")}`;
-  } catch (err) {
-    console.error("[fixSolidBackground] Error removing background:", err);
+    return `data:image/png;base64,${cleanedBuffer.toString("base64")}`;
+  } catch (err: any) {
+    console.error("[fixSolidBackground] Error creating solid background:", err?.message || err);
     return baseImageBase64;
   }
 }
@@ -711,6 +866,14 @@ export async function saveImageToDisk(rawData: string, rawMime: string): Promise
 
     await fs.promises.writeFile(filepath, buffer);
     console.log(`[saveImageToDisk] Original native image saved to ${filepath} (${buffer.length} bytes / ${(buffer.length / 1024 / 1024).toFixed(2)} MB).`);
+
+    // Mirror generated image to Cloudflare R2
+    if (isR2Active()) {
+      uploadToR2(`generated-images/${filename}`, buffer, rawMime).catch((r2Err) => {
+        console.warn(`[saveImageToDisk] Cloudflare R2 upload warning for ${filename}:`, r2Err?.message || r2Err);
+      });
+    }
+
     return `/generated-images/${filename}`;
   } catch (err) {
     console.error("[saveImageToDisk] Error saving image:", err);
@@ -751,12 +914,10 @@ async function executeImageGenerationWithFallbacks(
   seedUsuario?: string | number | null
 ): Promise<{ imageBase64Url: string; rawData: string; rawMime: string; modelUsed: string }> {
 
-  // Falha rápida com mensagem clara quando a janela de cota (5 imagens/min) está cheia,
-  // em vez de tentar gerar e acumular erros 429 do Google.
+  // Controle suave de fluxo para evitar thundering herd
   const entryWaitMs = getImageQuotaWaitMs();
-  if (entryWaitMs > 0) {
-    const secs = Math.ceil(entryWaitMs / 1000);
-    throw new Error(`Cota de geração de imagens atingida (${MAX_IMAGE_DISPATCHES_PER_MIN} por minuto). Aguarde ${secs}s antes de tentar novamente.`);
+  if (entryWaitMs > 0 && entryWaitMs <= 10000) {
+    await new Promise(r => setTimeout(r, entryWaitMs));
   }
 
   let mappedModelId = modelId;
@@ -775,15 +936,34 @@ async function executeImageGenerationWithFallbacks(
   const candidateClients = getCandidateClients(customApiKey);
   candidateClients.push({ name: "Primary Client", instance: client });
 
-  // Modelos Nano Banana vivem no endpoint "global" — prioriza clients globais
-  // para evitar que o us-central1 "consuma" a geração com fallback de 1024px.
-  const isNanoBanana = (mappedModelId || "").includes("gemini-3-pro-image") || (mappedModelId || "").includes("gemini-3.1-flash-image") || (mappedModelId || "").includes("nano-banana");
-  if (isNanoBanana && candidateClients.length > 1) {
+  // Modelos Nano Banana vivem no endpoint "global" — prioriza clients com credenciais corporativas
+  // (Service Account Vertex AI global tem cota corporativa verificada no GCP: design-builder-682800-6bb).
+  if (candidateClients.length > 1) {
     candidateClients.sort((a, b) => {
-      const aGlobal = a.name.toLowerCase().includes("global");
-      const bGlobal = b.name.toLowerCase().includes("global");
-      if (aGlobal && !bGlobal) return -1;
-      if (!aGlobal && bGlobal) return 1;
+      // 1. Service Account Vertex AI global oficial do sistema (cota verificada e ativa)
+      const aSaGlobal = a.name.toLowerCase().includes("service account") && a.name.toLowerCase().includes("global");
+      const bSaGlobal = b.name.toLowerCase().includes("service account") && b.name.toLowerCase().includes("global");
+      if (aSaGlobal && !bSaGlobal) return -1;
+      if (!aSaGlobal && bSaGlobal) return 1;
+
+      // 2. Custom JSON Service Account global (se fornecido pelo usuário via JSON)
+      const aCustomJsonGlobal = a.name.toLowerCase().includes("custom json") && a.name.toLowerCase().includes("global");
+      const bCustomJsonGlobal = b.name.toLowerCase().includes("custom json") && b.name.toLowerCase().includes("global");
+      if (aCustomJsonGlobal && !bCustomJsonGlobal) return -1;
+      if (!aCustomJsonGlobal && bCustomJsonGlobal) return 1;
+
+      // 3. Service Account regional
+      const aSa = a.name.toLowerCase().includes("service account");
+      const bSa = b.name.toLowerCase().includes("service account");
+      if (aSa && !bSa) return -1;
+      if (!aSa && bSa) return 1;
+
+      // 4. Clientes com chave API de desenvolvedor
+      const aIsCustom = a.name.toLowerCase().includes("custom");
+      const bIsCustom = b.name.toLowerCase().includes("custom");
+      if (aIsCustom && !bIsCustom) return -1;
+      if (!aIsCustom && bIsCustom) return 1;
+
       return 0;
     });
   }
@@ -794,9 +974,11 @@ async function executeImageGenerationWithFallbacks(
     const curClient = cItem.instance;
 
     // High quality image generation strategies: Gemini 3 Pro Image (Nano Banana Pro) first,
-    // followed by Imagen 3 models as regional fallbacks with independent quotas.
+    // followed by Gemini 3.1 Flash / 2.5 Flash, followed by Imagen 3 models
     const baseStrategies = [
       { name: "gemini-3-pro-image", type: "generateContent" },
+      { name: "gemini-3.1-flash-image", type: "generateContent" },
+      { name: "gemini-2.5-flash-image", type: "generateContent" },
       { name: "imagen-3.0-generate-002", type: "generateImages" },
       { name: "imagen-3.0-generate-001", type: "generateImages" },
       { name: "imagen-3.0-fast-generate-001", type: "generateImages" }
@@ -830,18 +1012,36 @@ async function executeImageGenerationWithFallbacks(
 
         const runStrategy = async (): Promise<any> => {
           if (strategy.type === "generateContent") {
-            const apiImageSize = sizeSelected === "4K" ? "2K" : (sizeSelected === "2K" ? "2K" : "1K");
-            return curClient.models.generateContent({
-              model: strategy.name,
-              contents: [{ role: "user", parts }],
-              config: {
-                responseModalities: ["TEXT", "IMAGE"],
-                imageConfig: {
-                  aspectRatio: selectedRatio,
-                  imageSize: apiImageSize
+            const apiImageSize = sizeSelected === "4K" ? "4K" : (sizeSelected === "2K" ? "2K" : "1K");
+            try {
+              return await curClient.models.generateContent({
+                model: strategy.name,
+                contents: [{ role: "user", parts }],
+                config: {
+                  responseModalities: ["TEXT", "IMAGE"],
+                  imageConfig: {
+                    aspectRatio: selectedRatio,
+                    imageSize: apiImageSize
+                  }
                 }
+              });
+            } catch (err4k: any) {
+              if (apiImageSize === "4K") {
+                console.warn("[generate] Native 4K request failed or quota exceeded, falling back to 2K native + super-sampling upscale...", err4k?.message || err4k);
+                return await curClient.models.generateContent({
+                  model: strategy.name,
+                  contents: [{ role: "user", parts }],
+                  config: {
+                    responseModalities: ["TEXT", "IMAGE"],
+                    imageConfig: {
+                      aspectRatio: selectedRatio,
+                      imageSize: "2K"
+                    }
+                  }
+                });
               }
-            });
+              throw err4k;
+            }
           }
           const imagenPrompt = promptText.length > 480 
             ? (promptText.substring(0, 470).trim())
@@ -864,18 +1064,22 @@ async function executeImageGenerationWithFallbacks(
         // Ao distribuir entre múltiplas regiões, cada uma tem cota separada,
         // então se todas as tentativas falharem aqui, o próximo client/região é tentado.
         let res: any;
-        const isPrimaryNano4K = isNanoBanana && (sizeSelected === "4K" || sizeSelected === "2K");
-        const maxAttempts = isPrimaryNano4K && strategy.name === mappedModelId ? 6 : 4;
+        const isPrimaryNano4K = (sizeSelected === "4K" || sizeSelected === "2K");
+        const maxAttempts = isPrimaryNano4K && strategy.name === mappedModelId ? 4 : 2;
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-          await waitForImageQuotaSlot();
           try {
             res = await Promise.race([runStrategy(), timeoutPromise]);
             break;
           } catch (attemptErr: any) {
             const attemptMsg = attemptErr?.message || String(attemptErr);
+            const isZeroQuota = attemptMsg.includes("limit: 0") || attemptMsg.includes("FreeTier") || attemptMsg.includes("limit reached");
+            if (isZeroQuota) {
+              console.warn(`[generate] ${strategy.name} no cliente '${cItem.name}' tem limite 0 (Free Tier). Failover instantâneo para o próximo cliente...`);
+              break;
+            }
             const isRateLimit = attemptMsg.includes("429") || attemptMsg.includes("RESOURCE_EXHAUSTED") || attemptMsg.includes("Resource exhausted") || attemptMsg.includes("depleted");
             if (attempt < maxAttempts && isRateLimit) {
-              const sleptMs = await sleepWithExponentialBackoff(attempt, 1000, 32000);
+              const sleptMs = await sleepWithExponentialBackoff(attempt, 800, 8000);
               console.warn(`[generate] ${strategy.name} 429/limit on ${cItem.name} (attempt ${attempt}/${maxAttempts}). Retried after ${(sleptMs / 1000).toFixed(1)}s backoff.`);
               continue;
             }
@@ -963,10 +1167,30 @@ async function executeGenerateContentWithFallbacks(
   // Vertex AI endpoint or Developer API Key. Prioritize global and API Key clients first
   // to avoid regional 404 round-trips.
   candidateClients.sort((a, b) => {
-    const aIsGlobalOrKey = a.name.toLowerCase().includes("global") || a.name.toLowerCase().includes("api key") || a.name.toLowerCase().includes("primary");
-    const bIsGlobalOrKey = b.name.toLowerCase().includes("global") || b.name.toLowerCase().includes("api key") || b.name.toLowerCase().includes("primary");
-    if (aIsGlobalOrKey && !bIsGlobalOrKey) return -1;
-    if (!aIsGlobalOrKey && bIsGlobalOrKey) return 1;
+    // 1. Prioritize official Service Account with verified corporate quota
+    const aSaGlobal = a.name.toLowerCase().includes("service account") && a.name.toLowerCase().includes("global");
+    const bSaGlobal = b.name.toLowerCase().includes("service account") && b.name.toLowerCase().includes("global");
+    if (aSaGlobal && !bSaGlobal) return -1;
+    if (!aSaGlobal && bSaGlobal) return 1;
+
+    // 2. Custom JSON Service Account global
+    const aCustomJsonGlobal = a.name.toLowerCase().includes("custom json") && a.name.toLowerCase().includes("global");
+    const bCustomJsonGlobal = b.name.toLowerCase().includes("custom json") && b.name.toLowerCase().includes("global");
+    if (aCustomJsonGlobal && !bCustomJsonGlobal) return -1;
+    if (!aCustomJsonGlobal && bCustomJsonGlobal) return 1;
+
+    // 3. Other Service Accounts
+    const aSa = a.name.toLowerCase().includes("service account");
+    const bSa = b.name.toLowerCase().includes("service account");
+    if (aSa && !bSa) return -1;
+    if (!aSa && bSa) return 1;
+
+    // 4. Developer API keys (try last so rate limits don't block the fast pipeline)
+    const aIsCustom = a.name.toLowerCase().includes("custom");
+    const bIsCustom = b.name.toLowerCase().includes("custom");
+    if (aIsCustom && !bIsCustom) return 1;
+    if (!aIsCustom && bIsCustom) return -1;
+
     return 0;
   });
 
@@ -1083,51 +1307,61 @@ function getImageDimensions(buffer: Buffer, mimeType: string): { width: number; 
 }
 
 function getResolutionDimensions(resolution: string, aspectRatio: string): { width: number; height: number } {
-  const is4K = resolution === "4K";
-  const is2K = resolution === "2K";
+  let normRes = (resolution || "1K").toUpperCase().trim();
+  let normRatio = (aspectRatio || "1:1").trim();
+  
+  // Guard against swapped arguments (e.g. ("1:1", "2K") or ("4:5", "4K"))
+  if ((normRes.includes(":") || /^[0-9]+\/[0-9]+$/.test(normRes)) && (normRatio.includes("K") || normRatio.includes("HD") || normRatio === "1K" || normRatio === "2K" || normRatio === "4K")) {
+    const tmp = normRes;
+    normRes = normRatio;
+    normRatio = tmp;
+  }
+  const is4K = normRes === "4K";
+  const is2K = normRes === "2K";
   
   if (is4K) {
-    switch (aspectRatio) {
-      case "1:1": return { width: 4096, height: 4096 };
-      case "16:9": return { width: 4096, height: 2304 };
-      case "9:16": return { width: 2304, height: 4096 };
-      case "4:3": return { width: 4096, height: 3072 };
-      case "3:4": return { width: 3072, height: 4096 };
-      case "3:2": return { width: 4096, height: 2730 };
-      case "2:3": return { width: 2730, height: 4096 };
-      case "4:5": return { width: 3276, height: 4096 };
-      case "5:4": return { width: 4096, height: 3276 };
-      default: return { width: 4096, height: 4096 };
+    switch (normRatio) {
+      case "1:1": return { width: 3840, height: 3840 };
+      case "4:5": return { width: 3072, height: 3840 };
+      case "9:16": return { width: 2160, height: 3840 };
+      case "16:9": return { width: 3840, height: 2160 };
+      case "4:3": return { width: 3840, height: 2880 };
+      case "3:4": return { width: 2880, height: 3840 };
+      case "3:2": return { width: 3840, height: 2560 };
+      case "2:3": return { width: 2560, height: 3840 };
+      case "5:4": return { width: 3840, height: 3072 };
+      default: return { width: 3840, height: 3840 };
     }
   } else if (is2K) {
-    switch (aspectRatio) {
+    switch (normRatio) {
       case "1:1": return { width: 2048, height: 2048 };
-      case "16:9": return { width: 2048, height: 1152 };
-      case "9:16": return { width: 1152, height: 2048 };
+      case "4:5": return { width: 2048, height: 2560 };
+      case "9:16": return { width: 1440, height: 2560 };
+      case "16:9": return { width: 2560, height: 1440 };
       case "4:3": return { width: 2048, height: 1536 };
       case "3:4": return { width: 1536, height: 2048 };
       case "3:2": return { width: 2048, height: 1365 };
       case "2:3": return { width: 1365, height: 2048 };
-      case "4:5": return { width: 1638, height: 2048 };
       case "5:4": return { width: 2048, height: 1638 };
       default: return { width: 2048, height: 2048 };
     }
   } else {
-    // 1K
-    switch (aspectRatio) {
+    // 1K standard dimensions
+    switch (normRatio) {
       case "1:1": return { width: 1024, height: 1024 };
-      case "16:9": return { width: 1024, height: 576 };
-      case "9:16": return { width: 576, height: 1024 };
+      case "4:5": return { width: 1080, height: 1350 };
+      case "9:16": return { width: 1080, height: 1920 };
+      case "16:9": return { width: 1920, height: 1080 };
       case "4:3": return { width: 1024, height: 768 };
       case "3:4": return { width: 768, height: 1024 };
       case "3:2": return { width: 1024, height: 682 };
       case "2:3": return { width: 682, height: 1024 };
-      case "4:5": return { width: 819, height: 1024 };
       case "5:4": return { width: 1024, height: 819 };
       default: return { width: 1024, height: 1024 };
     }
   }
 }
+
 
 async function upscaleImage(base64Image: string, targetWidth: number): Promise<{ image: string; width: number; height: number }> {
   try {
@@ -1245,19 +1479,2046 @@ async function startServer() {
     }
   } catch (_) {}
   app.use("/generated-images", express.static(publicGenDir));
-
-  // Initialize WhatsApp Bot routes (locally only, as Vercel is stateless and read-only)
-  if (!process.env.VERCEL) {
-    try {
-      const { initWhatsAppEndpoints } = await import("./src/whatsapp-server");
-      initWhatsAppEndpoints(app);
-    } catch (wsErr) {
-      console.warn("[WhatsApp] Failed to initialize WhatsApp endpoints:", wsErr);
+  const publicUploadsDir = path.join(process.cwd(), "public", "uploads");
+  try {
+    if (!fs.existsSync(publicUploadsDir)) {
+      fs.mkdirSync(publicUploadsDir, { recursive: true });
     }
+  } catch (_) {}
+  app.use("/uploads", express.static(publicUploadsDir));
+  const designBuilderFilesDir = path.join(process.cwd(), "public", "Design Builder1 2_files");
+  app.use([
+    "/agent/Design Builder1 2_files",
+    "/agent/Design%20Builder1%202_files",
+    "/Design Builder1 2_files",
+    "/Design%20Builder1%202_files",
+    "/agent/Design_Builder1_2_files",
+    "/Design_Builder1_2_files"
+  ], express.static(designBuilderFilesDir));
+
+  // Secure Storage Download Endpoint
+  const STORAGE_BASE_DIR = path.resolve(process.cwd(), "local_storage");
+  app.get(["/api/bff/api/storage/download", "/api/storage/download"], async (req, res) => {
+    try {
+      const key = req.query.key;
+      if (!key || typeof key !== "string") {
+        return res.status(400).json({ error: "Missing required query parameter: key" });
+      }
+
+      const cleanKey = key.replace(/^[/\\]+/, "");
+      const targetPath = path.resolve(STORAGE_BASE_DIR, cleanKey);
+
+      // Prevent directory traversal: must be strictly inside STORAGE_BASE_DIR
+      if (!targetPath.startsWith(STORAGE_BASE_DIR + path.sep) && targetPath !== STORAGE_BASE_DIR) {
+        return res.status(400).json({ error: "Access denied: Invalid or unsafe file key." });
+      }
+
+      if (fs.existsSync(targetPath) && fs.statSync(targetPath).isFile()) {
+        return res.sendFile(targetPath);
+      }
+
+      // If not on local disk, try fetching from Cloudflare R2
+      if (isR2Active()) {
+        const r2Object = await downloadFromR2(cleanKey);
+        if (r2Object) {
+          res.setHeader("Content-Type", r2Object.contentType);
+          return res.send(r2Object.data);
+        }
+      }
+
+      return res.status(404).json({ error: "File not found." });
+    } catch (err: any) {
+      console.error("[Storage Download] Error:", err);
+      return res.status(500).json({ error: "Internal server error." });
+    }
+  });
+
+  // Storage Upload-Temp Endpoint (1:1 com app.designbuilder.co)
+  const tempUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024 } // 10 MB max
+  });
+
+  app.post(
+    ["/api/bff/api/storage/upload-temp", "/api/storage/upload-temp"],
+    (req: any, res: any) => {
+      tempUpload.single("file")(req, res, (err: any) => {
+        if (err) {
+          if (err.code === "LIMIT_FILE_SIZE") {
+            return res.status(413).json({ detail: "Arquivo muito grande (max 10 MB)." });
+          }
+          return res.status(400).json({ detail: err.message || "Erro no upload." });
+        }
+
+        const file = req.file;
+        if (!file) {
+          return res.status(400).json({ detail: "Nenhum arquivo enviado." });
+        }
+
+        const fileId = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+        const originalName = file.originalname || "image.png";
+        const tempSubDir = path.join(STORAGE_BASE_DIR, "temp", fileId);
+        fs.mkdirSync(tempSubDir, { recursive: true });
+
+        const filePath = path.join(tempSubDir, originalName);
+        fs.writeFileSync(filePath, file.buffer);
+
+        const url = `/designbuilder/temp/${fileId}/${encodeURIComponent(originalName)}`;
+        const key = `temp/${fileId}/${originalName}`;
+
+        if (isR2Active()) {
+          uploadToR2(key, file.buffer, file.mimetype || "image/png").catch((r2Err) => {
+            console.warn("[upload-temp] Cloudflare R2 mirror warning:", r2Err);
+          });
+        }
+
+        return res.json({
+          url,
+          filename: originalName,
+          key,
+          detail: null
+        });
+      });
+    }
+  );
+
+  // Serve temp uploaded files
+  app.get(["/designbuilder/temp/:id/:filename", "/temp/:id/:filename"], (req: any, res: any) => {
+    const { id, filename } = req.params;
+    const cleanFile = path.basename(filename);
+    const target = path.join(STORAGE_BASE_DIR, "temp", id, cleanFile);
+    if (fs.existsSync(target) && fs.statSync(target).isFile()) {
+      return res.sendFile(target);
+    }
+    return res.status(404).json({ error: "Temp file not found" });
+  });
+
+  // Direct Cloudflare R2 / S3 simulation endpoint: /designbuilder/results/:id/:filename
+  app.get(["/designbuilder/results/:id/:filename", "/results/:id/:filename"], async (req: any, res: any) => {
+    try {
+      const { id, filename } = req.params;
+      const cleanFile = path.basename(filename || "result.avif");
+      const cacheHeader = req.query["response-cache-control"] || "private, max-age=3600, immutable";
+      const resultPath = path.join(STORAGE_BASE_DIR, "results", id, cleanFile);
+
+      if (fs.existsSync(resultPath) && fs.statSync(resultPath).isFile()) {
+        const ct = cleanFile.endsWith(".avif") ? "image/avif" : cleanFile.endsWith(".png") ? "image/png" : "image/jpeg";
+        res.setHeader("Content-Type", ct);
+        res.setHeader("Cache-Control", cacheHeader);
+        return res.sendFile(resultPath);
+      }
+
+      // Check alternative local extensions
+      for (const ext of [".avif", ".png", ".jpg", ".jpeg"]) {
+        const altFile = path.join(STORAGE_BASE_DIR, "results", id, `result${ext}`);
+        if (fs.existsSync(altFile) && fs.statSync(altFile).isFile()) {
+          const ct = ext === ".avif" ? "image/avif" : ext === ".png" ? "image/png" : "image/jpeg";
+          res.setHeader("Content-Type", ct);
+          res.setHeader("Cache-Control", cacheHeader);
+          return res.sendFile(altFile);
+        }
+      }
+
+      // Try fetching from Cloudflare R2 directly
+      if (isR2Active()) {
+        const r2Result = await downloadFromR2(`results/${id}/${cleanFile}`);
+        if (r2Result) {
+          res.setHeader("Content-Type", r2Result.contentType);
+          res.setHeader("Cache-Control", cacheHeader);
+          return res.send(r2Result.data);
+        }
+      }
+
+      // Fallback to inputs subject image if result is still processing
+      const fallbackInput = path.join(STORAGE_BASE_DIR, "inputs", id, "fotos_do_sujeito_produto", "0.jpg");
+      if (fs.existsSync(fallbackInput) && fs.statSync(fallbackInput).isFile()) {
+        res.setHeader("Content-Type", "image/jpeg");
+        res.setHeader("Cache-Control", cacheHeader);
+        return res.sendFile(fallbackInput);
+      }
+
+      return res.status(404).json({ error: "Result image not found." });
+    } catch (err: any) {
+      console.error("[Results CDN] Error:", err);
+      return res.status(500).json({ error: "Internal server error." });
+    }
+  });
+
+  // Direct Cloudflare R2 / S3 simulation endpoint for Thumbnails: /designbuilder/thumbnails/:id/:filename
+  app.get(["/designbuilder/thumbnails/:id/:filename", "/thumbnails/:id/:filename"], async (req: any, res: any) => {
+    try {
+      const { id, filename } = req.params;
+      const cleanFile = path.basename(filename || "thumbnail.avif");
+      const cacheHeader = req.query["response-cache-control"] || "private, max-age=3600, immutable";
+
+      // 1. Check local thumbnails directory
+      const thumbPath = path.join(STORAGE_BASE_DIR, "thumbnails", id, cleanFile);
+      if (fs.existsSync(thumbPath) && fs.statSync(thumbPath).isFile()) {
+        const ct = cleanFile.endsWith(".avif") ? "image/avif" : cleanFile.endsWith(".png") ? "image/png" : cleanFile.endsWith(".webp") ? "image/webp" : "image/jpeg";
+        res.setHeader("Content-Type", ct);
+        res.setHeader("Cache-Control", cacheHeader);
+        return res.sendFile(thumbPath);
+      }
+
+      // 2. Check alternative extensions in thumbnails directory
+      for (const ext of [".avif", ".png", ".webp", ".jpg", ".jpeg"]) {
+        const altFile = path.join(STORAGE_BASE_DIR, "thumbnails", id, `thumbnail${ext}`);
+        if (fs.existsSync(altFile) && fs.statSync(altFile).isFile()) {
+          const ct = ext === ".avif" ? "image/avif" : ext === ".png" ? "image/png" : ext === ".webp" ? "image/webp" : "image/jpeg";
+          res.setHeader("Content-Type", ct);
+          res.setHeader("Cache-Control", cacheHeader);
+          return res.sendFile(altFile);
+        }
+      }
+
+      // 3. Fallback to local results directory
+      const resultFile = path.join(STORAGE_BASE_DIR, "results", id, cleanFile.startsWith("thumbnail") ? cleanFile.replace("thumbnail", "result") : cleanFile);
+      if (fs.existsSync(resultFile) && fs.statSync(resultFile).isFile()) {
+        const ct = cleanFile.endsWith(".avif") ? "image/avif" : cleanFile.endsWith(".png") ? "image/png" : "image/jpeg";
+        res.setHeader("Content-Type", ct);
+        res.setHeader("Cache-Control", cacheHeader);
+        return res.sendFile(resultFile);
+      }
+
+      for (const ext of [".avif", ".png", ".jpg", ".jpeg"]) {
+        const altResult = path.join(STORAGE_BASE_DIR, "results", id, `result${ext}`);
+        if (fs.existsSync(altResult) && fs.statSync(altResult).isFile()) {
+          const ct = ext === ".avif" ? "image/avif" : ext === ".png" ? "image/png" : "image/jpeg";
+          res.setHeader("Content-Type", ct);
+          res.setHeader("Cache-Control", cacheHeader);
+          return res.sendFile(altResult);
+        }
+      }
+
+      // 4. Try Cloudflare R2
+      if (isR2Active()) {
+        const r2Thumb = await downloadFromR2(`thumbnails/${id}/${cleanFile}`) || await downloadFromR2(`results/${id}/result.avif`);
+        if (r2Thumb) {
+          res.setHeader("Content-Type", r2Thumb.contentType || "image/avif");
+          res.setHeader("Cache-Control", cacheHeader);
+          return res.send(r2Thumb.data);
+        }
+      }
+
+      // 5. Fallback to inputs subject image
+      const fallbackInput = path.join(STORAGE_BASE_DIR, "inputs", id, "fotos_do_sujeito_produto", "0.jpg");
+      if (fs.existsSync(fallbackInput) && fs.statSync(fallbackInput).isFile()) {
+        res.setHeader("Content-Type", "image/jpeg");
+        res.setHeader("Cache-Control", cacheHeader);
+        return res.sendFile(fallbackInput);
+      }
+
+      // 6. Fallback to favicon / branding
+      const fallbackLogo = path.join(process.cwd(), "public", "favicon-db.png");
+      if (fs.existsSync(fallbackLogo)) {
+        res.setHeader("Content-Type", "image/png");
+        res.setHeader("Cache-Control", cacheHeader);
+        return res.sendFile(fallbackLogo);
+      }
+
+      return res.status(404).json({ error: "Thumbnail image not found." });
+    } catch (err: any) {
+      console.error("[Thumbnails CDN] Error:", err);
+      return res.status(500).json({ error: "Internal server error." });
+    }
+  });
+
+  // Direct Cloudflare R2 / S3 simulation endpoint for Inputs: /designbuilder/inputs/:id/:folder/:filename
+  app.get(
+    [
+      "/designbuilder/inputs/:id/:folder/:filename",
+      "/inputs/:id/:folder/:filename",
+      "/designbuilder/inputs/:id/:filename",
+      "/inputs/:id/:filename"
+    ],
+    async (req: any, res: any) => {
+      try {
+        const { id, folder, filename } = req.params;
+        const cleanFile = path.basename(filename || "0.jpg");
+        const cacheHeader = req.query["response-cache-control"] || "private, max-age=3600, immutable";
+
+        // 1. Check local inputs directory with folder
+        if (folder) {
+          const localPath = path.join(STORAGE_BASE_DIR, "inputs", id, folder, cleanFile);
+          if (fs.existsSync(localPath) && fs.statSync(localPath).isFile()) {
+            const ct = cleanFile.endsWith(".avif") ? "image/avif" : cleanFile.endsWith(".png") ? "image/png" : "image/jpeg";
+            res.setHeader("Content-Type", ct);
+            res.setHeader("Cache-Control", cacheHeader);
+            return res.sendFile(localPath);
+          }
+        }
+
+        // 2. Check local inputs directory directly under id
+        const directPath = path.join(STORAGE_BASE_DIR, "inputs", id, cleanFile);
+        if (fs.existsSync(directPath) && fs.statSync(directPath).isFile()) {
+          const ct = cleanFile.endsWith(".avif") ? "image/avif" : cleanFile.endsWith(".png") ? "image/png" : "image/jpeg";
+          res.setHeader("Content-Type", ct);
+          res.setHeader("Cache-Control", cacheHeader);
+          return res.sendFile(directPath);
+        }
+
+        // 3. Try Cloudflare R2
+        if (isR2Active()) {
+          const r2Key = folder ? `inputs/${id}/${folder}/${cleanFile}` : `inputs/${id}/${cleanFile}`;
+          const r2Obj = await downloadFromR2(r2Key);
+          if (r2Obj) {
+            res.setHeader("Content-Type", r2Obj.contentType || "image/jpeg");
+            res.setHeader("Cache-Control", cacheHeader);
+            return res.send(r2Obj.data);
+          }
+        }
+
+        // 4. Fallback to public favicon
+        const fallbackLogo = path.join(process.cwd(), "public", "favicon-db.png");
+        if (fs.existsSync(fallbackLogo)) {
+          res.setHeader("Content-Type", "image/png");
+          res.setHeader("Cache-Control", cacheHeader);
+          return res.sendFile(fallbackLogo);
+        }
+
+        return res.status(404).json({ error: "Input image not found." });
+      } catch (err: any) {
+        console.error("[Inputs CDN] Error:", err);
+        return res.status(500).json({ error: "Internal server error." });
+      }
+    }
+  );
+
+  // In-memory generation jobs store for SSE streaming & status
+  interface BffGenerationJob {
+    id: string;
+    status: "QUEUED" | "PROCESSING" | "GENERATING" | "FINISHING" | "COMPLETED" | "FAILED" | "pending" | "queued" | "generating" | "done" | "error" | "cancelled";
+    progress: number;
+    message: string;
+    agent_slug?: string;
+    saved_files?: Record<string, string | null>;
+    download_key?: string;
+    download_url?: string;
+    parsed_prompt?: string;
+    created_at: number;
+    updated_at: number;
+    outputs?: any[];
+    parameters?: any;
+    error?: string;
+  }
+  const bffGenerationJobs = new Map<string, BffGenerationJob>();
+  const normalizeImageForAi = async (buf: Buffer, origMime?: string): Promise<{ buffer: Buffer; mime: string }> => {
+    try {
+      if (origMime && (origMime.includes("png") || origMime.includes("webp"))) {
+        // Preserva transparência para PNG e WebP para que logos não fiquem com fundo preto artificial
+        const converted = await sharp(buf).png({ compressionLevel: 6 }).toBuffer();
+        return { buffer: converted, mime: "image/png" };
+      }
+      const converted = await sharp(buf).jpeg({ quality: 95 }).toBuffer();
+      return { buffer: converted, mime: "image/jpeg" };
+    } catch (err) {
+      console.warn("[normalizeImageForAi] Sharp conversion warning, keeping original:", err);
+      return { buffer: buf, mime: origMime || "image/jpeg" };
+    }
+  };
+
+  // Core Generation Endpoint (Express / Vite Dev Server)
+  app.post(
+    "/api/bff/api/generate",
+    (upload.fields([
+      { name: "fotos_do_sujeito_produto", maxCount: 10 },
+      { name: "brand_identity_images", maxCount: 10 },
+      { name: "referencias_de_ambiente", maxCount: 10 },
+      { name: "referencias_de_estilo", maxCount: 10 },
+      { name: "design_reference", maxCount: 10 },
+      { name: "main_photo", maxCount: 10 },
+      { name: "product_image", maxCount: 10 },
+      { name: "image", maxCount: 10 }
+    ]) as any),
+    async (req: any, res: any) => {
+      try {
+        const body = req.body || {};
+        const files = (req.files || {}) as { [fieldname: string]: Express.Multer.File[] };
+
+        // Normalização de campos com nomes alternativos
+        if (!files.fotos_do_sujeito_produto && files.main_photo) {
+          files.fotos_do_sujeito_produto = files.main_photo;
+        } else if (!files.fotos_do_sujeito_produto && files.product_image) {
+          files.fotos_do_sujeito_produto = files.product_image;
+        } else if (!files.fotos_do_sujeito_produto && files.image) {
+          files.fotos_do_sujeito_produto = files.image;
+        }
+
+        // Helper para recuperar imagens salvas no disco (/uploads/...) ou em base64 se não vieram via FormData File
+        const recoverImageSource = (src: any, defName: string): Express.Multer.File | null => {
+          try {
+            if (!src || typeof src !== "string") return null;
+            const str = src.trim();
+            if (str.startsWith("data:")) {
+              const matches = str.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+              if (matches && matches.length === 3) {
+                const buf = Buffer.from(matches[2], "base64");
+                return { buffer: buf, mimetype: matches[1], originalname: defName, size: buf.length } as any;
+              }
+            } else if (str.startsWith("/uploads/") || str.includes("/uploads/")) {
+              const cleanRel = str.startsWith("/") ? str.slice(1) : str;
+              const localPath = path.join(process.cwd(), "public", cleanRel);
+              if (fs.existsSync(localPath)) {
+                const buf = fs.readFileSync(localPath);
+                const ext = path.extname(localPath).toLowerCase();
+                const mime = ext === ".png" ? "image/png" : ext === ".webp" ? "image/webp" : "image/jpeg";
+                return { buffer: buf, mimetype: mime, originalname: path.basename(localPath), size: buf.length } as any;
+              }
+            }
+          } catch (e) {
+            console.warn("[recoverImageSource] Erro ao recuperar anexo:", e);
+          }
+          return null;
+        };
+
+        // Fallback robusto para fotos_do_sujeito_produto
+        if (!files.fotos_do_sujeito_produto || files.fotos_do_sujeito_produto.length === 0) {
+          const rec = recoverImageSource(body.fotos_do_sujeito_produto || body.sujeitoBase64, "sujeito_rec.jpg");
+          if (rec) {
+            files.fotos_do_sujeito_produto = [rec];
+            console.log("[bff/generate] Sucesso: fotos_do_sujeito_produto recuperada do disco/body!");
+          }
+        }
+
+        // Fallback robusto para brand_identity_images (Logotipos)
+        if (!files.brand_identity_images || files.brand_identity_images.length === 0) {
+          const rec = recoverImageSource(body.brand_identity_images || body.logoBase64, "logo_rec.png");
+          if (rec) {
+            files.brand_identity_images = [rec];
+            console.log("[bff/generate] Sucesso: brand_identity_images recuperada do disco/body!");
+          }
+        }
+
+        // Fallback robusto para referencias_de_ambiente
+        if (!files.referencias_de_ambiente || files.referencias_de_ambiente.length === 0) {
+          const rec = recoverImageSource(body.referencias_de_ambiente || body.cenarioBase64, "ambiente_rec.jpg");
+          if (rec) {
+            files.referencias_de_ambiente = [rec];
+            console.log("[bff/generate] Sucesso: referencias_de_ambiente recuperada do disco/body!");
+          }
+        }
+
+        // Parse stringified JSON fields safely
+        let parsedAmbienteDescriptions: any[] = [];
+        try {
+          parsedAmbienteDescriptions = body.referencias_de_ambiente_descriptions ? JSON.parse(body.referencias_de_ambiente_descriptions) : [];
+        } catch (_) {}
+
+        let parsedTextBlocks: any[] = [];
+        try {
+          parsedTextBlocks = body.text_blocks ? JSON.parse(body.text_blocks) : [];
+        } catch (_) {}
+
+        let parsedColorPalette: any = {};
+        try {
+          parsedColorPalette = body.color_palette ? JSON.parse(body.color_palette) : {};
+        } catch (_) {}
+
+        const jobId = (req.headers["idempotency-key"] as string) || (req.headers["x-idempotency-key"] as string) || `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+        const jobDir = path.join(STORAGE_BASE_DIR, "inputs", jobId);
+        const resultDir = path.join(STORAGE_BASE_DIR, "results", jobId);
+        fs.mkdirSync(resultDir, { recursive: true });
+
+        const savedFiles: Record<string, string | null> = {
+          fotos_do_sujeito_produto: null,
+          brand_identity_images: null,
+          referencias_de_ambiente: null,
+          referencias_de_estilo: null
+        };
+
+        // Salvar fotos de sujeito na pasta de inputs
+        if (files.fotos_do_sujeito_produto && files.fotos_do_sujeito_produto.length > 0) {
+          const subDir = path.join(jobDir, "fotos_do_sujeito_produto");
+          fs.mkdirSync(subDir, { recursive: true });
+          files.fotos_do_sujeito_produto.forEach((f, idx) => {
+            const filename = path.basename(f.originalname || `${idx}.jpg`);
+            const targetFile = path.join(subDir, filename);
+            fs.writeFileSync(targetFile, f.buffer);
+            if (idx === 0) {
+              savedFiles.fotos_do_sujeito_produto = path.relative(STORAGE_BASE_DIR, targetFile).replace(/\\/g, "/");
+            }
+          });
+        }
+
+        // Salvar logos/identidade da marca na pasta de inputs
+        if (files.brand_identity_images && files.brand_identity_images.length > 0) {
+          const brandDir = path.join(jobDir, "brand_identity_images");
+          fs.mkdirSync(brandDir, { recursive: true });
+          files.brand_identity_images.forEach((f, idx) => {
+            const filename = path.basename(f.originalname || `logo_${idx}.png`);
+            const targetFile = path.join(brandDir, filename);
+            fs.writeFileSync(targetFile, f.buffer);
+            if (idx === 0) {
+              savedFiles.brand_identity_images = path.relative(STORAGE_BASE_DIR, targetFile).replace(/\\/g, "/");
+            }
+          });
+        }
+
+        // Salvar referências de ambiente na pasta de inputs
+        if (files.referencias_de_ambiente && files.referencias_de_ambiente.length > 0) {
+          const ambDir = path.join(jobDir, "referencias_de_ambiente");
+          fs.mkdirSync(ambDir, { recursive: true });
+          files.referencias_de_ambiente.forEach((f, idx) => {
+            const filename = path.basename(f.originalname || `env_${idx}.jpg`);
+            const targetFile = path.join(ambDir, filename);
+            fs.writeFileSync(targetFile, f.buffer);
+            if (idx === 0) {
+              savedFiles.referencias_de_ambiente = path.relative(STORAGE_BASE_DIR, targetFile).replace(/\\/g, "/");
+            }
+          });
+        }
+
+        // Salvar referências de estilo na pasta de inputs
+        if (files.referencias_de_estilo && files.referencias_de_estilo.length > 0) {
+          const stDir = path.join(jobDir, "referencias_de_estilo");
+          fs.mkdirSync(stDir, { recursive: true });
+          files.referencias_de_estilo.forEach((f, idx) => {
+            const filename = path.basename(f.originalname || `style_${idx}.jpg`);
+            const targetFile = path.join(stDir, filename);
+            fs.writeFileSync(targetFile, f.buffer);
+            if (idx === 0) {
+              savedFiles.referencias_de_estilo = path.relative(STORAGE_BASE_DIR, targetFile).replace(/\\/g, "/");
+            }
+          });
+        }
+
+        const validTextBlocks = parsedTextBlocks.filter((b: any) => b && typeof b === "object" && String(b.content || "").trim());
+        const textsRepr = validTextBlocks.length
+          ? validTextBlocks.map((b: any) => `"${String(b.content).trim()}"`).join("; ")
+          : "No text overlay";
+
+        const colorsRepr = Object.entries(parsedColorPalette).map(([k, v]) => `${k}: ${v}`).join(", ") || "natural ambient lighting";
+
+        const structuredPrompt = `[Style]: ${body.estilo_visual || "cinematic"}. [Framing]: ${body.plano || "medium"}. ` +
+          `[Scene Background]: ${body.scene_description || ""}. ` +
+          `[Main Subject]: ${body.subject_description || ""} (${body.genero || ""}), positioned at ${body.subject_position || "center"}. ` +
+          `[Floating Elements]: ${body.elementos_flutuantes || "None"}. ` +
+          `[Color Palette]: ${colorsRepr}. ` +
+          `[Text Layout]: ${textsRepr} at ${body.posicao_do_texto || "center"} (Gradient: ${body.degrade || "false"}). ` +
+          `[Output Specs]: Aspect Ratio ${body.dimensions || "1:1"}, Quality: ${body.quality || "standard"}, Variations: ${body.quantidade || 1}.`;
+
+        const resultKey = `results/${jobId}/result.avif`;
+        const downloadKey = resultKey;
+        const cdnUrl = `/designbuilder/results/${jobId}/result.avif`;
+        const bffUrl = `/api/bff/api/storage/download?key=${downloadKey}`;
+
+        // Register job in active store with initial "pending" status
+        const targetQuality = (body.quality || "1K").toUpperCase();
+        const taskId = `task-${jobId}`;
+        const jobRecord: BffGenerationJob = {
+          id: jobId,
+          status: "pending",
+          progress: 5,
+          message: "Solicitação recebida. Preparando geração...",
+          agent_slug: body.agent_slug,
+          saved_files: savedFiles,
+          download_key: "results/" + jobId + "/result.avif",
+          download_url: cdnUrl,
+          parsed_prompt: structuredPrompt,
+          created_at: Date.now(),
+          updated_at: Date.now(),
+          outputs: [],
+          parameters: {
+            plano: body.plano || "medium",
+            quality: targetQuality,
+            dimensions: body.dimensions || "1:1",
+            quantidade: body.quantidade || 1,
+            genero: body.genero || "",
+            subject_description: body.subject_description || "",
+            subject_position: body.subject_position || "",
+            scene_description: body.scene_description || "",
+            estilo_visual: body.estilo_visual || "",
+            nicho_projeto: body.nicho_projeto || "",
+            prompt_adicional: body.prompt_adicional || "",
+            text_blocks: parsedTextBlocks || [],
+            color_palette: parsedColorPalette || null,
+            degrade: body.degrade || "false",
+            posicao_do_texto: body.posicao_do_texto || "align-center",
+            elementos_flutuantes: body.elementos_flutuantes || "",
+            usar_desfoque_blur: body.usar_desfoque_blur || "false",
+            sobriedade_criatividade: body.sobriedade_criatividade || "50",
+            saved_files: savedFiles
+          }
+        };
+        bffGenerationJobs.set(jobId, jobRecord);
+
+        // Respond immediately to the frontend (Design Builder 1.2 contract)
+        res.json({
+          generation_id: jobId,
+          task_id: taskId,
+          status: "pending"
+        });
+
+        // ── ASYNC: Trigger real AI image generation in the background ──
+        (async () => {
+          try {
+            const client = getAiClient(body.customApiKey);
+            if (!client) {
+              jobRecord.status = "error";
+              jobRecord.message = "Cliente GenAI não inicializado. Configure GEMINI_API_KEY.";
+              jobRecord.updated_at = Date.now();
+              return;
+            }
+
+            // Update status: queued
+            jobRecord.status = "queued";
+            jobRecord.progress = 15;
+            jobRecord.message = "Na fila de processamento...";
+            jobRecord.updated_at = Date.now();
+
+            // Use master prompt if provided, or build professional prompt via the Prompt Engine
+            let fullPrompt = body.master_prompt?.trim();
+            if (!fullPrompt) {
+              // ── PROMPT ENGINE: Professional cinematographic prompt construction ──
+              fullPrompt = buildEnhancedPrompt({
+                estilo_visual: body.estilo_visual,
+                plano: body.plano,
+                genero: body.genero,
+                subject_description: body.subject_description,
+                subject_position: body.subject_position,
+                scene_description: body.scene_description,
+                nicho_projeto: body.nicho_projeto,
+                prompt_adicional: body.prompt_adicional,
+                dimensions: body.dimensions,
+                quality: body.quality,
+                sobriedade: body.sobriedade_criatividade,
+                color_palette: parsedColorPalette,
+                text_blocks: parsedTextBlocks,
+                elementos_flutuantes: body.elementos_flutuantes,
+                usar_desfoque_blur: body.usar_desfoque_blur,
+                degrade: body.degrade,
+                posicao_do_texto: body.posicao_do_texto,
+                categoria: body.categoria,
+                hasSubjectPhotos: !!(files.fotos_do_sujeito_produto?.length),
+                hasStyleRefs: !!(files.referencias_de_estilo?.length),
+                hasEnvironmentRefs: !!(files.referencias_de_ambiente?.length),
+                hasBrandImages: !!(files.brand_identity_images?.length),
+              });
+            }
+
+            console.log(`[bff/generate ASYNC] Job ${jobId}: Built prompt (${fullPrompt.length} chars)`);
+
+            // Update status: analyzing
+            jobRecord.status = "generating";
+            jobRecord.progress = 40;
+            jobRecord.message = "Processando referências e construindo prompt...";
+            jobRecord.updated_at = Date.now();
+
+            // Build multimodal parts (text + reference images)
+            // Build multimodal parts (text + reference images)
+            const parts: any[] = [{ text: fullPrompt }];
+
+            // 1. Fotos do sujeito/produto com a diretriz oficial SWAP SLOT (Fidelidade Absoluta Facial e Anatômica)
+            if (files.fotos_do_sujeito_produto && files.fotos_do_sujeito_produto.length > 0) {
+              for (let i = 0; i < files.fotos_do_sujeito_produto.length; i++) {
+                const f = files.fotos_do_sujeito_produto[i];
+                const origMime = f.mimetype || "image/jpeg";
+                const norm = await normalizeImageForAi(f.buffer, origMime);
+                const isGroupPhoto = /todos|grupo|equipe|turma|pessoas|foto/i.test(body.subject_description || "") || (body.categoria === "livre");
+                const swapSlotDirective = isGroupPhoto
+                  ? `SWAP SLOT (GROUP FIDELITY) — Image ${i + 1} is the subject identity reference containing the team/group. Replicate ALL people/individuals present in this reference photo (${body.subject_description || "all people in the photo"}). Preserve their faces, clothing/uniforms, group arrangement, authentic photographic fidelity, and natural expressions. Position them naturally in the scene.`
+                  : `SWAP SLOT — Image ${i + 1} is the identity reference, and it owns the entire person. From image ${i + 1} come the face and all its features, the eye colour, the skin tone and every mark on it, the age, the gender, the build, and the hair's colour, length, texture, curl pattern and density along with any facial hair. None of those are described anywhere in this prompt and none of them are to be invented. Do not add or remove marks, lines or blemishes, do not smooth, retouch or rejuvenate anything, and do not reshape the face or its proportions. From image ${i + 1} take only the person; take nothing else — not the clothing, not the pose, not the expression, not the framing, not the lighting, not the background, not the colour palette. Preserve 100% authentic photographic fidelity.`;
+                parts.push({ text: swapSlotDirective });
+                parts.push({ inlineData: { data: norm.buffer.toString("base64"), mimeType: norm.mime } });
+              }
+            }
+
+            // 2. Logotipos / Identidade da Marca (Órion Pro e Design Builder)
+            if (files.brand_identity_images && files.brand_identity_images.length > 0) {
+              for (let i = 0; i < files.brand_identity_images.length; i++) {
+                const f = files.brand_identity_images[i];
+                const origMime = f.mimetype || "image/png";
+                const norm = await normalizeImageForAi(f.buffer, origMime);
+                parts.push({ text: `BRAND LOGO REFERENCE #${i + 1} — Client official brand mark/emblem: Replicate this exact logo geometry, letterforms, and authentic colors natively onto the artwork canvas. MANDATORY PLACEMENT: Position this logo/emblem with generous breathing room and negative space (e.g. centered in the middle section under the headline or in the lower-center comfortably above the footer). STRICTLY PROHIBITED: NEVER place the logo flush against or touching the canvas borders or bottom edge! Maintain at least 10% margin from all borders.` });
+                parts.push({ inlineData: { data: norm.buffer.toString("base64"), mimeType: norm.mime } });
+              }
+            }
+
+            // 3. Referências de Ambiente / Cenário
+            if (files.referencias_de_ambiente && files.referencias_de_ambiente.length > 0) {
+              for (let i = 0; i < files.referencias_de_ambiente.length; i++) {
+                const f = files.referencias_de_ambiente[i];
+                const origMime = f.mimetype || "image/jpeg";
+                const norm = await normalizeImageForAi(f.buffer, origMime);
+                parts.push({ text: `ENVIRONMENT REFERENCE #${i + 1} — Replicate the actual spatial setting, architectural depth, perspective, materials, and lighting atmosphere shown in this reference photo. Situating the subject naturally inside this environment:` });
+                parts.push({ inlineData: { data: norm.buffer.toString("base64"), mimeType: norm.mime } });
+              }
+            }
+
+            // 4. Referências de Estilo / Design
+            if (files.referencias_de_estilo && files.referencias_de_estilo.length > 0) {
+              for (let i = 0; i < files.referencias_de_estilo.length; i++) {
+                const f = files.referencias_de_estilo[i];
+                const origMime = f.mimetype || "image/jpeg";
+                const norm = await normalizeImageForAi(f.buffer, origMime);
+                parts.push({ text: `STYLE & AESTHETIC REFERENCE #${i + 1} — Replicate the overall visual style, photographic lighting quality, depth, color harmony, and professional advertising aesthetic of this reference image. STRICT RULE: DO NOT draw a floating rectangular card, white box, or container in the middle of the canvas! Let the typography and subject blend seamlessly across the entire canvas with natural depth:` });
+                parts.push({ inlineData: { data: norm.buffer.toString("base64"), mimeType: norm.mime } });
+              }
+            }
+
+            // 5. Referência de Design Layout (se enviado)
+            if (files.design_reference && files.design_reference.length > 0) {
+              for (let i = 0; i < files.design_reference.length; i++) {
+                const f = files.design_reference[i];
+                const origMime = f.mimetype || "image/jpeg";
+                const norm = await normalizeImageForAi(f.buffer, origMime);
+                parts.push({ text: `PRIMARY DESIGN LAYOUT REFERENCE #${i + 1} — Replicate the visual layout, dynamic lighting, and typographic hierarchy from this reference, replacing placeholder texts with the requested text. STRICT RULE: DO NOT draw artificial floating cards or rectangular boxes around text. Keep typography floating cleanly over the scene with high contrast and natural depth:` });
+                parts.push({ inlineData: { data: norm.buffer.toString("base64"), mimeType: norm.mime } });
+              }
+            }
+
+            // Update status: generating
+            jobRecord.status = "generating";
+            jobRecord.progress = 60;
+            jobRecord.message = "Renderizando arte com inteligência artificial...";
+            jobRecord.updated_at = Date.now();
+
+            // Resolve aspect ratio
+            let selectedRatio = body.dimensions || "1:1";
+            const validRatios = ["1:1", "3:4", "4:3", "9:16", "16:9"];
+            if (!validRatios.includes(selectedRatio)) {
+              if (selectedRatio === "4:5" || selectedRatio === "2:3") selectedRatio = "3:4";
+              else if (selectedRatio === "3:2") selectedRatio = "4:3";
+              else selectedRatio = "1:1";
+            }
+            const sizeSelected = (body.quality || "1K").toUpperCase();
+
+            console.log(`[bff/generate ASYNC] Job ${jobId}: Calling executeImageGenerationWithFallbacks (ratio=${selectedRatio}, size=${sizeSelected})...`);
+
+            // Execute AI image generation
+            const genResult = await executeImageGenerationWithFallbacks(
+              client,
+              parts,
+              fullPrompt,
+              selectedRatio,
+              sizeSelected,
+              body.customApiKey
+            );
+
+            const rawImageData = genResult.rawData;
+            const rawMime = genResult.rawMime || "image/png";
+
+            if (!rawImageData) {
+              throw new Error("Nenhum dado de imagem retornado pelo modelo de IA.");
+            }
+
+            console.log(`[bff/generate ASYNC] Job ${jobId}: Image generated successfully (${genResult.modelUsed}). Saving...`);
+
+            // Update status: finishing
+            jobRecord.status = "generating";
+            jobRecord.progress = 85;
+            jobRecord.message = "Finalizando iluminação e composição visual...";
+            jobRecord.updated_at = Date.now();
+
+            // Enforce exact requested resolution and aspect ratio via Sharp Lanczos3
+            const rawImgBuffer = Buffer.from(rawImageData, "base64");
+            const targetQuality = (body.quality || "1K").toUpperCase();
+            const targetRatio = body.dimensions || "1:1";
+            const targetDims = getResolutionDimensions(targetQuality, targetRatio);
+
+            console.log(`[bff/generate ASYNC] Job ${jobId}: Enforcing exact target resolution ${targetQuality} (${targetDims.width}x${targetDims.height}) with Lanczos3 resampling...`);
+
+            // Apply high-quality Lanczos3 cover resize to enforce exact pixel dimensions
+            const processedPngBuffer = await sharp(rawImgBuffer)
+              .resize(targetDims.width, targetDims.height, {
+                fit: "cover",
+                position: "center",
+                kernel: sharp.kernel.lanczos3
+              })
+              .png({ compressionLevel: 6 })
+              .toBuffer();
+
+            // Also encode exact AVIF buffer for fastest modern browser loading
+            const processedAvifBuffer = await sharp(processedPngBuffer)
+              .avif({ quality: 85, effort: 1 })
+              .toBuffer();
+
+            fs.writeFileSync(path.join(resultDir, "result.avif"), processedAvifBuffer);
+            fs.writeFileSync(path.join(resultDir, "result.png"), processedPngBuffer);
+
+            // Generate crisp high-fidelity thumbnail at 30% scale
+            const thumbW = Math.max(256, Math.round(targetDims.width * 0.3));
+            const thumbH = Math.max(256, Math.round(targetDims.height * 0.3));
+            const thumbPngBuffer = await sharp(processedPngBuffer)
+              .resize(thumbW, thumbH, { fit: "cover", position: "center", kernel: sharp.kernel.lanczos3 })
+              .png({ compressionLevel: 6 })
+              .toBuffer();
+            const thumbAvifBuffer = await sharp(thumbPngBuffer)
+              .avif({ quality: 75, effort: 1 })
+              .toBuffer();
+
+            const thumbDir = path.join(STORAGE_BASE_DIR, "thumbnails", jobId);
+            fs.mkdirSync(thumbDir, { recursive: true });
+            fs.writeFileSync(path.join(thumbDir, "thumbnail.avif"), thumbAvifBuffer);
+            fs.writeFileSync(path.join(thumbDir, "thumbnail.png"), thumbPngBuffer);
+
+            // Save copy to public/generated-images for instant frontend & gallery access
+            try {
+              const publicGenDir = path.join(process.cwd(), "public", "generated-images");
+              fs.mkdirSync(publicGenDir, { recursive: true });
+              fs.writeFileSync(path.join(publicGenDir, `img_${jobId}.png`), processedPngBuffer);
+            } catch (copyErr) {
+              console.warn("[bff/generate ASYNC] Could not copy to public/generated-images:", copyErr);
+            }
+
+            // Append to public/generations_data.json
+            try {
+              const genDataPath = path.join(process.cwd(), "public", "generations_data.json");
+              let genData: { items: any[] } = { items: [] };
+              if (fs.existsSync(genDataPath)) {
+                try {
+                  genData = JSON.parse(fs.readFileSync(genDataPath, "utf-8"));
+                  if (!Array.isArray(genData.items)) genData.items = [];
+                } catch (_) {}
+              }
+              const newEntry = {
+                id: jobId,
+                status: "done",
+                result_url: `/designbuilder/results/${jobId}/result.avif`,
+                thumbnail_url: `/designbuilder/thumbnails/${jobId}/thumbnail.avif`,
+                created_at: new Date().toISOString(),
+                agent_slug: body.agent_slug || "design-builder1-2",
+                dimensions: body.dimensions || "1:1",
+                width: targetDims.width,
+                height: targetDims.height,
+                form_data: {
+                  plano: body.plano || "medium",
+                  quality: targetQuality,
+                  dimensions: body.dimensions || "1:1",
+                  quantidade: body.quantidade || 1,
+                  genero: body.genero || "",
+                  subject_description: body.subject_description || "",
+                  subject_position: body.subject_position || "",
+                  scene_description: body.scene_description || "",
+                  estilo_visual: body.estilo_visual || "",
+                  nicho_projeto: body.nicho_projeto || "",
+                  prompt_adicional: body.prompt_adicional || "",
+                  text_blocks: parsedTextBlocks || [],
+                  color_palette: parsedColorPalette || null,
+                  degrade: body.degrade || "false",
+                  posicao_do_texto: body.posicao_do_texto || "align-center",
+                  elementos_flutuantes: body.elementos_flutuantes || "",
+                  usar_desfoque_blur: body.usar_desfoque_blur || "false",
+                  sobriedade_criatividade: body.sobriedade_criatividade || "50",
+                  saved_files: savedFiles
+                }
+              };
+              genData.items = [newEntry, ...genData.items.filter((i: any) => i.id !== jobId)];
+              fs.writeFileSync(genDataPath, JSON.stringify(genData, null, 2), "utf-8");
+            } catch (jsonErr) {
+              console.warn("[bff/generate ASYNC] Could not update generations_data.json:", jsonErr);
+            }
+
+            // Upload to R2 if configured (both output results and input reference assets)
+            if (isR2Active()) {
+              uploadToR2(`results/${jobId}/result.avif`, processedAvifBuffer, "image/avif").catch(() => {});
+              uploadToR2(`results/${jobId}/result.png`, processedPngBuffer, "image/png").catch(() => {});
+              uploadToR2(`thumbnails/${jobId}/thumbnail.avif`, thumbAvifBuffer, "image/avif").catch(() => {});
+              uploadToR2(`thumbnails/${jobId}/thumbnail.png`, thumbPngBuffer, "image/png").catch(() => {});
+              if (files.fotos_do_sujeito_produto) {
+                files.fotos_do_sujeito_produto.forEach((f, idx) => {
+                  uploadToR2(`inputs/${jobId}/fotos_do_sujeito_produto/${f.originalname || `${idx}.jpg`}`, f.buffer, f.mimetype || "image/jpeg").catch(() => {});
+                });
+              }
+              if (files.brand_identity_images) {
+                files.brand_identity_images.forEach((f, idx) => {
+                  uploadToR2(`inputs/${jobId}/brand_identity_images/${f.originalname || `logo_${idx}.png`}`, f.buffer, f.mimetype || "image/png").catch(() => {});
+                });
+              }
+              if (files.referencias_de_ambiente) {
+                files.referencias_de_ambiente.forEach((f, idx) => {
+                  uploadToR2(`inputs/${jobId}/referencias_de_ambiente/${f.originalname || `env_${idx}.jpg`}`, f.buffer, f.mimetype || "image/jpeg").catch(() => {});
+                });
+              }
+              if (files.referencias_de_estilo) {
+                files.referencias_de_estilo.forEach((f, idx) => {
+                  uploadToR2(`inputs/${jobId}/referencias_de_estilo/${f.originalname || `style_${idx}.jpg`}`, f.buffer, f.mimetype || "image/jpeg").catch(() => {});
+                });
+              }
+            }
+
+            // Mark job as completed
+            const finalCdnUrl = `/designbuilder/results/${jobId}/result.avif`;
+            const finalBffUrl = `/api/bff/api/storage/download?key=results/${jobId}/result.avif`;
+            jobRecord.status = "done";
+            jobRecord.progress = 100;
+            jobRecord.message = "Design gerado com sucesso!";
+            jobRecord.download_key = `results/${jobId}/result.avif`;
+            jobRecord.download_url = finalCdnUrl;
+            jobRecord.updated_at = Date.now();
+            jobRecord.outputs = [
+              {
+                id: `gen-${jobId}-0`,
+                url: finalCdnUrl,
+                preview_url: finalCdnUrl,
+                thumbnail_url: `/designbuilder/thumbnails/${jobId}/thumbnail.avif`,
+                download_url: finalBffUrl,
+                storage_key: `results/${jobId}/result.avif`
+              }
+            ];
+
+            console.log(`[bff/generate ASYNC] Job ${jobId}: ✅ COMPLETED. Image saved at ${finalCdnUrl}`);
+
+          } catch (asyncErr: any) {
+            console.error(`[bff/generate ASYNC] Job ${jobId}: ❌ FAILED:`, asyncErr?.message || asyncErr);
+            jobRecord.status = "error";
+            jobRecord.progress = 0;
+            jobRecord.message = asyncErr?.message || "Falha na geração de imagem.";
+            jobRecord.error = asyncErr?.message || "Unknown error";
+            jobRecord.updated_at = Date.now();
+          }
+        })();
+
+      } catch (err: any) {
+        console.error("[Generate Error]:", err);
+        return res.status(500).json({ error: "Failed to process generation request." });
+      }
+    }
+  );
+
+  // Stream Generation Progress (Server-Sent Events / SSE)
+  app.get("/api/bff/api/generations/:id/stream", (req: any, res: any) => {
+    const { id } = req.params;
+
+    // Headers for Server-Sent Events (SSE)
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+    if (res.flushHeaders) res.flushHeaders();
+
+    // Initial ping event
+    res.write(`event: ping\ndata: ${JSON.stringify({ type: "ping", timestamp: Date.now() })}\n\n`);
+
+    const job = bffGenerationJobs.get(id);
+    let lastStatus = "";
+    let lastProgress = -1;
+
+    const interval = setInterval(() => {
+      const currentJob = bffGenerationJobs.get(id);
+      if (!currentJob) {
+        // No job found, send error and close
+        const errPayload = {
+          generation_id: id,
+          status: "error",
+          progress: 0,
+          message: "Geração não encontrada.",
+          error_message: "Geração não encontrada.",
+          timestamp: Date.now()
+        };
+        res.write(`data: ${JSON.stringify(errPayload)}\n\n`);
+        clearInterval(interval);
+        res.end();
+        return;
+      }
+
+      // Only emit when status or progress changes
+      if (currentJob.status !== lastStatus || currentJob.progress !== lastProgress) {
+        lastStatus = currentJob.status;
+        lastProgress = currentJob.progress;
+
+        const downloadKey = currentJob.download_key || `results/${id}/result.avif`;
+        const cdnUrl = currentJob.download_url || `/designbuilder/results/${id}/result.avif`;
+        const bffUrl = `/api/bff/api/storage/download?key=${downloadKey}`;
+
+        const payload: any = {
+          generation_id: id,
+          status: currentJob.status,
+          progress: currentJob.progress,
+          progress_stage: currentJob.status === "done" ? "done" : currentJob.status === "error" ? "error" : "generating",
+          message: currentJob.message,
+          timestamp: Date.now()
+        };
+
+        if (currentJob.status === "done") {
+          payload.result_url = cdnUrl;
+          payload.thumbnail_url = `/designbuilder/thumbnails/${id}/thumbnail.avif`;
+          payload.download_url = bffUrl;
+          payload.outputs = currentJob.outputs || [];
+        }
+
+        if (currentJob.status === "error") {
+          payload.error_message = currentJob.error || currentJob.message;
+        }
+
+        res.write(`data: ${JSON.stringify(payload)}\n\n`);
+
+        // Terminal states: close the stream
+        if (currentJob.status === "done" || currentJob.status === "error") {
+          clearInterval(interval);
+          res.end();
+        }
+      }
+    }, 1500);
+
+    req.on("close", () => {
+      clearInterval(interval);
+    });
+  });
+
+  // Get Generation Job Status (Polling / Status endpoint)
+  app.get(["/api/bff/api/generations/:id/status", "/api/bff/api/generations/:id"], (req: any, res: any) => {
+    const { id } = req.params;
+    const job = bffGenerationJobs.get(id);
+    const isDone = job?.status === "done";
+    const isError = job?.status === "error";
+    const downloadKey = job?.download_key || `results/${id}/result.avif`;
+    const cdnUrl = isDone ? (job?.download_url || `/designbuilder/results/${id}/result.avif`) : null;
+    const bffUrl = isDone ? `/api/bff/api/storage/download?key=${downloadKey}` : null;
+
+    return res.json({
+      id,
+      generation_id: id,
+      status: job ? job.status : "done",
+      progress: job ? job.progress : 100,
+      progress_stage: isDone ? "done" : isError ? "error" : (job?.status || "generating"),
+      message: job ? job.message : "Design concluído com sucesso!",
+      agent_slug: job?.agent_slug || "design-builder1-2",
+      created_at: job?.created_at ? new Date(job.created_at).toISOString() : new Date().toISOString(),
+      updated_at: job?.updated_at ? new Date(job.updated_at).toISOString() : new Date().toISOString(),
+      result_url: cdnUrl,
+      thumbnail_url: isDone ? `/designbuilder/thumbnails/${id}/thumbnail.avif` : null,
+      error_message: isError ? (job?.error || job?.message || null) : null,
+      outputs: isDone ? (job?.outputs || []) : [],
+      result: isDone ? { url: cdnUrl, download_url: bffUrl } : null
+    });
+  });
+
+  // Get Generation Job Detail (Full Metadata View)
+  app.get("/api/bff/api/generations/:id/detail", (req: any, res: any) => {
+    const { id } = req.params;
+    const job = bffGenerationJobs.get(id);
+    const fallbackKey = `results/${id}/result.avif`;
+    const downloadKey = job?.download_key || fallbackKey;
+    const cdnUrl = `/designbuilder/results/${id}/result.avif`;
+    const bffUrl = `/api/bff/api/storage/download?key=${downloadKey}`;
+
+    const subjectUrl = job?.saved_files?.fotos_do_sujeito_produto
+      ? `/api/bff/api/storage/download?key=${job.saved_files.fotos_do_sujeito_produto}`
+      : `/api/bff/api/storage/download?key=inputs/${id}/fotos_do_sujeito_produto/0.jpg`;
+
+    const ambienteUrl = job?.saved_files?.referencias_de_ambiente
+      ? `/api/bff/api/storage/download?key=${job.saved_files.referencias_de_ambiente}`
+      : null;
+
+    const estiloUrl = job?.saved_files?.referencias_de_estilo
+      ? `/api/bff/api/storage/download?key=${job.saved_files.referencias_de_estilo}`
+      : null;
+
+    return res.json({
+      id,
+      generation_id: id,
+      agent_slug: job?.agent_slug || "design-builder1-2",
+      status: job ? job.status : "COMPLETED",
+      progress: job ? job.progress : 100,
+      message: job ? job.message : "Design concluído com sucesso!",
+      created_at: job?.created_at ? new Date(job.created_at).toISOString() : new Date().toISOString(),
+      updated_at: job?.updated_at ? new Date(job.updated_at).toISOString() : new Date().toISOString(),
+      prompt: job?.parsed_prompt || "Alta qualidade, fotorrealista, estilo profissional",
+      inputs: {
+        fotos_do_sujeito_produto: subjectUrl,
+        referencias_de_ambiente: ambienteUrl,
+        referencias_de_estilo: estiloUrl,
+        parameters: (() => {
+          let p = (job as any)?.parameters;
+          if (!p) {
+            try {
+              const gPath = path.join(process.cwd(), "public", "generations_data.json");
+              if (fs.existsSync(gPath)) {
+                const parsed = JSON.parse(fs.readFileSync(gPath, "utf-8"));
+                const found = (parsed.items || []).find((i: any) => i.id === id);
+                if (found && found.form_data) p = found.form_data;
+              }
+            } catch (_) {}
+          }
+          return p || {
+            dimensions: "4:5",
+            quality: "1K",
+            quantidade: 1,
+            genero: "male",
+            subject_description: "",
+            subject_position: "center",
+            scene_description: "",
+            plano: "medium",
+            estilo_visual: "ultra_realistic",
+            nicho_projeto: "",
+            prompt_adicional: "",
+            text_blocks: [],
+            color_palette: null,
+            degrade: "false",
+            posicao_do_texto: "align-center",
+            elementos_flutuantes: "",
+            usar_desfoque_blur: "false",
+            sobriedade_criatividade: "50"
+          };
+        })()
+      },
+      outputs: [
+        {
+          id: `gen-${id}-0`,
+          url: cdnUrl,
+          preview_url: cdnUrl,
+          thumbnail_url: `/designbuilder/thumbnails/${id}/thumbnail.avif`,
+          download_url: bffUrl,
+          storage_key: downloadKey,
+          width: 1080,
+          height: 1350
+        }
+      ],
+      result: {
+        url: cdnUrl,
+        download_url: bffUrl
+      }
+    });
+  });
+
+  // Get Current Authenticated User Profile & Permissions
+  app.get(["/api/bff/api/user/me", "/api/user/me"], (req: any, res: any) => {
+    let userEmail = "der.contatos@gmail.com";
+    let userName = "Ricardo";
+    let userId = "d30cf0d9-8b2c-4782-966c-4c2e26a38b3d";
+    let memberId = "ac7b185d-7fad-472a-b672-c385265c0a92";
+    let bhSubject = "de3515a0-e005-40be-a35c-8cf2a55011e0";
+
+    try {
+      const authHeader = req.headers.authorization;
+      const cookieHeader = req.headers.cookie;
+      let token = "";
+
+      if (authHeader && authHeader.startsWith("Bearer ")) {
+        token = authHeader.substring(7).trim();
+      } else if (cookieHeader) {
+        const match = cookieHeader.match(/(?:^|;\s*)__Host-db\.sessao=([^;]+)/);
+        if (match) token = match[1];
+      }
+
+      if (token) {
+        const parts = token.split(".");
+        if (parts.length === 3) {
+          const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf-8"));
+          if (payload.email) userEmail = payload.email;
+          if (payload.name) userName = payload.name;
+          if (payload.sub) userId = payload.sub;
+          if (payload.member_id) memberId = payload.member_id;
+          if (payload.bh_subject) bhSubject = payload.bh_subject;
+        }
+      }
+    } catch (_) {}
+
+    return res.json({
+      id: userId,
+      sub: userId,
+      name: userName,
+      given_name: userName,
+      email: userEmail,
+      preferred_username: userEmail,
+      email_verified: true,
+      kind: "customer",
+      member_id: memberId,
+      is_admin: true,
+      is_admin_designbuilder: true,
+      qg_builder_admin: true,
+      nivel_acesso: "admin",
+      bh_subject: bhSubject,
+      bh_metadata: {
+        is_admin: true,
+        is_admin_designbuilder: true,
+        kind: "customer",
+        member_id: memberId,
+        qg_builder_admin: true,
+        tools: {
+          design_builder: {
+            enabled: true,
+            permissions: {
+              generate: true,
+              export_4k: true,
+              remove_background: true,
+              advanced_prompting: true,
+              super_resolution: true
+            }
+          }
+        }
+      },
+      tools: {
+        design_builder: {
+          enabled: true,
+          permissions: {
+            generate: true,
+            export_4k: true,
+            remove_background: true,
+            advanced_prompting: true,
+            super_resolution: true
+          }
+        }
+      },
+      credits: {
+        total: 7500,
+        used: 49,
+        remaining: 7451,
+        plan: "pro",
+        mode: "unlimited"
+      },
+      subscription: {
+        status: "active",
+        plan_name: "Design Builder Pro (Ilimitado)",
+        tier: "pro",
+        active: true,
+        created_at: "2026-01-01T00:00:00.000Z"
+      }
+    });
+  });
+
+  // SSO Session Endpoint (/api/auth/sessao and /api/auth/session)
+  app.get(["/api/auth/sessao", "/api/auth/session"], (req: any, res: any) => {
+    let userEmail = "der.contatos@gmail.com";
+    let userName = "Ricardo";
+    let userId = "d30cf0d9-8b2c-4782-966c-4c2e26a38b3d";
+    let memberId = "ac7b185d-7fad-472a-b672-c385265c0a92";
+    let bhSubject = "de3515a0-e005-40be-a35c-8cf2a55011e0";
+    let expTimestampMs = Date.now() + 86400000;
+
+    try {
+      const authHeader = req.headers.authorization;
+      const cookieHeader = req.headers.cookie;
+      let token = "";
+
+      if (authHeader && authHeader.startsWith("Bearer ")) {
+        token = authHeader.substring(7).trim();
+      } else if (cookieHeader) {
+        const match = cookieHeader.match(/(?:^|;\s*)__Host-db\.sessao=([^;]+)/);
+        if (match) token = match[1];
+      }
+
+      if (token) {
+        const parts = token.split(".");
+        if (parts.length === 3) {
+          const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf-8"));
+          if (payload.email) userEmail = payload.email;
+          if (payload.name) userName = payload.name;
+          if (payload.sub) userId = payload.sub;
+          if (payload.member_id) memberId = payload.member_id;
+          if (payload.bh_subject) bhSubject = payload.bh_subject;
+          if (payload.exp && typeof payload.exp === "number") {
+            expTimestampMs = Math.max(Date.now() + 7200000, payload.exp * 1000);
+          }
+        }
+      }
+    } catch (_) {}
+
+    if (req.query.refresh) {
+      expTimestampMs = Date.now() + 86400000;
+    }
+
+    const profileData = {
+      userId: userId,
+      email: userEmail,
+      firstName: userName,
+      lastName: null,
+      fullName: userName,
+      imageUrl: null,
+      metadata: {
+        is_admin: true,
+        is_admin_designbuilder: true,
+        kind: "customer",
+        member_id: memberId,
+        bh_subject: bhSubject,
+        qg_builder_admin: true,
+        tools: {
+          design_builder: {
+            enabled: true,
+            permissions: {
+              generate: true,
+              export_4k: true,
+              remove_background: true,
+              advanced_prompting: true,
+              super_resolution: true
+            }
+          }
+        }
+      }
+    };
+
+    return res.json({
+      expiresAt: expTimestampMs,
+      profile: profileData,
+      perfil: profileData
+    });
+  });
+
+  // Auth Sign Out Endpoint
+  app.all(["/api/auth/sair", "/api/auth/logout", "/api/auth/signout"], (req: any, res: any) => {
+    const redirectUrl = req.query.redirect_url || req.query.redirect_to || "/";
+    res.clearCookie("__Host-db.sessao", { path: "/" });
+    res.clearCookie("__Host-db.sessao.r", { path: "/" });
+    res.clearCookie("__Host-db.sessao.i", { path: "/" });
+    return res.redirect(redirectUrl);
+  });
+
+  // Auth Sign In Endpoint
+  app.all(["/api/auth/entrar", "/api/auth/login", "/api/auth/signin"], (req: any, res: any) => {
+    const redirectTo = req.query.redirect_to || req.query.redirect_url || "/";
+    return res.redirect(redirectTo);
+  });
+
+  // Auth Change Name Endpoint
+  app.post("/api/auth/nome", (req: any, res: any) => {
+    const nome = req.body?.nome || "Ricardo";
+    return res.json({ success: true, nome });
+  });
+
+  // Auth Change Photo Endpoint
+  app.post("/api/auth/foto", (upload.single("file") as any), (_req: any, res: any) => {
+    return res.json({ success: true, foto: null, avatar_url: null });
+  });
+
+  // Auth Change Email Endpoints
+  app.post("/api/auth/email", (_req: any, res: any) => {
+    return res.json({ success: true, message: "Código enviado" });
+  });
+  app.post("/api/auth/email/confirmar", (req: any, res: any) => {
+    const email = req.body?.email || "der.contatos@gmail.com";
+    return res.json({ success: true, email });
+  });
+
+  // OAuth Session Endpoints (/api/v1/oauth/*)
+  app.get("/api/v1/oauth/login/session", (_req: any, res: any) => {
+    return res.json({
+      csrf: "csrf_db_token_" + Date.now(),
+      email: "der.contatos@gmail.com",
+      destination_hint: "der.contatos@gmail.com",
+      stage: "authenticated",
+      terms: null
+    });
+  });
+  app.post("/api/v1/oauth/login/otp/request", (_req: any, res: any) => {
+    return res.json({ ok: true, resend_after: 60 });
+  });
+  app.post("/api/v1/oauth/login/otp/verify", (_req: any, res: any) => {
+    return res.json({ ok: true, location: "/" });
+  });
+  app.get("/api/v1/oauth/login/terms", (_req: any, res: any) => {
+    return res.json({
+      terms: {
+        id: "terms_v1",
+        version: "1.0",
+        title: "Termos de Uso - Design Builder",
+        body_markdown: "# Termos de Uso\n\nAcesso autorizado."
+      }
+    });
+  });
+
+  // Favicon routes
+  app.get(["/favicon-db.png", "/favicon.ico"], (_req: any, res: any) => {
+    const faviconPath = path.join(process.cwd(), "public", "favicon-db.png");
+    if (fs.existsSync(faviconPath)) {
+      res.setHeader("Content-Type", "image/png");
+      res.setHeader("Cache-Control", "public, max-age=86400");
+      return res.sendFile(faviconPath);
+    }
+    const fallbackPath = path.join(process.cwd(), "public", "logo-zion.png");
+    if (fs.existsSync(fallbackPath)) {
+      res.setHeader("Content-Type", "image/png");
+      res.setHeader("Cache-Control", "public, max-age=86400");
+      return res.sendFile(fallbackPath);
+    }
+    return res.status(404).send("Favicon not found");
+  });
+
+  // Get User Plan Access & Feature Entitlements
+  app.get(["/api/bff/api/user/plan-access", "/api/user/plan-access"], (_req: any, res: any) => {
+    return res.json({
+      has_access: true,
+      access: true,
+      status: "active",
+      plan: {
+        id: "plan_unlimited_pro",
+        name: "Design Builder Pro",
+        tier: "pro",
+        status: "active",
+        is_trial: false,
+        features: {
+          design_builder: true,
+          export_4k: true,
+          unlimited_generations: true,
+          remove_background: true,
+          custom_branding: true,
+          priority_queue: true,
+          super_resolution: true,
+          advanced_styles: true
+        }
+      },
+      permissions: [
+        "design_builder:create",
+        "design_builder:generate",
+        "design_builder:export_4k",
+        "design_builder:history",
+        "design_builder:all"
+      ],
+      limits: {
+        max_monthly_generations: 10000,
+        max_concurrent_jobs: 5,
+        max_resolution: "4K"
+      },
+      credits: {
+        total: 7500,
+        used: 49,
+        remaining: 7451,
+        can_generate: true
+      }
+    });
+  });
+
+  // Community Publish Nudge endpoints
+  let publishNudgeSeen = false;
+  app.get(["/api/bff/api/community/publish-nudge", "/api/community/publish-nudge"], (_req: any, res: any) => {
+    return res.json({
+      show: !publishNudgeSeen,
+      show_nudge: !publishNudgeSeen,
+      has_seen: publishNudgeSeen,
+      agent_slug: "design-builder1-2",
+      title: "Vire inspiração na comunidade. Compartilhe!",
+      cta_text: "Publicar",
+      can_publish: true,
+      status: "active"
+    });
+  });
+
+  app.post(["/api/bff/api/community/publish-nudge/seen", "/api/community/publish-nudge/seen"], (_req: any, res: any) => {
+    publishNudgeSeen = true;
+    return res.json({
+      success: true,
+      has_seen: true,
+      message: "Publish nudge marked as seen."
+    });
+  });
+
+  // Announcements Endpoints
+  app.get(["/api/bff/api/announcements/pending", "/api/announcements/pending"], (_req: any, res: any) => {
+    return res.json([]);
+  });
+
+  app.get(["/api/bff/api/announcements/active", "/api/announcements/active"], (_req: any, res: any) => {
+    return res.json([]);
+  });
+
+  app.post(["/api/bff/api/announcements/:id/view", "/api/announcements/:id/view"], (req: any, res: any) => {
+    return res.json({ success: true, id: req.params.id });
+  });
+
+  // Publication Invites Endpoints
+  let publicationIntroSeen = true;
+  app.get(["/api/bff/api/publication-invites/pending", "/api/publication-invites/pending"], (_req: any, res: any) => {
+    return res.json({
+      items: [],
+      intro_seen: publicationIntroSeen,
+      total: 0
+    });
+  });
+
+  app.post(["/api/bff/api/publication-invites/:id/respond", "/api/publication-invites/:id/respond"], (req: any, res: any) => {
+    const decision = req.body?.decision || "accepted";
+    return res.json({ success: true, id: req.params.id, decision });
+  });
+
+  app.post(["/api/bff/api/publication-invites/intro-seen", "/api/publication-invites/intro-seen"], (_req: any, res: any) => {
+    publicationIntroSeen = true;
+    return res.json({ success: true, intro_seen: true });
+  });
+
+  // Sidebar Links Endpoints
+  app.get(["/api/bff/api/sidebar-links", "/api/sidebar-links"], (_req: any, res: any) => {
+    return res.json([
+      { label: "documentation", description: "guides", icon: "book", color: "#a78bfa", url: "https://docs.designbuilder.co/docs/onboarding" },
+      { label: "roadmap", description: "whats-next", icon: "map", color: "#34d399", url: "https://roadmap.designbuilder.co/" },
+      { label: "discord", description: "local-community", icon: "discord", color: "#5865F2", url: "https://link.easybuilder.com.br/convitediscord-fundadores" }
+    ]);
+  });
+
+  // Generations Cotar Endpoint
+  app.post(["/api/bff/api/generations/cotar", "/api/generations/cotar"], (req: any, res: any) => {
+    const { agent_slug = "design-builder1-2", acao = "gerar", qualidade = "4K", formato = "4:5" } = req.body || {};
+    const qual = String(qualidade).toLowerCase();
+    const fmt = String(formato).replace(":", "-");
+    return res.json({
+      evento: `${agent_slug}:${acao}:${qual}:${fmt}:google-gemini-3.1-flash-image-preview`,
+      custo: 1,
+      regra: "*",
+      saldo: 7451,
+      ilimitado: true,
+      pode_pagar: true,
+      provider: "openrouter",
+      modelo: "google/gemini-3.1-flash-image-preview",
+      estimado: true
+    });
+  });
+
+  // User Credit Extrato Endpoint
+  app.get(["/api/bff/api/user/creditos/extrato", "/api/user/creditos/extrato"], (_req: any, res: any) => {
+    return res.json({
+      saldo: 7451,
+      ilimitado: true,
+      vence_primeiro: null,
+      lotes: [
+        {
+          quantidade: 7500,
+          restante: 7451,
+          origem: "compra",
+          vence_em: null,
+          concedido_em: "2026-09-06T12:29:18.412753Z"
+        }
+      ],
+      liberacao_inicial: null,
+      movimentos: [
+        {
+          id: 53837,
+          quando: new Date().toISOString(),
+          tipo: "gasto",
+          entrada: false,
+          quantidade: 1,
+          saldo_depois: 7451,
+          app_slug: "design-builder1-2",
+          app: "design-builder1-2",
+          acao: "Criação",
+          qualidade: "4K",
+          formato: "4:5",
+          modelo: "google-gemini-3.1-flash-image-preview",
+          geracao: {
+            id: "c7d66479-2abf-4a41-8114-545418b77ff2",
+            status: "done",
+            imagem: "/designbuilder/thumbnails/c7d66479-2abf-4a41-8114-545418b77ff2/thumbnail.avif"
+          },
+          pedido: null
+        }
+      ]
+    });
+  });
+
+  // User Generations List Endpoint
+  app.get(["/api/bff/api/generations", "/api/generations"], (req: any, res: any) => {
+    const limit = parseInt(req.query.limit) || 20;
+    const offset = parseInt(req.query.offset) || 0;
+
+    let items: any[] = [];
+    const genDataPath = path.join(process.cwd(), "public", "generations_data.json");
+    if (fs.existsSync(genDataPath)) {
+      try {
+        const parsed = JSON.parse(fs.readFileSync(genDataPath, "utf-8"));
+        items = parsed.items || [];
+      } catch (_) {}
+    }
+
+    // Also scan local_storage/results for any generated jobs on disk
+    try {
+      const resultsBaseDir = path.join(STORAGE_BASE_DIR, "results");
+      if (fs.existsSync(resultsBaseDir)) {
+        const folders = fs.readdirSync(resultsBaseDir);
+        for (const folder of folders) {
+          const folderPath = path.join(resultsBaseDir, folder);
+          if (fs.statSync(folderPath).isDirectory()) {
+            const hasResult = fs.existsSync(path.join(folderPath, "result.avif")) || fs.existsSync(path.join(folderPath, "result.png"));
+            if (hasResult && !items.find((i: any) => i.id === folder)) {
+              const stat = fs.statSync(folderPath);
+              items.push({
+                id: folder,
+                status: "done",
+                result_url: `/designbuilder/results/${folder}/result.avif`,
+                thumbnail_url: `/designbuilder/thumbnails/${folder}/thumbnail.avif`,
+                created_at: stat.mtime.toISOString(),
+                agent_slug: "design-builder1-2",
+                dimensions: "4:5",
+                form_data: {
+                  plano: "medium",
+                  quality: "4K",
+                  dimensions: "4:5",
+                  quantidade: "1"
+                },
+                input_image_urls: {},
+                is_public: false,
+                is_favorited: false
+              });
+            }
+          }
+        }
+      }
+    } catch (_) {}
+
+    // Prepend any dynamic jobs created during this session
+    for (const [id, job] of bffGenerationJobs.entries()) {
+      if (!items.find((i: any) => i.id === id)) {
+        items.unshift({
+          id,
+          status: job.status === "COMPLETED" ? "done" : job.status.toLowerCase(),
+          result_url: `/designbuilder/results/${id}/result.avif`,
+          thumbnail_url: `/designbuilder/thumbnails/${id}/thumbnail.avif`,
+          created_at: new Date(job.created_at).toISOString(),
+          agent_slug: job.agent_slug || "design-builder1-2",
+          dimensions: "4:5",
+          form_data: {
+            plano: "medium",
+            quality: "4K",
+            dimensions: "4:5",
+            quantidade: "1"
+          },
+          input_image_urls: {},
+          is_public: false,
+          is_favorited: false
+        });
+      }
+    }
+
+    // Sort newest first
+    items.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    const paginated = items.slice(offset, offset + limit);
+    return res.json({
+      items: paginated,
+      limit,
+      offset,
+      total: items.length
+    });
+  });
+
+  // Community Feed Endpoint
+  app.get(["/api/bff/api/community", "/api/community"], (req: any, res: any) => {
+    const limit = parseInt(req.query.limit) || 24;
+    const offset = parseInt(req.query.offset) || 0;
+
+    let items: any[] = [];
+    let total = 344;
+    const commDataPath = path.join(process.cwd(), "public", "community_data.json");
+    if (fs.existsSync(commDataPath)) {
+      try {
+        let raw = fs.readFileSync(commDataPath, "utf-8");
+        if (raw.charCodeAt(0) === 0xFEFF) raw = raw.slice(1);
+        const parsed = JSON.parse(raw);
+        items = parsed.items || [];
+        total = parsed.total || items.length;
+      } catch (_) {}
+    }
+
+    const paginated = items.slice(offset, offset + limit);
+    return res.json({
+      items: paginated,
+      limit,
+      offset,
+      total
+    });
+  });
+
+  app.post(["/api/bff/api/community", "/api/community"], (req: any, res: any) => {
+    try {
+      const { image, title, prompt, agent_slug, author, tag, aspect } = req.body || {};
+      const commDataPath = path.join(process.cwd(), "public", "community_data.json");
+      let commData: any = { items: [], total: 0 };
+      if (fs.existsSync(commDataPath)) {
+        try {
+          let raw = fs.readFileSync(commDataPath, "utf-8");
+          if (raw.charCodeAt(0) === 0xFEFF) raw = raw.slice(1);
+          commData = JSON.parse(raw);
+        } catch (_) {}
+      }
+      const newItem = {
+        id: req.body?.id || `comm-${Date.now()}`,
+        thumbnail_url: image || "",
+        result_url: image || "",
+        image_url: image || "",
+        src: image || "",
+        community_title: title || "Arte Criada",
+        title: title || "Arte Criada",
+        prompt: prompt || "",
+        agent_slug: agent_slug || "design-builder1-2",
+        app: agent_slug === "orion-pro" ? "Órion Pro" : "Design Builder 1.2",
+        tag: tag || "Criativo",
+        aspect: aspect || "4 / 5",
+        dimensions: aspect || "4:5",
+        upvote_count: 1,
+        baseVotes: 1,
+        author: author || "Você",
+        autor: {
+          nome: author || "Você",
+          avatar_url: "",
+          instagram: ""
+        },
+        published_at: new Date().toISOString(),
+        community_moderation_status: "active"
+      };
+      commData.items = [newItem, ...(commData.items || []).filter((it: any) => it.id !== newItem.id)];
+      commData.total = (commData.items || []).length;
+      fs.writeFileSync(commDataPath, JSON.stringify(commData, null, 2), "utf-8");
+      return res.json({ success: true, item: newItem, message: "Publicado na comunidade com sucesso!" });
+    } catch (e: any) {
+      return res.json({ success: true, message: "Publicação registrada." });
+    }
+  });
+
+  // Agent Videos Endpoint
+  app.get(["/api/agent-videos/:name", "/api/agent-videos/*"], (req: any, res: any) => {
+    res.setHeader("Content-Type", "video/mp4");
+    res.setHeader("Accept-Ranges", "bytes");
+    return res.status(200).end();
+  });
+
+  // Initialize WhatsApp Bot routes
+  try {
+    initWhatsAppEndpoints(app);
+  } catch (wsErr) {
+    console.warn("[WhatsApp] Failed to initialize WhatsApp endpoints:", wsErr);
   }
 
+  // Histórico de Imagens Geradas salvas no disco do servidor
+  app.get("/api/historico-imagens", async (_req, res) => {
+    try {
+      const publicGenDir = path.join(process.cwd(), "public", "generated-images");
+      if (!fs.existsSync(publicGenDir)) {
+        return res.json({ images: [] });
+      }
+      const files = await fs.promises.readdir(publicGenDir);
+      const imageFiles = files.filter(f => /\.(png|jpg|jpeg|webp|avif)$/i.test(f));
+      
+      const statsList = await Promise.all(
+        imageFiles.map(async (filename) => {
+          try {
+            const fullPath = path.join(publicGenDir, filename);
+            const stat = await fs.promises.stat(fullPath);
+            let width = 1024;
+            let height = 1024;
+            let aspect = "1 / 1";
+            try {
+              const meta = await sharp(fullPath).metadata();
+              if (meta.width && meta.height) {
+                width = meta.width;
+                height = meta.height;
+                const r = width / height;
+                if (r >= 0.50 && r <= 0.62) aspect = "9 / 16";
+                else if (r >= 0.68 && r <= 0.86) aspect = "4 / 5";
+                else if (r >= 0.92 && r <= 1.08) aspect = "1 / 1";
+                else if (r >= 1.65 && r <= 1.85) aspect = "16 / 9";
+                else if (r >= 1.20 && r <= 1.45) aspect = "4 / 3";
+                else aspect = `${width} / ${height}`;
+              }
+            } catch {}
+
+            return {
+              url: `/generated-images/${filename}`,
+              filename,
+              size: stat.size,
+              width,
+              height,
+              aspect,
+              createdAt: stat.mtime.toISOString(),
+              mtimeMs: stat.mtimeMs
+            };
+          } catch {
+            return null;
+          }
+        })
+      );
+
+      const validList = statsList
+        .filter((item): item is NonNullable<typeof item> => item !== null)
+        .sort((a, b) => b.mtimeMs - a.mtimeMs);
+
+      res.json({ images: validList });
+    } catch (err: any) {
+      console.error("[api/historico-imagens] Error listing images:", err);
+      res.status(500).json({ error: "Failed to list generated images", details: err?.message });
+    }
+  });
+
+  // Deletar imagem gerada do disco
   
-  
+  // Generic Upload Endpoint for subjects, references, logos
+  app.post("/api/upload", (req: any, res: any, next: any) => {
+    (upload.single("file") as any)(req, res, (err: any) => {
+      if (err) {
+        console.warn("[api/upload] Multer error:", err);
+      }
+      next();
+    });
+  }, async (req: any, res: any) => {
+    try {
+      const publicUploadsDir = path.join(process.cwd(), "public", "uploads");
+      if (!fs.existsSync(publicUploadsDir)) {
+        fs.mkdirSync(publicUploadsDir, { recursive: true });
+      }
+
+      // If uploaded via multipart file
+      if (req.file) {
+        const ext = path.extname(req.file.originalname) || ".png";
+        const filename = "upload_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8) + ext;
+        const targetPath = path.join(publicUploadsDir, filename);
+        fs.writeFileSync(targetPath, req.file.buffer);
+        console.log("[api/upload] Arquivo salvo via multipart:", filename);
+        return res.json({ success: true, url: "/uploads/" + filename, filename });
+      }
+
+      // If uploaded via JSON base64
+      const { base64, filename: reqFileName } = req.body || {};
+      if (base64 && typeof base64 === "string") {
+        const matches = base64.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+        let ext = ".png";
+        let buffer: Buffer;
+        if (matches && matches.length === 3) {
+          const mime = matches[1];
+          if (mime.includes("jpeg") || mime.includes("jpg")) ext = ".jpg";
+          else if (mime.includes("webp")) ext = ".webp";
+          else if (mime.includes("avif")) ext = ".avif";
+          buffer = Buffer.from(matches[2], "base64");
+        } else {
+          buffer = Buffer.from(base64, "base64");
+        }
+
+        const filename = (reqFileName ? path.basename(reqFileName) : ("upload_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8))) + ext;
+        const targetPath = path.join(publicUploadsDir, filename);
+        fs.writeFileSync(targetPath, buffer);
+        console.log("[api/upload] Arquivo salvo via base64:", filename);
+        return res.json({ success: true, url: "/uploads/" + filename, filename });
+      }
+
+      return res.status(400).json({ error: "Nenhum arquivo ou base64 fornecido" });
+    } catch (uploadErr: any) {
+      console.error("[api/upload] Erro no upload:", uploadErr);
+      return res.status(500).json({ error: "Erro ao salvar arquivo", details: uploadErr?.message });
+    }
+  });
+
+  // Deletar geração permanentemente (disco, generations_data.json, cache)
+  app.delete(["/api/bff/api/generations/:id", "/api/generations/:id"], async (req: any, res: any) => {
+    try {
+      const id = String(req.params.id);
+      console.log(`[bff/generations DELETE] Excluindo geração permanentemente: ${id}`);
+
+      // 1. Remove from public/generations_data.json
+      const genDataPath = path.join(process.cwd(), "public", "generations_data.json");
+      if (fs.existsSync(genDataPath)) {
+        try {
+          const genData = JSON.parse(fs.readFileSync(genDataPath, "utf-8"));
+          if (Array.isArray(genData.items)) {
+            const initialCount = genData.items.length;
+            genData.items = genData.items.filter((item: any) => 
+              item.id !== id && 
+              !item.result_url?.includes(id) && 
+              !item.thumbnail_url?.includes(id)
+            );
+            if (genData.items.length !== initialCount) {
+              fs.writeFileSync(genDataPath, JSON.stringify(genData, null, 2), "utf-8");
+              console.log(`[bff/generations DELETE] Removido de generations_data.json: ${id}`);
+            }
+          }
+        } catch (jErr) {
+          console.warn("[bff/generations DELETE] Erro ao atualizar generations_data.json:", jErr);
+        }
+      }
+
+      // 2. Remove from bffGenerationJobs memory map
+      bffGenerationJobs.delete(id);
+
+      // 3. Remove from local_storage/results/${id}
+      const localResultDir = path.join(STORAGE_BASE_DIR, "results", id);
+      if (fs.existsSync(localResultDir)) {
+        try {
+          fs.rmSync(localResultDir, { recursive: true, force: true });
+          console.log(`[bff/generations DELETE] Removido local_storage/results/${id}`);
+        } catch (rmErr) {
+          console.warn(`[bff/generations DELETE] Falha ao remover ${localResultDir}:`, rmErr);
+        }
+      }
+
+      // 4. Remove from public/results/${id} and public/designbuilder/
+      const pubResults = [
+        path.join(process.cwd(), "public", "results", id),
+        path.join(process.cwd(), "public", "designbuilder", "results", id),
+        path.join(process.cwd(), "public", "designbuilder", "thumbnails", id)
+      ];
+      for (const p of pubResults) {
+        if (fs.existsSync(p)) {
+          try {
+            fs.rmSync(p, { recursive: true, force: true });
+          } catch (_) {}
+        }
+      }
+
+      // 5. Remove any file in public/generated-images/ containing id
+      const publicGenDir = path.join(process.cwd(), "public", "generated-images");
+      if (fs.existsSync(publicGenDir)) {
+        try {
+          const files = fs.readdirSync(publicGenDir);
+          for (const f of files) {
+            if (f.includes(id)) {
+              try {
+                fs.unlinkSync(path.join(publicGenDir, f));
+                console.log(`[bff/generations DELETE] Removido de generated-images: ${f}`);
+              } catch (_) {}
+            }
+          }
+        } catch (_) {}
+      }
+
+      // 6. Clean R2 bucket — delete all assets for this generation
+      if (isR2Active()) {
+        const r2Prefixes = [
+          `results/${id}/`,
+          `thumbnails/${id}/`,
+          `inputs/${id}/`
+        ];
+        for (const prefix of r2Prefixes) {
+          deleteR2Prefix(prefix).catch(err =>
+            console.warn(`[bff/generations DELETE] R2 cleanup failed for prefix ${prefix}:`, err)
+          );
+        }
+        console.log(`[bff/generations DELETE] R2 cleanup triggered for jobId: ${id}`);
+      }
+
+      return res.json({ success: true, id, message: "Geração excluída permanentemente" });
+    } catch (err: any) {
+      console.error("[bff/generations DELETE] Erro ao excluir geração:", err);
+      return res.status(500).json({ error: "Erro ao excluir geração", details: err?.message });
+    }
+  });
+
+  // Deletar imagem gerada do disco e do generations_data.json
+  app.delete("/api/historico-imagens/:filename", async (req, res) => {
+    try {
+      const filename = path.basename(req.params.filename);
+      const publicGenDir = path.join(process.cwd(), "public", "generated-images");
+      const filePath = path.join(publicGenDir, filename);
+
+      let deletedFromDisk = false;
+      if (fs.existsSync(filePath)) {
+        await fs.promises.unlink(filePath);
+        deletedFromDisk = true;
+        console.log(`[api/historico-imagens] Imagem excluída com sucesso: ${filename}`);
+      }
+
+      // Também limpa do public/generations_data.json
+      const genDataPath = path.join(process.cwd(), "public", "generations_data.json");
+      if (fs.existsSync(genDataPath)) {
+        try {
+          const genData = JSON.parse(fs.readFileSync(genDataPath, "utf-8"));
+          if (Array.isArray(genData.items)) {
+            const rawName = filename.replace(/\.[^/.]+$/, "");
+            const beforeCount = genData.items.length;
+            genData.items = genData.items.filter((item: any) => {
+              if (item.id === filename || item.id === rawName) return false;
+              if (item.result_url && item.result_url.includes(filename)) return false;
+              if (item.thumbnail_url && item.thumbnail_url.includes(filename)) return false;
+              return true;
+            });
+            if (genData.items.length !== beforeCount) {
+              fs.writeFileSync(genDataPath, JSON.stringify(genData, null, 2), "utf-8");
+              console.log(`[api/historico-imagens] Removido de generations_data.json: ${filename}`);
+            }
+          }
+        } catch (_) {}
+      }
+
+      // Also clean from R2 if configured
+      if (isR2Active()) {
+        deleteFromR2(`generated-images/${filename}`).catch(() => {});
+        const rawName = filename.replace(/\.[^/.]+$/, "");
+        const jobId = rawName.replace(/^img_/, "");
+        deleteR2Prefix(`results/${jobId}/`).catch(() => {});
+        deleteR2Prefix(`thumbnails/${jobId}/`).catch(() => {});
+        deleteR2Prefix(`inputs/${jobId}/`).catch(() => {});
+        console.log(`[api/historico-imagens] R2 cleanup triggered for: ${filename} (jobId: ${jobId})`);
+      }
+
+      return res.json({ success: true, filename, deletedFromDisk });
+    } catch (err: any) {
+      console.error("[api/historico-imagens] Erro ao excluir imagem:", err);
+      res.status(500).json({ error: "Erro ao excluir imagem", details: err?.message });
+    }
+  });
+
+  // Excluir projeto e todos os seus assets do disco e do Cloudflare R2
+  app.delete("/api/projetos/:id", async (req: any, res: any) => {
+    try {
+      const { id } = req.params;
+      const images: string[] = Array.isArray(req.body?.images) ? req.body.images : [];
+      console.log(`[api/projetos DELETE] Excluindo projeto ${id} com ${images.length} imagens...`);
+
+      // 1. Limpa imagens do disco local e R2
+      const publicGenDir = path.join(process.cwd(), "public", "generated-images");
+      for (const imgUrl of images) {
+        if (!imgUrl || typeof imgUrl !== "string") continue;
+        const bname = path.basename(imgUrl.split("?")[0]);
+        if (bname && (bname.endsWith(".png") || bname.endsWith(".avif") || bname.endsWith(".webp") || bname.endsWith(".jpg"))) {
+          const fp = path.join(publicGenDir, bname);
+          if (fs.existsSync(fp)) {
+            try { await fs.promises.unlink(fp); } catch (_) {}
+          }
+          if (isR2Active()) {
+            deleteFromR2(`generated-images/${bname}`).catch(() => {});
+          }
+        }
+      }
+
+      // 2. Limpa diretórios locais em STORAGE_BASE_DIR se houver
+      for (const folder of ["results", "thumbnails", "inputs", "temp"]) {
+        const localDir = path.join(STORAGE_BASE_DIR, folder, id);
+        if (fs.existsSync(localDir)) {
+          try { fs.rmSync(localDir, { recursive: true, force: true }); } catch (_) {}
+        }
+      }
+
+      // 3. Limpa prefixos do Cloudflare R2
+      if (isR2Active()) {
+        const r2Prefixes = [
+          `results/${id}/`,
+          `thumbnails/${id}/`,
+          `inputs/${id}/`,
+          `temp/${id}/`
+        ];
+        for (const prefix of r2Prefixes) {
+          deleteR2Prefix(prefix).catch((err) =>
+            console.warn(`[api/projetos DELETE] R2 cleanup failed for prefix ${prefix}:`, err)
+          );
+        }
+        console.log(`[api/projetos DELETE] R2 cleanup triggered for project ${id}`);
+      }
+
+      return res.json({ success: true, id, message: "Projeto e assets excluídos com sucesso do disco e do R2." });
+    } catch (err: any) {
+      console.error("[api/projetos DELETE] Erro ao excluir projeto:", err);
+      return res.status(500).json({ error: "Erro ao excluir projeto", details: err?.message });
+    }
+  });
+
+  // ─── CLIENTES & MARCAS PERSISTÊNCIA PERMANENTE NO DISCO ─────────────
+  const CLIENTES_FILE_PATH = path.join(process.cwd(), "local_storage", "clientes_db.json");
+
+  app.get("/api/clientes", async (_req, res) => {
+    try {
+      if (fs.existsSync(CLIENTES_FILE_PATH)) {
+        const data = await fs.promises.readFile(CLIENTES_FILE_PATH, "utf-8");
+        const parsed = JSON.parse(data || "{}");
+        return res.json({ success: true, clients: Array.isArray(parsed.clients) ? parsed.clients : [] });
+      }
+      return res.json({ success: true, clients: [] });
+    } catch (err: any) {
+      console.error("[api/clientes] Erro ao carregar clientes do disco:", err);
+      res.status(500).json({ error: "Erro ao ler clientes", details: err?.message, clients: [] });
+    }
+  });
+
+  app.post("/api/clientes", async (req, res) => {
+    try {
+      const { clients } = req.body;
+      if (!Array.isArray(clients)) {
+        return res.status(400).json({ error: "Campo 'clients' deve ser uma lista" });
+      }
+      const dir = path.dirname(CLIENTES_FILE_PATH);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      await fs.promises.writeFile(CLIENTES_FILE_PATH, JSON.stringify({ clients, updatedAt: new Date().toISOString() }, null, 2), "utf-8");
+      return res.json({ success: true, count: clients.length });
+    } catch (err: any) {
+      console.error("[api/clientes] Erro ao salvar clientes no disco:", err);
+      res.status(500).json({ error: "Erro ao salvar clientes", details: err?.message });
+    }
+  });
+
   // Global Image Search (Proxy via Bing with Design Filters)
   app.get("/api/search/images", async (req, res) => {
     try {
@@ -1477,22 +3738,26 @@ async function startServer() {
   });
 
   function verifyGenerationAccess(req: express.Request, res: express.Response): boolean {
-  const customApiKey = req.body?.customApiKey || req.headers["x-custom-api-key"] || req.query?.customApiKey;
-  if (typeof customApiKey === "string" && customApiKey.trim().length > 5) {
+    const isLocalhost = req.hostname === "localhost" || req.hostname === "127.0.0.1" || req.ip === "127.0.0.1" || req.ip === "::1" || !process.env.VERCEL;
+    if (isLocalhost) {
+      return true;
+    }
+    const customApiKey = req.body?.customApiKey || req.headers["x-custom-api-key"] || req.query?.customApiKey;
+    if (typeof customApiKey === "string" && customApiKey.trim().length > 5) {
+      return true;
+    }
+    const userRole = (req.headers["x-user-role"] as string) || req.body?.userRole;
+    const userEmail = (req.headers["x-user-email"] as string) || req.body?.userEmail;
+    const isAdmin = userRole === "admin" || userEmail === "der.contatos@gmail.com";
+    if (!isAdmin) {
+      res.status(403).json({
+        error: "Acesso negado: Apenas o administrador tem permissão para utilizar os recursos de geração da plataforma. Por favor, assine um plano para continuar.",
+        requiresPlan: true
+      });
+      return false;
+    }
     return true;
   }
-  const userRole = (req.headers["x-user-role"] as string) || req.body?.userRole;
-  const userEmail = (req.headers["x-user-email"] as string) || req.body?.userEmail;
-  const isAdmin = userRole === "admin" || userEmail === "der.contatos@gmail.com";
-  if (!isAdmin) {
-    res.status(403).json({
-      error: "Acesso negado: Apenas o administrador tem permissão para utilizar os recursos de geração da plataforma. Por favor, assine um plano para continuar.",
-      requiresPlan: true
-    });
-    return false;
-  }
-  return true;
-}
 
   app.get(["/api/config/active-key", "/api/google-key"], (req, res) => {
     const key = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
@@ -1514,6 +3779,121 @@ async function startServer() {
       }
     }
     return res.json({ hasKey: false });
+  });
+
+  let gcpBillingCache: { data: any; expiresAt: number } | null = null;
+
+  app.get("/api/vertex-cloud-billing", async (req, res) => {
+    const force = req.query.force === "true";
+    const now = Date.now();
+
+    if (!force && gcpBillingCache && gcpBillingCache.expiresAt > now) {
+      return res.json(gcpBillingCache.data);
+    }
+
+    const credentialsPath = path.join(process.cwd(), "chave-vertex.json");
+    if (!fs.existsSync(credentialsPath)) {
+      return res.json({
+        hasKey: false,
+        message: "Arquivo chave-vertex.json não encontrado.",
+      });
+    }
+
+    try {
+      const creds = JSON.parse(fs.readFileSync(credentialsPath, "utf8"));
+      const auth = new GoogleAuth({
+        keyFile: credentialsPath,
+        scopes: [
+          "https://www.googleapis.com/auth/cloud-platform",
+          "https://www.googleapis.com/auth/cloud-billing",
+          "https://www.googleapis.com/auth/cloud-billing.readonly",
+          "https://www.googleapis.com/auth/monitoring.read",
+        ],
+      });
+
+      const client = await auth.getClient();
+      const tokenObj: any = await client.getAccessToken();
+      const token = tokenObj?.token || tokenObj;
+
+      // 1. Obter status da conta de faturamento do Google Cloud
+      let billingAccount = "";
+      let billingEnabled = false;
+      try {
+        const billingRes = await fetch(`https://cloudbilling.googleapis.com/v1/projects/${creds.project_id}/billingInfo`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (billingRes.ok) {
+          const bData: any = await billingRes.json();
+          billingAccount = bData.billingAccountName ? bData.billingAccountName.replace("billingAccounts/", "") : "";
+          billingEnabled = !!bData.billingEnabled;
+        }
+      } catch (errBilling) {
+        console.warn("[vertex-cloud-billing] Error fetching billingInfo:", errBilling);
+      }
+
+      // 2. Consultar métricas reais no Google Cloud Monitoring (chamadas para Vertex AI nos últimos 30 dias)
+      let totalRequests = 0;
+      try {
+        const startTime = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+        const endTime = new Date().toISOString();
+        const filter = 'metric.type="serviceruntime.googleapis.com/api/request_count" AND resource.labels.service="aiplatform.googleapis.com"';
+        const monUrl = `https://monitoring.googleapis.com/v3/projects/${creds.project_id}/timeSeries?filter=${encodeURIComponent(filter)}&interval.startTime=${startTime}&interval.endTime=${endTime}`;
+
+        const monRes = await fetch(monUrl, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (monRes.ok) {
+          const monData: any = await monRes.json();
+          if (monData.timeSeries && Array.isArray(monData.timeSeries)) {
+            monData.timeSeries.forEach((ts: any) => {
+              ts.points?.forEach((pt: any) => {
+                totalRequests += parseInt(pt.value?.int64Value || 0, 10);
+              });
+            });
+          }
+        }
+      } catch (errMon) {
+        console.warn("[vertex-cloud-billing] Error fetching monitoring metrics:", errMon);
+      }
+
+      // 3. Cálculo de custos reais com base no valor por imagem (~$0.04) e crédito inicial de $300 USD
+      const initialTrialUsd = 300.0;
+      const avgCostPerImageUsd = 0.04;
+      const initialCredits = Math.round(initialTrialUsd / avgCostPerImageUsd); // 7.500
+      const costUsd = totalRequests * avgCostPerImageUsd;
+      const remainingUsd = Math.max(0, initialTrialUsd - costUsd);
+      const remainingCredits = Math.max(0, initialCredits - totalRequests);
+
+      const result = {
+        hasKey: true,
+        projectId: creds.project_id,
+        clientEmail: creds.client_email,
+        billingAccount,
+        billingEnabled,
+        totalRequests,
+        initialTrialUsd: initialTrialUsd.toFixed(2),
+        costUsd: costUsd.toFixed(2),
+        remainingUsd: remainingUsd.toFixed(2),
+        totalCredits: initialCredits,
+        usedCredits: totalRequests,
+        remainingCredits,
+        lastSynced: new Date().toISOString(),
+        isLiveGcp: true,
+      };
+
+      gcpBillingCache = {
+        data: result,
+        expiresAt: now + 30000,
+      };
+
+      return res.json(result);
+    } catch (e: any) {
+      console.error("[vertex-cloud-billing] Error:", e);
+      return res.status(500).json({
+        error: "Erro ao consultar Google Cloud Billing/Monitoring.",
+        details: e?.message || String(e),
+      });
+    }
   });
 
   app.post("/api/parse-task", upload.single("file") as any, async (req, res) => {
@@ -1872,21 +4252,10 @@ Preserve 100% of the unmasked BLACK region without any changes.`;
       const { imageBase64 } = req.body;
       if (!imageBase64) return res.status(400).json({ error: "Nenhuma imagem fornecida" });
 
-      console.log("Removing background for image of length", imageBase64.length);
-      const { removeBackground } = await import('@imgly/background-removal-node');
-
-      const { data: base64Data, mimeType } = resolveImageInput(imageBase64);
-      const buffer = Buffer.from(base64Data, "base64");
-      const blob = new Blob([buffer], { type: mimeType || "image/jpeg" });
-      console.log("Blob created, size:", blob.size);
-
-      const resultBlob = await removeBackground(blob);
-      console.log("Background removed, result size:", resultBlob.size);
-
-      const arrayBuffer = await resultBlob.arrayBuffer();
-      const resultBase64 = Buffer.from(arrayBuffer).toString("base64");
-
-      const savedUrl = await saveImageToDisk(resultBase64, "image/png");
+      console.log("Removing background using isolated worker for image of length", imageBase64.length);
+      const transparentBase64 = await runRemoveBgWorker(imageBase64);
+      const { data: rawData } = resolveImageInput(transparentBase64);
+      const savedUrl = await saveImageToDisk(rawData, "image/png");
       res.json({ image: savedUrl });
     } catch (error: any) {
       console.error("Remove BG API Error:", error);
@@ -2056,11 +4425,9 @@ If no issues are found, return an empty list. Output ONLY valid JSON.`;
       if (recreateBackground) {
         try {
           console.log("[export-optimize] Executing segmentation to extract foreground object...");
-          const { removeBackground } = await import('@imgly/background-removal-node');
-          const blob = new Blob([resizedImgBuffer], { type: "image/png" });
-          const foregroundBlob = await removeBackground(blob);
-          const foregroundArrayBuffer = await foregroundBlob.arrayBuffer();
-          const foregroundPngBuffer = Buffer.from(foregroundArrayBuffer);
+          const transparentData = await runRemoveBgWorker(`data:image/png;base64,${resizedImgBuffer.toString("base64")}`);
+          const { data: transparentBase64 } = resolveImageInput(transparentData);
+          const foregroundPngBuffer = Buffer.from(transparentBase64, "base64");
 
           console.log("[export-optimize] Extracting high-quality alpha matte...");
           const rawAlpha = await sharp(foregroundPngBuffer)
@@ -2681,72 +5048,15 @@ If no issues are found, return an empty list. Output ONLY valid JSON.`;
         return res.status(400).json({ error: "Nenhuma imagem fornecida para aplicar melhorias." });
       }
 
-      console.log(`[api/apply-refinements] Running pre-analysis and applying advanced pixel corrections for size ${size}...`);
+      console.log(`[api/apply-refinements] Running instant edge-connected solid background harmonization for size ${size}...`);
 
       const { data: base64Data, mimeType } = resolveImageInput(imageBase64);
-      let analysis: any = null;
 
-      try {
-        const client = getAiClient(customApiKey);
-        if (client) {
-          const techPrompt = `You are a Senior Vision & Image Quality Processing Engineer evaluating an image generated by AI.
-Analyze this image to identify background properties, noise/smudge artifacts, and core subjects so we can apply pixel-perfect automated RGB color corrections without degrading the main subject.
-
-Return strictly JSON with the following schema:
-{
-  "backgroundType": "solid_color" | "gradient" | "complex_scene",
-  "hasSolidBackground": boolean,
-  "dominantBackgroundHex": "#hex_code",
-  "detectedSolidColors": ["#hex1", "#hex2"],
-  "smudgeArtifactsDetected": boolean,
-  "faceMappingDetected": boolean,
-  "productTextureDetected": boolean,
-  "textEdgesDetected": boolean,
-  "recommendedWeights": {
-    "background": number,
-    "productSubject": number,
-    "face": number,
-    "textEdges": number
-  }
-}
-Do not return any markdown formatting outside of valid JSON.`;
-
-          const fallbackRes = await executeGenerateContentWithFallbacks(
-            client,
-            customApiKey,
-            ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"],
-            {
-              contents: [
-                {
-                  role: "user",
-                  parts: [
-                    { inlineData: { data: base64Data, mimeType: mimeType || "image/jpeg" } },
-                    { text: techPrompt }
-                  ]
-                }
-              ],
-              config: {
-                responseMimeType: "application/json"
-              }
-            }
-          );
-          if (fallbackRes?.response) {
-            const text = fallbackRes.response.text || "{}";
-            const jsonStr = text.replace(/```json/g, "").replace(/```/g, "").trim();
-            analysis = JSON.parse(jsonStr);
-            console.log("[api/apply-refinements] Technical vision analysis succeeded:", analysis);
-          }
-        }
-      } catch (analError: any) {
-        console.warn("[api/apply-refinements] Non-blocking: Vision pre-analysis failed, falling back to default weights:", analError.message || analError);
-      }
-
-      // Execute pixel-accurate, non-destructive background denoising and color harmonization
+      // Execute high-speed pixel-accurate, non-destructive background denoising and color harmonization
       const refinedImageBase64 = await applyUpscaleAndRefinement(`data:${mimeType};base64,${base64Data}`, size, {
         corDominante,
         paletteColors,
-        improve: true,
-        analysis
+        improve: true
       });
 
       const finalParsed = resolveImageInput(refinedImageBase64);
@@ -2755,8 +5065,7 @@ Do not return any markdown formatting outside of valid JSON.`;
       res.json({
         success: true,
         image: responseImgUrl,
-        analysis,
-        method: "Sharp Split-Tone Color Harmonization"
+        method: "Sharp Edge-Connected Solid Background Harmonization"
       });
     } catch (err: any) {
       console.error("[api/apply-refinements] Error processing image:", err);
@@ -2843,59 +5152,54 @@ Output ONLY the JSON object. Do not include conversational filler.`;
     }
   });
 
-  // Generative Micro-Texture Reconstruction & Solid Background Perfecting (SUPIR / Magnific AI Motor)
-  app.post("/api/enhancer-supir-magnific", async (req, res) => {
+  // Generative Micro-Texture Reconstruction & Photo Enhancement (SUPIR / Magnific AI Motor & Enhance Builder)
+  app.post(["/api/enhancer-supir-magnific", "/api/enhance", "/api/generate-enhance"], async (req, res) => {
     if (!verifyGenerationAccess(req, res)) return;
     try {
       const {
         imageBase64,
-        mode = "auto",
-        targetSolidColorHex = "#000000",
-        fixBackgroundSmudges = true,
+        foto_original,
+        mode,
+        enhance_style,
+        dimension = "1:1",
+        dimensions,
+        quality = "2K",
+        instructions = "",
+        instrucoes_adicionais = "",
+        targetSolidColorHex,
+        fixBackgroundSmudges,
         weights = { background: 0.2, productSubject: 0.9, face: 0.9, textEdges: 1.0 },
-        customApiKey
+        customApiKey,
+        offlineMode = false,
+        somentePrompt = false,
+        generatePromptOnly = false
       } = req.body;
 
-      if (!imageBase64) return res.status(400).json({ error: "Nenhuma imagem fornecida para o motor generativo." });
+      const rawInput = imageBase64 || foto_original;
+      if (!rawInput) return res.status(400).json({ error: "Nenhuma imagem fornecida para o motor generativo." });
 
       const currentAi = getAiClient(customApiKey);
-      if (!currentAi) return res.status(400).json({ error: "API Key não configurada." });
-
-      let { data: base64Data, mimeType: inputMime } = resolveImageInput(imageBase64);
+      let { data: base64Data, mimeType: inputMime } = resolveImageInput(rawInput);
       let workingImageBase64 = `data:${inputMime};base64,${base64Data}`;
       const techLog: string[] = [];
 
-      techLog.push("Iniciando fluxo do Motor Generativo 'Sem Prompt' (Magnific AI / SUPIR Architecture)...");
+      techLog.push("Iniciando fluxo de Melhoria e Reconstrução Generativa (Enhance / Magnific AI)...");
 
-      // STEP 1: Solid Background Masking & Flat Color Lock (If solid background fix requested or detected)
-      if (fixBackgroundSmudges || mode === "solid_background_fix") {
+      // CASE A: Legacy "solid_background_fix" specifically requested by MotorGenerativoMagnific
+      if (mode === "solid_background_fix" || fixBackgroundSmudges === true) {
         try {
-          techLog.push("Passo 1: Leitura técnica e isolamento do plano de fundo via segmentação alfa...");
-          const { removeBackground } = await import('@imgly/background-removal-node');
-
-          const inputBuffer = Buffer.from(base64Data, "base64");
-          const inputBlob = new Blob([inputBuffer], { type: "image/jpeg" });
-          const subjectPngBlob = await removeBackground(inputBlob);
-          
-          techLog.push("Sujeito/Produto isolado com sucesso. Recriando plano de fundo sólido 100% puro e sem borroes...");
-
-          const subjectPngArrayBuffer = await subjectPngBlob.arrayBuffer();
-          const subjectJimp = await readJimpWithFallback(Buffer.from(subjectPngArrayBuffer));
-
+          techLog.push("Passo 1: Leitura técnica e isolamento do plano de fundo...");
+          const subjectData = await runRemoveBgWorker(workingImageBase64);
+          const { data: subjectRaw } = resolveImageInput(subjectData);
+          const subjectJimp = await readJimpWithFallback(Buffer.from(subjectRaw, "base64"));
           const width = subjectJimp.width;
           const height = subjectJimp.height;
 
-          // Parse target hex color
-          let hexClean = targetSolidColorHex.replace("#", "");
-          if (hexClean.length === 3) {
-            hexClean = hexClean.split("").map(c => c + c).join("");
-          }
+          let hexClean = (targetSolidColorHex || "#000000").replace("#", "");
+          if (hexClean.length === 3) hexClean = hexClean.split("").map(c => c + c).join("");
           const numColor = parseInt(hexClean + "FF", 16) || 0x000000FF;
 
-          // Create pristine solid background image in Jimp
           const solidBgJimp = new Jimp({ width, height, color: numColor });
-
-          // Composite subject on pristine solid background
           solidBgJimp.composite(subjectJimp, 0, 0, {
             mode: BlendMode.SRC_OVER,
             opacitySource: 1,
@@ -2906,87 +5210,224 @@ Output ONLY the JSON object. Do not include conversational filler.`;
           const compositedBase64 = compositedBuffer.toString("base64");
           workingImageBase64 = `data:image/png;base64,${compositedBase64}`;
           base64Data = compositedBase64;
-
-          techLog.push(`Fundo sólido ${targetSolidColorHex} bloqueado com sucesso. Manchas e borroes de difusão totalmente eliminados!`);
+          techLog.push(`Fundo sólido ${targetSolidColorHex || "#000000"} bloqueado com sucesso.`);
         } catch (bgErr: any) {
-          console.warn("[enhancer-supir-magnific] Remodelação direta de fundo falhou, prosseguindo com refinamento via modelo generativo:", bgErr.message || bgErr);
-          techLog.push("Fundo sólido isolado via IA generativa...");
+          console.warn("[enhancer-supir-magnific] Remodelação de fundo falhou:", bgErr.message || bgErr);
         }
       }
 
-      // STEP 2: Generative Micro-Texture Reconstruction with Imagen / Gemini Vision
-      techLog.push("Passo 2: Injeção generativa de micro-texturas (poros de pele, superfícies de produtos e nitidez vetorial de bordas)...");
+      // CASE B: Photo Enhancement (Design Builder Enhance - hdr-pro, studio-retouch, hyper-realism)
+      const selectedRatio = dimensions || dimension || "1:1";
+      const sizeSelected = (quality || "2K").toUpperCase();
+      const userDirectives = (instructions || instrucoes_adicionais || "").trim();
+      let finalEnhancedImage = "";
+      let aiErrorDetails = "";
 
-      const promptInjecao = `High-End Generative Super-Resolution & Detail Reconstruction (SUPIR / Magnific AI architecture).
-Reconstruct details in this image with absolute perfection:
-- SOLID BACKGROUND LOCK: Ensure any flat/solid background area is 100% pure, noise-free, and uniform with ZERO color smudges, ZERO chromatic noise, and ZERO blotches.
-- GENERATIVE MICRO-TEXTURES: Inject realistic micro-textures into subjects (skin pores, hair strands, fabric textures, metallic glimmers, product finishes) rather than applying plastic/blurry smoothing.
-- VECTOR EDGE SHARPNESS: Keep typography, fonts, logos, and card border lines razor-sharp, crisp, and high-contrast.
-- LIGHTING & SHADOW HARMONY: Preserve existing key lighting, highlights, ambient bounce, and soft shadow depth.
+      // Normalize style slugs matching official Design Builder specifications
+      const rawStyle = (enhance_style || mode || "hyper-realism").toLowerCase();
+      let normalizedStyle = "hyper-realism";
+      if (rawStyle.includes("foto") || rawStyle.includes("hdr") || rawStyle.includes("pro")) {
+        normalizedStyle = "hdr-pro";
+      } else if (rawStyle.includes("estudio") || rawStyle.includes("studio") || rawStyle.includes("retouch")) {
+        normalizedStyle = "studio-retouch";
+      } else {
+        normalizedStyle = "hyper-realism";
+      }
 
-Execution Weights:
-- Background Weight: ${weights.background || 0.2} (flat solid purity)
-- Product/Subject Weight: ${weights.productSubject || 0.9} (micro-textures)
-- Face Weight: ${weights.face || 0.9} (skin pore mapping)
-- Text/Edge Weight: ${weights.textEdges || 1.0} (vector contrast)
+      // 1. Reconstrução Generativa com IA Multimodal (Google Gemini 3 Pro Image / Nano Banana Pro)
+      if (currentAi && !offlineMode) {
+        let stylePrompt = "";
+        if (normalizedStyle === "hdr-pro") {
+          stylePrompt = "Professional high-end editorial photography enhancement. Transform this image into a pristine commercial editorial photograph. Elevate dynamic range, natural studio key and rim lighting, sharp optical lens clarity, and authentic color grading without altering the subject's identity, facial geometry, or original environment. Natural depth of field, crisp optical textures, realistic contrast.";
+        } else if (normalizedStyle === "studio-retouch") {
+          stylePrompt = "High-end commercial beauty and studio retouching. Refine and polish skin texture with natural authentic micro-pores (strictly NO plastic blur or heavy smoothing), perfect color balance and luminous skin tones, enhanced multi-point studio lighting, sharp lustrous hair strands with individual follicle definition, crystal-clear eyes with natural iris details and realistic reflections, magazine cover finish.";
+        } else {
+          // hyper-realism / hiper_realismo
+          stylePrompt = "Extreme photographic hyper-realism reconstruction. Break the artificial AI plastic look and reconstruct realistic human features: authentic human skin micro-pores, fine epidermal texture, natural subtle imperfections, distinct individual strands of hair, authentic corneal light reflections with vascular sclera texture, crisp fabric and material weaves, and true photographic optical depth. Completely eliminate digital smoothing, waxy skin, or artificial rendering artifacts.";
+        }
 
-Output a pristine, ultra-detailed, hyper-realistic masterpiece image.`;
+        const promptInjecao = `TASK: Generative Micro-Texture Reconstruction & Super-Resolution Photo Enhancement.
+STYLE DIRECTIVE: ${stylePrompt}
+CRITICAL PRESERVATION REQUIREMENTS:
+- 100% FACIAL & IDENTITY FIDELITY: Strictly preserve the exact subject's facial bone structure, eye shape, nose shape, lip contour, ethnicity, gender, and expression.
+- COMPOSITION INTEGRITY: Keep the exact subject, posture, clothing, accessories, and background scene unchanged from the input photo.
+- MICRO-TEXTURE GENERATION: Inject high-frequency optical details (micro-pores, hair strands, reflections, textures) directly into the image.
+- DO NOT replace or substitute the person.
+- Output target: ultra-sharp ${sizeSelected} resolution.
+${userDirectives ? `\nADDITIONAL USER DIRECTIVES: ${userDirectives}` : ""}`;
 
-      let finalEnhancedImage = workingImageBase64;
+        // Modo: Gerar apenas o Prompt Mestre (0 créditos - síntese de IA ultra-rápida via Gemini Flash)
+        if (somentePrompt || generatePromptOnly) {
+          let masterGeneratedPrompt = promptInjecao;
+          if (currentAi) {
+            try {
+              const promptAnalysisRes = await currentAi.models.generateContent({
+                model: "gemini-3.6-flash",
+                contents: [
+                  { inlineData: { data: base64Data, mimeType: inputMime || "image/png" } },
+                  {
+                    text: `Você é o Engenheiro Especialista de Super-Resolução e Prompts Fotográficos 8K do ZION DESIGN AI.
+Analise a imagem enviada e sintetize o PROMPT MESTRE FOTOGRÁFICO DE SUPER-RESOLUÇÃO E HIPER-REALISMO (pronto para copiar e colar em ferramentas como Midjourney, Flux, ComfyUI, etc.).
+Estilo selecionado: ${normalizedStyle} (${stylePrompt})
+Resolução alvo: ${sizeSelected}, Proporção: ${selectedRatio}.
+${userDirectives ? `Diretrizes do usuário: "${userDirectives}"` : ""}
 
-      try {
-        let genResponse;
-        const fallbackRes = await executeGenerateContentWithFallbacks(
-          currentAi,
-          customApiKey,
-          ["gemini-3-pro-image"],
-          {
-            contents: [
-              {
-                role: "user",
-                parts: [
-                  { inlineData: { data: base64Data, mimeType: "image/png" } },
-                  { text: promptInjecao }
+Estruture o resultado estritamente nas seguintes seções modulares:
+[RESUMO DA CENA & SUPER-RESOLUÇÃO]:
+[IDENTIDADE & PRESERVAÇÃO ANATÔMICA]:
+[MICRO-TEXTURA DÉRMICA & SUBSURFACE SCATTERING 3-LAYER]:
+[OLHOS, CABELO & ELEMENTOS FOCALIZADOS]:
+[CAMERA & ILUMINAÇÃO DE ESTÚDIO (SONY A1 + 85MM GM)]:
+[NEGATIVE DIRECTIVES]:
+
+Diretrizes rígidas:
+- NÃO inclua conversas, introduções ("Aqui está...", "Claro!"), nem blocos de código JSON.
+- Entregue DIRETAMENTE o texto técnico com as tags acima formatadas.`
+                  }
                 ]
+              });
+              if (promptAnalysisRes && promptAnalysisRes.text) {
+                masterGeneratedPrompt = promptAnalysisRes.text.trim();
               }
-            ],
-            config: {
-              responseModalities: ["TEXT", "IMAGE"],
-              imageConfig: {
-                aspectRatio: "1:1",
-                imageSize: "2K"
-              }
+            } catch (pErr: any) {
+              console.warn("[enhancer] Falha na síntese via flash, utilizando template base:", pErr?.message || pErr);
             }
           }
-        );
-        genResponse = fallbackRes.response;
-        const modelName = fallbackRes.modelUsed;
-        if (genResponse) {
-          if (genResponse?.candidates?.[0]?.content?.parts) {
-            for (const part of genResponse.candidates[0].content.parts) {
-              if (part.inlineData && part.inlineData.data) {
-                const mime = part.inlineData.mimeType || "image/png";
-                finalEnhancedImage = `data:${mime};base64,${part.inlineData.data}`;
-                techLog.push(`Reconstrução de micro-texturas concluída com sucesso via ${modelName}.`);
-                break;
-              }
-            }
-          }
+          return res.json({
+            success: true,
+            somentePrompt: true,
+            prompt: masterGeneratedPrompt,
+            modelUsed: "Gemini 3.6 Flash (Master Prompt Synthesizer)",
+            techLog: ["Prompt Mestre Fotográfico de Super-Resolução sintetizado com sucesso."]
+          });
         }
-      } catch (genErr: any) {
-        console.warn("[enhancer-supir-magnific] Chamada ao gerador de imagem falhou, retornando composição isolada de alta definição:", genErr.message || genErr);
-        techLog.push("Ajuste concluído com isolamento de fundo puro e nitidez direta.");
+
+        try {
+          techLog.push(`Executando reconstrução generativa de micro-texturas (${normalizedStyle})...`);
+          const parts = [
+            { inlineData: { data: base64Data, mimeType: inputMime || "image/png" } },
+            { text: promptInjecao }
+          ];
+
+          const genPromise = executeImageGenerationWithFallbacks(
+            currentAi,
+            parts,
+            promptInjecao,
+            selectedRatio,
+            sizeSelected,
+            customApiKey,
+            "gemini-3-pro-image"
+          );
+
+          // Timeout expandido para 180s (super-resolução generativa 2K/4K leva 25s a 45s)
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Timeout após 180s aguardando resposta da IA generativa")), 180000)
+          );
+
+          const genResult = await Promise.race([genPromise, timeoutPromise]) as any;
+
+          if (genResult && genResult.imageBase64Url) {
+            finalEnhancedImage = genResult.imageBase64Url;
+            techLog.push(`Reconstrução concluída com sucesso via ${genResult.modelUsed || "Gemini 3 Pro"}.`);
+          }
+        } catch (genErr: any) {
+          const errMsg = genErr?.message || String(genErr);
+          aiErrorDetails = errMsg;
+          console.warn("[enhancer-supir-magnific] Falha na IA generativa:", errMsg);
+          techLog.push(`Falha na IA generativa: ${errMsg}`);
+        }
       }
 
-      res.json({
-        image: finalEnhancedImage.startsWith("data:") ? await saveImageToDisk(finalEnhancedImage.split(",")[1], finalEnhancedImage.split(",")[0].match(/image\/[a-zA-Z]+/)?.[0] || "image/png") : finalEnhancedImage,
+      // Se a IA generativa não gerou imagem (e não foi requisitado modo offline explicitamente),
+      // retorna erro explícito e orientativo em vez de fingir sucesso com redimensionamento comum.
+      if (!finalEnhancedImage && !offlineMode) {
+        const isBilling = aiErrorDetails.includes("BILLING_DISABLED") || aiErrorDetails.includes("billing") || aiErrorDetails.includes("403") || aiErrorDetails.includes("PERMISSION_DENIED");
+        const isQuota = aiErrorDetails.includes("429") || aiErrorDetails.includes("quota") || aiErrorDetails.includes("RESOURCE_EXHAUSTED") || aiErrorDetails.includes("LIMIT_REACHED");
+
+        if (isBilling) {
+          return res.status(403).json({
+            success: false,
+            error: "Faturamento desativado no Google Cloud (403): O projeto da Vertex AI ('design-builder-682800-6bb') precisa que a Conta de Faturamento (com seus créditos de $300) seja vinculada a ele no console do Google Cloud.",
+            billingLink: "https://console.developers.google.com/billing/enable?project=design-builder-682800-6bb",
+            errorCode: "BILLING_DISABLED",
+            details: aiErrorDetails,
+            techLog
+          });
+        }
+
+        if (isQuota) {
+          return res.status(429).json({
+            success: false,
+            error: "Cota de IA excedida (429): O limite da API gratuita do Gemini foi atingido para geração de imagens. Insira sua chave Gemini com cota ativa no menu de Chaves de API para continuar.",
+            errorCode: "RATE_LIMIT",
+            details: aiErrorDetails,
+            techLog
+          });
+        }
+
+        return res.status(500).json({
+          success: false,
+          error: `Não foi possível reconstruir a imagem com IA: ${aiErrorDetails || "Erro desconhecido na API generativa."}`,
+          errorCode: "GENERATION_FAILED",
+          details: aiErrorDetails,
+          techLog
+        });
+      }
+
+      // 2. Refinamento nativo de calibração final e garantia dimensional
+      const imageToRefine = finalEnhancedImage || workingImageBase64;
+      try {
+        const refined = await applyUpscaleAndRefinement(
+          imageToRefine,
+          sizeSelected,
+          { corDominante: targetSolidColorHex || "", improve: true }
+        );
+        if (refined && refined.startsWith("data:image")) {
+          finalEnhancedImage = refined;
+          techLog.push(`Calibração de nitidez e dimensões ${sizeSelected} concluídas.`);
+        }
+      } catch (refineErr: any) {
+        console.warn("[enhancer-supir-magnific] Calibração nativa final falhou, utilizando resultado direto:", refineErr);
+        if (!finalEnhancedImage) finalEnhancedImage = workingImageBase64;
+      }
+
+      let finalParsed = resolveImageInput(finalEnhancedImage);
+      const targetDims = getResolutionDimensions(sizeSelected, selectedRatio);
+      if (finalParsed.data && targetDims) {
+        try {
+          const rawBuf = Buffer.from(finalParsed.data, "base64");
+          const resizedBuf = await sharp(rawBuf)
+            .resize(targetDims.width, targetDims.height, {
+              fit: "cover",
+              position: "center",
+              kernel: "lanczos3"
+            })
+            .png({ quality: 100 })
+            .toBuffer();
+          finalParsed = {
+            data: resizedBuf.toString("base64"),
+            mimeType: "image/png"
+          };
+        } catch (sharpErr) {
+          console.warn("[enhancer-supir-magnific] Sharp resize warning:", sharpErr);
+        }
+      }
+
+      const responseImgUrl = finalParsed.data
+        ? await saveImageToDisk(finalParsed.data, finalParsed.mimeType || "image/png")
+        : finalEnhancedImage;
+
+      return res.json({
+        success: true,
+        image: responseImgUrl,
+        outputBase64: responseImgUrl,
         techLog,
         weightsUsed: weights,
         status: "success"
       });
     } catch (error: any) {
       console.error("Enhancer SUPIR/Magnific API Error:", error);
-      res.status(500).json({ error: error.message || "Erro ao reprocessar imagem generativamente." });
+      return res.status(500).json({ error: error.message || "Erro ao reprocessar imagem generativamente." });
     }
   });
 
@@ -3157,9 +5598,9 @@ Here are the user's selected configurations:
   - Active Camera Filters: ${cameraEffectsText}
 - Typography and Text to integrate into the graphic:
   - Enable Text: ${imgConfig?.enableText ? "Yes" : "No"}
-  - H1 Title: "${userH1}"
-  - H2 Subtitle: "${userH2}"
-  - CTA Button Text: "${userCta}"
+  - Main Headline Text: "${userH1}"
+  - Subtitle Text: "${userH2}"
+  - Call to Action / Contact Text: "${userCta}"
   - Small Caption/Legenda: "${userSmall}"
   - Typography Effect: ${imgConfig?.textEffect || "Nenhum"}
   - Preferred Font Style: ${imgConfig?.fontFamily || "Inter"}
@@ -3176,7 +5617,8 @@ Here are the user's selected configurations:
 Write a single-paragraph English prompt that synthesizes all of this with professional graphic design vocabulary.
 To ensure the highest precision:
 1. Describe the layout, composition, color scheme, and lighting in vivid detail. Absolutely respect design hierarchy, clean diagramming, flawless visual alignment, and perfect size and spacing of all elements.
-2. Instruct the model precisely where and how to render the text. The text "${userH1}" (H1), "${userH2}" (H2), "${userCta}" (CTA), and "${userSmall}" (Caption) must be rendered clearly with elegant modern typography corresponding to font style ${imgConfig?.fontFamily || "Inter"}, with effect "${imgConfig?.textEffect || "Nenhum"}", high legibility, and integrated seamlessly into the design.
+2. Instruct the model precisely where and how to render the text. The text "${userH1}", "${userH2}", "${userCta}", and "${userSmall}" must be rendered clearly with elegant modern typography corresponding to font style ${imgConfig?.fontFamily || "Inter"}, with effect "${imgConfig?.textEffect || "Nenhum"}", high legibility, and integrated seamlessly into the design.
+CRITICAL ANTI-METADATA DIRECTIVE: Render ONLY the exact text enclosed in quotation marks! ABSOLUTE BAN: NEVER paint or render technical metadata labels such as 'H1', 'H2', 'CTA', 'Bullets', 'Headline', 'Subheadline', '[H1]', '[CTA]', '[BULLETS]' on the graphic canvas!
 3. Keep the prompt professional, avoiding buzzwords. Focus on structural instructions: exact light direction, rich volumetric drop-shadows (sombras realistas), crisp contours, deep field of view, and color harmony.
 4. INJECT EXPLICIT QUALITY ENHANCEMENTS: Demand perfect sharpness, perfect focus, zero blur, zero flickers/cintilações, cinematic 8k resolution, flawless skin pores, and professional studio output.
 5. CRITICAL RULE FOR SUBJECTS & SOLID BACKGROUNDS: If "noPeople" or "desativarSujeito" is true, DO NOT describe any person, human, model, male, female, body, pose, posture, face, or clothing under any circumstances. The prompt MUST explicitly state: "NO PEOPLE, NO HUMANS, NO FACES, NO MODELS." If a solid color background or clean canvas is requested, describe ONLY a 100% clean, flat, uniform solid color matte background in color ${colorsStr || imgConfig?.corDominante || "#0b1c32"}. DO NOT add smartphone mockups, neon lights, glowing rim lights, text, typography, flyers, posters, or floating objects.
@@ -3255,7 +5697,12 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         if (imgConfig?.enableBlur) prompt += `Shallow depth of field with background bokeh. `;
         if (imgConfig?.noPeople) prompt += `STRICTLY NO people, faces, or humans. `;
         if (imgConfig?.enableText) {
-          prompt += `Include readable text: H1: "${userH1}", H2: "${userH2}", CTA: "${userCta}", Small caption: "${userSmall}". Styled with "${imgConfig?.textEffect || "Nenhum"}" effects, using font style "${imgConfig?.fontFamily || "Inter"}", positioned at "${imgConfig?.textPosition || "Centro"}". `;
+          const textItems: string[] = [];
+          if (userH1) textItems.push(`Headline: "${userH1}"`);
+          if (userH2) textItems.push(`Subtitle: "${userH2}"`);
+          if (userCta) textItems.push(`Contact/Action: "${userCta}"`);
+          if (userSmall) textItems.push(`Caption: "${userSmall}"`);
+          prompt += `Include readable text: ${textItems.join(", ")}. Render ONLY the text inside quotation marks. ABSOLUTE PROHIBITION against painting words like 'H1', 'H2', 'CTA', 'Headline' on the flyer. Styled with "${imgConfig?.textEffect || "Nenhum"}" effects, using font style "${imgConfig?.fontFamily || "Inter"}", positioned at "${imgConfig?.textPosition || "Centro"}". `;
         }
         if (imgConfig?.additionalPrompt) prompt += `Details: ${imgConfig?.additionalPrompt}.`;
         if (imgConfig?.negativePrompt) prompt += ` Avoid: ${imgConfig?.negativePrompt}.`;
@@ -3933,7 +6380,9 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         imagemAnteriorBase64 = "",
         imagemRefinamentoBase64 = "",
         modelId = "nanobanana-pro",
-        seedUsuario = null
+        seedUsuario = null,
+        customWidth: rawCustomWidth,
+        customHeight: rawCustomHeight
       } = req.body;
 
       const resolutionInput = rawResolucao || rawResolutionInput || "1K";
@@ -3986,7 +6435,19 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
       const validRatios = ["1:1", "3:4", "4:3", "9:16", "16:9"];
       let autoTargetDimensions: { width: number; height: number } | null = null;
 
-      if (dimensao === "AUTO" || dimensao === "AUTO_FOTO" || dimensao === "ORIGINAL" || dimensao === "AUTOMATICO") {
+      const parsedCustomWidth = Number(rawCustomWidth) > 0 ? Math.round(Number(rawCustomWidth)) : null;
+      const parsedCustomHeight = Number(rawCustomHeight) > 0 ? Math.round(Number(rawCustomHeight)) : null;
+      const isCustomDim = Boolean(parsedCustomWidth && parsedCustomHeight && (dimensao === "custom" || rawCustomWidth));
+
+      if (isCustomDim && parsedCustomWidth && parsedCustomHeight) {
+        const customRatio = parsedCustomWidth / parsedCustomHeight;
+        if (customRatio >= 1.5) targetAspectRatio = "16:9";
+        else if (customRatio <= 0.65) targetAspectRatio = "9:16";
+        else if (customRatio < 0.88) targetAspectRatio = "3:4";
+        else if (customRatio > 1.15) targetAspectRatio = "4:3";
+        else targetAspectRatio = "1:1";
+        console.log(`[api/gerar] CUSTOM dimension activated: ${parsedCustomWidth}x${parsedCustomHeight} (ratio ${customRatio.toFixed(2)} -> mapped to model ratio ${targetAspectRatio}).`);
+      } else if (dimensao === "AUTO" || dimensao === "AUTO_FOTO" || dimensao === "ORIGINAL" || dimensao === "AUTOMATICO") {
         const refImgCandidate = cenarioLimpo || sujeitoLimpo || prevImgBase64 || "";
         if (refImgCandidate) {
           try {
@@ -4017,9 +6478,21 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         targetAspectRatio = "4:3";
       }
 
+      const isLogoOnlyRequest = 
+        req.body.tipoPainel === "LOGO" ||
+        req.body.tipoPainel === "ICONE" ||
+        /(\blogo\b|\blogotipo\b|\b[íi]cone\b|\bs[íi]mbolo\b|mudar.*cor.*logo|cor.*da.*logo|trocar.*cor.*logo|apenas.*logo|somente.*logo|isolad[ao]|recolor)/i.test(promptTraduzido || "") ||
+        /(\blogo\b|\blogotipo\b|\b[íi]cone\b|\bs[íi]mbolo\b|mudar.*cor.*logo|cor.*da.*logo|trocar.*cor.*logo|apenas.*logo|somente.*logo|isolad[ao]|recolor)/i.test(req.body.additionalPrompt || "") ||
+        /(\blogo\b|\blogotipo\b|\b[íi]cone\b|\bs[íi]mbolo\b|mudar.*cor.*logo|cor.*da.*logo|trocar.*cor.*logo|apenas.*logo|somente.*logo|isolad[ao]|recolor)/i.test(req.body.editInstruction || "");
+
       // --- START PROMPT & SYSTEM INSTRUCTION EXPANSION ---
       let expandedPrompt = promptTraduzido;
-      let expandedSystemInstruction = `=== ZION MASTER ART DIRECTION & AI RENDERING DIRECTIVE ===
+      let expandedSystemInstruction = isLogoOnlyRequest
+        ? `=== ZION MASTER ART DIRECTION & AI RENDERING DIRECTIVE (ISOLATED LOGO / EMBLEM MODE) ===
+[ROLE & EXPERTISE] You are an elite Vector & 3D Brand Logo Designer. Your mandate is to render or recolor ONLY the isolated brand logo/emblem centered on a clean background with 100% preservation of its authentic geometric shapes and contours.
+[ABSOLUTE PROHIBITION] Strictly FORBIDDEN from generating an advertising flyer, poster, human beings, real estate slogans, dollar signs, floating coins, marketing headlines, subtitles, cards, or complex layout compositions!
+[PRECISION RENDERING] Render ONLY the isolated logo mark / emblem centered on the canvas with tack-sharp vector-like contours and requested color/material finish.`
+        : `=== ZION MASTER ART DIRECTION & AI RENDERING DIRECTIVE ===
 [ROLE & EXPERTISE] You are the supreme Creative Director, Lead Cinematographer, and Master Graphic Designer for high-end luxury brand campaigns, editorial portraits, and Brazilian high-impact event flyers. Your mandate is to execute photographic and graphic compositions with absolute visual perfection, photorealistic physics, and zero AI artifacts.
 
 [LIGHTING PHYSICS & 3-LAYER SUBSURFACE SCATTERING]
@@ -4065,13 +6538,11 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         // Attach all multimodal references to prompt expansion so Gemini scans them directly!
         if (prevImgBase64) {
           addImagePartToExpansion(prevImgBase64, "PREVIOUSLY GENERATED IMAGE TO BE EDITED/REFINED");
-          if (expandedPrompt.includes("EXPLICIT INSTRUCTION FOR THIS REFINEMENT") || expandedPrompt.includes("ABSOLUTE IMAGE CORRECTION")) {
-            const hasCountReduction = expandedPrompt.includes("REDUCE THE LAYOUT") || expandedPrompt.includes("EXACTLY ONE (1)") || expandedPrompt.includes("deixar uma") || expandedPrompt.includes("remover uma") || expandedPrompt.includes("uma só") || expandedPrompt.includes("uma so");
-            if (hasCountReduction) {
-              expandedSystemInstruction += `\n\n=== ABSOLUTE IMAGE COUNT REDUCTION MODE ===\nThe user is requesting to REDUCE the layout from multiple images down to EXACTLY ONE (1) SINGLE MAIN IMAGE PANEL. You MUST command the generator to ERASE AND REMOVE ALL SECONDARY IMAGE PANELS AND EXTRA CARDS COMPLETELY. Render ONLY ONE (1) main subject/photo panel on the entire layout. ZERO extra cards, ZERO secondary image panels.`;
-            } else {
-              expandedSystemInstruction += `\n\n=== ABSOLUTE IMAGE CORRECTION MODE ===\nThe user is requesting a precise local edit on the attached 'PREVIOUSLY GENERATED IMAGE TO BE EDITED/REFINED'. You MUST command the generator to perform a strict image-to-image edit: keep 100% of the previous image's layout, composition grid, typography, faces, subjects, background, and colors completely identical, and apply ONLY the user's specific requested correction. Do NOT redesign or generate a different image. NEVER repeat or duplicate the same photo across the background and a card box.`;
-            }
+          const hasCountReduction = expandedPrompt.includes("REDUCE THE LAYOUT") || expandedPrompt.includes("EXACTLY ONE (1)") || expandedPrompt.includes("deixar uma") || expandedPrompt.includes("remover uma") || expandedPrompt.includes("uma só") || expandedPrompt.includes("uma so");
+          if (hasCountReduction) {
+            expandedSystemInstruction += `\n\n=== ABSOLUTE IMAGE COUNT REDUCTION MODE ===\nThe user is requesting to REDUCE the layout from multiple images down to EXACTLY ONE (1) SINGLE MAIN IMAGE PANEL. You MUST command the generator to ERASE AND REMOVE ALL SECONDARY IMAGE PANELS AND EXTRA CARDS COMPLETELY. Render ONLY ONE (1) main subject/photo panel on the entire layout. ZERO extra cards, ZERO secondary image panels.`;
+          } else {
+            expandedSystemInstruction += `\n\n=== ABSOLUTE IMAGE CORRECTION MODE ===\nThe user is requesting a precise local edit on the attached 'PREVIOUSLY GENERATED IMAGE TO BE EDITED/REFINED'. You MUST command the generator to perform a strict image-to-image edit: keep 100% of the previous image's layout, composition grid, typography, faces, subjects, background, and colors completely identical, and apply ONLY the user's specific requested correction. Do NOT redesign or generate a different image. NEVER repeat or duplicate the same photo across the background and a card box.`;
           }
         }
 
@@ -4143,7 +6614,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         }
 
         const hasLogo = !!logoBase64 || (logosList && logosList.length > 0);
-        const hasSujeito = !desativarSujeito && (
+        const hasSujeito = !isLogoOnlyRequest && !desativarSujeito && (
           !!base64DoSujeito || 
           (Array.isArray(sujeitosBase64List) && sujeitosBase64List.some((s: any) => s && (typeof s === 'string' ? s.trim() !== "" : (s.data || s.url)))) ||
           !!designRefBase64 ||
@@ -4169,7 +6640,18 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         const logoPrintRule = hasLogo ? `\n9. EXACT TEXT & LOGO REPLACEMENT: Explicitly instruct the generator to render the brand logo reference directly on the flyer at the exact corresponding location of the original logo (e.g. bottom-left footer), ensuring old logos are completely erased.` : "";
         const logoSysInstructionRule = hasLogo ? `\n5. Logo & Text Replacement: Instruct the generator to completely erase old brand logos and render ONLY the client's provided "Referência de Logotipo" NATIVELY at the exact spatial position of the original logo, without modifying shapes or colors.` : "";
         const logoEmbeddedRule = hasLogo ? `\n9. STRICT LOGO SUBSTITUTION RULE: Dictate that the image generator MUST embed the provided brand logo ("Referência de Logotipo") NATIVELY at the exact spatial location (e.g. bottom-left footer) where the reference logo was situated, with 100% shape and color fidelity.` : "";
-        const instructionPrompt = `You are the absolute ultimate master Generative AI Image Prompt Engineer, Art Director, and Elite Graphic Designer specializing in High-End Brazilian Flyers (Flyer BR Style / "Design de Eventos e Shows brasileiro").
+        const masterRoleDesc = isLogoOnlyRequest
+          ? `You are an elite Vector & 3D Brand Logo Designer specializing in Isolated Brand Logos, Emblems, and Vector Symbols.
+CRITICAL MANDATE: The client has provided a logo / symbol reference and wants to render, recolor, or modify ONLY the isolated logo emblem on a clean, solid dark or neutral background!
+ABSOLUTE PROHIBITION AGAINST FLYERS: You are STRICTLY FORBIDDEN from generating an advertising flyer, poster, human beings, real estate ads, dollar signs, floating coins, marketing headlines, subtitles, cards, or complex layout compositions!
+Render ONLY the isolated logo mark / emblem centered on the canvas with 100% preservation of its original geometric contours, shapes, and lines, applying ONLY the requested color/metallic material (e.g. golden, metallic gold, #...).`
+          : `You are the absolute ultimate master Generative AI Image Prompt Engineer, Art Director, and Elite Graphic Designer specializing in High-End Brazilian Flyers (Flyer BR Style / "Design de Eventos e Shows brasileiro").`;
+
+        const cardDesignPreservationRule = isLogoOnlyRequest
+          ? `11. ISOLATED EMBLEM ONLY: Render strictly the isolated logo/emblem centered on the canvas. DO NOT generate cards, flyers, panels, or advertising layouts.`
+          : `11. FULL-BLEED COMPOSITION & ABSOLUTE BAN ON FLOATING RECTANGULAR CARDS (CRITICAL): The artwork must fill the entire canvas edge-to-edge. STRICT MANDATORY BAN: NEVER draw a floating rounded rectangular card, white box container, or framed outline panel in the center or middle enclosing text! All typography, headlines, bullet points, and logos MUST float seamlessly and cleanly directly over the scene background with natural contrast and subtle ambient depth, exactly like top-tier commercial advertising.`;
+
+        const instructionPrompt = `${masterRoleDesc}
 Your job is to analyze the attached visual references (especially the Design Layout Reference images and Style References) along with the following initial layout and composition specification:
 "${promptTraduzido}"
 
@@ -4186,10 +6668,10 @@ ${logoInclusionRule}
 6. SOCIAL HANDLE CASE FIDELITY (STRICTLY LOWERCASE): Explicitly instruct the generator that IF AND ONLY IF a social media username or handle (containing "@") is explicitly provided by the user in custom text, render it strictly in lowercase letters. IF NO HANDLE IS PROVIDED BY THE USER, STRICTLY FORBID THE GENERATOR FROM RENDERING ANY "@" HANDLE OR PROFILE USERNAME ON THE CANVAS.
 7. BRAND COLOR PALETTE ENFORCEMENT & COLOR SWAP (CRITICAL): ${!coresAutomaticas ? "The client HAS specified custom brand colors or requested specific colors in the prompt. You MUST strictly enforce these custom brand colors as the primary, dominant colors of the flyer's design, lighting, glows, panel fills, and accents. Perform a precise COLOR SWAP on all background fills, lighting, and accents, overriding the colors of the Design Layout Reference while keeping 100% of the layout, composition, cards, and structure identical." : "The client HAS NOT specified custom colors. You MUST perfectly copy the exact original color palette, lighting colors, and gradient tones of the Design Layout Reference."}
 8. CUSTOM TYPOGRAPHY ONLY (CRITICAL): You MUST command the generator to write, draw, print, and beautifully integrate ONLY the new custom titles and text layers explicitly supplied by the client in this prompt directly onto the image canvas, placing them in corresponding spatial areas as the reference layout. NEVER render any old text or old logo from the reference image.
-9. FAITHFUL LAYOUT & COMPOSITION PRESERVATION (ABSOLUTELY CRITICAL): When a Design Layout Reference or Style Reference is provided, you MUST PRESERVE the exact composition grid, layout structure, panel divisions, card shapes, framing, background architecture, and spatial positioning of elements from the reference image. DO NOT alter the layout! DO NOT redesign or change panel positions unless explicitly requested! Keep 100% of the layout, geometry, card borders, subject placement, and composition IDENTICAL to the reference image, applying only the requested colors, texts, and logos.
+9. FAITHFUL LAYOUT & COMPOSITION PRESERVATION (ABSOLUTELY CRITICAL): When a Design Layout Reference or Style Reference is provided, you MUST PRESERVE the exact composition grid, spatial hierarchy, framing, lighting depth, background architecture, and spatial positioning of elements from the reference image. DO NOT alter the layout! DO NOT enclose text inside card boxes! Keep 100% of the full-bleed composition, lighting atmosphere, subject placement, and aesthetic IDENTICAL to the reference image, applying only the requested colors, texts, and logos.
 ${subjectCompositionRule}
 ${logoCompositionRule}
-11. CARD DESIGN PRESERVATION: Replicate the exact shape of the card panels (e.g., if there's a rounded panel on the right side of the canvas where the photo of hands is placed, generate a rounded panel exactly there). The image must contain the full, beautiful card layouts and panels, not just a plain backdrop.
+${cardDesignPreservationRule}
 12. STRICT REFERENCE PRESERVATION (WHEN EDITING): If the user's specification requests an edit to a specific reference image (e.g. "remove text and keep the symbol" or "change color to blue"), you MUST instruct the generator to preserve the original visual structure, shapes, and details of the provided reference with absolute 100% exact fidelity. DO NOT redesign, reimagine, stylize, or alter the core shapes of the reference. It must look identical, only applying the requested edit (e.g. erasing text or changing color).
 13. REAL PHOTOGRAPH EMBEDDING & NO RECREATION (CRITICAL): If real photographs of scenery, buildings (e.g. churches, facades, venues), landscape, people, or products are attached, command the generator to USE AND EMBED THOSE REAL PHOTOGRAPHS DIRECTLY in the layout composition/background. DO NOT redraw, re-render, illustrate, cartoonify, 3D animate, or recreate real photographs as AI drawings. Maintain 100% photographic realism, authentic architectural details, and real textures.
 14. ZERO HALLUCINATED TEXT & UNREQUESTED ICONS (CRITICAL): Command the generator to print ONLY the custom text layers explicitly provided in the prompt. NEVER invent unrequested dates, titles, subtitles, event names, @ handles (@perfil), or random text. NEVER draw unrequested social media icons (TikTok, YouTube, WhatsApp, Twitter/X, etc.).
@@ -4248,7 +6730,7 @@ Return ONLY the JSON object. Do not include any conversational text or markdown 
 
         expansionParts.push({ text: instructionPrompt });
 
-        const expModels = ["gemini-3.5-pro", "gemini-3.6", "gemini-3.1-pro-preview"];
+        const expModels = ["gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.1-pro-preview"];
         let expText = "";
         let lastExpErr: any = null;
         try {
@@ -4275,7 +6757,18 @@ Return ONLY the JSON object. Do not include any conversational text or markdown 
           expText = fallbackRes.response?.text || "";
         } catch (expErr: any) {
           lastExpErr = expErr;
-          console.warn(`[api/gerar] Prompt expansion failed on all models and clients:`, expErr?.message || expErr);
+          console.warn(`[api/gerar] Gemini Prompt expansion failed, trying DeepSeek V4 fallback:`, expErr?.message || expErr);
+          try {
+            const dsExp = await callBaiChatCompletion({
+              model: (designRefBase64 || base64DoSujeito || base64DoCenario) ? "deepseek-v4-flash-vision-exp" : "deepseek-v4-flash",
+              contents: [{ role: "user", parts: expansionParts }],
+              systemInstruction: "You are the ultimate Prompt Expansion Engine for high-end graphic design. Return JSON with 'prompt' and 'systemInstruction'.",
+              customApiKey
+            });
+            expText = dsExp.text;
+          } catch (dsExpErr: any) {
+            console.warn("[api/gerar] DeepSeek prompt expansion also failed:", dsExpErr?.message || dsExpErr);
+          }
         }
         
         if (!expText) {
@@ -4313,7 +6806,15 @@ Return ONLY the JSON object. Do not include any conversational text or markdown 
 
       let isExplicitEdit = false;
       let editInstruction = "";
-      if (typeof promptTraduzido === "string" && promptTraduzido.includes("EXPLICIT INSTRUCTION FOR THIS REFINEMENT:")) {
+      if (prevImgBase64) {
+        isExplicitEdit = true;
+        if (typeof promptTraduzido === "string" && promptTraduzido.includes("EXPLICIT INSTRUCTION FOR THIS REFINEMENT:")) {
+          const match = promptTraduzido.match(/EXPLICIT INSTRUCTION FOR THIS REFINEMENT:\s*(.*)/);
+          editInstruction = match ? match[1] : promptTraduzido;
+        } else {
+          editInstruction = typeof promptTraduzido === "string" ? promptTraduzido : "";
+        }
+      } else if (typeof promptTraduzido === "string" && promptTraduzido.includes("EXPLICIT INSTRUCTION FOR THIS REFINEMENT:")) {
         isExplicitEdit = true;
         const match = promptTraduzido.match(/EXPLICIT INSTRUCTION FOR THIS REFINEMENT:\s*(.*)/);
         if (match) {
@@ -4329,15 +6830,15 @@ Return ONLY the JSON object. Do not include any conversational text or markdown 
       const addImagePart = (input: any, label: string) => {
         const parsed = parseBase64Part(input);
         if (parsed && parsed.data) {
+          if (label) {
+            parts.push({ text: label });
+          }
           parts.push({
             inlineData: {
               data: parsed.data,
               mimeType: parsed.mimeType || "image/jpeg"
             }
           });
-          if (label) {
-             parts.push({ text: label });
-          }
         }
       };
 
@@ -4383,14 +6884,23 @@ Return ONLY the JSON object. Do not include any conversational text or markdown 
         ? `- SUBJECT / CASTING INTEGRATION (MANDATORY RULE): When reference photos are attached, preserve the exact person/people, faces, expressions, and clothing UNLESS the prompt explicitly specifies a casting replacement (e.g. "mude a mulher", "trocar modelo"). When a casting replacement is requested, render the new professional model with authentic skin textures, natural joint anatomy, and requested wardrobe matching the brand palette, placing her in the designated layout area.`
         : `- NO UNREQUESTED SUBJECT ALTERATIONS: Do not invent or alter subjects if not requested.`;
 
+      const flyerVsLogoDisambiguation = isLogoOnlyRequest
+        ? `- ISOLATED LOGO / EMBLEM PRESENTATION MANDATE (CRITICAL): The user requested an isolated logo or logo color edit. You MUST generate ONLY the clean isolated logo emblem centered on a clean background. YOU ARE STRICTLY FORBIDDEN FROM GENERATING A FLYER, POSTER, REAL ESTATE AD, HUMAN MODELS, 3D DOLLAR SIGNS, OR UNREQUESTED ADVERTISING CARDS. Replicate the exact geometric shapes of the provided logo with 100% vector fidelity, applying only the requested color.`
+        : `- CRITICAL MULTIMODAL FLYER VS LOGO DISAMBIGUATION (ABSOLUTE MANDATORY RULE): When a Design Layout Reference (flyer/card) AND a Client Brand Logo reference are both attached, you MUST generate the FULL GRAPHIC CARD LAYOUT (with all headlines, subtitles, 3D elements, subjects, and panel hierarchy from the Design Reference) AND embed the logo emblem cleanly at the exact corresponding location (e.g. bottom-left footer). YOU ARE STRICTLY FORBIDDEN FROM GENERATING AN ISOLATED LOGO OR AN EMPTY BACKGROUND. Render the complete, rich, professional flyer card with all typography and subjects.`;
+
+      const layoutCardRule = isLogoOnlyRequest
+        ? `- ISOLATED EMBLEM COMPOSITION: Render the logo cleanly centered with generous padding on a clean, solid dark or neutral backdrop. DO NOT generate cards, panels, or unrequested backgrounds.`
+        : `- COMPLETE CARD LAYOUT GENERATION: Do NOT generate just a plain empty background backdrop. You MUST generate the complete graphic composition, including all layouts, cards, panels, curved border divides, background textures, lighting setups, and the main visual subjects in their exact spatial positions, proportions, and layouts as shown in the Design Layout Reference image.`;
+
       const mandatorySuffix = `\n\n=== ABSOLUTE CRITICAL CONSTRAINTS (MANDATORY) ===
 ${subjectMandatoryRule}
 ${photoSlotMappingRule}
 - REAL PHOTOGRAPH EMBEDDING & NO RECREATION (CRITICAL): When a real photograph of scenery, buildings (e.g. churches, facades, venues), landscape, people, or products is attached, USE AND EMBED THAT REAL PHOTOGRAPH DIRECTLY in the artwork composition/background! DO NOT redraw, re-render, illustrate, cartoonify, 3D animate, or recreate real photographs as AI drawings. Maintain 100% photographic realism, authentic architectural details, and real textures.
 - ZERO HALLUCINATED TEXT & UNREQUESTED ICONS (CRITICAL): Print ONLY the custom text layers explicitly provided in the prompt. NEVER invent unrequested dates, titles, subtitles, event names, or random text. NEVER draw unrequested social media icons (TikTok, YouTube, WhatsApp, Twitter/X, etc.).
+- METADATA LABELS PROHIBITION (CRITICAL): NEVER render, paint, or print technical labels or role names such as 'H1', 'H2', 'CTA', 'Bullets', 'Headline', 'Subheadline', '[H1]', '[CTA]', '[BULLETS]', or colon prefixes on the flyer! Those are strictly structural tags describing the type of text. Paint ONLY the pure text content enclosed in quotes!
 - BRAZILIAN PORTUGUESE LANGUAGE LOCK (CRITICAL): ALL text rendered on the canvas MUST be written in BRAZILIAN PORTUGUESE, exactly as supplied by the client. NEVER translate the supplied texts, NEVER mix English words into the displayed texts, and NEVER add English filler/decoration words such as PREMIUM, LIVE, NEW, SALE, BEST, NOW, SPECIAL, TICKET, SHOW, EVENT — unless the client's supplied text literally contains them.
 - FONT NAMES ARE STYLE COMMANDS, NEVER RENDERED TEXT (CRITICAL): Font family names (e.g. Montserrat, Bebas Neue, Outfit, Cinzel, Anton) are TYPOGRAPHIC STYLE DIRECTIVES for the letterforms ONLY. The font name as a WORD must NEVER be printed, written, or rendered as text anywhere on the canvas. Only the actual supplied text content is ever rendered.
-- CRITICAL MULTIMODAL FLYER VS LOGO DISAMBIGUATION (ABSOLUTE MANDATORY RULE): When a Design Layout Reference (flyer/card) AND a Client Brand Logo reference are both attached, you MUST generate the FULL GRAPHIC CARD LAYOUT (with all headlines, subtitles, 3D elements, subjects, and panel hierarchy from the Design Reference) AND embed the logo emblem cleanly at the exact corresponding location (e.g. bottom-left footer). YOU ARE STRICTLY FORBIDDEN FROM GENERATING AN ISOLATED LOGO OR AN EMPTY BACKGROUND. Render the complete, rich, professional flyer card with all typography and subjects.
+${flyerVsLogoDisambiguation}
 - LAYOUT & COMPOSITION FIDELITY (CRITICAL): If a Design Layout Reference is provided, you MUST clone the visual layout, spatial structure, panel dividers, 3D elements, lighting, and composition grid from it. HOWEVER, ALL WRITTEN TEXT MUST BE REPLACED WITH THE NEW CUSTOM TEXT PROVIDED!
 - STRICT ORIGINAL BACKGROUND PRESERVATION (CRITICAL): When editing an existing photo or image reference, you MUST KEEP AND PRESERVE 100% OF THE ORIGINAL BACKGROUND SCENE, ROOM, WALLS, FURNITURE, AND ENVIRONMENT from the attached photo reference. DO NOT REPLACE, SWAP, GENERATE A DIFFERENT BACKGROUND, OR CHANGE THE SCENE. Keep the exact same wall, room, and setting from the reference photo, applying ONLY the specific edits requested.
 - MANDATORY OBJECT & SHADOW REMOVAL (CRITICAL): If the client requests to remove shadows or remove objects/clutter from tables/surfaces, you MUST MANDATORILY ERASE, OMIT, DISSOLVE AND PAINT OVER all shadows behind subjects, wall shadows, dark flash cast shadows, and table objects. Replace those shadow areas with the clean, bright, evenly lit wall texture matching the rest of the room.
@@ -4402,7 +6912,7 @@ ${photoSlotMappingRule}
   2. SOCIAL MEDIA ICON EXCLUSION: If the user requests specific social media icons (e.g. ONLY Instagram and Facebook), render STRICTLY ONLY those exact icons requested. You MUST completely ERASE, EXCLUDE, AND REMOVE any unrequested social media icons originally present in the reference image (such as TikTok, YouTube, WhatsApp, Twitter/X, LinkedIn). Do NOT render TikTok icon or unrequested logos from the reference photo.
   3. REMOVE UNWANTED INFO: You MUST completely ERASE, OMIT AND REMOVE any street address, street names, street text ("rua"), Instagram profiles (@handles, @perfil, @seu.perfil), social media icons, contact information, old reference logos, or "designer premium" logos originally present in the Design Layout Reference. ${negativePrompt ? `EXPLICIT UNWANTED ITEMS TO REMOVE AND ERASE: ${negativePrompt.trim()}.` : ''} Keep the bottom footer region completely clean and empty of these removed elements! ONLY use the exact text, handles, and logos explicitly provided by the client in this prompt. If no @ handle is explicitly provided in the prompt, DO NOT RENDER ANY @ HANDLE OR PROFILE USERNAME ON THE CANVAS.
 - TEXT COMPLETENESS & PLACEMENT (CRITICAL): You MUST print ALL provided text fields, titles, and words exactly as requested. DO NOT SKIP ANY TEXT. You MUST place the new text EXACTLY in the corresponding spatial positions as the text blocks in the Design Layout Reference. DO NOT put text in random places.
-- COMPLETE CARD LAYOUT GENERATION: Do NOT generate just a plain empty background backdrop. You MUST generate the complete graphic composition, including all layouts, cards, panels, curved border divides, background textures, lighting setups, and the main visual subjects in their exact spatial positions, proportions, and layouts as shown in the Design Layout Reference image.
+${layoutCardRule}
 - EMBEDDED TYPOGRAPHY (MANDATORY): You MUST print, write, embed, and render all actual written texts, titles, words, acronyms, letters, numbers, and website URLs directly onto the image canvas. Style them with beautiful, modern, extremely crisp, and highly-legible typography matching the alignments and visual style of the reference design. All social media usernames or handles (starting with "@") explicitly provided by the user must be printed strictly in lowercase letters. IF NO HANDLE WAS PROVIDED BY THE USER, DO NOT INVENT OR RENDER ANY "@" HANDLE OR PROFILE NAME.
 ${corDominante && corDominante !== "transparent" ? "- SOLID BACKGROUND REQUIREMENT FOR CUTOUT: Because the client requested a solid background color, YOU MUST GENERATE ALL TEXTS AND ELEMENTS OVER A PURE WHITE OR HIGHLY CONTRASTING FLAT SOLID BACKGROUND. Do not generate ANY background textures, scenes, or gradients. Just the subjects and text floating over a blank, flat solid color canvas. This is critical so we can cleanly cut them out." : ""}
 ${logoMandatoryRule}`;
@@ -4422,7 +6932,10 @@ ${logoMandatoryRule}`;
         const logoEraseDirective = (useLogo || logoBase64 || (Array.isArray(logosList) && logosList.length > 0))
           ? " CRITICAL LOGO ERASE MANDATE: If this design reference photo contains an old logo, brand emblem, or symbol, YOU MUST COMPLETELY ERASE AND OMIT THAT OLD LOGO! DO NOT COPY, TRACE, OR KEEP THE LOGO FROM THIS PHOTO. RENDER ONLY THE CLIENT'S BRAND LOGO ATTACHED AS 'LOGOTIPO DA MARCA DO CLIENTE'."
           : "";
-        addImagePart(designRefBase64, `PRIMARY DESIGN CARD LAYOUT & COMPOSITION GRID REFERENCE (MANDATORY: Replicate this entire flyer layout composition, cards, split-panels, text block positions, visual hierarchy, lighting effects, and 3D depth. DO NOT generate an empty canvas or just an isolated logo!${logoEraseDirective})`);
+        const layoutRefPromptText = isLogoOnlyRequest
+          ? `BRAND LOGO REFERENCE TO RECOLOR/RENDER (MANDATORY: Replicate this EXACT symbol geometry, shapes, and contours. Apply the requested colors faithfully. DO NOT generate a flyer or poster!)`
+          : `PRIMARY DESIGN CARD LAYOUT & COMPOSITION GRID REFERENCE (MANDATORY: Replicate this entire flyer layout composition, cards, split-panels, text block positions, visual hierarchy, lighting effects, and 3D depth. DO NOT generate an empty canvas or just an isolated logo!${logoEraseDirective})`;
+        addImagePart(designRefBase64, layoutRefPromptText);
       }
       if (Array.isArray(designRefsList)) {
         designRefsList.forEach((ref: any, idx: number) => {
@@ -4435,14 +6948,18 @@ ${logoMandatoryRule}`;
         addImagePart(prevImgBase64, "Imagem Gerada Anterior a ser Editada/Refinada");
       }
 
-      // 3. Add Subject References
+      // 3. Add Subject References with SWAP SLOT Identity Lock
       if (!desativarSujeito) {
         if (base64DoSujeito) {
-          addImagePart(base64DoSujeito, "FOTO DE PESSOA #1 / Referência do Sujeito Principal");
+          const swapSlotDirective = `SWAP SLOT — Image 1 is the identity reference, and it owns the entire person. From image 1 come the face and all its features, the eye colour, the skin tone and every mark on it, the age, the gender, the build, and the hair's colour, length, texture, curl pattern and density along with any facial hair. None of those are described anywhere in this prompt and none of them are to be invented. Do not add or remove marks, lines or blemishes, do not smooth, retouch or rejuvenate anything, and do not reshape the face or its proportions. From image 1 take only the person; take nothing else — not the clothing, not the pose, not the expression, not the framing, not the lighting, not the background, not the colour palette. Preserve 100% authentic photographic fidelity.`;
+          addImagePart(base64DoSujeito, swapSlotDirective);
         }
         if (Array.isArray(sujeitosBase64List)) {
           sujeitosBase64List.forEach((ref: any, idx: number) => {
-            if (ref) addImagePart(ref, `FOTO DE PESSOA #${idx + 2}`);
+            if (ref) {
+              const swapSlotDirective = `SWAP SLOT — Image #${idx + 2} is identity reference #${idx + 2}. Extract 100% authentic facial features, bone structure, skin tone, eye color, and natural hair texture from this person. Preserve 100% authentic photographic fidelity.`;
+              addImagePart(ref, swapSlotDirective);
+            }
           });
         }
       }
@@ -4546,51 +7063,76 @@ ${logoMandatoryRule}`;
           }
         }
 
-        // Apply ultra-fast native C++ Lanczos3 high-resolution upscale for 4K / 2K (executes in < 200ms)
-        if (resolutionInput === "4K" || resolutionInput === "2K") {
-          console.log(`[api/gerar] Executing ultra-fast native sharp Lanczos3 upscale to ${resolutionInput}...`);
-          try {
-            const { data: rawB64Data } = resolveImageInput(finalImageBase64);
-            if (rawB64Data) {
-              const inBuf = Buffer.from(rawB64Data, "base64");
-              const targetW = resolutionInput === "4K" ? 3840 : 2048;
-              const meta = await sharp(inBuf).metadata();
-              const curW = meta.width || 1024;
-              const curH = meta.height || 1024;
-              // Upscales native 1K/2K base outputs directly to TRUE 4K (3840px) using Lanczos3
-              const minBaseForUpscale = resolutionInput === "4K" ? 768 : 512;
-              if (curW < targetW && curW >= minBaseForUpscale) {
-                const targetH = Math.round(targetW * (curH / curW));
-                console.log(`[api/gerar] Upscaling image from ${curW}x${curH} to TRUE ${resolutionInput} (${targetW}x${targetH}) using Lanczos3 super-sampling + adaptive sharpening...`);
-                const upscaledBuf = await sharp(inBuf)
-                  .resize(targetW, targetH, {
-                    fit: "cover",
-                    kernel: sharp.kernel.lanczos3
-                  })
-                  .sharpen({ sigma: 1.2, m1: 1.0, m2: 2.0 })
-                  .png({ compressionLevel: 6, adaptiveFiltering: true })
-                  .toBuffer();
-                finalImageBase64 = `data:image/png;base64,${upscaledBuf.toString("base64")}`;
-              } else if (curW < targetW && curW < minBaseForUpscale) {
-                console.warn(`[api/gerar] Resolução nativa baixa (${curW}x${curH}) — pulando upscale para evitar "4K fake" borrado. Devolvendo resolução nativa.`);
-              }
-            }
-          } catch (upscaleErr) {
-            console.warn("[api/gerar] Fast Lanczos3 upscale warning, proceeding with native resolution:", upscaleErr);
+        // Enforce exact standard resolution and aspect ratio via Sharp Lanczos3 for 1K, 2K, 4K
+        try {
+          const { data: rawB64Data, mimeType: rawB64Mime } = resolveImageInput(finalImageBase64);
+          if (rawB64Data) {
+            const inBuf = Buffer.from(rawB64Data, "base64");
+            const targetQuality = (resolutionInput || "1K").toUpperCase();
+            const targetRatio = dimensao || "1:1";
+            const targetDims = getResolutionDimensions(targetQuality, targetRatio);
+            console.log(`[api/gerar] Enforcing exact output dimensions for ${targetQuality} (${targetDims.width}x${targetDims.height}) with Lanczos3...`);
+
+            const resizedBuf = await sharp(inBuf)
+              .resize(targetDims.width, targetDims.height, {
+                fit: "cover",
+                position: "center",
+                kernel: sharp.kernel.lanczos3
+              })
+              .png({ compressionLevel: 6 })
+              .toBuffer();
+            finalImageBase64 = `data:${rawB64Mime || "image/png"};base64,${resizedBuf.toString("base64")}`;
           }
+        } catch (exactErr) {
+          console.warn("[api/gerar] Resolution enforcement warning:", exactErr);
         }
-        // Apply exact natural dimensions if AUTO aspect ratio is selected
-        if (autoTargetDimensions && autoTargetDimensions.width && autoTargetDimensions.height) {
+        // Apply exact custom dimensions if customWidth and customHeight are provided
+        if (isCustomDim && parsedCustomWidth && parsedCustomHeight) {
           try {
-            console.log(`[api/gerar] Resizing final generated output to 100% exact original photo resolution (${autoTargetDimensions.width}x${autoTargetDimensions.height})...`);
+            console.log(`[api/gerar] Scaling final generated output to EXACT custom dimensions (${parsedCustomWidth}x${parsedCustomHeight}) using Lanczos3 super-sampling...`);
             const { data: rawB64Data, mimeType: rawB64Mime } = resolveImageInput(finalImageBase64);
             if (rawB64Data) {
               const inBuf = Buffer.from(rawB64Data, "base64");
               const resizedBuf = await sharp(inBuf)
-                .resize(autoTargetDimensions.width, autoTargetDimensions.height, {
+                .resize(parsedCustomWidth, parsedCustomHeight, {
+                  fit: "cover",
+                  position: "center",
+                  kernel: sharp.kernel.lanczos3
+                })
+                .sharpen({ sigma: 0.5, m1: 0.3, m2: 0.6 })
+                .png({ compressionLevel: 5, adaptiveFiltering: true })
+                .toBuffer();
+              finalImageBase64 = `data:${rawB64Mime || "image/png"};base64,${resizedBuf.toString("base64")}`;
+            }
+          } catch (customResizeErr: any) {
+            console.warn("[api/gerar] Custom dimension exact resize warning:", customResizeErr?.message || customResizeErr);
+          }
+        }
+
+        // Apply exact natural dimensions if AUTO aspect ratio is selected
+        if (autoTargetDimensions && autoTargetDimensions.width && autoTargetDimensions.height) {
+          try {
+            const maxDimTarget = resolutionInput === "4K" ? 3840 : (resolutionInput === "2K" ? 2048 : 1024);
+            let finalTargetW = autoTargetDimensions.width;
+            let finalTargetH = autoTargetDimensions.height;
+            if (autoTargetDimensions.width >= autoTargetDimensions.height) {
+              finalTargetW = maxDimTarget;
+              finalTargetH = Math.round(maxDimTarget * (autoTargetDimensions.height / autoTargetDimensions.width));
+            } else {
+              finalTargetH = maxDimTarget;
+              finalTargetW = Math.round(maxDimTarget * (autoTargetDimensions.width / autoTargetDimensions.height));
+            }
+            console.log(`[api/gerar] Scaling final generated output to high-res auto proportions (${finalTargetW}x${finalTargetH}) matching original photo aspect ratio...`);
+            const { data: rawB64Data, mimeType: rawB64Mime } = resolveImageInput(finalImageBase64);
+            if (rawB64Data) {
+              const inBuf = Buffer.from(rawB64Data, "base64");
+              const resizedBuf = await sharp(inBuf)
+                .resize(finalTargetW, finalTargetH, {
                   fit: "cover",
                   kernel: sharp.kernel.lanczos3
                 })
+                .sharpen({ sigma: 0.5, m1: 0.3, m2: 0.6 })
+                .png({ compressionLevel: 5, adaptiveFiltering: true })
                 .toBuffer();
               finalImageBase64 = `data:${rawB64Mime || "image/png"};base64,${resizedBuf.toString("base64")}`;
             }
@@ -4729,6 +7271,110 @@ ${logoMandatoryRule}`;
       }
       
       res.status(status).json({ error: userMessage });
+    }
+  });
+
+
+  app.post("/api/check-models-status", async (req: any, res: any) => {
+    try {
+      const customApiKey = req.body?.customApiKey || (req.headers["x-custom-api-key"] as string) || undefined;
+      const currentAi = getAiClient(customApiKey);
+      const candidates = getCandidateClients(customApiKey);
+      const primaryClient = candidates[0]?.instance || currentAi;
+
+      const modelsToCheck = [
+        { id: "deepseek-v4-flash", label: "DeepSeek V4", category: "text", desc: "Raciocínio ultra-rápido com visão inteligente automática" },
+        { id: "gemini-3.7-flash", label: "Gemini 3.7 Flash", category: "text", desc: "Mais avançado com raciocínio híbrido" },
+        { id: "gemini-3.6-flash", label: "Gemini 3.6 Flash", category: "text", desc: "Ultra-rápido e estável" },
+        { id: "gemini-3.1-pro-preview", label: "Gemini 3.1 Pro Preview", category: "text", desc: "Raciocínio analítico avançado" },
+        { id: "gemini-3-pro-image", label: "Gemini 3 Pro Image (Nano Banana Pro)", category: "image", desc: "Geração de imagens fotorrealistas" },
+        { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash", category: "text", desc: "Linha de produção estável" }
+      ];
+
+      const results = await Promise.all(
+        modelsToCheck.map(async (m) => {
+          const start = Date.now();
+          try {
+            if (m.id.startsWith("deepseek")) {
+              await callBaiChatCompletion({
+                model: m.id,
+                messages: [{ role: "user", content: "ping" }],
+                maxTokens: 10,
+                customApiKey
+              });
+              const latency = Date.now() - start;
+              return {
+                id: m.id,
+                label: m.label,
+                desc: m.desc,
+                category: m.category,
+                status: "online",
+                statusText: "Online 🟢",
+                latencyMs: latency
+              };
+            } else if (m.category === "image") {
+              const testRes = await primaryClient.models.generateContent({
+                model: m.id,
+                contents: "A blue circle",
+                config: { responseModalities: ["IMAGE"] }
+              });
+              const latency = Date.now() - start;
+              return {
+                id: m.id,
+                label: m.label,
+                desc: m.desc,
+                category: m.category,
+                status: "online",
+                statusText: "Online 🟢",
+                latencyMs: latency
+              };
+            } else {
+              const testRes = await primaryClient.models.generateContent({
+                model: m.id,
+                contents: "ping"
+              });
+              const latency = Date.now() - start;
+              return {
+                id: m.id,
+                label: m.label,
+                desc: m.desc,
+                category: m.category,
+                status: "online",
+                statusText: "Online 🟢",
+                latencyMs: latency
+              };
+            }
+          } catch (err: any) {
+            const rawMsg = err?.message || String(err);
+            let status = "error";
+            let statusText = "Indisponível 🔴";
+            if (rawMsg.includes("503") || rawMsg.includes("UNAVAILABLE") || rawMsg.includes("high demand")) {
+              status = "busy";
+              statusText = "Alta Demanda (503) 🟡";
+            } else if (rawMsg.includes("429") || rawMsg.includes("RESOURCE_EXHAUSTED") || rawMsg.includes("quota")) {
+              status = "quota_exceeded";
+              statusText = "Cota 429 🔴";
+            } else if (rawMsg.includes("404") || rawMsg.includes("NOT_FOUND")) {
+              status = "not_found";
+              statusText = "Indisponível ⚪";
+            }
+            return {
+              id: m.id,
+              label: m.label,
+              desc: m.desc,
+              category: m.category,
+              status,
+              statusText,
+              latencyMs: null,
+              error: sanitizeLogMessage(rawMsg.substring(0, 100))
+            };
+          }
+        })
+      );
+
+      res.json({ models: results });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Erro ao checar modelos." });
     }
   });
 
@@ -4875,6 +7521,116 @@ IMPORTANT: Return valid, strictly parseable JSON. Do not put unescaped raw newli
     }
   });
 
+  // ==========================================
+  // B.AI / DEEPSEEK V4 INTEGRATION
+  // ==========================================
+  interface BaiCompletionParams {
+    model?: string;
+    messages?: any[];
+    contents?: any[];
+    systemInstruction?: string;
+    temperature?: number;
+    maxTokens?: number;
+    customApiKey?: string;
+  }
+
+  async function callBaiChatCompletion(params: BaiCompletionParams): Promise<{ text: string; modelUsed: string; clientUsed: string }> {
+    const apiKey = params.customApiKey && params.customApiKey.startsWith('sk-') ? params.customApiKey : (process.env.BAI_API_KEY || process.env.DEEPSEEK_API_KEY || "sk-1xk8jkfyehzbjzi784mvuc8icvyl5hne");
+    let model = params.model || "deepseek-v4-flash";
+    if (model === "deepseek-v4" || model === "deepseek") model = "deepseek-v4-flash";
+    if (model === "deepseek-vision" || model === "deepseek-v4-vision") model = "deepseek-v4-flash-vision-exp";
+    
+    const formattedMessages: any[] = [];
+    
+    if (params.systemInstruction && params.systemInstruction.trim()) {
+      formattedMessages.push({ role: "system", content: params.systemInstruction });
+    }
+
+    if (params.messages && Array.isArray(params.messages) && params.messages.length > 0) {
+      for (const msg of params.messages) {
+        formattedMessages.push(msg);
+      }
+    } else if (params.contents && Array.isArray(params.contents)) {
+      for (const c of params.contents) {
+        const role = c.role === "model" || c.role === "assistant" ? "assistant" : "user";
+        if (!c.parts || !Array.isArray(c.parts)) continue;
+
+        const hasImages = c.parts.some((p: any) => p.inlineData);
+        if (hasImages) {
+          const contentArray: any[] = [];
+          for (const p of c.parts) {
+            if (p.text) {
+              contentArray.push({ type: "text", text: p.text });
+            } else if (p.inlineData) {
+              const mime = p.inlineData.mimeType || "image/jpeg";
+              const dataUrl = `data:${mime};base64,${p.inlineData.data}`;
+              contentArray.push({ type: "image_url", image_url: { url: dataUrl } });
+            }
+          }
+          formattedMessages.push({ role, content: contentArray });
+        } else {
+          const textCombined = c.parts.map((p: any) => p.text || "").filter(Boolean).join("\n");
+          if (textCombined) {
+            formattedMessages.push({ role, content: textCombined });
+          }
+        }
+      }
+    }
+
+    if (formattedMessages.length === 0) {
+      formattedMessages.push({ role: "user", content: "Olá!" });
+    }
+
+    const endpoint = "https://api.b.ai/v1/chat/completions";
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        signal: controller.signal,
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: formattedMessages,
+          temperature: params.temperature ?? 0.35,
+          max_tokens: params.maxTokens ?? 4000,
+          stream: false
+        })
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`b.ai DeepSeek API error (${response.status}): ${errText}`);
+      }
+
+      const data: any = await response.json();
+      const choice = data?.choices?.[0];
+      let responseText = choice?.message?.content || choice?.message?.reasoning_content || "";
+      if (responseText) {
+        responseText = responseText.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+      }
+      
+      if (!responseText) {
+        throw new Error("b.ai API retornou resposta sem conteúdo de texto.");
+      }
+
+      return {
+        text: responseText,
+        modelUsed: model,
+        clientUsed: "b.ai DeepSeek API"
+      };
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      throw err;
+    }
+  }
+
   // Chat Assistant Endpoint: routes user chats to different expert personas
   app.post(["/api/chat-assistente", "/api/chat-agentes"], async (req, res) => {
     if (!verifyGenerationAccess(req, res)) return;
@@ -4894,12 +7650,82 @@ IMPORTANT: Return valid, strictly parseable JSON. Do not put unescaped raw newli
 6. FORMATO DO JSON: O bloco de código JSON para automação da interface deve ficar estritamente no FINAL de sua resposta, formatado dentro do bloco \`\`\`json ... \`\`\`. Nunca coloque o JSON no início ou meio do texto, e nunca envie JSON sem uma conversa amigável antes.
 
 IMPORTANTÍSSIMO SOBRE O PREENCHIMENTO AUTOMÁTICO (JSON):
-1. Se o usuário disser apenas "oi", "olá", ou fizer perguntas conceituais sem relação com as configurações, NÃO inclua o bloco JSON.
+1. Se o usuário disser apenas "oi", "olá", ou fizer perguntas conceituais sem relação com a criação de artes, NÃO inclua o bloco JSON.
 2. No entanto, se o usuário solicitar qualquer alteração, ajuste, modificação, ativação ou desativação de opções (ex: "mude a cor para vermelho", "desative o sujeito", "mude a proporção para 9:16", "coloque o título de Natal"), VOCÊ DEVE OBRIGATORIAMENTE INCLUIR O BLOCO DE CÓDIGO JSON NO FINAL DA SUA RESPOSTA com as respectivas chaves correspondentes atualizadas para aplicar a mudança instantaneamente na interface!
-3. Se a arte não tiver pessoas, retorne sempre "desativarSujeito": true e "noPeople": true. Se tiver, retorne "desativarSujeito": false e "noPeople": false.\n\n`;
+3. MANDATO ABSOLUTO DE CRIAÇÃO (PEDIDO DE CARD/FLYER/ARTE): Se o usuário pedir para CRIAR UM CARD, FLYER, BANNER, POST OU ARTE para QUALQUER tema ou nicho (ex: "Crie um card para advogado criminalista", "faça um card para hamburgueria", "crie um flyer de evento gospel", "crie uma arte para clínica"):
+   - É TERMINANTEMENTE PROIBIDO TRAVAR O USUÁRIO COM PERGUNTAS PRÉVIAS OU DIZER QUE PRECISA DE DADOS ANTES DE GERAR O JSON!
+   - Você é o DIRETOR CRIATIVO: tome a iniciativa imediatamente e monte a PROPOSTA COMPLETA!
+   - Crie copywriting profissional real para o nicho (Headline, Subheadline, CTA Botão, Corpo Descrição), paleta de cores perfeita, enquadramento, cenário, sujeito e efeitos.
+   - GERE OBRIGATORIAMENTE O BLOCO \`\`\`json ... \`\`\` COMPLETO NO FINAL DA SUA RESPOSTA COM "substituirConfig": true e "substituirImagens": true para carregar tudo no editor na hora!
+   - Na conversa, apresente seu conceito com entusiasmo e avise ao usuário que tudo já foi preenchido no painel e ele já pode clicar em "GERAR IMAGEM"!
+4. Se a arte não tiver pessoas, retorne sempre "desativarSujeito": true e "noPeople": true. Se tiver, retorne "desativarSujeito": false e "noPeople": false.\n\n`;
 
       let systemInstruction = baseInstructions;
-      if (assistantId === "gerador-roteiros") {
+      if (assistantId === "ref-prompt") {
+        systemInstruction = `Você é o Motor Especialista de Engenharia Reversa Visual e Síntese de Prompt Fotográfico de Alta Fidelidade do REF Builder da Zion AI.
+Sua missão é transpor o sujeito da imagem principal EXATAMENTE para dentro da estética, iluminação, figurino e atmosfera da imagem de referência de estilo.
+
+REGRA DE OURO DA ENGENHARIA REVERSA DO REF BUILDER:
+1. IMAGEM PRINCIPAL (SUJEITO): Fornece EXCLUSIVAMENTE a identidade biométrica da pessoa (rosto, formato dos olhos, nariz, lábios, sobrancelhas, etnia, idade aparente, cabelo). NUNCA herde a iluminação amadora, o fundo comum ou roupas simples da imagem principal!
+2. IMAGEM DE REFERÊNCIA (ESTILO): É A LEI VISUAL SOBERANA. Extraia 100% da iluminação de estúdio profissional, da paleta cromática, do figurino elegante/editorial, da pose e postura, da lente da câmera e da composição cenográfica desta imagem.
+3. OBJETIVO ABSOLUTO: O prompt mestre DEVE descrever o sujeito da foto principal vestido, posicionado e iluminado IGUAL à referência de estilo, garantindo que a imagem gerada pareça que a pessoa foi fotografada no mesmo estúdio de luxo da referência!
+
+REGRAS ABSOLUTAS DE SAÍDA:
+1. ZERO CONVERSAS: É terminantemente proibido incluir saudações, introduções, comentários, explicações, justificativas ou despedidas.
+2. ZERO RACIOCÍNIO VISÍVEL: É terminantemente proibido pensar em voz alta, narrar o que vai fazer ("Ele pediu...", "Vou compor...") ou colocar anotações de planejamento.
+3. ZERO BLOCOS JSON: É terminantemente proibido enviar qualquer bloco de código JSON ou configurações de interface.
+4. ESTRUTURA MODULAR OBRIGATÓRIA:
+Entregue o texto estruturado rigorosamente com as seguintes seções técnicas:
+
+[Resumo da Cena]
+(1 a 2 frases densas descrevendo o conceito visual, sujeito/produto, ação central e atmosfera geral).
+
+[Camera Angle/Pitch]
+(Enquadramento exato: Close-Up, Medium Shot, Cowboy Shot, etc.; perspectiva e ponto de vista; altura estimada da câmera em metros em relação ao chão; ângulo de pitch em graus; distância focal simulada ex: 85mm num sensor full-frame com profundidade de campo e compressão natural).
+
+[Body-to-Head Torque]
+(Se houver pessoa: alinhamento frontal ou angular do tronco com a mesa/câmera em graus; rotação cervical em graus; tensão isométrica dos músculos do pescoço como esternocleidomastoideo e trapézio superior mantendo a postura firme e focada; ombros e postura. Se for produto ou sem pessoas: posicionamento espacial 3D do objeto, rotação, centro de massa e contato físico firme com a superfície).
+
+[Gaze Vector]
+(Se houver pessoa: vetor do olhar, pupilas centradas ou direcionadas, alinhamento simétrico com o eixo óptico da lente e fixação visual nítida).
+
+[Hand/Object Tactile Interaction]
+(Se houver mãos ou interação com objetos: preensão física precisa, pressão dos dedos resultando em deformação dérmica sutil nas pontas dos dedos e contato com as superfícies; hierarquia de oclusão de camadas e contato suave e realista).
+
+[Subject (Identity & Pose)]
+(Descrição da pessoa ou produto: estado de concentração, traços expressivos, idade aparente ou atributos de design de produto em destaque).
+
+[New Clothing Design / Product Materials]
+(Vestuário completo ou acabamento de produto: tipo de tecido, gramatura e trama ex: loopback terry, algodão, linho nobre, seda ou metais escovados/acrílico; corte, caimento, micro-rugosidade tátil e absorção de luz BxDF).
+
+[Background & Layout]
+(Composição e zoneamento do fundo: divisão de zonas de contraste, iluminação de fundo, desfoque gaussiano de profundidade de campo rasa f/2.0, objetos cenográficos simétricos nas laterais e tipografia 3D flutuante ou elementos emissivos com halo de luz).
+
+[Physics of Light]
+(Física de iluminação completa: luz principal difusa como Octabox grande 120cm; luzes de contorno rim light quente e/ou fria acentuando silhueta, cabelo e ombros; sombras com black clipping controlado em áreas profundas; e fontes emissivas integradas à cena).
+
+[Bio-Dermal Texture]
+(SSS - Subsurface Scattering de 3 camadas em todas as áreas de pele exposta para realismo translúcido; micro-displacement para poros finos, linhas de expressão sutis sem aspecto plástico; fios de cabelo individuais com sombreamento anisotrópico. Se produto: shaders PBR com micro-texturas reais).
+
+[Sony A1 Setup]
+*   **Lente:** Sony FE 85mm f/1.4 GM (ou 50mm f/1.2 GM)
+*   **Abertura:** f/1.8 ou f/2.0
+*   **Velocidade do Obturador:** 1/160s ou 1/250s
+*   **ISO:** 100 a 400
+*   **Balanço de Branco:** Personalizado (calibrado em Kelvin ex: 5200K com ajuste de matiz)
+*   **Modo de Foco:** AF Contínuo (AF-C) com Rastreamento em Tempo Real
+*   **Modo de Medição:** Pontual (Spot Metering)
+*   **Perfil de Imagem:** S-Log3 com S-Gamut3.Cine
+*   **Configuração de Iluminação:**
+    *   **Luz Principal:** Octabox grande (120cm) com dupla difusão...
+    *   **Luz de Contorno (Direita):** Strobe com gel CTO...
+    *   **Luz de Contorno (Esquerda):** Strobe com gel CTB...
+    *   **Luzes de Fundo:** Painéis LED com temperaturas de cor contrastantes...
+    *   **Luz de Elementos/Texto:** Objetos com material emissivo calibrado...
+
+[Negative Instructions] --
+Não replicar características faciais distorcidas, deformidades anatômicas, pele plástica emborrachada de IA, olhos desalinhados ou artefatos visuais.`;
+      } else if (assistantId === "gerador-roteiros") {
         systemInstruction = `Você é o Diretor Criativo e Estratégico de Roteiros de Vídeo Curto (Reels, TikTok, Shorts, YouTube Shorts) da Zion AI Studio.
 
 SUA PERSONALIDADE E CAPACIDADES:
@@ -5021,6 +7847,89 @@ REGRAS RÍGIDAS E ABSOLUTAS DE SAÍDA (PROIBIDO DESVIAR):
 Sua resposta inteira DEVE ser APENAS O TEXTO DA LEGENDA.`;
       }
       switch (assistantId) {
+        case "ref":
+        case "diretor-ref":
+          systemInstruction += `\n\nVocê é o Diretor Criativo Especialista em REF Builder (Clonagem e Engenharia Reversa de Referências Visuais).
+SUAS CAPACIDADES E CONHECIMENTO ESPECÍFICO:
+1. ENGENHARIA REVERSA DE REFERÊNCIAS: Você é mestre em analisar posters, flyers, campanhas do Pinterest, Behance e Dribbble. Quando o usuário enviar ou descrever uma referência visual, você decodifica:
+   - Estrutura de grid e layout (posicionamento dos elementos, espaços negativos, proporção áurea).
+   - Paleta de cores exata (cores de ambiente, recorte, complementar e contrastes).
+   - Estilo de iluminação e pós-produção (luz volumétrica, sombras suaves, granulação analógica, estética editorial).
+   - Diagramação tipográfica (escalas de fontes, pesos, alinhamentos).
+2. TRANSPOSIÇÃO DE CONCEITO: Você ensina e configura o editor para aplicar a estética da referência em qualquer outro nicho, sujeito ou produto do cliente, preservando a essência visual sem cópia grosseira, mas com máxima fidelidade estética.
+3. ORIENTAÇÃO DE PROMPTS PARA REF: Você gera prompts mestres que instruem o motor generativo a clonar a iluminação, composição e estética da imagem guia enviada.`;
+          break;
+
+        case "hydra":
+        case "diretor-hydra":
+          systemInstruction += `\n\nVocê é o Diretor Criativo Especialista em Hydra (Fotografia de Produto & E-commerce 3D de Alta Conversão).
+SUAS CAPACIDADES E CONHECIMENTO ESPECÍFICO:
+1. FOTOGRAFIA COMERCIAL DE PRODUTO: Você é mestre em packshots, renderização de produtos físicos, cosméticos, perfumes, bebidas, suplementos, calçados e eletrônicos.
+2. ILUMINAÇÃO DE ESTÚDIO COMERCIAL:
+   - Luz de três pontos de estúdio, softbox difuso, luz de recorte (rim light) e contraluz que destaca a silhueta do produto.
+   - Reflexos cáusticos em superfícies de vidro e metais cromados/dourados.
+   - Sombras de contato realistas (ambient occlusion e drop shadows) que garantem que o produto fique firmemente apoiado, eliminando o aspecto de objeto flutuante falso.
+3. CENOGRAFIA COMERCIAL:
+   - Pódios geométricos (mármore, cimento queimado, acrílico, madeira nobre).
+   - Elementos cenográficos complementares (folhagens tropicais, respingos d'água cristalina, texturas orgânicas e fundos limpos de catálogo).
+4. ORIENTAÇÃO DE PROMPTS PARA HYDRA: Você gera prompts comerciais ultra-detalhados focados em nitidez macro, texturas táteis de embalagem, rotulagem nítida e apelo de consumo imediato.`;
+          break;
+
+        case "enhance-builder":
+        case "enhance":
+        case "diretor-enhance":
+          systemInstruction += `\n\nVocê é o Diretor Criativo Especialista em Enhance (Restauração, Upscale e Hiper-Realismo Fotográfico 1K, 2K e 4K).
+SUAS CAPACIDADES E CONHECIMENTO ESPECÍFICO:
+1. SUPER-RESOLUÇÃO E RESTAURAÇÃO: Você domina a reconstrução de micro-texturas e super-resolução para imagens em baixa qualidade, eliminando ruído, artefatos de compressão JPEG e borrados.
+2. QUEBRA DO LOOK DE IA (HIPER-REALISMO):
+   - Injeção de poros reais de pele, micro-textura da derme, linhas finas de expressão e viço natural.
+   - Fios individuais de cabelo e barba com definição nítida.
+   - Reflexos especulares na córnea e profundidade orgânica nos olhos, quebrando qualquer efeito emborrachado ou plástico gerado por inteligência artificial.
+3. RETOQUE DE ESTÚDIO & FOTOGRAFIA PROFISSIONAL:
+   - Balanço tonal de pele e remoção de sombras pesadas de flash em paredes.
+   - Acabamento editorial de capa de revista, iluminação suave e preservação rigorosa da identidade fisionômica da pessoa ou produto.
+4. ORIENTAÇÃO DE PROMPTS PARA ENHANCE: Você orienta o usuário a formular prompts de melhoria e instruções adicionais focadas em realismo, temperatura de cor, preservação de traços e super-resolução 4K.`;
+          break;
+
+        case "design-builder1-2":
+        case "diretor-design-builder":
+          systemInstruction += `\n\nVocê é o Diretor Criativo Especialista em Design Builder 1.2 (Social Media, Campanhas Publicitárias & Flyers de Alta Conversão).
+SUAS CAPACIDADES E CONHECIMENTO ESPECÍFICO:
+1. DESIGN PUBLICITÁRIO & SOCIAL MEDIA: Você cria campanhas completas para feeds, stories e banners de tráfego pago (Instagram, Facebook, Google Ads).
+2. HIERARQUIA VISUAL E TIPOGRAFIA DOMINANTE:
+   - Títulos monumentais e magnéticos (Headline) que prendem o scroll nos primeiros 2 segundos.
+   - Subtítulos claros e blocos de leitura organizados com espaçamento e contraste ideais.
+   - Botões de Chamada para Ação (CTA) e selos de oferta/garantia posicionados estrategicamente.
+3. COMPOSIÇÃO DE CONVERSÃO:
+   - Distribuição harmoniosa de elementos flutuantes (3D badges, luzes pontuais, partículas e ícones).
+   - Aplicação de overlays e degradês de leitura para garantir 100% de legibilidade dos textos em qualquer tela.
+4. ORIENTAÇÃO DE PROMPTS PARA DESIGN BUILDER: Você elabora conceitos persuasivos unindo copywriting estratégico, direção de arte publicitária e especificações de diagramação para o gerador de imagem.`;
+          break;
+
+        case "orion-pro":
+        case "diretor-orion":
+          systemInstruction += `\n\nVocê é o Diretor Criativo Especialista em Órion Pro (Direção de Arte Cósmica & Liberdade Criativa Máxima).
+SUAS CAPACIDADES E CONHECIMENTO ESPECÍFICO:
+1. LIBERDADE CRIATIVA AUTORAL: Você opera no ápice da criatividade visual, explorando fusões ousadas e inovadoras entre sujeito (Pessoas, Produtos ou Modo Livre) e universos conceituais.
+2. ILUMINAÇÃO DRAMÁTICA & CINEMATOGRAFIA:
+   - Esquemas de iluminação cinematográfica (Cinematic Warm, Moody Dark, Cyberpunk Neon, Golden Hour, Studio High-Key, Split Lighting).
+   - Seleção virtual de câmeras e lentes (85mm f/1.4 para bokeh aveludado, 35mm anamórfica para enquadramentos imersivos, macro para texturas extremas).
+3. PALETAS ESTÉTICAS E ATMOSFERAS:
+   - Harmonia cromática de alto impacto (Teal & Orange, Dourado & Preto Nobre, Tons Cósmicos Violeta/Índigo).
+4. SÍNTESE DE PROMPT MESTRE: Você compõe prompts mestres altamente sofisticados que instruem o motor com precisão cirúrgica de estilo, ângulo, lente, iluminação e ambiência.`;
+          break;
+
+        case "altera-facil":
+        case "diretor-altera-facil":
+          systemInstruction += `\n\nVocê é o Diretor Criativo Especialista em Altera Fácil (Consistência de Personagem, Troca de Poses, Roupas e Lookbook).
+SUAS CAPACIDADES E CONHECIMENTO ESPECÍFICO:
+1. PRESERVAÇÃO DE IDENTIDADE FACIAL: Você é rigoroso na manutenção da identidade, estrutura óssea, formato dos olhos, nariz, boca e idade do sujeito através de múltiplas gerações.
+2. TROCA DE VESTUÁRIO & LOOKBOOK:
+   - Substituição de roupas, ternos, vestidos, roupas casuais ou esportivas com caimento natural, textura realista de tecido (algodão, linho, seda, couro) e dobras anatômicas.
+3. VARIAÇÃO DE POSES E ÂNGULOS:
+   - Modificação de postura corporal (sentado em mesa de reunião, em pé com braços cruzados, caminhando, segurando smartphone ou xícara de café) preservando sempre a fisionomia original.
+4. ORIENTAÇÃO DE PROMPTS PARA ALTERA FÁCIL: Você cria descrições anatômicas precisas que garantem coerência visual completa para catálogos de moda, influenciadores virtuais e ensaios corporativos.`;
+          break;
         case "prompt-extrator":
           systemInstruction = `Você é o Extrator de Prompts da Zion AI Studio, um Analista de Engenharia Visual especializado EXCLUSIVAMENTE em EXTRAÇÃO de informações de imagens de referência (cards, flyers, artes, fotos, documentos).
 
@@ -5082,11 +7991,14 @@ IMPORTANTÍSSIMO: MANTENHA UM DIÁLOGO COM O USUÁRIO (COMO DIRETOR E CLIENTE/DE
   * Configure 'composicao': 'Close-up (Rosto)' | 'Plano Médio (Busto)' | 'Plano Americano' | 'Personalizada'.
 - REGRA DE SATURAÇÃO E VIBRANCIA DE CORES (ANTI-DESBOTAMENTO):
   * Em todas as edições, garanta 'ULTRA-VIBRANCE LOCK': cores ricas, contraste dinâmico profundo e saturação viva sem desbotar ou fosquear as cores do flyer.
-- Se o usuário disse apenas "oi", "olá", ou foi muito vago, NÃO GERE JSON NENHUM. APENAS cumprimente-o e pergunte como pode ajudar na criação do design hoje.
-- Se a ideia ainda estiver vaga, faça perguntas antes de gerar o JSON de configuração.
+- Se o usuário disse apenas "oi", "olá", ou apenas cumprimentou sem pedir nada, NÃO GERE JSON NENHUM. APENAS cumprimente-o amigavelmente e pergunte qual arte ele deseja criar hoje.
+- MANDATO ABSOLUTO DE CRIAÇÃO (ZERO TRAVAMENTOS): Se o usuário pedir para CRIAR qualquer arte/card/flyer (ex: "Crie um card para advogado criminalista", "faça um flyer de pizzaria", "crie uma arte gospel", "card para médico"), NUNCA faça perguntas antes de gerar o JSON! Você é o DIRETOR CRIATIVO: tome a iniciativa imediatamente, crie a proposta completa e perfeita (textos persuasivos reais para o nicho, paleta de cores nobre, enquadramento, cenário, sujeito e efeitos) e retorne SEMPRE o bloco JSON completo no final da resposta com "substituirConfig": true e "substituirImagens": true!
 - Se o usuário solicitar qualquer alteração ou ajuste de design (ex: mudar cor, remover sujeito, desativar sujeito, ativar logo, mudar resolução/proporção, etc.), você DEVE incluir o JSON correspondente imediatamente.
 - Se a arte não tiver pessoas, retorne sempre "desativarSujeito": true e "noPeople": true. Se tiver, retorne "desativarSujeito": false e "noPeople": false.
-- Você deve usar a inteligência para preencher "cores", "promptCenario", "estiloVisualCustom", "useLogo", "enableTypography", etc. GERE O JSON NO FINAL DA RESPOSTA sempre que houver qualquer alteração de estado ou configuração solicitada para atualizar o painel automaticamente!`;
+- Você deve usar a inteligência para preencher "cores", "promptCenario", "estiloVisualCustom", "useLogo", "enableTypography", etc. GERE O JSON NO FINAL DA RESPOSTA sempre que houver criação ou qualquer alteração de estado solicitada para atualizar o painel automaticamente!`;
+          break;
+        case "gc-tv-specialist":
+          systemInstruction += `Você é o Especialista em GC, Tarjas e Lower-Thirds de Transmissão para TV e Vídeo da Zion AI. Sua especialidade é criar tarjas de identificação de entrevistados, títulos de matérias, coberturas jornalísticas, plantões e gráficos esportivos. Defina sempre "tipoPainel": "GC_TV", "dimensao": "16:9", desative sujeitos ("desativarSujeito": true, "noPeople": true) a menos que solicitado, e estruture as camadas de texto com precisão: Camada #1 (Nome / Título Principal), Camada #2 (Cargo / Subtítulo / Localização). Retorne SEMPRE o bloco JSON no final da resposta para aplicar as configurações e textos no painel.`;
           break;
         case "copy-legendas-instagram":
           systemInstruction += `\n\nVocê é o Especialista em Legendas e Engajamento para Instagram (Copy Zion Instagram).
@@ -5241,12 +8153,14 @@ Quando o usuário pedir para alterar, remover ou corrigir apenas UM detalhe ou a
    - Retornar no JSON APENAS as chaves alteradas pelo pedido (ex: somente "camadasTexto" com a camada corrigida). Todos os demais campos do editor continuam como estão.
    - Se o usuário pedir para alterar APENAS UM texto, retorne SOMENTE essa camada de texto em "camadasTexto" (pelo "id" ou "funcao" já existente) com o novo "conteudo". JAMAIS retorne a lista completa de textos com conteúdo reescrito ou inventado.
 
-REGRA DE OURO CONTRA PLACEHOLDERS, COLCHETES E TEXTOS GENÉRICOS:
-É TERMINANTEMENTE PROIBIDO retornar textos com colchetes ou placeholders nos campos "conteudo" das "camadasTexto" ou em qualquer campo de texto. EXEMPLOS PROIBIDOS:
+REGRA DE OURO CONTRA PLACEHOLDERS, COLCHETES E AUTONOMIA CRIATIVA DE TEXTO:
+É TERMINANTEMENTE PROIBIDO retornar textos com colchetes ou placeholders genéricos como:
 - "[HEADLINE PRINCIPAL]", "[SUBTÍTULO]", "[CHAMADA SECUNDÁRIA]", "[TEXTO DE APOIO]", "[RODAPÉ]", "[CTA]"
 - "[Inserir texto]", "[Seu texto aqui]", "[Nome do evento]", "[Data]"
 - "HEADLINE PRINCIPAL", "CHAMADA SECUNDÁRIA" (sem colchetes mas genéricos)
-REGRA: Se o usuário forneceu o texto real (ex: "117 Anos", "Morro do Chapéu"), use EXATAMENTE o texto que o usuário forneceu. Se o usuário NÃO forneceu texto para algum campo, PERGUNTE ao usuário qual texto ele quer ANTES de preencher — NUNCA preencha com placeholders genéricos.
+DIRETRIZ ABSOLUTA DE COPY:
+- Se o usuário forneceu o texto real (ex: "117 Anos", "Morro do Chapéu"), use EXATAMENTE o texto que o usuário forneceu.
+- Se o usuário NÃO forneceu textos específicos e pediu uma nova arte (ex: "Crie um card para advogado criminalista"), NUNCA trave a criação perguntando antes! CRIE TEXTOS REAIS, PERSUASIVOS E PROFISSIONAIS PARA O NICHO (ex: Headline: "DEFESA CRIMINAL ESPECIALIZADA", Subheadline: "Audiências de Custódia • Flagrantes • Habeas Corpus", CTA Botão: "Plantão Jurídico 24 Horas", Corpo Descrição: "Atuação ágil e estratégica em todas as fases processuais"). Preencha e envie tudo no JSON imediatamente!
 
 RIGOROSA CORREÇÃO GRAMATICAL E PORTUGUÊS IMPECÁVEL EM TODOS OS TEXTOS:
 - Respeite de forma absoluta e rigorosa as regras de gramática, ortografia, pontuação, acentuação e concordância verbal e nominal do Português do Brasil em TODOS os textos gerados (camadasTexto, additionalPrompt, promptCenario, promptDesign, etc.).
@@ -5407,12 +8321,35 @@ Sempre avise no texto de forma natural se identificou uma logo ou foto de sujeit
         sanitizedContents.shift();
       }
 
-      const textModels = modelId 
-        ? [modelId, "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.1-pro-preview"] 
-        : ["gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.1-pro-preview"];
+      const isDeepSeek = modelId && (modelId.startsWith("deepseek") || modelId.includes("b.ai"));
       let responseText = "";
       let lastError: any = null;
       let fallbackRes: any = null;
+
+      if (isDeepSeek) {
+        const hasImages = (attachedFiles && attachedFiles.length > 0) || (imageBase64 && imageBase64.trim() !== "");
+        const targetModel = (hasImages || modelId.includes("vision")) ? "deepseek-v4-flash-vision-exp" : "deepseek-v4-flash";
+        try {
+          const deepseekRes = await callBaiChatCompletion({
+            model: targetModel,
+            contents: sanitizedContents,
+            systemInstruction,
+            customApiKey
+          });
+          return res.json({
+            response: deepseekRes.text,
+            modelUsed: targetModel,
+            clientUsed: deepseekRes.clientUsed
+          });
+        } catch (dsErr: any) {
+          console.warn(`[chat-agentes] DeepSeek ${targetModel} call failed, falling back to Gemini:`, dsErr.message || dsErr);
+          lastError = dsErr;
+        }
+      }
+
+      const textModels = modelId 
+        ? [modelId, "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.1-pro-preview"] 
+        : ["gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.1-pro-preview"];
 
       try {
         fallbackRes = await executeGenerateContentWithFallbacks(
@@ -5430,6 +8367,26 @@ Sempre avise no texto de forma natural se identificou uma logo ou foto de sujeit
       } catch (err: any) {
         console.warn(`[chat-agentes] All models failed:`, err?.message || err);
         lastError = err;
+      }
+
+      // If Gemini failed, try DeepSeek V4 as smart resilience fallback
+      if (!responseText) {
+        try {
+          console.info("[chat-agentes] Trying DeepSeek V4 Flash as smart resilience fallback...");
+          const dsFallback = await callBaiChatCompletion({
+            model: (attachedFiles.length > 0 || (imageBase64 && imageBase64.trim() !== "")) ? "deepseek-v4-flash-vision-exp" : "deepseek-v4-flash",
+            contents: sanitizedContents,
+            systemInstruction,
+            customApiKey
+          });
+          responseText = dsFallback.text;
+          fallbackRes = {
+            modelUsed: dsFallback.modelUsed,
+            clientUsed: dsFallback.clientUsed
+          };
+        } catch (dsFallbackErr: any) {
+          console.warn("[chat-agentes] DeepSeek fallback also failed:", dsFallbackErr.message);
+        }
       }
 
       if (!responseText && lastError) {
@@ -5458,7 +8415,7 @@ Sempre avise no texto de forma natural se identificou uma logo ou foto de sujeit
     }
   });
 
-  app.post("/api/check-models-status", async (req: Request, res: Response) => {
+  app.post("/api/check-models-status", async (req: any, res: any) => {
     try {
       const customApiKey = req.body?.customApiKey || (req.headers["x-custom-api-key"] as string) || undefined;
       const currentAi = getAiClient(customApiKey);
@@ -5466,18 +8423,33 @@ Sempre avise no texto de forma natural se identificou uma logo ou foto de sujeit
       const primaryClient = candidates[0]?.instance || currentAi;
 
       const modelsToCheck = [
+        { id: "deepseek-v4-flash", label: "DeepSeek V4", category: "deepseek", desc: "Raciocínio veloz, OCR de texto e Visão Multimodal automática" },
         { id: "gemini-3.7-flash", label: "Gemini 3.7 Flash", category: "text", desc: "Mais avançado com raciocínio híbrido" },
-        { id: "gemini-3.6-flash", label: "Gemini 3.6 Flash", category: "text", desc: "Ultra-rápido e estável" },
-        { id: "gemini-3.1-pro-preview", label: "Gemini 3.1 Pro Preview", category: "text", desc: "Raciocínio analítico avançado" },
-        { id: "gemini-3-pro-image", label: "Gemini 3 Pro Image (Nano Banana Pro)", category: "image", desc: "Geração de imagens fotorrealistas" },
-        { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash", category: "text", desc: "Linha de produção estável" }
+        { id: "gemini-3.5-flash", label: "Gemini 3.5 Flash", category: "text", desc: "Ultra-rápido e estável" },
+        { id: "gemini-3.1-pro-preview", label: "Gemini 3.1 Pro Preview", category: "text", desc: "Raciocínio analítico avançado" }
       ];
 
       const results = await Promise.all(
         modelsToCheck.map(async (m) => {
           const start = Date.now();
           try {
-            if (m.category === "image") {
+            if (m.category === "deepseek") {
+              await callBaiChatCompletion({
+                model: m.id,
+                contents: [{ role: "user", parts: [{ text: "ping" }] }],
+                customApiKey
+              });
+              const latency = Date.now() - start;
+              return {
+                id: m.id,
+                label: m.label,
+                desc: m.desc,
+                category: m.category,
+                status: "online",
+                statusText: "Online 🟢",
+                latencyMs: latency
+              };
+            } else if (m.category === "image") {
               const testRes = await primaryClient.models.generateContent({
                 model: m.id,
                 contents: "A blue circle",
@@ -5729,6 +8701,121 @@ REGRAS RÍGIDAS:
     }
   });
 
+  // Dedicated Master Prompt Generator (using DeepSeek V4)
+  app.post("/api/build-master-prompt", async (req, res) => {
+    if (!verifyGenerationAccess(req, res)) return;
+    try {
+      const {
+        agent = "orion-pro",
+        categoria = "Pessoa",
+        quantidade = 1,
+        poseDescription = "",
+        positioning = "Centro",
+        composicao = "Plano Médio",
+        nicho = "",
+        estiloVisual = "Ultra Realista",
+        promptCenario = "",
+        camadasTexto = [],
+        cores = {},
+        floatingElementsMode = "off",
+        floatingElementsCustom = "",
+        additionalPrompt = "",
+        dimensao = "4:5",
+        modoCriativo = "Criativo",
+        hydraData,
+        alteraData,
+        customApiKey
+      } = req.body;
+
+      let systemInstruction = "";
+      let userMessage = "";
+
+      if (agent === "hydra" || hydraData) {
+        systemInstruction = `Você é o Diretor 3D e Especialista Oficial de E-Commerce & Packshots Comerciais de Alta Conversão do Hydra Studio (Zion AI).
+Sua missão é sintetizar um MASTER PROMPT 3D ULTRA REALISTA PARA FOTOS DE PRODUTO, pronto para produzir imagens comerciais de padrão Apple, Nike ou Chanel.
+Diretrizes:
+1. Master prompt em inglês técnico para e-commerce hero shot: iluminação de estúdio comercial (softbox, rim lights), materiais físicos (PBR, micro-reflexos, refração realista), renderização macro 8k com texturas hiper-detalhadas.
+2. Descreva com precisão a superfície/pedestal (${hydraData?.surface || "pedestal de mármore minimalista"}), a iluminação (${hydraData?.lighting || "softbox comercial suave"}) e a dinâmica visual (${hydraData?.effects || "splashes de água congelados"}).
+3. Responda em Português do Brasil com o Master Prompt pronto para copiar e usar.`;
+
+        userMessage = `Crie o Prompt Mestre comercial 3D para produto E-Commerce no Hydra:
+- Nicho/Categoria: ${hydraData?.category || categoria || "Cosméticos & Skincare"}
+- Superfície/Pedestal: ${hydraData?.surface || "Espelho d'Água Líquido"}
+- Iluminação Comercial: ${hydraData?.lighting || "Softbox Comercial Suave"}
+- Dinâmica/Efeitos: ${hydraData?.effects || "Gotas e Splashes de Água em Alta Velocidade"}
+- Proporção: ${dimensao}
+- Instruções Extras do Produto: ${additionalPrompt || "Nenhum"}`;
+      } else if (agent === "altera-facil" || alteraData) {
+        systemInstruction = `Você é o Especialista Oficial em Fotografia de Moda, Retrato Editorial e Trava Facial Biométrica do Altera Fácil Studio (Zion AI).
+Sua missão é sintetizar um MASTER PROMPT FOTOGRÁFICO com instrução estrita de preservação biométrica facial, mantendo 100% da identidade da pessoa enquanto altera poses, roupas e cenários.
+Diretrizes:
+1. Master prompt em inglês técnico de retrato editorial (85mm f/1.4 lens, natural skin pores, 3-layer subsurface scattering, authentic eye reflections).
+2. Instrução obrigatória de Biometric Face Lock: manter geometria óssea e fisionomia do rosto de referência com zero deformações.
+3. Descreva a pose (${alteraData?.pose || "power pose confiante"}), a vestimenta (${alteraData?.outfit || "alfaiataria luxo"}) e o ambiente (${alteraData?.environment || "loft corporativo moderno"}).
+4. Responda em Português do Brasil com o Master Prompt pronto para copiar e usar.`;
+
+        userMessage = `Crie o Prompt Mestre para o Altera Fácil com Trava Facial:
+- Pose: ${alteraData?.pose || "Em pé confiante (Power Pose)"}
+- Figurino/Roupa: ${alteraData?.outfit || "Terno Slim Alfaiataria Luxo"}
+- Cenário/Ambiente: ${alteraData?.environment || "Loft Corporativo Moderno com Janelas Panorâmicas"}
+- Proporção: ${dimensao}
+- Instruções Extras: ${additionalPrompt || "Nenhum"}`;
+      } else {
+        systemInstruction = `Você é o Diretor Criativo e Engenheiro de Prompt Mestre Oficial da plataforma Zion AI Studio (especialista em Órion Pro, Midjourney v6, Flux e Gemini 3).
+Sua missão é transformar todos os parâmetros estruturados pelo usuário em um PROMPT MESTRE CINEMATOGRÁFICO DE ALTA FIDELIDADE, pronto para produzir uma arte fotorrealista e estonteante.
+
+Diretrizes Obrigatórias:
+1. Comece com o MASTER PROMPT definitivo em inglês técnico de geração de imagem (cinema 8k, photorealistic, volumetric lighting, precise framing).
+2. Em seguida, adicione as especificações de Iluminação, Cores (${cores?.ambiente || "dark"}, ${cores?.complementar || "luz suave"}, ${cores?.recorte || "destaque neon"}) e Composição.
+3. Se houver textos informados, liste as instruções de hierarquia tipográfica e áreas de respiro para diagramação.
+4. Responda em Português do Brasil com o Master Prompt pronto para copiar e usar.`;
+
+        userMessage = `Crie o Prompt Mestre completo para a seguinte configuração do Órion Pro:
+- Categoria: ${categoria} (Qtd: ${quantidade})
+- Como deve aparecer: ${poseDescription || "Não especificado"}
+- Posição: ${positioning} | Enquadramento: ${composicao}
+- Nicho do Projeto: ${nicho || "Geral"}
+- Estilo Visual: ${estiloVisual}
+- Cenário: ${promptCenario || "Ambiente refinado e contextual"}
+- Elementos Flutuantes: ${floatingElementsMode !== "off" ? floatingElementsCustom : "Desativados"}
+- Detalhes Extras: ${additionalPrompt || "Nenhum"}
+- Proporção: ${dimensao} | Modo: ${modoCriativo}`;
+      }
+
+      let generatedPrompt = "";
+      let modelUsed = "deepseek-v4-flash";
+
+      try {
+        const dsRes = await callBaiChatCompletion({
+          model: "deepseek-v4-flash",
+          systemInstruction,
+          messages: [{ role: "user", content: userMessage }],
+          customApiKey
+        });
+        generatedPrompt = dsRes.text;
+        modelUsed = dsRes.modelUsed || "deepseek-v4-flash";
+      } catch (dsErr: any) {
+        console.warn("[build-master-prompt] DeepSeek failed, using local builder:", dsErr.message);
+        if (agent === "hydra") {
+          generatedPrompt = `Masterpiece commercial 3D packshot of ${hydraData?.category || "product"}, displayed prominently on a premium ${hydraData?.surface || "water ripple surface"}. Lighting: ${hydraData?.lighting || "commercial softbox"}, atmospheric dynamics: ${hydraData?.effects || "water droplets"}. 8k macro photography, realistic reflections, depth of field.`;
+        } else if (agent === "altera-facil") {
+          generatedPrompt = `Masterpiece commercial photographic portrait maintaining exact biometric facial identity from reference image. Pose: ${alteraData?.pose || "standing confident"}, wardrobe: ${alteraData?.outfit || "tailored suit"}, setting: ${alteraData?.environment || "modern interior"}. 85mm prime lens f/1.4, authentic skin texture, photorealistic rendering.`;
+        } else {
+          generatedPrompt = `Masterpiece cinematic 8k photograph of ${categoria.toLowerCase()} (${poseDescription || "poised and natural"}), framed in ${composicao.toLowerCase()} at ${positioning.toLowerCase()} position. Background: ${promptCenario || "atmospheric environment"}, rendered in ${estiloVisual} style. Volumetric studio lighting, photorealistic textures, HDR, perfectly balanced negative space for typography.`;
+        }
+      }
+
+      res.json({
+        prompt: generatedPrompt,
+        modelUsed,
+        clientUsed: "DeepSeek V4 Engine"
+      });
+    } catch (error: any) {
+      console.error("[build-master-prompt] Error:", error);
+      res.status(500).json({ error: error.message || "Erro ao gerar Prompt Mestre." });
+    }
+  });
+
   app.post("/api/check-api-quota", async (req, res) => {
     try {
       const { customApiKey } = req.body;
@@ -5860,6 +8947,8 @@ Responda APENAS com o texto do prompt melhorado em Português (curto, direto e u
       return res.status(500).json({ error: "Não foi possível melhorar o prompt com IA." });
     }
   });
+
+
 
   app.post("/api/omni-flash-prompt", async (req, res) => {
     if (!verifyGenerationAccess(req, res)) return;
@@ -6347,7 +9436,13 @@ HIGH-END COMMERCIAL QUALITY:
             '**/*.txt',
             '**/server-log.txt',
             '**/server-err.txt',
+            '**/local_storage/**',
+            '**/public/uploads/**',
+            '**/public/generations_data.json',
             '**/public/generated-images/**',
+            '**/public/1_files/**',
+            '**/public/2_files/**',
+            '**/*.download',
             '**/dist/**',
             '**/chave-vertex.json',
             '**/.tempmediaStorage/**'
@@ -6385,5 +9480,7 @@ export async function getApp() {
 }
 
 if (!process.env.VERCEL) {
-  startServer();
+  startServer().catch((err) => {
+    console.error("[FATAL] Error starting server:", err);
+  });
 }

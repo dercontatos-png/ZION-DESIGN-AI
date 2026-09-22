@@ -61,6 +61,7 @@ import {
   Layers,
   Globe,
   Bot,
+  Brain,
   Tv, Music, Film, Video,
   ChevronDown,
   Mail,
@@ -80,6 +81,8 @@ import { useClientStore } from "./store/useClientStore";
 import { get as idbGet, set as idbSet, del as idbDel } from "idb-keyval";
 import { InpaintCanvas } from "./components/InpaintCanvas";
 import DesignBuilder from "./components/DesignBuilder";
+import { DesignBuilderSidebar } from "./components/DesignBuilderSidebar";
+import { ProjetosManager } from "./components/ProjetosManager";
 import { GeradorGcTv } from "./components/GeradorGcTv";
 import Agentes from "./components/Agentes";
 import { CopilotoAgencia } from "./components/CopilotoAgencia";
@@ -87,6 +90,7 @@ import AudioStudio from "./components/AudioStudio";
 import GeradorOmniFlash from "./components/GeradorOmniFlash";
 import VideoAnalysis from "./components/VideoAnalysis";
 import { ApiKeyManagerTab } from "./components/ApiKeyManagerTab";
+import { SistemaOperacionalIa } from "./components/SistemaOperacionalIa";
 import { safeStorageSetItem, getStorageStats, cleanImageStorage } from "./utils/imageStorageManager";
 
 
@@ -182,19 +186,19 @@ Consigo analisar a saúde financeira dos seus **${clients.length} clientes**, su
 
   const quickPrompts = [
     {
-      label: "💡 Ideias de Post",
+      label: "Ideias de Post",
       text: "Me dê 5 ideias criativas e persuasivas de posts para o Instagram focados em atração orgânica.",
     },
     {
-      label: "🎬 Roteiro de Reels",
+      label: "Roteiro de Reels",
       text: "Crie um roteiro de Reels dinâmico de 30 segundos, incluindo gancho, conteúdo e chamada para ação (CTA).",
     },
     {
-      label: "📈 Estratégia de Ads",
+      label: "Estratégia de Ads",
       text: "Qual estrutura de campanha você recomenda para impulsionar um negócio local com orçamento baixo?",
     },
     {
-      label: "✍️ Copy de Vendas",
+      label: "Copy de Vendas",
       text: "Escreva uma legenda de Instagram com copy persuasiva e hashtags para venda de serviços digitais.",
     },
   ];
@@ -345,14 +349,16 @@ Pergunta ou comando do usuário:
       <div className="p-4 border-b border-white/5 flex flex-col gap-3 bg-black/50">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[#c5a880] flex items-center justify-center text-zinc-950 font-black text-sm">
+            <div className="w-8 h-8 rounded-lg bg-[#a855f7] flex items-center justify-center text-zinc-950 font-black text-sm">
               Z
             </div>
             <div>
               <h3 className="font-bold text-sm text-white flex items-center gap-2">
                 Assistente Zion AI
-                <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-zinc-300">
-                  {selectedModel === "gemini-3.1-pro-preview" ? "Pro 3.1" : "Image Pro"}
+                <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-violet-400 font-bold">
+                  {selectedModel === "deepseek-v4-flash" ? "DeepSeek V4" :
+                   selectedModel === "gemini-3.7-flash" ? "Gemini 3.7" :
+                   selectedModel === "gemini-3.5-flash" ? "Gemini 3.5" : "Gemini 3.1 Pro"}
                 </span>
               </h3>
               <span className="text-[10px] text-emerald-400 flex items-center gap-1 font-semibold">
@@ -379,25 +385,34 @@ Pergunta ou comando do usuário:
         </div>
         
         {showSettings && (
-          <div className="bg-black/80 p-3 rounded-xl border border-white/5 flex flex-col gap-2">
-            <label className="text-xs font-semibold text-zinc-300">Modelo de IA</label>
-            <div className="flex gap-2">
+          <div className="bg-black/90 p-3 rounded-xl border border-violet-500/20 flex flex-col gap-2 shadow-xl">
+            <label className="text-xs font-semibold text-zinc-300">Modelo de IA Ativo</label>
+            <div className="grid grid-cols-2 gap-1.5">
+              <button
+                onClick={() => setSelectedModel("deepseek-v4-flash")}
+                className={`py-1.5 px-2 flex items-center justify-center gap-1 text-[11px] rounded-lg transition-all cursor-pointer ${selectedModel === "deepseek-v4-flash" ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-bold" : "bg-black text-zinc-400 hover:text-zinc-200 border border-white/5"}`}
+              >
+                <Zap size={12} /> DeepSeek V4
+              </button>
+              <button
+                onClick={() => setSelectedModel("gemini-3.7-flash")}
+                className={`py-1.5 px-2 flex items-center justify-center gap-1 text-[11px] rounded-lg transition-all cursor-pointer ${selectedModel === "gemini-3.7-flash" ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-bold" : "bg-black text-zinc-400 hover:text-zinc-200 border border-white/5"}`}
+              >
+                <Sparkles size={12} /> Gemini 3.7
+              </button>
+              <button
+                onClick={() => setSelectedModel("gemini-3.5-flash")}
+                className={`py-1.5 px-2 flex items-center justify-center gap-1 text-[11px] rounded-lg transition-all cursor-pointer ${selectedModel === "gemini-3.5-flash" ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-bold" : "bg-black text-zinc-400 hover:text-zinc-200 border border-white/5"}`}
+              >
+                <Zap size={12} /> Gemini 3.5
+              </button>
               <button
                 onClick={() => setSelectedModel("gemini-3.1-pro-preview")}
-                className={`flex-1 py-1.5 flex items-center justify-center gap-1.5 text-xs rounded-lg transition-all ${selectedModel === "gemini-3.1-pro-preview" ? "bg-[#c5a880] text-zinc-950 font-bold" : "bg-black text-zinc-400 hover:text-zinc-200 border border-white/5"}`}
+                className={`py-1.5 px-2 flex items-center justify-center gap-1 text-[11px] rounded-lg transition-all cursor-pointer ${selectedModel === "gemini-3.1-pro-preview" ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-bold" : "bg-black text-zinc-400 hover:text-zinc-200 border border-white/5"}`}
               >
-                <Zap size={14} /> Pro 3.1
-              </button>
-              <button
-                onClick={() => setSelectedModel("gemini-3-pro-image")}
-                className={`flex-1 py-1.5 flex items-center justify-center gap-1.5 text-xs rounded-lg transition-all ${selectedModel === "gemini-3-pro-image" ? "bg-[#c5a880] text-zinc-950 font-bold" : "bg-black text-zinc-400 hover:text-zinc-200 border border-white/5"}`}
-              >
-                <Sparkles size={14} /> Image Pro
+                <Layers size={12} /> Gemini 3.1 Pro
               </button>
             </div>
-            <p className="text-[10px] text-zinc-500">
-              O modelo Pro 3.1 é ideal para chat avançado e raciocínio. O Image Pro é otimizado para lidar com imagens e visão.
-            </p>
           </div>
         )}
       </div>
@@ -406,13 +421,13 @@ Pergunta ou comando do usuário:
       <div className="p-2 border-b border-white/5 flex gap-1 bg-black/20">
         <button
           onClick={() => setMode("chat")}
-          className={`flex-1 text-xs py-2 rounded-xl transition-all font-semibold ${mode === "chat" ? "bg-[#c5a880] text-zinc-950" : "text-zinc-400 hover:text-zinc-200"}`}
+          className={`flex-1 text-xs py-2 rounded-xl transition-all font-semibold ${mode === "chat" ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white" : "text-zinc-400 hover:text-zinc-200"}`}
         >
           Chat Integrado
         </button>
         <button
           onClick={() => setMode("extract")}
-          className={`flex-1 text-xs py-2 rounded-xl transition-all font-semibold ${mode === "extract" ? "bg-[#c5a880] text-zinc-950" : "text-zinc-400 hover:text-zinc-200"}`}
+          className={`flex-1 text-xs py-2 rounded-xl transition-all font-semibold ${mode === "extract" ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white" : "text-zinc-400 hover:text-zinc-200"}`}
         >
           Extrair de Referências
         </button>
@@ -424,7 +439,7 @@ Pergunta ou comando do usuário:
           <div className="text-sm text-zinc-300 space-y-6 p-1">
             <div className="bg-black p-4 border border-white/5 rounded-xl">
               <p className="text-xs font-bold text-white mb-2 flex items-center gap-1">
-                📸 Extrair Prompt de Imagem
+                Extrair Prompt de Imagem
               </p>
               <p className="text-[11px] text-zinc-500 mb-3">
                 Envie uma imagem de referência de social media e o assistente
@@ -437,14 +452,14 @@ Pergunta ou comando do usuário:
                 onChange={handleImageUpload}
               />
               {isExtracting && (
-                <p className="mt-2 text-[#c5a880] animate-pulse text-xs">
+                <p className="mt-2 text-violet-400 animate-pulse text-xs">
                   Analisando imagem e extraindo prompt...
                 </p>
               )}
               {extractedPrompt && (
                 <div className="mt-3 p-3 bg-black rounded-xl border border-white/5 text-zinc-200 text-xs">
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="font-bold text-[#c5a880]">
+                    <span className="font-bold text-violet-400">
                       Prompt Extraído:
                     </span>
                     <button
@@ -465,7 +480,7 @@ Pergunta ou comando do usuário:
 
             <div className="bg-black p-4 border border-white/5 rounded-xl">
               <p className="text-xs font-bold text-white mb-2 flex items-center gap-1">
-                🎨 Extrair Estilo Tipográfico
+                Extrair Estilo Tipográfico
               </p>
               <p className="text-[11px] text-zinc-500 mb-3">
                 Gostou das letras de um post? Envie a imagem e descubra fontes,
@@ -478,14 +493,14 @@ Pergunta ou comando do usuário:
                 onChange={handleTypographyExtraction}
               />
               {isExtracting && (
-                <p className="mt-2 text-[#c5a880] animate-pulse text-xs">
+                <p className="mt-2 text-violet-400 animate-pulse text-xs">
                   Analisando fontes e layout...
                 </p>
               )}
               {extractedTypography && (
                 <div className="mt-3 p-3 bg-black rounded-xl border border-white/5 text-zinc-200 text-xs">
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="font-bold text-[#c5a880]">
+                    <span className="font-bold text-violet-400">
                       Estilo Tipográfico:
                     </span>
                     <button
@@ -518,7 +533,7 @@ Pergunta ou comando do usuário:
                 <div
                   className={`max-w-[90%] p-3.5 rounded-xl text-xs leading-relaxed ${
                     m.role === "user"
-                      ? "bg-[#c5a880] text-zinc-950 rounded-tr-none font-medium"
+                      ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-tr-none font-medium"
                       : "bg-black border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] text-zinc-200 rounded-tl-none"
                   }`}
                 >
@@ -540,7 +555,7 @@ Pergunta ou comando do usuário:
             <button
               key={idx}
               onClick={() => handleSend(p.text)}
-              className="inline-block text-[10px] font-bold text-zinc-400 bg-black hover:bg-[#111] border border-white/5 rounded-full px-3 py-1.5 transition-all hover:text-[#c5a880]"
+              className="inline-block text-[10px] font-bold text-zinc-400 bg-black hover:bg-[#111] border border-white/5 rounded-full px-3 py-1.5 transition-all hover:text-violet-400"
             >
               {p.label}
             </button>
@@ -560,12 +575,12 @@ Pergunta ou comando do usuário:
               : "Selecione um recurso acima..."
           }
           disabled={mode === "extract"}
-          className="flex-1 bg-black border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-[#c5a880]/50 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 bg-black border border-white/5 rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-violet-500/50 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
         />
         <button
           onClick={() => handleSend()}
           disabled={mode === "extract" || !input.trim()}
-          className="bg-[#c5a880] text-zinc-950 p-2.5 rounded-xl hover:bg-[#c5a880]/80 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white p-2.5 rounded-xl hover:bg-violet-500/80 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <Check size={16} className="stroke-[3]" />
         </button>
@@ -634,7 +649,7 @@ function CustomDatePicker({ value, onChange }: CustomDatePickerProps) {
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full bg-black border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white text-left focus:outline-none focus:border-[#c5a880]/50 flex items-center justify-between font-mono hover:bg-black transition-colors"
+        className="w-full bg-black border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white text-left focus:outline-none focus:border-violet-500/50 flex items-center justify-between font-mono hover:bg-black transition-colors"
       >
         <span>{formattedDisplay}</span>
         <Calendar size={16} className="text-zinc-500" />
@@ -652,7 +667,7 @@ function CustomDatePicker({ value, onChange }: CustomDatePickerProps) {
               <select
                 value={pickerMonth}
                 onChange={(e) => setPickerMonth(Number(e.target.value))}
-                className="flex-1 bg-black border border-white/5 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50"
+                className="flex-1 bg-black border border-white/5 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-violet-500/50"
               >
                 {months.map((m, idx) => (
                   <option key={idx} value={idx}>
@@ -664,7 +679,7 @@ function CustomDatePicker({ value, onChange }: CustomDatePickerProps) {
               <select
                 value={pickerYear}
                 onChange={(e) => setPickerYear(Number(e.target.value))}
-                className="bg-black border border-white/5 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50"
+                className="bg-black border border-white/5 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-violet-500/50"
               >
                 {years.map((y) => (
                   <option key={y} value={y}>
@@ -707,7 +722,7 @@ function CustomDatePicker({ value, onChange }: CustomDatePickerProps) {
                     onClick={() => handleSelectDay(day)}
                     className={`h-7 w-7 rounded-lg text-xs font-bold transition-all flex items-center justify-center ${
                       isSelected
-                        ? "bg-[#c5a880] text-zinc-950 scale-105"
+                        ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white scale-105"
                         : "text-zinc-300 hover:bg-white/5"
                     }`}
                   >
@@ -742,7 +757,7 @@ const DEFAULT_DEMO_CLIENTS: Client[] = [
     plan: "Premium (R$ 1.500/mês)",
     planValue: 1500,
     dueDate: "2026-06-10",
-    paymentStatus: "Em dia",
+    paymentStatus: "Em dia" as const,
     startDate: "2026-01-10",
     notes: "Contato prioritário por WhatsApp. Foco em campanhas de implante.",
   },
@@ -755,7 +770,7 @@ const DEFAULT_DEMO_CLIENTS: Client[] = [
     plan: "Basic (R$ 1.200/mês)",
     planValue: 1200,
     dueDate: "2026-06-15",
-    paymentStatus: "Em dia",
+    paymentStatus: "Em dia" as const,
     startDate: "2026-02-15",
     notes: "Gosta de conteúdos dinâmicos e fotos de antes/depois da clínica.",
   },
@@ -783,7 +798,7 @@ const DEFAULT_DEMO_CLIENTS: Client[] = [
       "2 Posts Estratégicos por semana (8/mês)\n1 Vídeo Reels Dinâmico por semana (4/mês)\nGestão de Legendas e Agendamento\nTráfego Local Incluso (R$ 150 de verba)\nRelatório Mensal de Alcance",
     planValue: 829,
     dueDate: "2026-06-20",
-    paymentStatus: "Em dia",
+    paymentStatus: "Em dia" as const,
     startDate: "2026-03-20",
     notes: "Publicar sempre em tom institucional e informativo.",
   },
@@ -1175,10 +1190,27 @@ export default function App() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   React.useEffect(() => {
-    if (currentUser?.role === "client" && activeTab !== "ai-tools" && activeTab !== "gallery" && activeTab !== "profile") {
+    if (
+      currentUser?.role === "client" &&
+      activeTab !== "ai-tools" &&
+      activeTab !== "gallery" &&
+      activeTab !== "profile" &&
+      activeTab !== "projetos" &&
+      activeTab !== "projects"
+    ) {
       setActiveTab("ai-tools");
     }
   }, [currentUser, activeTab]);
+
+  // Sempre que a aba galeria for acionada, usar a Galeria Oficial do Studio (DesignBuilder)
+  React.useEffect(() => {
+    if (activeTab === "gallery") {
+      setActiveTab("ai-tools");
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent("db:open_gallery"));
+      }, 50);
+    }
+  }, [activeTab]);
 
   // Listen for Supabase OAuth redirect logins (Google Login)
   React.useEffect(() => {
@@ -1380,19 +1412,12 @@ export default function App() {
         safeStorageSetItem("zion_workspace_key", "ZION-MASTER");
       }
       
-      const customKey = localStorage.getItem("custom_gemini_api_key");
-      const keyCleared = localStorage.getItem("custom_key_cleared_for_vertex_v2");
-      if (customKey && !keyCleared) {
-        console.log("Limpando chave de API customizada antiga para usar o Vertex AI oficial do servidor...");
-        localStorage.removeItem("custom_gemini_api_key");
-        safeStorageSetItem("custom_key_cleared_for_vertex_v2", "true");
-        // Forçar reload rápido para aplicar a limpeza
-        setTimeout(() => {
-          window.location.reload();
-        }, 300);
-      } else {
-        safeStorageSetItem("custom_key_cleared_for_vertex_v2", "true");
-      }
+      try {
+        if (localStorage.getItem("custom_gemini_api_key")) {
+          localStorage.removeItem("custom_gemini_api_key");
+        }
+        localStorage.setItem("custom_key_cleared_for_vertex_v2", "true");
+      } catch (_) {}
       // Migration v3: Mark done - Supabase is the source of truth, localStorage is just cache
       const demoClearedV3 = localStorage.getItem("zion_demo_cleared_v3");
       if (!demoClearedV3) {
@@ -1778,7 +1803,7 @@ export default function App() {
           contact: "Geral",
           planValue: 0,
           dueDate: "01",
-          paymentStatus: "Em dia",
+          paymentStatus: "Em dia" as const,
           roteirosChat: history999
         });
       } catch (e) {}
@@ -2018,6 +2043,7 @@ export default function App() {
       if (hasPaid) {
         calculatedStatus = "Em dia";
       } else if (
+        client.paymentStatus === "Atrasado" ||
         (typeof client.dueDate === "string" &&
           client.dueDate.includes("-") &&
           new Date().toISOString().split("T")[0] > client.dueDate) ||
@@ -2028,7 +2054,7 @@ export default function App() {
       ) {
         calculatedStatus = "Atrasado";
       } else {
-        calculatedStatus = "Pendente";
+        calculatedStatus = client.paymentStatus || "Pendente";
       }
 
       if (client.paymentStatus !== calculatedStatus) {
@@ -2419,6 +2445,303 @@ export default function App() {
     };
   }, [activeSyncKey]);
 
+  // Live Auto-Sync for WhatsApp AI Assistant Events (Tasks, Finances, Clients)
+  const lastProcessedActionTimeRef = React.useRef(0);
+
+  React.useEffect(() => {
+    const checkWhatsAppSync = async () => {
+      try {
+        const activeUser = syncUserId || (currentUser?.email ? currentUser.email.replace(/[^a-zA-Z0-9_-]/g, "_") : "admin_user");
+        const res = await fetch(`/api/whatsapp/sync-data?userId=${encodeURIComponent(activeUser)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+
+        // 0. Handle real-time actions (Deletions, Complete, Clear)
+        if (data?.lastAction && data.lastAction.timestamp > lastProcessedActionTimeRef.current) {
+          lastProcessedActionTimeRef.current = data.lastAction.timestamp;
+          
+          if (data.lastAction.type === "CLEAR_ALL_TASKS") {
+            setTasks([]);
+            safeStorageSetItem("zion_tasks", JSON.stringify([]));
+          } else if (data.lastAction.type === "DELETE_TASK" && data.lastAction.target) {
+            const target = data.lastAction.target.toLowerCase();
+            setTasks((prev) => {
+              const filtered = prev.filter(
+                (t) => !((t.title || "").toLowerCase().includes(target) || (t.description || "").toLowerCase().includes(target))
+              );
+              safeStorageSetItem("zion_tasks", JSON.stringify(filtered));
+              return filtered;
+            });
+          } else if (data.lastAction.type === "COMPLETE_TASK" && data.lastAction.target) {
+            const target = data.lastAction.target.toLowerCase();
+            setTasks((prev) => {
+              const updated = prev.map((t) => {
+                if ((t.title || "").toLowerCase().includes(target) || (t.description || "").toLowerCase().includes(target)) {
+                  return { ...t, status: "done" as any };
+                }
+                return t;
+              });
+              safeStorageSetItem("zion_tasks", JSON.stringify(updated));
+              return updated;
+            });
+          } else if (data.lastAction.type === "CLEAR_ALL_TRANSACTIONS") {
+            setTransactions([]);
+            safeStorageSetItem("zion_transactions", JSON.stringify([]));
+            saveToFirestoreDirectly({ transactions: [] });
+          } else if (data.lastAction.type === "DELETE_TRANSACTION") {
+            const target = (data.lastAction.target || "").toLowerCase().trim();
+            const targetId = data.lastAction.id;
+            setTransactions((prev) => {
+              const filtered = prev.filter((tx) => {
+                if (targetId && String(tx.id) === String(targetId)) return false;
+                if (target && ((tx.description || "").toLowerCase().includes(target) || String(tx.amount || "").includes(target))) return false;
+                return true;
+              });
+              safeStorageSetItem("zion_transactions", JSON.stringify(filtered));
+              saveToFirestoreDirectly({ transactions: filtered });
+              return filtered;
+            });
+          } else if (data.lastAction.type === "UPDATE_CLIENT") {
+            const oldTarget = (data.lastAction.oldName || data.lastAction.name || "").toLowerCase().trim();
+            const newName = data.lastAction.name;
+            const updatedClient = data.lastAction.client;
+            
+            setClients((prev) => {
+              const updated = prev.map((c, index) => {
+                const matchesOld = oldTarget && (c.name || "").toLowerCase().includes(oldTarget);
+                const isLatest = (!oldTarget || oldTarget === (c.name || "").toLowerCase().trim()) || index === 0;
+                if (matchesOld || isLatest) {
+                  return { 
+                    ...c, 
+                    ...(updatedClient || {}),
+                    name: newName || updatedClient?.name || c.name,
+                    niche: updatedClient?.niche || c.niche,
+                    status: updatedClient?.status || c.status,
+                    contact: updatedClient?.contact || c.contact,
+                    avatarUrl: updatedClient?.avatarUrl || c.avatarUrl,
+                    paymentType: updatedClient?.paymentType || c.paymentType,
+                    plan: updatedClient?.plan || c.plan,
+                    planDetails: updatedClient?.planDetails || c.planDetails,
+                    planValue: updatedClient?.planValue !== undefined ? Number(updatedClient.planValue) : c.planValue,
+                    dueDate: updatedClient?.dueDate || c.dueDate,
+                    startDate: updatedClient?.startDate || c.startDate,
+                    paymentStatus: updatedClient?.paymentStatus || c.paymentStatus,
+                    notes: updatedClient?.notes || c.notes,
+                    paletaCores: updatedClient?.paletaCores || c.paletaCores,
+                    bancoDeDadosIA: updatedClient?.bancoDeDadosIA || c.bancoDeDadosIA
+                  };
+                }
+                return c;
+              });
+              safeStorageSetItem("zion_clients", JSON.stringify(updated));
+              saveToFirestoreDirectly({ clients: updated });
+              return updated;
+            });
+
+            // If the client edit modal is currently open on the user's screen, update its form fields live!
+            setClientForm((prevForm) => {
+              if (!prevForm || !prevForm.name) return prevForm;
+              const matchesModal = (prevForm.name || "").toLowerCase().trim().includes(oldTarget) ||
+                                    (newName && (prevForm.name || "").toLowerCase().trim().includes(newName.toLowerCase().trim()));
+              if (matchesModal) {
+                return {
+                  ...prevForm,
+                  ...(updatedClient || {}),
+                  name: newName || updatedClient?.name || prevForm.name,
+                  niche: updatedClient?.niche || prevForm.niche,
+                  status: updatedClient?.status || prevForm.status,
+                  contact: updatedClient?.contact || prevForm.contact,
+                  avatarUrl: updatedClient?.avatarUrl || prevForm.avatarUrl,
+                  paymentType: updatedClient?.paymentType || prevForm.paymentType,
+                  plan: updatedClient?.plan || prevForm.plan,
+                  planDetails: updatedClient?.planDetails || prevForm.planDetails,
+                  planValue: updatedClient?.planValue !== undefined ? Number(updatedClient.planValue) : prevForm.planValue,
+                  dueDate: updatedClient?.dueDate || prevForm.dueDate,
+                  startDate: updatedClient?.startDate || prevForm.startDate,
+                  paymentStatus: updatedClient?.paymentStatus || prevForm.paymentStatus,
+                  notes: updatedClient?.notes || prevForm.notes,
+                  paletaCores: updatedClient?.paletaCores || prevForm.paletaCores,
+                  bancoDeDadosIA: updatedClient?.bancoDeDadosIA || prevForm.bancoDeDadosIA
+                };
+              }
+              return prevForm;
+            });
+          } else if (data.lastAction.type === "UPDATE_TASK") {
+            const oldTarget = (data.lastAction.target || "").toLowerCase().trim();
+            const newTitle = data.lastAction.title;
+            const newStatus = data.lastAction.status;
+            setTasks((prev) => {
+              const updated = prev.map((t, index) => {
+                const matchesOld = oldTarget && ((t.title || "").toLowerCase().includes(oldTarget) || (t.description || "").toLowerCase().includes(oldTarget));
+                const isLatest = (!oldTarget || oldTarget === (t.title || "").toLowerCase().trim()) || index === 0;
+                if (matchesOld || isLatest) {
+                  return { 
+                    ...t, 
+                    title: (newTitle && !newTitle.toLowerCase().includes("produção") && !newTitle.toLowerCase().includes("concluído") && !newTitle.toLowerCase().includes("a fazer")) ? newTitle : t.title,
+                    status: (newStatus || t.status || "todo") as any
+                  };
+                }
+                return t;
+              });
+              safeStorageSetItem("zion_tasks", JSON.stringify(updated));
+              return updated;
+            });
+          } else if (data.lastAction.type === "DELETE_CLIENT" && data.lastAction.target) {
+            const target = data.lastAction.target.toLowerCase();
+            setClients((prev) => {
+              const filtered = prev.filter(
+                (c) => !(c.name || "").toLowerCase().includes(target)
+              );
+              safeStorageSetItem("zion_clients", JSON.stringify(filtered));
+              return filtered;
+            });
+          } else if (data.lastAction.type === "DELETE_EVENT" && data.lastAction.target) {
+            const target = data.lastAction.target.toLowerCase();
+            setCalendarEvents((prev) => {
+              const filtered = prev.filter(
+                (e) => !(e.title || "").toLowerCase().includes(target)
+              );
+              safeStorageSetItem("zion_calendar_events", JSON.stringify(filtered));
+              return filtered;
+            });
+          }
+        }
+
+        // 1. Sync Tasks from WhatsApp (including updated status & properties)
+        if (data && Array.isArray(data.tasks) && data.tasks.length > 0) {
+          setTasks((prevTasks) => {
+            let hasDiff = false;
+            const updatedTasks = data.tasks.map((backendTask: any) => {
+              const existing = prevTasks.find(
+                (t) => String(t.id) === String(backendTask.id) || (t.title || "").toLowerCase().trim() === (backendTask.title || "").toLowerCase().trim()
+              );
+              if (!existing) {
+                hasDiff = true;
+                return backendTask;
+              }
+              if (
+                existing.status !== backendTask.status || 
+                existing.title !== backendTask.title || 
+                existing.dueDate !== backendTask.dueDate
+              ) {
+                hasDiff = true;
+                return { ...existing, ...backendTask };
+              }
+              return existing;
+            });
+            if (hasDiff || updatedTasks.length !== prevTasks.length) {
+              safeStorageSetItem("zion_tasks", JSON.stringify(updatedTasks));
+              return updatedTasks;
+            }
+            return prevTasks;
+          });
+        }
+
+        // 2. Sync Finances from WhatsApp
+        if (data && Array.isArray(data.transactions) && data.transactions.length > 0) {
+          setTransactions((prevTx) => {
+            const existingIds = new Set(prevTx.map((t) => String(t.id)));
+            const existingDescs = new Set(prevTx.map((t) => (t.description || "").toLowerCase().trim()));
+            const newTxToAdd = data.transactions.filter(
+              (t: any) => !existingIds.has(String(t.id)) && !existingDescs.has((t.description || "").toLowerCase().trim())
+            );
+            if (newTxToAdd.length > 0) {
+              const merged = [...newTxToAdd, ...prevTx];
+              safeStorageSetItem("zion_transactions", JSON.stringify(merged));
+              return merged;
+            }
+            return prevTx;
+          });
+        }
+
+        // 3. Sync Clients from WhatsApp (including all CRM properties)
+        if (data && Array.isArray(data.clients) && data.clients.length > 0) {
+          setClients((prevCl) => {
+            let hasDiff = false;
+            const updatedClients = data.clients.map((backendCl: any) => {
+              const existing = prevCl.find(
+                (c) => (c.name || "").toLowerCase().trim() === (backendCl.name || "").toLowerCase().trim() || String(c.id) === String(backendCl.id)
+              );
+              if (!existing) {
+                hasDiff = true;
+                return backendCl;
+              }
+              if (
+                existing.planValue !== backendCl.planValue || 
+                existing.name !== backendCl.name || 
+                existing.niche !== backendCl.niche ||
+                existing.dueDate !== backendCl.dueDate ||
+                existing.startDate !== backendCl.startDate ||
+                existing.status !== backendCl.status ||
+                existing.paymentStatus !== backendCl.paymentStatus ||
+                existing.paymentType !== backendCl.paymentType ||
+                existing.contact !== backendCl.contact ||
+                existing.plan !== backendCl.plan ||
+                existing.notes !== backendCl.notes
+              ) {
+                hasDiff = true;
+                return { ...existing, ...backendCl };
+              }
+              return existing;
+            });
+            if (hasDiff || updatedClients.length !== prevCl.length) {
+              safeStorageSetItem("zion_clients", JSON.stringify(updatedClients));
+              return updatedClients;
+            }
+            return prevCl;
+          });
+        }
+
+        // 4. Sync Calendar Events from WhatsApp
+        if (data && Array.isArray(data.calendarEvents) && data.calendarEvents.length > 0) {
+          setCalendarEvents((prevEv) => {
+            const existingIds = new Set(prevEv.map((e) => String(e.id)));
+            const existingTitles = new Set(prevEv.map((e) => (e.title || "").toLowerCase().trim()));
+            const newEvToAdd = data.calendarEvents.filter(
+              (e: any) => !existingIds.has(String(e.id)) && !existingTitles.has((e.title || "").toLowerCase().trim())
+            );
+            if (newEvToAdd.length > 0) {
+              const merged = [...newEvToAdd, ...prevEv];
+              safeStorageSetItem("zion_calendar_events", JSON.stringify(merged));
+              return merged;
+            }
+            return prevEv;
+          });
+        }
+
+        // 5. Sync Saved Notes from WhatsApp
+        if (data && Array.isArray(data.savedNotes) && data.savedNotes.length > 0) {
+          setSavedNotes((prevNotes) => {
+            const existingIds = new Set(prevNotes.map((n) => String(n.id)));
+            const newNotesToAdd = data.savedNotes.filter(
+              (n: any) => !existingIds.has(String(n.id))
+            );
+            if (newNotesToAdd.length > 0) {
+              const merged = [...newNotesToAdd, ...prevNotes];
+              safeStorageSetItem("zion_saved_notes", JSON.stringify(merged));
+              return merged;
+            }
+            return prevNotes;
+          });
+        }
+
+        // 6. Sync WhatsApp Activity Logs
+        if (data && Array.isArray(data.whatsappLogs) && data.whatsappLogs.length > 0) {
+          setWhatsappLogs((prevLogs) => {
+            if (data.whatsappLogs.length !== prevLogs.length) {
+              safeStorageSetItem("zion_whatsapp_logs", JSON.stringify(data.whatsappLogs));
+              return data.whatsappLogs;
+            }
+            return prevLogs;
+          });
+        }
+      } catch (e) {}
+    };
+
+    const interval = setInterval(checkWhatsAppSync, 2000);
+    return () => clearInterval(interval);
+  }, []);
+
   // 2. Auto-save to Firestore on State Changes with 2-second debounce
   React.useEffect(() => {
     if (!activeSyncKey) return;
@@ -2626,47 +2949,84 @@ export default function App() {
 
   // Dynamic 6-month historical calculations for the Cash Flow chart
   const getMonthlyData = () => {
-    const monthlyList = [
-      { name: "JAN", month: 0, revenue: 0, expense: 0 },
-      { name: "FEV", month: 1, revenue: 0, expense: 0 },
-      { name: "MAR", month: 2, revenue: 0, expense: 0 },
-      { name: "ABR", month: 3, revenue: 0, expense: 0 },
-      { name: "MAI", month: 4, revenue: 0, expense: 0 },
-      { name: "JUN", month: 5, revenue: 0, expense: 0 },
-    ];
+    const monthNames = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    // Generate rolling last 6 months up to current month (e.g. MAR, ABR, MAI, JUN, JUL, AGO)
+    const rollingMonths: Array<{ name: string; year: number; month: number; revenue: number; expense: number; isCurrent: boolean }> = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(currentYear, currentMonth - i, 1);
+      const m = d.getMonth();
+      const y = d.getFullYear();
+      rollingMonths.push({
+        name: monthNames[m],
+        year: y,
+        month: m,
+        revenue: 0,
+        expense: 0,
+        isCurrent: i === 0,
+      });
+    }
 
     transactions.forEach((t) => {
       try {
-        const d = new Date(t.date);
-        if (d.getFullYear() === 2026) {
-          const m = d.getMonth();
-          if (m >= 0 && m <= 5) {
-            if (t.type === "receita") {
-              monthlyList[m].revenue += t.amount;
-            } else {
-              monthlyList[m].expense += t.amount;
-            }
+        if (!t.date) return;
+        let dateStr = String(t.date);
+        if (dateStr.includes("/")) {
+          const parts = dateStr.split("/");
+          if (parts.length === 3) dateStr = `${parts[2]}-${parts[1]}-${parts[0]}`;
+        }
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return;
+        const m = d.getMonth();
+        const y = d.getFullYear();
+
+        const slot = rollingMonths.find((item) => item.month === m && item.year === y);
+        if (slot) {
+          const val = Number(t.amount) || 0;
+          if (t.type === "receita") {
+            slot.revenue += val;
+          } else if (t.type === "despesa") {
+            slot.expense += val;
           }
         }
       } catch (e) {
         console.error("Erro ao processar transação para gráfico:", e);
       }
     });
-    return monthlyList;
+
+    return rollingMonths;
   };
 
   const monthlyData = getMonthlyData();
-  const maxChartVal =
-    Math.max(...monthlyData.map((m) => Math.max(m.revenue, m.expense, 1000))) *
-    1.15;
+  
+  // Calculate clean, professional rounded scale ceiling (e.g. 500, 1000, 2000, 3000, 5000)
+  const rawMax = Math.max(...monthlyData.map((m) => Math.max(m.revenue, m.expense)), 500);
+  const getCleanCeiling = (val: number) => {
+    if (val <= 500) return 500;
+    if (val <= 1000) return 1000;
+    if (val <= 1500) return 1500;
+    if (val <= 2000) return 2000;
+    if (val <= 2500) return 2500;
+    if (val <= 3000) return 3000;
+    if (val <= 4000) return 4000;
+    if (val <= 5000) return 5000;
+    if (val <= 8000) return 8000;
+    if (val <= 10000) return 10000;
+    const step = Math.pow(10, Math.floor(Math.log10(val)));
+    return Math.ceil((val * 1.1) / step) * step;
+  };
+  const maxChartVal = getCleanCeiling(rawMax);
 
   // Calculate SVG Points for the Cash Flow graph
   const chartPoints = monthlyData.map((d, i) => {
-    // Offset X to make room for Y Axis labels
-    const x = 70 + i * 80;
+    // Offset X nicely across 500 width: 75, 153, 231, 309, 387, 465
+    const x = 75 + i * 78;
     // Y maps from 200 (value=0) to 30 (value=maxChartVal)
-    const yRev = 200 - (d.revenue / maxChartVal) * 170;
-    const yExp = 200 - (d.expense / maxChartVal) * 170;
+    const yRev = Math.max(30, Math.min(200, 200 - (d.revenue / maxChartVal) * 170));
+    const yExp = Math.max(30, Math.min(200, 200 - (d.expense / maxChartVal) * 170));
     return {
       x,
       yRev,
@@ -2674,15 +3034,29 @@ export default function App() {
       revenue: d.revenue,
       expense: d.expense,
       name: d.name,
+      year: d.year,
+      isCurrent: d.isCurrent,
     };
   });
 
-  // Construct SVG path strings safely
-  const revLinePath = chartPoints.map((p) => `${p.x},${p.yRev}`).join(" L ");
-  const expLinePath = chartPoints.map((p) => `${p.x},${p.yExp}`).join(" L ");
+  // Construct smooth cubic Bezier paths
+  const getSvgCurvedPath = (pts: Array<{ x: number; y: number }>) => {
+    if (pts.length === 0) return "";
+    let path = `${pts[0].x},${pts[0].y}`;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[i];
+      const p1 = pts[i + 1];
+      const mx = (p0.x + p1.x) / 2;
+      path += ` C ${mx},${p0.y} ${mx},${p1.y} ${p1.x},${p1.y}`;
+    }
+    return path;
+  };
 
-  const revAreaPath = `M ${chartPoints[0].x},200 L ${revLinePath} L ${chartPoints[chartPoints.length - 1].x},200 Z`;
-  const expAreaPath = `M ${chartPoints[0].x},200 L ${expLinePath} L ${chartPoints[chartPoints.length - 1].x},200 Z`;
+  const revLinePath = getSvgCurvedPath(chartPoints.map((p) => ({ x: p.x, y: p.yRev })));
+  const expLinePath = getSvgCurvedPath(chartPoints.map((p) => ({ x: p.x, y: p.yExp })));
+
+  const revAreaPath = `M ${chartPoints[0].x},200 L ${chartPoints[0].x},${chartPoints[0].yRev} ${revLinePath.replace(`${chartPoints[0].x},${chartPoints[0].yRev}`, "")} L ${chartPoints[chartPoints.length - 1].x},200 Z`;
+  const expAreaPath = `M ${chartPoints[0].x},200 L ${chartPoints[0].x},${chartPoints[0].yExp} ${expLinePath.replace(`${chartPoints[0].x},${chartPoints[0].yExp}`, "")} L ${chartPoints[chartPoints.length - 1].x},200 Z`;
 
   // Calendar Helpers
   const getDaysInMonth = (year: number, month: number) => {
@@ -2764,6 +3138,14 @@ export default function App() {
     const target = clients.find((c) => c.id === id);
     const updatedClients = clients.filter((c) => c.id !== id);
     setClients(updatedClients);
+    try {
+      const activeUser = syncUserId || (currentUser?.email ? currentUser.email.replace(/[^a-zA-Z0-9_-]/g, "_") : "admin_user");
+      fetch("/api/whatsapp/delete-item", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: activeUser, type: "client", id, name: target?.name })
+      }).catch(() => {});
+    } catch (e) {}
     if (target) {
       const newNotif: NotificationItem = {
         id: Date.now(),
@@ -2792,7 +3174,7 @@ export default function App() {
         plan: "Premium (R$ 1.500/mês)",
         planValue: 1500,
         dueDate: new Date().toISOString().split("T")[0],
-        paymentStatus: "Em dia",
+        paymentStatus: "Em dia" as const,
         startDate: new Date().toISOString().split("T")[0],
       });
     }
@@ -3046,8 +3428,17 @@ ${textContent}`
   };
 
   const handleDeleteTask = (id: number) => {
+    const target = tasks.find((t) => t.id === id);
     const updated = tasks.filter((t) => t.id !== id);
     setTasks(updated);
+    try {
+      const activeUser = syncUserId || (currentUser?.email ? currentUser.email.replace(/[^a-zA-Z0-9_-]/g, "_") : "admin_user");
+      fetch("/api/whatsapp/delete-item", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: activeUser, type: "task", id, title: target?.title })
+      }).catch(() => {});
+    } catch (e) {}
     saveToFirestoreDirectly({ tasks: updated });
     closeTaskModal();
   };
@@ -3123,8 +3514,17 @@ ${textContent}`
   };
 
   const handleDeleteTransaction = (id: number) => {
+    const target = transactions.find((t) => t.id === id);
     const updatedTx = transactions.filter((t) => t.id !== id);
     setTransactions(updatedTx);
+    try {
+      const activeUser = syncUserId || (currentUser?.email ? currentUser.email.replace(/[^a-zA-Z0-9_-]/g, "_") : "admin_user");
+      fetch("/api/whatsapp/delete-item", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: activeUser, type: "transaction", id, description: target?.description })
+      }).catch(() => {});
+    } catch (e) {}
     saveToFirestoreDirectly({ transactions: updatedTx });
     closeTransactionModal();
   };
@@ -3499,7 +3899,18 @@ ${textContent}`
   };
 
   const handleDeleteEvent = (id: number) => {
-    setCalendarEvents(calendarEvents.filter((e) => e.id !== id));
+    const target = calendarEvents.find((e) => e.id === id);
+    const updated = calendarEvents.filter((e) => e.id !== id);
+    setCalendarEvents(updated);
+    try {
+      const activeUser = syncUserId || (currentUser?.email ? currentUser.email.replace(/[^a-zA-Z0-9_-]/g, "_") : "admin_user");
+      fetch("/api/whatsapp/delete-item", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: activeUser, type: "event", id, title: target?.title })
+      }).catch(() => {});
+    } catch (e) {}
+    saveToFirestoreDirectly({ calendarEvents: updated });
     closeEventModal();
   };
 
@@ -3826,7 +4237,7 @@ ${textContent}`
             NUVEM CONECTADA
           </span>
           <div className="flex items-center gap-1.5">
-            <span className={`w-1.5 h-1.5 rounded-full ${isCloudSyncing ? "bg-[#c5a880] animate-ping" : "bg-emerald-500"}`} />
+            <span className={`w-1.5 h-1.5 rounded-full ${isCloudSyncing ? "bg-[#a855f7] animate-ping" : "bg-emerald-500"}`} />
 
           </div>
         </div>
@@ -3843,22 +4254,22 @@ ${textContent}`
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-black text-zinc-50 font-sans relative overflow-hidden">
         {/* Ambient background glow */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-[#c5a880]/10 rounded-full blur-[120px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-violet-500/10 rounded-full blur-[120px]" />
         <div className="z-10 flex flex-col items-center gap-6">
-          <div className="w-16 h-16 bg-[#c5a880] rounded-xl flex items-center justify-center text-zinc-950 text-3xl font-black shadow-lg shadow-amber-500/20 animate-bounce">
+          <div className="w-16 h-16 bg-[#a855f7] rounded-xl flex items-center justify-center text-zinc-950 text-3xl font-black shadow-lg shadow-violet-600/20 animate-bounce">
             Z
           </div>
           <div className="flex flex-col items-center gap-2">
             <h2 className="text-xl font-bold tracking-tight text-white flex items-center gap-1.5">
               Carregando Workspace
-              <span className="text-[#c5a880] animate-pulse">.</span>
+              <span className="text-violet-400 animate-pulse">.</span>
             </h2>
             <p className="text-xs text-zinc-400 font-mono">
               Iniciando conexão segura...
             </p>
           </div>
           <div className="w-48 h-1.5 bg-black rounded-full overflow-hidden relative border border-white/5">
-            <div className="h-full bg-[#c5a880] rounded-full animate-slide w-1/3 absolute left-0" />
+            <div className="h-full bg-[#a855f7] rounded-full animate-slide w-1/3 absolute left-0" />
           </div>
         </div>
       </div>
@@ -3876,352 +4287,66 @@ ${textContent}`
       
       {/* Premium Ambient Light Orbs */}
       <div
-        className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-[#ad8330]/5 rounded-full blur-[150px] pointer-events-none z-0 animate-pulse"
+        className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-violet-500/5 rounded-full blur-[150px] pointer-events-none z-0 animate-pulse"
         style={{ animationDuration: "8s" }}
       />
 
-      {/* Botão de Menu Flutuante para 100% de aproveitamento de espaço vertical */}
-      <button
-        onClick={() => {
-          if (window.innerWidth >= 1024) {
-            setIsDesktopSidebarOpen(!isDesktopSidebarOpen);
-          } else {
-            setIsMobileSidebarOpen(true);
-          }
-        }}
-        className={`fixed top-3 left-3 z-40 text-zinc-400 hover:text-white p-2.5 bg-[#09090b]/90 backdrop-blur-md border border-white/5 hover:border-[#c5a880]/30 rounded-xl transition-all flex items-center justify-center shadow-lg cursor-pointer ${
-          isDesktopSidebarOpen ? "lg:hidden" : "flex"
-        }`}
-        aria-label="Abrir menu"
-      >
-        <Menu size={18} />
-      </button>
+      {/* Botão de Menu Flutuante para 100% de aproveitamento de espaço vertical (oculto no Design Builder) */}
+      {activeTab !== "ai-tools" && (
+        <button
+          onClick={() => {
+            if (window.innerWidth >= 1024) {
+              setIsDesktopSidebarOpen(!isDesktopSidebarOpen);
+            } else {
+              setIsMobileSidebarOpen(true);
+            }
+          }}
+          className={`fixed top-3 left-3 z-40 text-zinc-400 hover:text-white p-2.5 bg-[#090611]/90 backdrop-blur-md border border-white/5 hover:border-violet-500/30 rounded-xl transition-all flex items-center justify-center shadow-lg cursor-pointer ${
+            isDesktopSidebarOpen ? "lg:hidden" : "flex"
+          }`}
+          aria-label="Abrir menu"
+        >
+          <Menu size={18} />
+        </button>
+      )}
 
       {/* Conteúdo Principal + Barra Lateral */}
       <div className="flex h-screen mt-0 overflow-hidden relative w-full">
         
-        {/* Menu Lateral Expandido Profissional (Desktop Zion Theme: Preto Sólido, Dourado & Branco) */}
-        <aside className={`hidden ${isDesktopSidebarOpen ? 'lg:flex' : 'lg:hidden'} w-64 bg-[#000000] border-r border-[#c5a880]/15 flex-col py-5 px-3.5 flex-shrink-0 overflow-y-auto custom-scrollbar h-full justify-between shadow-2xl`}>
-          <div className="space-y-5">
-            
-            {/* Logo Zion Studio Dourado */}
-            <div className="flex items-center justify-between px-2.5 py-1 border-b border-[#c5a880]/15 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#c5a880] to-[#ad8330] flex items-center justify-center text-zinc-950 shadow-lg shadow-[#c5a880]/20 shrink-0">
-                  <Layers size={18} />
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-montserrat font-black text-sm tracking-wider uppercase bg-gradient-to-r from-white via-zinc-200 to-[#c5a880] bg-clip-text text-transparent">
-                    ZION STUDIO
-                  </span>
-                  <span className="text-[9px] text-[#c5a880]/80 font-mono tracking-widest uppercase -mt-0.5">
-                    PAINEL DE TRABALHO
-                  </span>
-                </div>
-              </div>
-              <button 
-                onClick={() => setIsDesktopSidebarOpen(false)}
-                className="text-zinc-500 hover:text-white p-1 rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
-                title="Recolher Menu"
-              >
-                <ChevronLeft size={14} />
-              </button>
-            </div>
-
-            {/* Seção 1: Criação & IA */}
-            <div className="space-y-1">
-              {isAdmin && (
-                <>
-                  <SidebarItem
-                    icon={<LayoutDashboard size={16} />}
-                    label={t("inicio")}
-                    active={activeTab === "dashboard"}
-                    onClick={() => setActiveTab("dashboard")}
-                  />
-                  <SidebarItem
-                    icon={<Bot size={16} />}
-                    label={t("copiloto")}
-                    active={activeTab === "copiloto-agencia"}
-                    onClick={() => setActiveTab("copiloto-agencia")}
-                  />
-                  <SidebarItem
-                    icon={<Layers size={16} />}
-                    label={t("assistentes")}
-                    active={activeTab === "agents"}
-                    onClick={() => setActiveTab("agents")}
-                  />
-                  <SidebarItem
-                    icon={<FileText size={16} />}
-                    label={t("roteiros")}
-                    active={activeTab === "roteiros"}
-                    onClick={() => setActiveTab("roteiros")}
-                  />
-                </>
-              )}
-              <SidebarItem
-                icon={<Sparkles size={16} />}
-                label={t("fotos")}
-                active={activeTab === "ai-tools"}
-                onClick={() => setActiveTab("ai-tools")}
-              />
-              {isAdmin && (
-                <>
-                  <SidebarItem
-                    icon={<Tv size={16} />}
-                    label={t("gcs")}
-                    active={activeTab === "gc-tv"}
-                    onClick={() => setActiveTab("gc-tv")}
-                  />
-                  <SidebarItem
-                    icon={<Music size={16} />}
-                    label={t("audio")}
-                    active={activeTab === "audio"}
-                    onClick={() => setActiveTab("audio")}
-                  />
-                  <SidebarItem
-                    icon={<Film size={16} />}
-                    label={t("omni")}
-                    active={activeTab === "omni-flash"}
-                    onClick={() => setActiveTab("omni-flash")}
-                  />
-                  <SidebarItem
-                    icon={<Video size={16} />}
-                    label={t("videoAnalise")}
-                    active={activeTab === "video-analysis"}
-                    onClick={() => setActiveTab("video-analysis")}
-                  />
-                </>
-              )}
-              <SidebarItem
-                icon={<ImageIcon size={16} />}
-                label={t("galeria")}
-                active={activeTab === "gallery"}
-                onClick={() => setActiveTab("gallery")}
-              />
-            </div>
-
-            {/* Separador sutil */}
-            {isAdmin && <div className="h-px bg-[#c5a880]/15 mx-2" />}
-
-            {/* Seção 2: Organização & Clientes (Apenas Administrador) */}
-            {isAdmin && (
-              <div className="space-y-1">
-                <p className="px-3 text-[10px] font-black uppercase tracking-widest text-[#c5a880]/80 mb-2.5">
-                  {t("organizacao")}
-                </p>
-                <SidebarItem
-                  icon={<DollarSign size={16} />}
-                  label={t("financeiro")}
-                  active={activeTab === "finance"}
-                  onClick={() => setActiveTab("finance")}
-                />
-                <SidebarItem
-                  icon={<Users size={16} />}
-                  label={t("clientes")}
-                  active={activeTab === "clients"}
-                  onClick={() => setActiveTab("clients")}
-                />
-                <SidebarItem
-                  icon={<CheckSquare size={16} />}
-                  label={t("tarefas")}
-                  active={activeTab === "tasks"}
-                  onClick={() => setActiveTab("tasks")}
-                />
-                <SidebarItem
-                  icon={<Calendar size={16} />}
-                  label={t("agenda")}
-                  active={activeTab === "calendar"}
-                  onClick={() => setActiveTab("calendar")}
-                />
-                <SidebarItem
-                  icon={<MessageSquare size={16} />}
-                  label={t("whatsapp")}
-                  active={activeTab === "whatsapp"}
-                  onClick={() => setActiveTab("whatsapp")}
-                />
-                <SidebarItem
-                  icon={<FileText size={16} />}
-                  label={t("anotacoes")}
-                  active={activeTab === "notes"}
-                  onClick={() => setActiveTab("notes")}
-                />
-              </div>
-            )}
+        {/* Menu Lateral Unificado Oficial: Design Builder Vitrine */}
+        {activeTab !== "ai-tools" && (
+          <div className={`${isDesktopSidebarOpen ? 'lg:flex' : 'lg:hidden'} hidden h-full shrink-0 z-30 p-3`}>
+            <DesignBuilderSidebar
+              activeTab={activeTab}
+              onNavigateTab={(tab: string) => setActiveTab(tab)}
+              onOpenGallery={() => setActiveTab("gallery")}
+              onOpenCommunity={() => {
+                setActiveTab("ai-tools");
+                setTimeout(() => {
+                  window.dispatchEvent(new CustomEvent("db:open_community"));
+                }, 50);
+              }}
+              onSelectAgent={(slug: string) => {
+                setActiveTab("ai-tools");
+                setTimeout(() => {
+                  window.dispatchEvent(new CustomEvent("db:open_studio", { detail: { agent: slug } }));
+                }, 50);
+              }}
+              onOpenCreditsModal={() => setIsCreditsModalOpen(true)}
+              currentLang={currentLang}
+              setLanguage={setLanguage}
+              userInitials={(myProfile?.name || currentUser?.email || "EQ").substring(0, 2).toUpperCase()}
+              userName={myProfile?.name || "Equipe Zion"}
+              userEmail={currentUser?.email || "der.contatos@gmail.com"}
+              onOpenProfile={() => setActiveTab("profile")}
+              onSignOut={handleSignOut}
+            />
           </div>
-
-          {/* Rodapé da Sidebar com Widgets Zion Preto Sólido (Bônus, Streaks, Tokens, Assinar, Idioma, Perfil) */}
-          <div className="pt-4 border-t border-[#c5a880]/15 space-y-3 shrink-0">
-            
-            {/* Widget 1: BÔNUS RECEBIDO +600 tokens */}
-            <div className="p-3 bg-[#0a0a0a] border border-[#c5a880]/30 rounded-xl flex items-center justify-between shadow-sm relative group">
-              <div className="flex items-center gap-2.5">
-                <span className="text-[#c5a880] text-sm">🎁</span>
-                <div className="flex flex-col">
-                  <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#c5a880]">{t("bonus_recebido")}</span>
-                  <span className="text-xs font-black text-white">+600 tokens</span>
-                </div>
-              </div>
-              <button 
-                onClick={(e) => { e.stopPropagation(); }}
-                className="text-zinc-500 hover:text-[#c5a880] text-xs p-1 cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Widget 2: Streak 🔥 2 & Status 🟢 Iniciante */}
-            <div className="flex items-center gap-2">
-              <div className="flex-1 bg-[#0a0a0a] border border-[#c5a880]/15 rounded-xl py-1.5 px-3 flex items-center gap-1.5 text-xs font-bold text-zinc-300">
-                <span>🔥</span>
-                <span>2</span>
-              </div>
-              <div className="flex-[1.5] bg-[#0a0a0a] border border-[#c5a880]/15 rounded-xl py-1.5 px-3 flex items-center gap-1.5 text-xs font-bold text-zinc-300">
-                <span className="w-2 h-2 rounded-full bg-[#c5a880] animate-pulse" />
-                <span className="truncate text-[#c5a880] font-bold">{t("iniciante")}</span>
-              </div>
-            </div>
-
-            {/* Widget 3: Contador de Tokens Real & Barra de Progresso Dourada Zion */}
-            <div 
-              onClick={() => setIsCreditsModalOpen(true)}
-              className="p-3 bg-[#0a0a0a] border border-[#c5a880]/15 hover:border-[#c5a880]/40 rounded-xl space-y-2 cursor-pointer transition-all"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-xs font-black text-white">
-                  <span className="text-[#c5a880]">⚡</span>
-                  <span>97 tokens</span>
-                </div>
-                <span className="text-[10px] text-zinc-500 hover:text-[#c5a880]">ⓘ</span>
-              </div>
-              <div className="w-full bg-[#151515] h-1.5 rounded-full overflow-hidden">
-                <div className="bg-gradient-to-r from-[#ad8330] via-[#c5a880] to-[#e6c687] h-full rounded-full w-[65%]" />
-              </div>
-              <p className="text-[9.5px] text-zinc-400 leading-tight">
-                87 {t("tokens_vencem")}
-              </p>
-            </div>
-
-            {/* Widget 4: Botão Assinar Plano Dourado */}
-            <button 
-              onClick={() => setIsCreditsModalOpen(true)}
-              className="w-full py-2.5 bg-gradient-to-r from-[#c5a880] to-[#ad8330] hover:from-[#d4b991] hover:to-[#be9441] rounded-full text-xs font-black text-zinc-950 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-[#c5a880]/20"
-            >
-              <CreditCard size={14} className="text-zinc-950" />
-              <span>{t("assinar_plano")}</span>
-            </button>
-
-            {/* Widget 5: Seletor Interativo de Idioma (Português, Inglês, Espanhol) */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setIsLangMenuOpen(!isLangMenuOpen)}
-                className="w-full flex items-center justify-between px-2.5 py-1.5 text-xs font-medium text-zinc-400 hover:text-white cursor-pointer transition-colors rounded-lg hover:bg-white/5 border border-transparent hover:border-[#c5a880]/20"
-              >
-                <div className="flex items-center gap-2">
-                  <Globe size={14} className="text-[#c5a880]" />
-                  <span className="font-bold">
-                    {currentLang === "pt" ? "Português 🇧🇷" : currentLang === "en" ? "English 🇺🇸" : "Español 🇪🇸"}
-                  </span>
-                </div>
-                <ChevronUp size={12} className={`text-zinc-500 transition-transform ${isLangMenuOpen ? "rotate-180" : ""}`} />
-              </button>
-
-              {isLangMenuOpen && (
-                <div className="absolute bottom-full left-0 mb-1 w-full bg-[#050505] border border-[#c5a880]/30 rounded-xl p-1.5 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150 space-y-1">
-                  <button
-                    onClick={() => setLanguage("pt")}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold rounded-lg text-left transition-all cursor-pointer ${
-                      currentLang === "pt" ? "bg-[#c5a880]/20 text-[#c5a880]" : "text-zinc-300 hover:bg-white/10 hover:text-white"
-                    }`}
-                  >
-                    <span>🇧🇷</span>
-                    <span>Português</span>
-                  </button>
-                  <button
-                    onClick={() => setLanguage("en")}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold rounded-lg text-left transition-all cursor-pointer ${
-                      currentLang === "en" ? "bg-[#c5a880]/20 text-[#c5a880]" : "text-zinc-300 hover:bg-white/10 hover:text-white"
-                    }`}
-                  >
-                    <span>🇺🇸</span>
-                    <span>English</span>
-                  </button>
-                  <button
-                    onClick={() => setLanguage("es")}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold rounded-lg text-left transition-all cursor-pointer ${
-                      currentLang === "es" ? "bg-[#c5a880]/20 text-[#c5a880]" : "text-zinc-300 hover:bg-white/10 hover:text-white"
-                    }`}
-                  >
-                    <span>🇪🇸</span>
-                    <span>Español</span>
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {renderCloudSyncStatus()}
-
-            {/* Widget 6: Perfil do Usuário Zion Dourado no Rodapé com Popover Interativo */}
-            <div className="relative">
-              {isProfileMenuOpen && (
-                <div className="absolute bottom-full left-0 mb-2 w-full bg-[#050505] border border-[#c5a880]/30 rounded-2xl p-1.5 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150 space-y-1">
-                  <button
-                    onClick={() => {
-                      setActiveTab("profile");
-                      setIsProfileMenuOpen(false);
-                    }}
-                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-bold text-white hover:bg-[#c5a880]/15 hover:text-[#c5a880] rounded-xl transition-all cursor-pointer"
-                  >
-                    <User size={15} className="text-[#c5a880]" />
-                    <span>{t("ver_perfil")}</span>
-                  </button>
-
-                  <div className="h-px bg-[#c5a880]/15 mx-1" />
-
-                  <button
-                    onClick={() => {
-                      setIsProfileMenuOpen(false);
-                      if (currentUser) {
-                        handleSignOut();
-                      } else {
-                        setIsAuthModalOpen(true);
-                      }
-                    }}
-                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-bold text-red-400 hover:bg-red-500/10 rounded-xl transition-all cursor-pointer"
-                  >
-                    <LogOut size={15} />
-                    <span>{currentUser ? t("sair_conta") : t("fazer_login")}</span>
-                  </button>
-                </div>
-              )}
-
-              <div
-                onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                className="flex items-center justify-between p-2 bg-[#0a0a0a] border border-[#c5a880]/15 hover:border-[#c5a880]/40 rounded-xl transition-all cursor-pointer group"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#c5a880] to-[#ad8330] text-zinc-950 font-black flex items-center justify-center text-sm shadow-md shrink-0">
-                    {(myProfile?.name || currentUser?.email || "Ricardo").substring(0, 1).toUpperCase()}
-                  </div>
-                  <div className="flex flex-col min-w-0">
-                    <span className="text-xs font-bold text-white truncate group-hover:text-[#c5a880] transition-colors">
-                      {myProfile?.name || "Ricardo"}
-                    </span>
-                    <span className="text-[10px] text-zinc-400 truncate">
-                      {currentUser?.email || "der.contatos@gmail.com"}
-                    </span>
-                  </div>
-                </div>
-                <ChevronUp size={14} className={`text-zinc-500 transition-transform ${isProfileMenuOpen ? "rotate-180" : ""}`} />
-              </div>
-            </div>
-
-          </div>
-        </aside>
+        )}
 
       {/* Mobile Sidebar overlay */}
       <AnimatePresence>
-        {isMobileSidebarOpen && (
+        {isMobileSidebarOpen && activeTab !== "ai-tools" && (
           <>
             {/* Backdrop */}
             <motion.div
@@ -4237,265 +4362,61 @@ ${textContent}`
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ type: "tween", duration: 0.25 }}
-              className="fixed top-0 left-0 h-full w-72 bg-black border-r border-white/5 z-50 flex flex-col p-6 lg:hidden"
+              className="fixed top-0 left-0 h-full w-72 bg-[#06040a] border-r border-white/[0.06] z-50 flex flex-col lg:hidden overflow-hidden"
             >
-              <div className="flex items-center justify-between mb-6">
-                <div className="text-xl font-bold tracking-tight text-white flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#c5a880] to-[#ad8330] flex items-center justify-center text-zinc-950 shadow-md">
-                    <Layers size={18} />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="font-montserrat font-black text-sm tracking-wider uppercase bg-gradient-to-r from-white via-zinc-200 to-[#c5a880] bg-clip-text text-transparent">
-                      Zion Studio
-                    </span>
-                    <span className="text-[9px] text-zinc-500 font-mono tracking-widest uppercase -mt-0.5">
-                      PAINEL DE TRABALHO
-                    </span>
-                  </div>
-                </div>
+              <div className="absolute top-3 right-3 z-50">
                 <button
                   onClick={() => setIsMobileSidebarOpen(false)}
-                  className="text-zinc-400 hover:text-white p-2 hover:bg-white/5 rounded-xl transition-all"
+                  className="text-zinc-400 hover:text-white p-2 hover:bg-white/5 rounded-xl transition-all cursor-pointer"
+                  aria-label="Fechar menu"
                 >
                   <X size={20} />
                 </button>
               </div>
-
-              <div className="flex-1 overflow-y-auto space-y-6 custom-scrollbar pr-1">
-                {/* Section: Principal */}
-                <div className="space-y-1.5">
-                  <SidebarItem
-                    icon={<LayoutDashboard size={16} />}
-                    label={t("inicio")}
-                    active={activeTab === "dashboard"}
-                    onClick={() => {
-                      setActiveTab("dashboard");
-                      setIsMobileSidebarOpen(false);
-                    }}
-                  />
-                  <SidebarItem
-                    icon={<Bot size={16} />}
-                    label={t("copiloto")}
-                    active={activeTab === "copiloto-agencia"}
-                    onClick={() => {
-                      setActiveTab("copiloto-agencia");
-                      setIsMobileSidebarOpen(false);
-                    }}
-                  />
-                  <SidebarItem
-                    icon={<Layers size={16} />}
-                    label={t("assistentes")}
-                    active={activeTab === "agents"}
-                    onClick={() => {
-                      setActiveTab("agents");
-                      setIsMobileSidebarOpen(false);
-                    }}
-                  />
-                  <SidebarItem
-                    icon={<FileText size={16} />}
-                    label={t("roteiros")}
-                    active={activeTab === "roteiros"}
-                    onClick={() => {
-                      setActiveTab("roteiros");
-                      setIsMobileSidebarOpen(false);
-                    }}
-                  />
-                  <SidebarItem
-                    icon={<Sparkles size={16} />}
-                    label={t("fotos")}
-                    active={activeTab === "ai-tools"}
-                    onClick={() => {
-                      setActiveTab("ai-tools");
-                      setIsMobileSidebarOpen(false);
-                    }}
-                  />
-                  <SidebarItem
-                    icon={<Tv size={16} />}
-                    label={t("gcs")}
-                    active={activeTab === "gc-tv"}
-                    onClick={() => {
-                      setActiveTab("gc-tv");
-                      setIsMobileSidebarOpen(false);
-                    }}
-                  />
-                  <SidebarItem
-                    icon={<Music size={16} />}
-                    label={t("audio")}
-                    active={activeTab === "audio"}
-                    onClick={() => {
-                      setActiveTab("audio");
-                      setIsMobileSidebarOpen(false);
-                    }}
-                  />
-                  <SidebarItem
-                    icon={<Film size={16} />}
-                    label={t("omni")}
-                    active={activeTab === "omni-flash"}
-                    onClick={() => {
-                      setActiveTab("omni-flash");
-                      setIsMobileSidebarOpen(false);
-                    }}
-                  />
-                  <SidebarItem
-                    icon={<Video size={16} />}
-                    label={t("videoAnalise")}
-                    active={activeTab === "video-analysis"}
-                    onClick={() => {
-                      setActiveTab("video-analysis");
-                      setIsMobileSidebarOpen(false);
-                    }}
-                  />
-                  <SidebarItem
-                    icon={<ImageIcon size={16} />}
-                    label={t("galeria")}
-                    active={activeTab === "gallery"}
-                    onClick={() => {
-                      setActiveTab("gallery");
-                      setIsMobileSidebarOpen(false);
-                    }}
-                  />
-                </div>
-
-                {/* Section: Workspace */}
-                <div className="space-y-1.5">
-                  <p className="px-3.5 text-[9px] font-black uppercase tracking-widest text-[#c5a880]/80 mb-2">{t("organizacao")}</p>
-                  <SidebarItem
-                    icon={<DollarSign size={16} />}
-                    label={t("financeiro")}
-                    active={activeTab === "finance" || activeTab === "dashboard"}
-                    onClick={() => {
-                      setActiveTab("finance");
-                      setIsMobileSidebarOpen(false);
-                    }}
-                  />
-                  <SidebarItem
-                    icon={<Users size={16} />}
-                    label={t("clientes")}
-                    active={activeTab === "clients"}
-                    onClick={() => {
-                      setActiveTab("clients");
-                      setIsMobileSidebarOpen(false);
-                    }}
-                  />
-                  <SidebarItem
-                    icon={<CheckSquare size={16} />}
-                    label={t("tarefas")}
-                    active={activeTab === "tasks"}
-                    onClick={() => {
-                      setActiveTab("tasks");
-                      setIsMobileSidebarOpen(false);
-                    }}
-                  />
-                  <SidebarItem
-                    icon={<Calendar size={16} />}
-                    label={t("agenda")}
-                    active={activeTab === "calendar"}
-                    onClick={() => {
-                      setActiveTab("calendar");
-                      setIsMobileSidebarOpen(false);
-                    }}
-                  />
-                  <SidebarItem
-                    icon={<MessageSquare size={16} />}
-                    label={t("whatsapp")}
-                    active={activeTab === "whatsapp"}
-                    onClick={() => {
-                      setActiveTab("whatsapp");
-                      setIsMobileSidebarOpen(false);
-                    }}
-                  />
-                  <SidebarItem
-                    icon={<FileText size={16} />}
-                    label={t("anotacoes")}
-                    active={activeTab === "notes"}
-                    onClick={() => {
-                      setActiveTab("notes");
-                      setIsMobileSidebarOpen(false);
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div className="border-t border-white/5 pt-4 space-y-3">
-                {typeof window !== "undefined" &&
-                localStorage.getItem("custom_gemini_api_key") ? (
-                  <div
-                    className="p-2.5 bg-black border border-white/10 hover:border-[#c5a880]/40 rounded-xl flex items-center justify-between cursor-pointer transition-all shadow-sm group"
-                    onClick={() => {
-                      setIsCreditsModalOpen(true);
-                      setIsMobileSidebarOpen(false);
-                    }}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-[#c5a880] animate-pulse" />
-                      <span className="text-xs text-[#c5a880] font-bold">
-                        ⚡ Créditos & Cota API
-                      </span>
-                    </div>
-                    <span className="text-[10px] bg-[#c5a880]/15 text-[#c5a880] px-2 py-0.5 rounded-full font-mono font-bold">
-                      {getUsageStats().generatedToday}/50 hoje
-                    </span>
-                  </div>
-                ) : (
-                  <div
-                    className="p-2.5 bg-black border border-white/5 hover:border-[#c5a880]/40 rounded-xl flex items-center justify-between cursor-pointer transition-all shadow-sm group"
-                    onClick={() => {
-                      setIsCreditsModalOpen(true);
-                      setIsMobileSidebarOpen(false);
-                    }}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                      <span className="text-xs text-zinc-300 font-bold">
-                        ⚡ Créditos API (Padrão)
-                      </span>
-                    </div>
-                    <span className="text-[10px] bg-emerald-500/15 text-emerald-400 px-2 py-0.5 rounded-full font-mono font-bold">
-                      {getUsageStats().generatedToday}/50 hoje
-                    </span>
-                  </div>
-                )}
-                <SidebarItem
-                  icon={<LogOut size={20} />}
-                  label="Sair da Conta"
-                  active={false}
-                  onClick={() => {
-                    handleSignOut();
-                    setIsMobileSidebarOpen(false);
-                  }}
-                />
-
-                {renderCloudSyncStatus()}
-
-                <div
-                  onClick={() => {
-                    setActiveTab("profile");
-                    setIsMobileSidebarOpen(false);
-                  }}
-                  className="flex items-center gap-3 py-3 px-2.5 cursor-pointer hover:bg-white/5 rounded-xl transition-all border border-white/5 bg-black/40"
-                >
-                  {myProfile?.avatarUrl ? (
-                    <img
-                      src={myProfile.avatarUrl}
-                      alt={myProfile?.name || "Zion"}
-                      className="w-9 h-9 rounded-full object-cover border border-white/5"
-                      referrerPolicy="no-referrer"
-                    />
-                  ) : (
-                    <div className="w-9 h-9 rounded-full bg-[#c5a880] text-zinc-950 flex items-center justify-center text-xs font-bold uppercase">
-                      {(myProfile?.name || "Zion").substring(0, 2)}
-                    </div>
-                  )}
-                  <div className="flex flex-col min-w-0">
-                    <span className="text-sm font-bold truncate text-white">
-                      {myProfile?.name || "Equipe Zion"}
-                    </span>
-                    <span className="text-[11px] text-zinc-400 truncate">
-                      {myProfile?.role || "Agência Digital"}
-                    </span>
-                  </div>
-                </div>
-              </div>
+              <DesignBuilderSidebar
+                isMobile={true}
+                activeTab={activeTab}
+                onNavigateTab={(tab: string) => {
+                  setActiveTab(tab);
+                  setIsMobileSidebarOpen(false);
+                }}
+                onOpenGallery={() => {
+                  setActiveTab("gallery");
+                  setIsMobileSidebarOpen(false);
+                }}
+                onOpenCommunity={() => {
+                  setActiveTab("ai-tools");
+                  setIsMobileSidebarOpen(false);
+                  setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent("db:open_community"));
+                  }, 50);
+                }}
+                onSelectAgent={(slug: string) => {
+                  setActiveTab("ai-tools");
+                  setIsMobileSidebarOpen(false);
+                  setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent("db:open_studio", { detail: { agent: slug } }));
+                  }, 50);
+                }}
+                onOpenCreditsModal={() => {
+                  setIsCreditsModalOpen(true);
+                  setIsMobileSidebarOpen(false);
+                }}
+                currentLang={currentLang}
+                setLanguage={setLanguage}
+                userInitials={(myProfile?.name || currentUser?.email || "EQ").substring(0, 2).toUpperCase()}
+                userName={myProfile?.name || "Equipe Zion"}
+                userEmail={currentUser?.email || "der.contatos@gmail.com"}
+                onOpenProfile={() => {
+                  setActiveTab("profile");
+                  setIsMobileSidebarOpen(false);
+                }}
+                onSignOut={() => {
+                  handleSignOut();
+                  setIsMobileSidebarOpen(false);
+                }}
+                onCloseMobile={() => setIsMobileSidebarOpen(false)}
+              />
             </motion.aside>
           </>
         )}
@@ -4515,15 +4436,15 @@ ${textContent}`
               {/* Header de Banner Top Estilo Gravyx com Cores Zion */}
               <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-gradient-to-r from-zinc-950 via-[#10141d] to-[#070a11] shadow-2xl">
                 {/* Glow Radial Dourado no topo */}
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_200px_at_50%_0%,rgba(197,168,128,0.18),transparent_80%)] pointer-events-none" />
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_200px_at_50%_0%,rgba(188, 132, 35,0.18),transparent_80%)] pointer-events-none" />
                 
                 {/* Banner Top Area & Trocar Banner Button */}
                 <div className="h-36 sm:h-44 w-full flex items-start justify-end p-4 relative">
                   <label
                     htmlFor="user-banner-upload"
-                    className="bg-[#c5a880] hover:bg-[#ad8330] text-zinc-950 text-xs font-bold px-4 py-2 rounded-full flex items-center gap-1.5 shadow-lg shadow-[#c5a880]/20 cursor-pointer transition-all hover:scale-105 active:scale-95"
+                    className="bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white text-xs font-bold px-4 py-2 rounded-full flex items-center gap-1.5 shadow-lg shadow-violet-600/20 cursor-pointer transition-all hover:scale-105 active:scale-95"
                   >
-                    <span>📷 Trocar banner</span>
+                    <span>Trocar banner</span>
                   </label>
                   <input type="file" id="user-banner-upload" accept="image/*" className="hidden" />
                 </div>
@@ -4542,7 +4463,7 @@ ${textContent}`
                           referrerPolicy="no-referrer"
                         />
                       ) : (
-                        <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-tr from-[#c5a880] to-[#ad8330] text-zinc-950 flex items-center justify-center text-4xl font-black border-4 border-[#070a11] shadow-2xl uppercase">
+                        <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-tr from-violet-600 to-fuchsia-600 text-zinc-950 flex items-center justify-center text-4xl font-black border-4 border-[#070a11] shadow-2xl uppercase">
                           {(myProfile?.name || "Zion").substring(0, 2)}
                         </div>
                       )}
@@ -4550,11 +4471,10 @@ ${textContent}`
                       {/* Botão de Trocar Foto Badge */}
                       <label
                         htmlFor="user-avatar-upload-badge"
-                        className="absolute bottom-1 right-1 w-7 h-7 bg-[#c5a880] hover:bg-[#ad8330] text-zinc-950 rounded-full flex items-center justify-center text-xs font-bold shadow-md cursor-pointer transition-all"
+                        className="absolute bottom-1 right-1 w-7 h-7 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white rounded-full flex items-center justify-center text-xs font-bold shadow-md cursor-pointer transition-all"
                         title="Trocar Foto de Perfil"
                       >
-                        📷
-                      </label>
+                        </label>
                       <input
                         type="file"
                         id="user-avatar-upload-badge"
@@ -4582,7 +4502,7 @@ ${textContent}`
                       </div>
 
                       <div className="flex items-center justify-center sm:justify-start gap-2.5 flex-wrap pt-0.5">
-                        <span className="bg-[#c5a880]/20 border border-[#c5a880]/40 text-[#c5a880] text-[11px] font-bold px-3 py-0.5 rounded-md shadow-sm">
+                        <span className="bg-violet-500/20 border border-violet-500/40 text-violet-400 text-[11px] font-bold px-3 py-0.5 rounded-md shadow-sm">
                           {isAdmin ? "Administrador Zion" : "Cliente Agência"}
                         </span>
                         <span className="bg-[#101622] border border-white/10 text-slate-300 text-[11px] font-bold px-3 py-0.5 rounded-full flex items-center gap-1.5 shadow-sm">
@@ -4598,7 +4518,7 @@ ${textContent}`
 
                   <button
                     onClick={() => setActiveTab("dashboard")}
-                    className="text-xs font-bold bg-[#c5a880] hover:bg-[#c5a880]/80 text-zinc-950 px-4 py-2 rounded-xl transition-colors shrink-0 shadow-md"
+                    className="text-xs font-bold bg-[#a855f7] hover:bg-violet-500/80 text-zinc-950 px-4 py-2 rounded-xl transition-colors shrink-0 shadow-md"
                   >
                     ← Voltar ao Painel
                   </button>
@@ -4624,7 +4544,7 @@ ${textContent}`
                       onClick={() => setProfileSubTab(item.id)}
                       className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                         isActive
-                          ? "bg-[#c5a880]/20 text-[#c5a880] border border-[#c5a880]/40 shadow-md"
+                          ? "bg-violet-500/20 text-violet-400 border border-violet-500/40 shadow-md"
                           : "text-zinc-400 hover:text-white hover:bg-white/5"
                       }`}
                     >
@@ -4647,7 +4567,7 @@ ${textContent}`
               {profileSubTab === "mcp" && (
                 <div className="bg-[#0d131f] border border-white/5 rounded-2xl p-6 sm:p-8 space-y-5 shadow-2xl animate-fade-in">
                   <div className="flex items-center gap-3 border-b border-white/5 pb-4">
-                    <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                    <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/30 flex items-center justify-center text-violet-400">
                       <Sparkles size={20} />
                     </div>
                     <div>
@@ -4671,7 +4591,7 @@ ${textContent}`
 }`}
                     </pre>
                     <p className="text-zinc-500 text-[11px]">
-                      Cole esta configuração no seu arquivo <code className="text-[#c5a880]">claude_desktop_config.json</code> para habilitar o Zion como ferramenta no Claude Desktop.
+                      Cole esta configuração no seu arquivo <code className="text-violet-400">claude_desktop_config.json</code> para habilitar o Zion como ferramenta no Claude Desktop.
                     </p>
                   </div>
                 </div>
@@ -4685,14 +4605,14 @@ ${textContent}`
                       <h3 className="text-base font-bold text-white">Membros da Equipe & Permissões</h3>
                       <p className="text-xs text-zinc-400">Gerencie os acessos de designers e clientes ao seu workspace.</p>
                     </div>
-                    <span className="px-3 py-1 bg-[#c5a880]/10 border border-[#c5a880]/30 text-[#c5a880] text-xs font-bold rounded-lg">
+                    <span className="px-3 py-1 bg-violet-500/10 border border-violet-500/30 text-violet-400 text-xs font-bold rounded-lg">
                       1 Usuário Ativo
                     </span>
                   </div>
                   <div className="divide-y divide-white/5">
                     <div className="py-3 flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-[#c5a880] text-black font-bold flex items-center justify-center text-sm">
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-bold flex items-center justify-center text-sm">
                           {(myProfile?.name || "R").substring(0, 1)}
                         </div>
                         <div>
@@ -4719,7 +4639,7 @@ ${textContent}`
                         type="text"
                         value={myProfile?.name || ""}
                         onChange={(e) => setMyProfile({ ...myProfile, name: e.target.value })}
-                        className="w-full bg-[#050810] border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-[#c5a880]"
+                        className="w-full bg-[#050810] border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-violet-500"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -4734,8 +4654,8 @@ ${textContent}`
                   </div>
                   <button
                     type="button"
-                    onClick={() => showToast("Perfil atualizado com sucesso! ✅", "success")}
-                    className="px-5 py-2 bg-[#c5a880] hover:bg-[#b08e58] text-black font-bold text-xs rounded-xl transition-all shadow-md cursor-pointer"
+                    onClick={() => showToast("Perfil atualizado com sucesso! ", "success")}
+                    className="px-5 py-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white font-bold text-xs rounded-xl transition-all shadow-md cursor-pointer"
                   >
                     Salvar Alterações
                   </button>
@@ -4770,7 +4690,7 @@ ${textContent}`
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div className="bg-[#090d15] border border-white/5 rounded-xl p-4 space-y-1">
                       <span className="text-xs text-zinc-400">Status do Plano</span>
-                      <p className="text-lg font-bold text-[#c5a880]">Iniciante (Free)</p>
+                      <p className="text-lg font-bold text-violet-400">Iniciante (Free)</p>
                     </div>
                     <div className="bg-[#090d15] border border-white/5 rounded-xl p-4 space-y-1">
                       <span className="text-xs text-zinc-400">Gerações Hoje</span>
@@ -4814,7 +4734,7 @@ ${textContent}`
                         <div className="flex items-center justify-between border-b border-white/5 pb-3">
                           <div className="flex items-center gap-2">
                             <button className="bg-[#182234] border border-[#2563eb]/40 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm">
-                              <span>📷 Minhas Criações ({allProfileImages.length})</span>
+                              <span>Minhas Criações ({allProfileImages.length})</span>
                             </button>
                           </div>
                           {allProfileImages.length > 0 && (
@@ -4835,7 +4755,7 @@ ${textContent}`
                             </div>
                             <button
                               onClick={() => setActiveTab("ai-tools")}
-                              className="px-4 py-2 bg-[#c5a880] hover:bg-[#b08e58] text-black font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md cursor-pointer"
+                              className="px-4 py-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md cursor-pointer"
                             >
                               Ir para o Gerador de Fotos
                             </button>
@@ -4853,7 +4773,7 @@ ${textContent}`
                                   projectStore.setActiveImageIndex(0);
                                   setActiveTab("ai-tools");
                                 }}
-                                className="group relative bg-[#090d16] border border-white/10 hover:border-[#c5a880]/50 rounded-xl overflow-hidden cursor-pointer shadow-lg hover:shadow-2xl hover:scale-[1.02] transition-all aspect-[3/4]"
+                                className="group relative bg-[#090d16] border border-white/10 hover:border-violet-500/50 rounded-xl overflow-hidden cursor-pointer shadow-lg hover:shadow-2xl hover:scale-[1.02] transition-all aspect-[3/4]"
                               >
                                 <img
                                   src={img}
@@ -4863,7 +4783,7 @@ ${textContent}`
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
                                   <span className="text-xs font-bold text-white mb-1">Abrir no Estúdio</span>
-                                  <span className="text-[10px] text-[#c5a880] font-medium">Ultra HD</span>
+                                  <span className="text-[10px] text-violet-400 font-medium">Ultra HD</span>
                                 </div>
                               </div>
                             ))}
@@ -4877,7 +4797,23 @@ ${textContent}`
             </motion.div>
           )}
 
-              {/* View: Notes & Docs */}
+          {/* View: WhatsApp AI Assistant */}
+          {activeTab === "whatsapp" && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="max-w-7xl mx-auto h-full flex flex-col"
+            >
+              <WhatsAppTab
+                userId={syncUserId || (currentUser?.email ? currentUser.email.replace(/[^a-zA-Z0-9_-]/g, "_") : "admin_user")}
+                userData={{ ...currentUser, clients, tasks, transactions, calendarEvents, whatsappLogs }}
+                myProfile={myProfile}
+                setMyProfile={setMyProfile}
+              />
+            </motion.div>
+          )}
+
+          {/* View: Notes & Docs */}
           {activeTab === "notes" && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
@@ -4886,7 +4822,7 @@ ${textContent}`
             >
               <div className="mb-8">
                 <h1 className="text-xl sm:text-3xl font-bold text-white mb-2 flex items-center gap-2 sm:gap-3">
-                  <FileText className="text-[#c5a880]" size={28} /> Notas & Docs
+                  <FileText className="text-violet-400" size={28} /> Notas & Docs
                 </h1>
                 <p className="text-zinc-400">
                   Armazene e consulte rapidamente briefings, ideias de cópias e
@@ -4909,10 +4845,10 @@ ${textContent}`
                   {savedNotes.map((note) => (
                     <div
                       key={note.id}
-                      className="bg-black border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-4 sm:p-5 lg:p-6 flex flex-col hover:border-[#c5a880]/20 transition-all shadow-lg hover:shadow-amber-500/5"
+                      className="bg-black border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-4 sm:p-5 lg:p-6 flex flex-col hover:border-violet-500/20 transition-all shadow-lg hover:shadow-violet-600/5"
                     >
                       <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-2 text-[#c5a880] bg-[#c5a880]/10 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider">
+                        <div className="flex items-center gap-2 text-violet-400 bg-violet-500/10 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider">
                           <User size={12} />
                           {note.clientName}
                         </div>
@@ -4955,13 +4891,13 @@ ${textContent}`
               <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <h1 className="text-xl sm:text-3xl font-bold text-white mb-1 flex items-center gap-2 sm:gap-3">
-                    <ImageIcon className="text-[#c5a880]" size={28} /> Minha Galeria de Artes
+                    <ImageIcon className="text-violet-400" size={28} /> Minha Galeria de Artes
                   </h1>
                   <p className="text-zinc-400 text-xs sm:text-sm">Todas as suas artes geradas no estúdio reunidas em um só lugar.</p>
                 </div>
                 <button
                   onClick={() => setActiveTab("ai-tools")}
-                  className="px-4 py-2.5 bg-[#c5a880] hover:bg-[#b08e58] text-black font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md flex items-center gap-2 self-start sm:self-auto cursor-pointer"
+                  className="px-4 py-2.5 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md flex items-center gap-2 self-start sm:self-auto cursor-pointer"
                 >
                   <Sparkles size={14} /> Criar Nova Arte
                 </button>
@@ -4989,7 +4925,7 @@ ${textContent}`
                       </div>
                       <button
                         onClick={() => setActiveTab("ai-tools")}
-                        className="px-5 py-2 bg-[#c5a880] hover:bg-[#b08e58] text-black font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md cursor-pointer"
+                        className="px-5 py-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md cursor-pointer"
                       >
                         Abrir Gerador de Fotos
                       </button>
@@ -5002,7 +4938,7 @@ ${textContent}`
                     {allGalleryImages.map((img, idx) => (
                       <div
                         key={idx}
-                        className="relative group bg-[#08080a] border border-white/10 hover:border-[#c5a880]/60 rounded-xl overflow-hidden shadow-lg transition-all aspect-[3/4]"
+                        className="relative group bg-[#08080a] border border-white/10 hover:border-violet-500/60 rounded-xl overflow-hidden shadow-lg transition-all aspect-[3/4]"
                       >
                         <img
                           src={img}
@@ -5020,7 +4956,7 @@ ${textContent}`
                               projectStore.setActiveImageIndex(0);
                               setActiveTab("ai-tools");
                             }}
-                            className="px-3 py-1.5 bg-[#c5a880] hover:bg-[#b08e58] text-black font-black text-xs uppercase tracking-wider rounded-lg transition-all shadow-md w-full cursor-pointer"
+                            className="px-3 py-1.5 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white font-black text-xs uppercase tracking-wider rounded-lg transition-all shadow-md w-full cursor-pointer"
                           >
                             Editar / Abrir
                           </button>
@@ -5050,7 +4986,7 @@ ${textContent}`
               {/* Header */}
               <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 border-b border-white/5">
                 <div className="flex items-center gap-3.5">
-                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#c5a880]/20 via-[#c5a880]/10 to-transparent border border-[#c5a880]/30 flex items-center justify-center text-[#c5a880] shadow-lg shadow-[#c5a880]/5 shrink-0">
+                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#a855f7]/20 via-[#a855f7]/10 to-transparent border border-violet-500/30 flex items-center justify-center text-violet-400 shadow-lg shadow-violet-600/5 shrink-0">
                     <Users size={22} />
                   </div>
                   <div>
@@ -5064,7 +5000,7 @@ ${textContent}`
                 </div>
                 <button
                   onClick={() => openClientModal()}
-                  className="bg-gradient-to-r from-[#c5a880] to-[#b08e58] hover:from-[#d2b68c] hover:to-[#be9b62] text-zinc-950 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all shadow-md shadow-[#c5a880]/10 flex items-center justify-center gap-2 active:scale-95"
+                  className="bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all shadow-md shadow-violet-600/10 flex items-center justify-center gap-2 active:scale-95"
                 >
                   <Plus size={16} /> Cadastrar Novo Cliente
                 </button>
@@ -5119,7 +5055,7 @@ ${textContent}`
                       placeholder="Buscar por nome, nicho ou contato..."
                       value={clientSearch}
                       onChange={(e) => setClientSearch(e.target.value)}
-                      className="w-full bg-black border border-white/5 rounded-lg py-2 pl-10 pr-4 text-xs focus:outline-none focus:border-[#c5a880]/50 text-white placeholder:text-zinc-600 transition-all"
+                      className="w-full bg-black border border-white/5 rounded-lg py-2 pl-10 pr-4 text-xs focus:outline-none focus:border-violet-500/50 text-white placeholder:text-zinc-600 transition-all"
                     />
                   </div>
                   {clientSearch && (
@@ -5144,7 +5080,7 @@ ${textContent}`
                       onClick={() => setClientFilterStatus(btn.value)}
                       className={`px-3.5 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all my-0.5 ${
                         clientFilterStatus === btn.value
-                          ? "bg-[#c5a880] text-zinc-950 shadow-md shadow-amber-500/10 font-bold"
+                          ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-md shadow-violet-600/10 font-bold"
                           : "bg-black text-zinc-400 hover:text-white hover:bg-[#111]"
                       }`}
                     >
@@ -5215,7 +5151,7 @@ ${textContent}`
                                   referrerPolicy="no-referrer"
                                 />
                               ) : (
-                                <div className="w-9 h-9 rounded-full bg-[#111] border border-white/5 flex items-center justify-center text-[#c5a880] font-bold text-sm">
+                                <div className="w-9 h-9 rounded-full bg-[#111] border border-white/5 flex items-center justify-center text-violet-400 font-bold text-sm">
                                   {client.name.charAt(0)}
                                 </div>
                               )}
@@ -5252,7 +5188,7 @@ ${textContent}`
                                 client.paymentStatus === "Em dia"
                                   ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/10"
                                   : client.paymentStatus === "Pendente"
-                                    ? "bg-[#c5a880]/15 text-[#c5a880] border border-[#c5a880]/10"
+                                    ? "bg-violet-500/15 text-violet-400 border border-violet-500/10"
                                     : "bg-red-500/15 text-red-400 border border-red-500/10"
                               }`}
                             >
@@ -5275,7 +5211,7 @@ ${textContent}`
                           <td className="px-6 py-4 text-right">
                             <button
                               onClick={() => openClientModal(client)}
-                              className="bg-[#111] text-zinc-300 hover:bg-[#c5a880] hover:text-zinc-950 font-bold text-xs px-3 py-1.5 rounded-lg transition-all"
+                              className="bg-[#111] text-zinc-300 hover:bg-violet-600 hover:text-zinc-950 font-bold text-xs px-3 py-1.5 rounded-lg transition-all"
                             >
                               Editar
                             </button>
@@ -5289,20 +5225,28 @@ ${textContent}`
             </motion.div>
           )}
 
-          {/* View: WhatsApp Integration */}
-          {activeTab === "whatsapp" && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="max-w-7xl mx-auto h-full flex flex-col"
-            >
-              <WhatsAppTab 
-                userId={activeSyncKey || "zion-master"} 
-                userData={{ clients, tasks, transactions, calendarEvents, whatsappLogs }} 
-                myProfile={myProfile} 
-                setMyProfile={setMyProfile} 
-              />
-            </motion.div>
+
+
+          {(activeTab === "sistema-ia" || activeTab === "maestro") && (
+            <SistemaOperacionalIa
+              customApiKey={getActiveApiKey()}
+              myProfile={myProfile}
+              clients={clients}
+              setClients={setClients}
+              tasks={tasks}
+              setTasks={setTasks}
+              saveToFirestoreDirectly={saveToFirestoreDirectly}
+              showToast={(msg, type) => {
+                const notif: NotificationItem = {
+                  id: Date.now(),
+                  message: msg,
+                  date: new Date().toISOString().split("T")[0],
+                  read: false,
+                  type: (type === "error" ? "warning" : type) || "info"
+                };
+                setNotifications((prev) => [notif, ...prev]);
+              }}
+            />
           )}
 
           {activeTab === "copiloto-agencia" && (
@@ -5353,6 +5297,11 @@ ${textContent}`
             <DesignBuilder
               customApiKey={getActiveApiKey()}
               myProfile={myProfile}
+              onNavigateTab={(tab: string) => setActiveTab(tab)}
+              activeMainTab={activeTab}
+              userEmail={myProfile?.email || "der.contatos@gmail.com"}
+              userName={myProfile?.name || "Equipe Zion"}
+              userTokens={97}
             />
           )}
 
@@ -5369,6 +5318,21 @@ ${textContent}`
             </motion.div>
           )}
 
+          {(activeTab === "projetos" || activeTab === "projects") && (
+            <div className="h-full w-full bg-zinc-950 flex flex-col min-h-0 overflow-hidden">
+              <ProjetosManager
+                onOpenVitrine={() => setActiveTab("ai-tools")}
+                onOpenStudio={() => setActiveTab("ai-tools")}
+                onOpenGallery={() => setActiveTab("gallery")}
+                onOpenCommunity={() => setActiveTab("ai-tools")}
+                onUseImageAsReference={(imgUrl) => {
+                  setActiveTab("ai-tools");
+                }}
+                showToast={(msg, typ) => showToast(msg, typ || "success")}
+              />
+            </div>
+          )}
+
           {/* View: Tasks */}
           {activeTab === "tasks" && (
             <motion.div
@@ -5379,7 +5343,7 @@ ${textContent}`
               {/* Header */}
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 border-b border-white/5">
                 <div className="flex items-center gap-3.5">
-                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#c5a880]/20 via-[#c5a880]/10 to-transparent border border-[#c5a880]/30 flex items-center justify-center text-[#c5a880] shadow-lg shadow-[#c5a880]/5 shrink-0">
+                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#a855f7]/20 via-[#a855f7]/10 to-transparent border border-violet-500/30 flex items-center justify-center text-violet-400 shadow-lg shadow-violet-600/5 shrink-0">
                     <CheckSquare size={22} />
                   </div>
                   <div>
@@ -5393,7 +5357,7 @@ ${textContent}`
                 </div>
                 <button
                   onClick={() => openTaskModal()}
-                  className="bg-gradient-to-r from-[#c5a880] to-[#b08e58] hover:from-[#d2b68c] hover:to-[#be9b62] text-zinc-950 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all shadow-md shadow-[#c5a880]/10 flex items-center justify-center gap-2 active:scale-95"
+                  className="bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all shadow-md shadow-violet-600/10 flex items-center justify-center gap-2 active:scale-95"
                 >
                   <Plus size={16} /> Criar Nova Tarefa
                 </button>
@@ -5410,7 +5374,7 @@ ${textContent}`
                       placeholder="Buscar por título ou descrição..."
                       value={taskSearch}
                       onChange={(e) => setTaskSearch(e.target.value)}
-                      className="w-full bg-black border border-white/5 rounded-xl pl-9 pr-9 py-1.5 sm:py-2 text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[#c5a880]/50 transition-colors"
+                      className="w-full bg-black border border-white/5 rounded-xl pl-9 pr-9 py-1.5 sm:py-2 text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-violet-500/50 transition-colors"
                     />
                     {taskSearch && (
                       <button
@@ -5425,14 +5389,14 @@ ${textContent}`
                   {/* View Switcher Controls */}
                   <div className="flex items-center gap-2 self-stretch sm:self-auto justify-between sm:justify-end">
                     <span className="text-[11px] text-zinc-400 flex items-center gap-1 font-medium whitespace-nowrap">
-                      <Layers size={12} className="text-[#c5a880]" /> Ver por:
+                      <Layers size={12} className="text-violet-400" /> Ver por:
                     </span>
                     <div className="bg-black p-2 my-1 rounded-xl border border-white/5 flex shrink-0 items-center gap-1.5">
                       <button
                         onClick={() => setTaskViewMode("kanban")}
                         className={`px-3.5 py-2 rounded-lg text-[10px] sm:text-xs font-bold transition-all ${
                           taskViewMode === "kanban"
-                            ? "bg-[#c5a880] text-zinc-950 shadow-md shadow-amber-500/10"
+                            ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-md shadow-violet-600/10"
                             : "text-zinc-500 hover:text-white"
                         }`}
                       >
@@ -5442,7 +5406,7 @@ ${textContent}`
                         onClick={() => setTaskViewMode("client")}
                         className={`px-3.5 py-2 rounded-lg text-[10px] sm:text-xs font-bold transition-all ${
                           taskViewMode === "client"
-                            ? "bg-[#c5a880] text-zinc-950 shadow-md shadow-amber-500/10"
+                            ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-md shadow-violet-600/10"
                             : "text-zinc-500 hover:text-white"
                         }`}
                       >
@@ -5455,7 +5419,7 @@ ${textContent}`
                 {/* Horizontal Client Filter Chips */}
                 <div className="space-y-2 pt-3 border-t border-white/[0.03]">
                   <div className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-zinc-500 font-bold px-0.5">
-                    <Filter size={10} className="text-[#c5a880]" />
+                    <Filter size={10} className="text-violet-400" />
                     Filtrar por Cliente:
                   </div>
                   <div className="flex items-center gap-2 overflow-x-auto py-3 px-1.5 my-1 scrollbar-none max-w-full">
@@ -5463,7 +5427,7 @@ ${textContent}`
                       onClick={() => setTaskClientFilter("all")}
                       className={`px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold whitespace-nowrap transition-all border ${
                         taskClientFilter === "all"
-                          ? "bg-[#c5a880]/10 border-[#c5a880] text-[#c5a880] shadow-sm shadow-amber-500/5"
+                          ? "bg-violet-500/10 border-violet-500 text-violet-400 shadow-sm shadow-violet-600/5"
                           : "bg-black border-white/5 text-zinc-400 hover:text-white hover:border-white/5"
                       }`}
                     >
@@ -5474,7 +5438,7 @@ ${textContent}`
                       onClick={() => setTaskClientFilter("none")}
                       className={`px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold whitespace-nowrap transition-all border ${
                         taskClientFilter === "none"
-                          ? "bg-[#c5a880]/10 border-[#c5a880] text-[#c5a880] shadow-sm shadow-amber-500/5"
+                          ? "bg-violet-500/10 border-violet-500 text-violet-400 shadow-sm shadow-violet-600/5"
                           : "bg-black border-white/5 text-zinc-400 hover:text-white hover:border-white/5"
                       }`}
                     >
@@ -5489,7 +5453,7 @@ ${textContent}`
                           onClick={() => setTaskClientFilter(clientName)}
                           className={`px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold whitespace-nowrap transition-all border ${
                             taskClientFilter === clientName
-                              ? "bg-[#c5a880]/10 border-[#c5a880] text-[#c5a880] shadow-sm shadow-amber-500/5"
+                              ? "bg-violet-500/10 border-violet-500 text-violet-400 shadow-sm shadow-violet-600/5"
                               : "bg-black border-white/5 text-zinc-400 hover:text-white hover:border-white/5"
                           }`}
                         >
@@ -5622,7 +5586,7 @@ ${textContent}`
                           {/* Client Header Card */}
                           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-white/5 pb-4 mb-5">
                             <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-xl bg-[#c5a880]/10 border border-[#c5a880]/20 flex items-center justify-center text-[#c5a880] font-bold shrink-0">
+                              <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400 font-bold shrink-0">
                                 {clientName.substring(0, 2).toUpperCase()}
                               </div>
                               <div>
@@ -5756,7 +5720,7 @@ ${textContent}`
             >
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 border-b border-white/5">
                 <div className="flex items-center gap-3.5">
-                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#c5a880]/20 via-[#c5a880]/10 to-transparent border border-[#c5a880]/30 flex items-center justify-center text-[#c5a880] shadow-lg shadow-[#c5a880]/5 shrink-0">
+                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#a855f7]/20 via-[#a855f7]/10 to-transparent border border-violet-500/30 flex items-center justify-center text-violet-400 shadow-lg shadow-violet-600/5 shrink-0">
                     <LayoutDashboard size={22} />
                   </div>
                   <div>
@@ -5771,7 +5735,7 @@ ${textContent}`
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => openTransactionModal()}
-                    className="bg-gradient-to-r from-[#c5a880] to-[#b08e58] hover:from-[#d2b68c] hover:to-[#be9b62] text-zinc-950 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all shadow-md shadow-[#c5a880]/10 flex items-center justify-center gap-2 active:scale-95"
+                    className="bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all shadow-md shadow-violet-600/10 flex items-center justify-center gap-2 active:scale-95"
                   >
                     <Plus size={16} />
                     <span>Nova Transação</span>
@@ -5781,10 +5745,10 @@ ${textContent}`
 
               {/* Welcome state when empty */}
               {clients.length === 0 && transactions.length === 0 && (
-                <div className="bg-gradient-to-br from-amber-500/10 via-zinc-900 to-zinc-900 border border-[#c5a880]/10 rounded-xl p-6 sm:p-8 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-64 h-64 bg-[#c5a880]/5 rounded-full blur-3xl pointer-events-none" />
+                <div className="bg-gradient-to-br from-[#a855f7]/10 via-zinc-900 to-zinc-900 border border-violet-500/10 rounded-xl p-6 sm:p-8 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-violet-500/5 rounded-full blur-3xl pointer-events-none" />
                   <div className="max-w-2xl relative z-10">
-                    <span className="bg-[#c5a880]/20 text-[#c5a880] text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider inline-block mb-4">
+                    <span className="bg-violet-500/20 text-violet-400 text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider inline-block mb-4">
                       Boas-vindas ao Zion!
                     </span>
                     <h2 className="text-xl sm:text-2xl font-bold text-white mb-3">
@@ -5798,7 +5762,7 @@ ${textContent}`
                     <div className="flex flex-wrap gap-3">
                       <button
                         onClick={() => setActiveTab("clients")}
-                        className="bg-[#c5a880] hover:bg-[#c5a880]/80 text-zinc-950 px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-2"
+                        className="bg-[#a855f7] hover:bg-violet-500/80 text-zinc-950 px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-2"
                       >
                         <Users size={16} /> Cadastrar Novo Cliente
                       </button>
@@ -5811,15 +5775,15 @@ ${textContent}`
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="bg-[#c5a880]/10 border border-[#c5a880]/30 rounded-xl p-4 sm:p-6 flex items-start gap-4 shadow-lg shadow-amber-500/5"
+                  className="bg-violet-500/10 border border-violet-500/30 rounded-xl p-4 sm:p-6 flex items-start gap-4 shadow-lg shadow-violet-600/5"
                 >
-                  <div className="bg-[#c5a880]/20 p-2 rounded-lg text-[#c5a880] shrink-0 mt-0.5">
+                  <div className="bg-violet-500/20 p-2 rounded-lg text-violet-400 shrink-0 mt-0.5">
                     <Bell size={20} />
                   </div>
                   <div>
                     <h3 className="text-white font-bold text-sm sm:text-base flex items-center gap-2">
                       Faturas próximas do vencimento
-                      <span className="bg-[#c5a880] text-zinc-950 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider">
+                      <span className="bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider">
                         {pendingInvoicesExpiringSoon.length} Cliente(s)
                       </span>
                     </h3>
@@ -5837,13 +5801,13 @@ ${textContent}`
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 w-full">
                 {/* Card 1: MRR */}
                 <div className="bg-black border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-5 hover:border-white/5 transition-colors relative overflow-hidden group min-w-0 flex flex-col justify-between">
-                  <div className="absolute top-0 left-0 w-1.5 h-full bg-[#c5a880]" />
+                  <div className="absolute top-0 left-0 w-1.5 h-full bg-[#a855f7]" />
                   <div>
                     <div className="flex justify-between items-center text-zinc-400 mb-2 gap-2">
                       <span className="text-xs sm:text-sm font-semibold text-zinc-300 leading-tight">
                         Recorrência (MRR)
                       </span>
-                      <Wallet size={18} className="text-[#c5a880] shrink-0" />
+                      <Wallet size={18} className="text-violet-400 shrink-0" />
                     </div>
                     <h3 className="text-lg sm:text-xl xl:text-2xl font-black text-white tracking-tight whitespace-nowrap overflow-hidden">
                       R$ {mrr.toLocaleString("pt-BR")}
@@ -5954,407 +5918,265 @@ ${textContent}`
 
               {/* Chart Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* SVG Line Chart */}
-                <div className="bg-black border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-4 sm:p-6 lg:col-span-2">
-                  <div className="flex items-center justify-between mb-6">
+                {/* High-Tech Cyberpunk Cash Flow Chart */}
+                <div className="bg-zinc-950/90 border border-white/10 shadow-2xl rounded-2xl p-5 sm:p-6 lg:col-span-2 relative overflow-hidden backdrop-blur-xl">
+                  {/* Subtle Background Glow Accent */}
+                  <div className="absolute top-0 right-1/4 w-80 h-40 bg-violet-500/5 rounded-full blur-3xl pointer-events-none" />
+
+                  {/* Header & Legends */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-white/5 relative z-10">
                     <div>
-                      <h3 className="text-sm font-bold uppercase tracking-wider text-white">
-                        Fluxo de Caixa (Últimos 6 Meses)
-                      </h3>
-                      <p className="text-xs text-zinc-500 mt-1">
-                        Comparativo histórico de faturamento bruto vs custos
-                        operacionais.
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full bg-[#a855f7] shadow-[0_0_10px_#a855f7]" />
+                        <h3 className="text-sm sm:text-base font-bold uppercase tracking-wider text-white">
+                          Fluxo de Caixa Histórico
+                        </h3>
+                        <span className="text-[10px] font-mono font-bold bg-violet-500/15 text-violet-400 px-2 py-0.5 rounded-full border border-violet-500/30">
+                          6 MESES
+                        </span>
+                      </div>
+                      <p className="text-xs text-zinc-400 mt-1">
+                        Evolução mensal de receitas brutas vs despesas operacionais
                       </p>
                     </div>
-                    <div className="flex gap-4 text-xs">
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-3 h-3 bg-[#c5a880] rounded-full inline-block" />
-                        <span className="text-zinc-400">Receitas</span>
+
+                    {/* Quick Live Counters */}
+                    <div className="flex flex-wrap items-center gap-3 text-xs font-mono">
+                      <div className="flex items-center gap-2 bg-zinc-900/80 px-3 py-1.5 rounded-xl border border-white/5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-[#a855f7] shadow-[0_0_8px_#a855f7]" />
+                        <span className="text-zinc-400 text-[11px]">Receitas:</span>
+                        <span className="font-bold text-violet-400">R$ {totalReceitas.toLocaleString("pt-BR")}</span>
                       </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-3 h-3 bg-red-500 rounded-full inline-block" />
-                        <span className="text-zinc-400">Despesas</span>
+                      <div className="flex items-center gap-2 bg-zinc-900/80 px-3 py-1.5 rounded-xl border border-white/5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444]" />
+                        <span className="text-zinc-400 text-[11px]">Despesas:</span>
+                        <span className="font-bold text-red-400">R$ {totalDespesas.toLocaleString("pt-BR")}</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Responsive Vector Chart */}
-                  <div className="w-full h-64 sm:h-80 bg-black rounded-xl border border-white/5 p-4 relative flex items-center justify-center">
-                    <svg
-                      className="w-full h-full overflow-visible"
-                      viewBox="0 0 500 240"
-                      preserveAspectRatio="none"
-                    >
-                      <defs>
-                        <linearGradient
-                          id="receitaGrad"
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="1"
-                        >
-                          <stop
-                            offset="0%"
-                            stopColor="#f59e0b"
-                            stopOpacity="0.15"
-                          />
-                          <stop
-                            offset="100%"
-                            stopColor="#f59e0b"
-                            stopOpacity="0.0"
-                          />
-                        </linearGradient>
-                        <linearGradient
-                          id="despesaGrad"
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="1"
-                        >
-                          <stop
-                            offset="0%"
-                            stopColor="#ef4444"
-                            stopOpacity="0.1"
-                          />
-                          <stop
-                            offset="100%"
-                            stopColor="#ef4444"
-                            stopOpacity="0.0"
-                          />
-                        </linearGradient>
-                      </defs>
+                  {/* Main Visual Stage: Left Y-Axis + Center Chart Area */}
+                  <div className="relative h-60 sm:h-72 flex gap-3 z-10">
+                    {/* Left Y-Axis Values (HTML Column - Zero Overlap) */}
+                    <div className="w-16 sm:w-20 flex flex-col justify-between text-right text-[10px] font-mono text-zinc-500 py-2 select-none shrink-0 font-semibold">
+                      <span>R$ {maxChartVal.toLocaleString("pt-BR")}</span>
+                      <span>R$ {Math.round(maxChartVal * 0.75).toLocaleString("pt-BR")}</span>
+                      <span>R$ {Math.round(maxChartVal * 0.5).toLocaleString("pt-BR")}</span>
+                      <span>R$ {Math.round(maxChartVal * 0.25).toLocaleString("pt-BR")}</span>
+                      <span>R$ 0</span>
+                    </div>
 
-                      {/* Grid Lines */}
-                      <line
-                        x1="50"
-                        y1="30"
-                        x2="490"
-                        y2="30"
-                        stroke="rgba(255,255,255,0.03)"
-                        strokeWidth="1"
-                      />
-                      <line
-                        x1="50"
-                        y1="72"
-                        x2="490"
-                        y2="72"
-                        stroke="rgba(255,255,255,0.03)"
-                        strokeWidth="1"
-                      />
-                      <line
-                        x1="50"
-                        y1="115"
-                        x2="490"
-                        y2="115"
-                        stroke="rgba(255,255,255,0.03)"
-                        strokeWidth="1"
-                      />
-                      <line
-                        x1="50"
-                        y1="157"
-                        x2="490"
-                        y2="157"
-                        stroke="rgba(255,255,255,0.03)"
-                        strokeWidth="1"
-                      />
-                      <line
-                        x1="50"
-                        y1="200"
-                        x2="490"
-                        y2="200"
-                        stroke="rgba(255,255,255,0.12)"
-                        strokeWidth="1.5"
-                      />
+                    {/* Stage Container */}
+                    <div className="flex-1 relative flex flex-col justify-between">
+                      {/* Dashed Horizontal Grid Guidelines */}
+                      <div className="absolute inset-0 flex flex-col justify-between pointer-events-none py-2">
+                        <div className="w-full border-b border-white/[0.04] border-dashed" />
+                        <div className="w-full border-b border-white/[0.04] border-dashed" />
+                        <div className="w-full border-b border-white/[0.04] border-dashed" />
+                        <div className="w-full border-b border-white/[0.04] border-dashed" />
+                        <div className="w-full border-b border-white/10" />
+                      </div>
 
-                      {/* Y Axis Labels */}
-                      <text
-                        x="45"
-                        y="34"
-                        fill="#52525b"
-                        fontSize="8"
-                        textAnchor="end"
-                        fontFamily="monospace"
+                      {/* SVG Spline Glow Path Layer */}
+                      <svg
+                        className="absolute inset-0 w-full h-full overflow-visible pointer-events-none"
+                        preserveAspectRatio="none"
+                        viewBox="0 0 500 200"
                       >
-                        R$ {Math.round(maxChartVal).toLocaleString("pt-BR")}
-                      </text>
-                      <text
-                        x="45"
-                        y="76"
-                        fill="#52525b"
-                        fontSize="8"
-                        textAnchor="end"
-                        fontFamily="monospace"
-                      >
-                        R${" "}
-                        {Math.round(maxChartVal * 0.75).toLocaleString("pt-BR")}
-                      </text>
-                      <text
-                        x="45"
-                        y="119"
-                        fill="#52525b"
-                        fontSize="8"
-                        textAnchor="end"
-                        fontFamily="monospace"
-                      >
-                        R${" "}
-                        {Math.round(maxChartVal * 0.5).toLocaleString("pt-BR")}
-                      </text>
-                      <text
-                        x="45"
-                        y="161"
-                        fill="#52525b"
-                        fontSize="8"
-                        textAnchor="end"
-                        fontFamily="monospace"
-                      >
-                        R${" "}
-                        {Math.round(maxChartVal * 0.25).toLocaleString("pt-BR")}
-                      </text>
-                      <text
-                        x="45"
-                        y="204"
-                        fill="#52525b"
-                        fontSize="8"
-                        textAnchor="end"
-                        fontFamily="monospace"
-                      >
-                        R$ 0
-                      </text>
+                        <defs>
+                          <linearGradient id="glowRevGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#a855f7" stopOpacity="0.28" />
+                            <stop offset="100%" stopColor="#a855f7" stopOpacity="0.0" />
+                          </linearGradient>
+                          <filter id="splineGlow" x="-20%" y="-20%" width="140%" height="140%">
+                            <feDropShadow dx="0" dy="2" stdDeviation="4" floodColor="#a855f7" floodOpacity="0.5" />
+                          </filter>
+                        </defs>
+                        <path d={revAreaPath} fill="url(#glowRevGrad)" />
+                        <path d={revLinePath} fill="none" stroke="#a855f7" strokeWidth="3" filter="url(#splineGlow)" />
+                      </svg>
 
-                      {/* Dynamic X Axis Labels */}
-                      {chartPoints.map((p, idx) => (
-                        <text
-                          key={`lbl-${idx}`}
-                          x={p.x}
-                          y="222"
-                          fill={
-                            hoveredPointIndex === idx ? "#f59e0b" : "#71717a"
-                          }
-                          fontSize="10"
-                          fontWeight={
-                            hoveredPointIndex === idx ? "bold" : "normal"
-                          }
-                          textAnchor="middle"
-                          fontFamily="monospace"
-                        >
-                          {p.name}
-                        </text>
-                      ))}
+                      {/* Interactive 6-Columns Stage */}
+                      <div className="absolute inset-0 flex items-end justify-between px-2 sm:px-6 py-2">
+                        {chartPoints.map((p, idx) => {
+                          const isHovered = hoveredPointIndex === idx;
+                          const revHeightPercent = Math.max(4, Math.min(100, (p.revenue / maxChartVal) * 100));
+                          const expHeightPercent = Math.max(0, Math.min(100, (p.expense / maxChartVal) * 100));
 
-                      {/* Area Fill Gradients */}
-                      <path d={revAreaPath} fill="url(#receitaGrad)" />
-                      <path d={expAreaPath} fill="url(#despesaGrad)" />
+                          return (
+                            <div
+                              key={p.name}
+                              className="flex-1 h-full flex flex-col justify-end items-center relative group cursor-pointer"
+                              onMouseEnter={() => setHoveredPointIndex(idx)}
+                              onMouseLeave={() => setHoveredPointIndex(null)}
+                            >
+                              {/* Column Glow Highlight */}
+                              {isHovered && (
+                                <div className="absolute inset-0 bg-violet-500/[0.06] border-x border-violet-500/25 rounded-xl pointer-events-none transition-all" />
+                              )}
 
-                      {/* Trend Lines */}
-                      <path
-                        d={`M ${revLinePath}`}
-                        fill="none"
-                        stroke="#f59e0b"
-                        strokeWidth="2.5"
-                      />
-                      <path
-                        d={`M ${expLinePath}`}
-                        fill="none"
-                        stroke="#ef4444"
-                        strokeWidth="2"
-                      />
+                              {/* Floating Popover Tooltip (Above Active Column Only) */}
+                              {isHovered && (
+                                <div className="absolute -top-16 z-30 bg-zinc-900/95 border border-violet-500/40 rounded-xl px-3 py-2 text-xs shadow-2xl backdrop-blur-xl whitespace-nowrap pointer-events-none animate-in fade-in zoom-in-95">
+                                  <div className="flex items-center gap-1.5 font-bold text-white text-[11px] mb-1">
+                                    <span>{p.name} / {p.year}</span>
+                                    {p.isCurrent && (
+                                      <span className="bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-black px-1.5 py-0.2 rounded text-[9px]">
+                                        ATUAL
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="space-y-0.5 font-mono text-[10px]">
+                                    <div className="flex items-center justify-between gap-3 text-violet-400">
+                                      <span>Receita:</span>
+                                      <span className="font-bold">R$ {p.revenue.toLocaleString("pt-BR")}</span>
+                                    </div>
+                                    {p.expense > 0 && (
+                                      <div className="flex items-center justify-between gap-3 text-red-400">
+                                        <span>Despesa:</span>
+                                        <span className="font-bold">R$ {p.expense.toLocaleString("pt-BR")}</span>
+                                      </div>
+                                    )}
+                                    <div className="flex items-center justify-between gap-3 text-emerald-400 border-t border-white/10 pt-0.5 font-bold">
+                                      <span>Líquido:</span>
+                                      <span>R$ {(p.revenue - p.expense).toLocaleString("pt-BR")}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
 
-                      {/* Hover column highlight line */}
-                      {hoveredPointIndex !== null && (
-                        <line
-                          x1={chartPoints[hoveredPointIndex].x}
-                          y1={30}
-                          x2={chartPoints[hoveredPointIndex].x}
-                          y2={200}
-                          stroke="rgba(245, 158, 11, 0.25)"
-                          strokeWidth="1.5"
-                          strokeDasharray="4,4"
-                        />
-                      )}
+                              {/* Cyberpunk Bars */}
+                              <div className="w-full flex items-end justify-center gap-1.5 max-w-[36px] sm:max-w-[48px] z-10">
+                                {/* Revenue Glowing Bar */}
+                                <div
+                                  style={{ height: `${revHeightPercent}%` }}
+                                  className={`w-3.5 sm:w-5 rounded-t-lg transition-all duration-300 relative ${
+                                    isHovered
+                                      ? "bg-gradient-to-t from-[#a855f7]/40 via-[#a855f7] to-[#f3dfbe] shadow-[0_0_15px_#a855f7]"
+                                      : p.isCurrent
+                                        ? "bg-gradient-to-t from-[#a855f7]/30 to-[#a855f7] shadow-[0_0_8px_rgba(188, 132, 35,0.4)]"
+                                        : "bg-gradient-to-t from-[#a855f7]/20 to-[#a855f7]/80 hover:to-[#a855f7]"
+                                  }`}
+                                >
+                                  {/* Top Glowing Cap */}
+                                  <div className="w-full h-1 bg-[#f5e6c8] rounded-t-lg shadow-sm" />
+                                </div>
 
-                      {/* Data Dots for Receitas */}
-                      {chartPoints.map((p, idx) => (
-                        <circle
-                          key={`dot-rev-${idx}`}
-                          cx={p.x}
-                          cy={p.yRev}
-                          r={hoveredPointIndex === idx ? 6 : 4}
-                          fill="#18181b"
-                          stroke="#f59e0b"
-                          strokeWidth={hoveredPointIndex === idx ? 3.5 : 2}
-                          className="transition-all duration-150"
-                        />
-                      ))}
-
-                      {/* Data Dots for Despesas */}
-                      {chartPoints.map((p, idx) => (
-                        <circle
-                          key={`dot-exp-${idx}`}
-                          cx={p.x}
-                          cy={p.yExp}
-                          r={hoveredPointIndex === idx ? 5 : 3}
-                          fill="#18181b"
-                          stroke="#ef4444"
-                          strokeWidth={hoveredPointIndex === idx ? 2.5 : 1.5}
-                          className="transition-all duration-150"
-                        />
-                      ))}
-
-                      {/* Invisible Hover column rect triggers */}
-                      {chartPoints.map((p, idx) => (
-                        <rect
-                          key={`trigger-${idx}`}
-                          x={p.x - 40}
-                          y={30}
-                          width={80}
-                          height={170}
-                          fill="transparent"
-                          className="cursor-pointer"
-                          onMouseEnter={() => setHoveredPointIndex(idx)}
-                          onMouseLeave={() => setHoveredPointIndex(null)}
-                        />
-                      ))}
-                    </svg>
-
-                    {/* Tooltip dynamic overlay */}
-                    <div className="absolute top-2 right-2 bg-black border border-white/5 rounded-xl p-3 text-xs text-zinc-300 backdrop-blur-md shadow-xl transition-all w-52">
-                      {hoveredPointIndex !== null ? (
-                        <div>
-                          <p className="font-bold text-white text-xs tracking-wider uppercase">
-                            Mês: {chartPoints[hoveredPointIndex].name} 2026
-                          </p>
-                          <div className="mt-1.5 space-y-1">
-                            <div className="flex justify-between items-center">
-                              <span className="flex items-center gap-1.5 text-zinc-400">
-                                <span className="w-1.5 h-1.5 rounded-full bg-[#c5a880]" />
-                                Receitas
-                              </span>
-                              <span className="font-bold font-mono text-white">
-                                R${" "}
-                                {chartPoints[
-                                  hoveredPointIndex
-                                ].revenue.toLocaleString("pt-BR")}
-                              </span>
+                                {/* Expense Bar (only if > 0) */}
+                                {p.expense > 0 && (
+                                  <div
+                                    style={{ height: `${expHeightPercent}%` }}
+                                    className="w-2.5 sm:w-3.5 rounded-t-md bg-gradient-to-t from-red-500/20 to-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]"
+                                  />
+                                )}
+                              </div>
                             </div>
-                            <div className="flex justify-between items-center">
-                              <span className="flex items-center gap-1.5 text-zinc-400">
-                                <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                                Despesas
-                              </span>
-                              <span className="font-bold font-mono text-zinc-300">
-                                R${" "}
-                                {chartPoints[
-                                  hoveredPointIndex
-                                ].expense.toLocaleString("pt-BR")}
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center border-t border-white/5 pt-1 mt-1 font-semibold text-white">
-                              <span>Saldo</span>
-                              <span
-                                className={`font-mono ${chartPoints[hoveredPointIndex].revenue - chartPoints[hoveredPointIndex].expense >= 0 ? "text-emerald-400" : "text-red-400"}`}
-                              >
-                                R${" "}
-                                {(
-                                  chartPoints[hoveredPointIndex].revenue -
-                                  chartPoints[hoveredPointIndex].expense
-                                ).toLocaleString("pt-BR")}
-                              </span>
-                            </div>
-                          </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* X-Axis Month Labels Row */}
+                  <div className="flex gap-3 mt-3 pt-3 border-t border-white/5 relative z-10">
+                    <div className="w-16 sm:w-20 shrink-0" />
+                    <div className="flex-1 flex justify-between px-2 sm:px-6">
+                      {chartPoints.map((p, idx) => (
+                        <div key={p.name} className="flex-1 flex flex-col items-center">
+                          <span
+                            className={`text-xs font-mono font-bold transition-colors ${
+                              p.isCurrent
+                                ? "text-violet-400 bg-violet-500/15 border border-violet-500/40 px-2 py-0.5 rounded-md shadow-[0_0_10px_rgba(188, 132, 35,0.25)]"
+                                : hoveredPointIndex === idx
+                                  ? "text-white font-bold"
+                                  : "text-zinc-400"
+                            }`}
+                          >
+                            {p.name}
+                          </span>
+                          <span className="text-[9px] text-zinc-500 font-mono mt-0.5">
+                            {p.year}
+                          </span>
                         </div>
-                      ) : (
-                        <div>
-                          <p className="font-bold text-white flex items-center gap-1.5">
-                            <Sparkles
-                              size={12}
-                              className="text-[#c5a880] animate-pulse"
-                            />
-                            Relatório Dinâmico
-                          </p>
-                          <p className="text-[10px] text-zinc-500 mt-0.5 leading-tight">
-                            Passe o mouse no gráfico para ver detalhes mensais
-                          </p>
-                          <div className="mt-2 space-y-1 text-[11px] border-t border-white/5 pt-1.5">
-                            <div className="flex justify-between">
-                              <span className="text-zinc-500">Fat. Total:</span>
-                              <span className="font-bold text-emerald-400 font-mono">
-                                R$ {totalReceitas.toLocaleString("pt-BR")}
-                              </span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-zinc-500">
-                                Custos Totais:
-                              </span>
-                              <span className="font-bold text-red-400 font-mono">
-                                R$ {totalDespesas.toLocaleString("pt-BR")}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
+                      ))}
                     </div>
                   </div>
                 </div>
 
                 {/* Distribution of Despesas */}
-                <div className="bg-black border border-white/5 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] rounded-xl p-4 sm:p-6">
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-white mb-4">
-                    Divisão de Custos
-                  </h3>
-                  <div className="space-y-4">
-                    {[
-                      {
-                        name: "Ferramentas de IA & SaaS",
-                        key: "Ferramentas",
-                        color: "bg-[#c5a880]",
-                      },
-                      {
-                        name: "Freelancers & Produção",
-                        key: "Freelancers",
-                        color: "bg-[#c5a880]",
-                      },
-                      {
-                        name: "Tráfego Pago (Meta/Google)",
-                        key: "Tráfego Ads",
-                        color: "bg-emerald-500",
-                      },
-                      {
-                        name: "Outros operacionais",
-                        key: "Outros",
-                        color: "bg-zinc-500",
-                      },
-                    ].map((cat) => {
-                      const value = transactions
-                        .filter(
-                          (t) => t.type === "despesa" && t.category === cat.key,
-                        )
-                        .reduce((sum, t) => sum + t.amount, 0);
-                      const pct =
-                        totalDespesas > 0
-                          ? Math.round((value / totalDespesas) * 100)
-                          : 0;
-                      return (
-                        <div key={cat.key} className="space-y-1">
-                          <div className="flex justify-between text-xs">
-                            <span className="text-zinc-400">{cat.name}</span>
-                            <span className="text-white font-bold font-mono">
-                              R$ {value} ({pct}%)
-                            </span>
+                <div className="bg-zinc-950/90 border border-white/10 shadow-2xl rounded-2xl p-5 sm:p-6 flex flex-col justify-between backdrop-blur-xl relative overflow-hidden">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
+                      <h3 className="text-sm sm:text-base font-bold uppercase tracking-wider text-white">
+                        Divisão de Custos
+                      </h3>
+                    </div>
+                    <p className="text-xs text-zinc-400 mb-6">
+                      Distribuição percentual dos gastos operacionais da agência
+                    </p>
+
+                    <div className="space-y-4">
+                      {[
+                        {
+                          name: "Ferramentas de IA & SaaS",
+                          key: "Ferramentas",
+                          color: "from-[#a855f7] to-[#e4c99e]",
+                          shadow: "shadow-[0_0_8px_rgba(188, 132, 35,0.4)]"
+                        },
+                        {
+                          name: "Freelancers & Produção",
+                          key: "Freelancers",
+                          color: "from-blue-500 to-cyan-400",
+                          shadow: "shadow-[0_0_8px_rgba(59,130,246,0.4)]"
+                        },
+                        {
+                          name: "Tráfego Pago (Meta/Google)",
+                          key: "Tráfego Ads",
+                          color: "from-emerald-500 to-teal-400",
+                          shadow: "shadow-[0_0_8px_rgba(16,185,129,0.4)]"
+                        },
+                        {
+                          name: "Outros operacionais",
+                          key: "Outros",
+                          color: "from-zinc-500 to-zinc-400",
+                          shadow: "shadow-[0_0_8px_rgba(113,113,122,0.3)]"
+                        },
+                      ].map((cat) => {
+                        const value = transactions
+                          .filter(
+                            (t) => t.type === "despesa" && t.category === cat.key,
+                          )
+                          .reduce((sum, t) => sum + t.amount, 0);
+                        const pct =
+                          totalDespesas > 0
+                            ? Math.round((value / totalDespesas) * 100)
+                            : 0;
+                        return (
+                          <div key={cat.key} className="space-y-1.5">
+                            <div className="flex justify-between text-xs">
+                              <span className="text-zinc-300 font-medium">{cat.name}</span>
+                              <span className="text-white font-bold font-mono">
+                                R$ {value.toLocaleString("pt-BR")} <span className="text-zinc-500 font-normal">({pct}%)</span>
+                              </span>
+                            </div>
+                            <div className="w-full h-2 bg-zinc-900 rounded-full overflow-hidden border border-white/5 p-0.5">
+                              <div
+                                className={`h-full rounded-full bg-gradient-to-r ${cat.color} ${cat.shadow} transition-all duration-500`}
+                                style={{ width: `${Math.max(pct > 0 ? 4 : 0, pct)}%` }}
+                              />
+                            </div>
                           </div>
-                          <div className="w-full h-1.5 bg-black rounded-full overflow-hidden">
-                            <div
-                              className={`h-full ${cat.color}`}
-                              style={{ width: `${pct}%` }}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
 
                   <div className="mt-6 pt-4 border-t border-white/5 text-center">
-                    <span className="text-xs text-zinc-500">
-                      Média de custos operacionais está em 22.4% do faturamento.
+                    <span className="text-xs text-zinc-400 font-mono">
+                      {totalReceitas > 0
+                        ? `Custos representam ${Math.round((totalDespesas / totalReceitas) * 100)}% do faturamento total.`
+                        : "Nenhum custo operacional registrado no período."}
                     </span>
                   </div>
                 </div>
@@ -6370,7 +6192,7 @@ ${textContent}`
                     </h3>
                     <button
                       onClick={() => openTransactionModal()}
-                      className="text-[#c5a880] hover:text-[#c5a880] text-xs font-bold"
+                      className="text-violet-400 hover:text-violet-400 text-xs font-bold"
                     >
                       + Lançar manual
                     </button>
@@ -6422,7 +6244,7 @@ ${textContent}`
                           </button>
                           <button
                             onClick={() => openTransactionModal(t)}
-                            className="text-zinc-600 hover:text-[#c5a880] transition-colors p-1"
+                            className="text-zinc-600 hover:text-violet-400 transition-colors p-1"
                             title="Editar"
                           >
                             <Edit2 size={14} />
@@ -6464,54 +6286,70 @@ ${textContent}`
                                   c.paymentStatus === "Em dia"
                                     ? "bg-emerald-500/10 text-emerald-400"
                                     : c.paymentStatus === "Pendente"
-                                      ? "bg-[#c5a880]/10 text-[#c5a880]"
+                                      ? "bg-violet-500/10 text-violet-400"
                                       : "bg-red-500/10 text-red-400"
                                 }`}
                               >
                                 {c.paymentStatus}
                               </span>
                             </div>
-                            <p className="text-xs text-zinc-500 mt-1">
-                              Fatura de{" "}
-                              <span className="text-zinc-300 font-semibold">
-                                R$ {c.planValue || 0}
-                              </span>{" "}
-                              vence dia{" "}
-                              {c.dueDate
-                                ? typeof c.dueDate === "string" &&
-                                  c.dueDate.includes("-")
-                                  ? c.dueDate.split("-").reverse().join("/")
-                                  : c.dueDate
-                                : "N/A"}
-                            </p>
+                            {(() => {
+                              const clientPendingTxSum = transactions
+                                .filter((t) => (t.client || "").toLowerCase() === (c.name || "").toLowerCase() && t.type === "receita" && t.status === "pendente")
+                                .reduce((sum, t) => sum + t.amount, 0);
+                              const displayValue = c.planValue > 0 ? c.planValue : (clientPendingTxSum > 0 ? clientPendingTxSum : 0);
+                              const isAvulso = (c.paymentType as any) === "Projeto Avulso" || c.paymentType === "Sob Demanda" || (c.paymentType as any) === "Por Entrega" || c.paymentType === "Projeto";
+
+                              return (
+                                <p className="text-xs text-zinc-500 mt-1">
+                                  {isAvulso ? "Serviço Avulso: " : "Fatura de "}
+                                  <span className="text-zinc-300 font-semibold">
+                                    R$ {displayValue.toLocaleString("pt-BR")}
+                                  </span>{" "}
+                                  {c.paymentStatus === "Atrasado" ? "venceu dia" : "vence dia"}{" "}
+                                  {c.dueDate
+                                    ? typeof c.dueDate === "string" &&
+                                      c.dueDate.includes("-")
+                                      ? c.dueDate.split("-").reverse().join("/")
+                                      : c.dueDate
+                                    : "N/A"}
+                                </p>
+                              );
+                            })()}
                           </div>
 
                           {c.paymentStatus !== "Em dia" ? (
                             <button
                               onClick={() => {
+                                const clientPendingTxSum = transactions
+                                  .filter((t) => (t.client || "").toLowerCase() === (c.name || "").toLowerCase() && t.type === "receita" && t.status === "pendente")
+                                  .reduce((sum, t) => sum + t.amount, 0);
+                                const finalAmount = c.planValue > 0 ? c.planValue : (clientPendingTxSum > 0 ? clientPendingTxSum : 0);
+
                                 // Fast link: record transaction from client
                                 const newTx: Transaction = {
                                   id: Date.now(),
-                                  description: `${(!c.paymentType || c.paymentType === "Mensal") ? "Mensalidade" : c.paymentType === "Projeto" ? "Pagamento de projeto" : "Pagamento por entrega"} recebido: ${c.name}`,
+                                  description: `${(!c.paymentType || c.paymentType === "Mensal") ? "Mensalidade" : c.paymentType === "Projeto" ? "Pagamento de projeto" : "Pagamento de serviço avulso"} recebido: ${c.name}`,
                                   type: "receita",
-                                  amount: c.planValue || 0,
+                                  amount: finalAmount,
                                   date: new Date().toISOString().split("T")[0],
-                                  category: "Contratos",
+                                  category: c.paymentType === "Mensal" ? "Contratos" : "Serviços Avulsos",
                                   status: "pago",
                                   client: c.name,
                                 };
-                                setTransactions([newTx, ...transactions]);
-                                setClients(
-                                  clients.map((item) =>
-                                    item.id === c.id
-                                      ? { ...item, paymentStatus: "Em dia" }
-                                      : item,
-                                  ),
+                                const updatedTx = [newTx, ...transactions.map(t => (t.client || "").toLowerCase() === (c.name || "").toLowerCase() && t.status === "pendente" ? { ...t, status: "pago" as any } : t)];
+                                setTransactions(updatedTx);
+                                const updatedClients = clients.map((item) =>
+                                  item.id === c.id
+                                    ? { ...item, paymentStatus: "Em dia" as const }
+                                    : item,
                                 );
+                                setClients(updatedClients);
+                                saveToFirestoreDirectly({ transactions: updatedTx, clients: updatedClients });
                                 // notify
                                 const newNotif: NotificationItem = {
                                   id: Date.now(),
-                                  message: `Pagamento recebido de '${c.name}' no valor de R$ ${c.planValue} registrado com sucesso.`,
+                                  message: `Pagamento recebido de '${c.name}' no valor de R$ ${finalAmount} registrado com sucesso.`,
                                   date: new Date().toISOString().split("T")[0],
                                   read: false,
                                   type: "success",
@@ -6520,7 +6358,7 @@ ${textContent}`
                               }}
                               className="bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-xs font-bold px-2.5 py-1.5 rounded-lg transition-colors"
                             >
-                              {(!c.paymentType || c.paymentType === "Mensal") ? "Receber Mensalidade" : c.paymentType === "Projeto" ? "Receber Pagamento" : "Receber Pagamento (Entrega)"}
+                              {(!c.paymentType || c.paymentType === "Mensal") ? "Receber Mensalidade" : "Receber Pagamento"}
                             </button>
                           ) : (
                             <span className="text-xs text-emerald-500/70 flex items-center gap-1 font-semibold">
@@ -6580,7 +6418,7 @@ ${textContent}`
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-4 border-b border-white/5">
                     <div>
                       <h1 className="text-xl sm:text-3xl font-bold text-white flex items-center gap-2 sm:gap-3">
-                        <Calendar className="text-[#c5a880]" size={28} />{" "}
+                        <Calendar className="text-violet-400" size={28} />{" "}
                         Calendário & Agenda
                       </h1>
                       <p className="text-zinc-400 text-sm mt-1">
@@ -6604,10 +6442,10 @@ ${textContent}`
                             {isGcalSyncing ? (
                               <Loader2
                                 size={14}
-                                className="animate-spin text-[#c5a880]"
+                                className="animate-spin text-violet-400"
                               />
                             ) : (
-                              <RefreshCw size={14} className="text-[#c5a880]" />
+                              <RefreshCw size={14} className="text-violet-400" />
                             )}
                             Sincronizar
                           </button>
@@ -6632,7 +6470,7 @@ ${textContent}`
                             `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-25`,
                           )
                         }
-                        className="bg-[#c5a880] text-zinc-950 px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#c5a880]/80 transition-colors flex items-center gap-2"
+                        className="bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-violet-500/80 transition-colors flex items-center gap-2"
                       >
                         <Plus size={16} /> Agendar Compromisso
                       </button>
@@ -6727,12 +6565,12 @@ ${textContent}`
                               }
                               className={`aspect-square p-2 bg-black border rounded-xl flex flex-col justify-between hover:bg-[#111]/40 cursor-pointer transition-colors relative group ${
                                 isToday
-                                  ? "border-[#c5a880] bg-[#c5a880]/5"
+                                  ? "border-violet-500 bg-violet-500/5"
                                   : "border-white/5"
                               }`}
                             >
                               <span
-                                className={`text-xs font-bold font-mono ${isToday ? "text-[#c5a880]" : "text-zinc-400"}`}
+                                className={`text-xs font-bold font-mono ${isToday ? "text-violet-400" : "text-zinc-400"}`}
                               >
                                 {day}
                               </span>
@@ -6747,10 +6585,10 @@ ${textContent}`
                                     }}
                                     className={`px-1 py-0.5 rounded text-[8px] font-bold truncate ${
                                       e.type === "post"
-                                        ? "bg-[#c5a880]/15 text-[#c5a880]"
+                                        ? "bg-violet-500/15 text-violet-400"
                                         : e.type === "reuniao"
                                           ? "bg-blue-500/15 text-blue-400"
-                                          : "bg-[#c5a880]/15 text-[#c5a880]"
+                                          : "bg-violet-500/15 text-violet-400"
                                     }`}
                                     title={`${e.title} (${e.clientName})`}
                                   >
@@ -6760,7 +6598,7 @@ ${textContent}`
                               </div>
 
                               {/* Quick add Indicator show on hover */}
-                              <span className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 text-[9px] text-[#c5a880] font-bold transition-opacity">
+                              <span className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 text-[9px] text-violet-400 font-bold transition-opacity">
                                 +
                               </span>
                             </div>
@@ -6797,23 +6635,23 @@ ${textContent}`
                                   <span
                                     className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
                                       e.type === "post"
-                                        ? "bg-[#c5a880]/10 text-[#c5a880]"
+                                        ? "bg-violet-500/10 text-violet-400"
                                         : e.type === "reuniao"
                                           ? "bg-blue-500/10 text-blue-400"
-                                          : "bg-[#c5a880]/10 text-[#c5a880]"
+                                          : "bg-violet-500/10 text-violet-400"
                                     }`}
                                   >
                                     {e.type === "post"
-                                      ? "Postagem 📝"
+                                      ? "Postagem "
                                       : e.type === "reuniao"
-                                        ? "Reunião 🤝"
-                                        : "Entrega 📦"}
+                                        ? "Reunião "
+                                        : "Entrega "}
                                   </span>
                                   <span className="text-[10px] text-zinc-500 font-mono font-medium">
                                     {e.date} às {e.time}
                                   </span>
                                 </div>
-                                <h4 className="text-sm font-bold text-zinc-100 mt-2 group-hover:text-[#c5a880] transition-colors">
+                                <h4 className="text-sm font-bold text-zinc-100 mt-2 group-hover:text-violet-400 transition-colors">
                                   {e.title}
                                 </h4>
                                 <p className="text-xs text-zinc-500 mt-1 font-semibold">
@@ -6833,7 +6671,7 @@ ${textContent}`
                       <div className="mt-6 pt-4 border-t border-white/5">
                         <div className="flex gap-2 text-[10px] text-zinc-400 justify-center">
                           <span className="flex items-center gap-1">
-                            <span className="w-2 h-2 rounded bg-[#c5a880]" />{" "}
+                            <span className="w-2 h-2 rounded bg-[#a855f7]" />{" "}
                             Postagem
                           </span>
                           <span className="flex items-center gap-1">
@@ -6841,7 +6679,7 @@ ${textContent}`
                             Reunião
                           </span>
                           <span className="flex items-center gap-1">
-                            <span className="w-2 h-2 rounded bg-[#c5a880]" />{" "}
+                            <span className="w-2 h-2 rounded bg-[#a855f7]" />{" "}
                             Entrega
                           </span>
                         </div>
@@ -6868,7 +6706,7 @@ ${textContent}`
               <div className="flex items-center justify-between mb-6 pb-3 border-b border-white/5">
                 <div>
                   <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                    <Users size={22} className="text-[#c5a880]" />
+                    <Users size={22} className="text-violet-400" />
                     {editingClient
                       ? "Editar Cadastro do Cliente"
                       : "Cadastrar Novo Cliente"}
@@ -6889,7 +6727,7 @@ ${textContent}`
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
                 {/* Coluna 1: Informações Cadastrais */}
                 <div className="space-y-4">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#c5a880] font-mono">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-violet-400 font-mono">
                     1. Dados do Cliente
                   </h3>
 
@@ -6914,7 +6752,7 @@ ${textContent}`
                       onChange={(e) =>
                         setClientForm({ ...clientForm, name: e.target.value })
                       }
-                      className="w-full bg-black border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 focus:ring-1 focus:ring-amber-500/20"
+                      className="w-full bg-black border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-amber-500/20"
                       placeholder="Ex: Dr. Silva (Odonto)"
                     />
                   </div>
@@ -6942,7 +6780,7 @@ ${textContent}`
                       onChange={(e) =>
                         setClientForm({ ...clientForm, niche: e.target.value })
                       }
-                      className="w-full bg-black border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 focus:ring-1 focus:ring-amber-500/20"
+                      className="w-full bg-black border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-amber-500/20"
                       placeholder="Ex: Odontologia"
                     />
                   </div>
@@ -6960,7 +6798,7 @@ ${textContent}`
                           contact: e.target.value,
                         })
                       }
-                      className="w-full bg-black border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 focus:ring-1 focus:ring-amber-500/20 font-mono"
+                      className="w-full bg-black border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-amber-500/20 font-mono"
                       placeholder="Ex: (11) 99999-9999"
                     />
                   </div>
@@ -6976,7 +6814,7 @@ ${textContent}`
                           <img
                             src={clientForm.avatarUrl}
                             alt="Visualização"
-                            className="w-12 h-12 rounded-full object-cover border border-[#c5a880]/50"
+                            className="w-12 h-12 rounded-full object-cover border border-violet-500/50"
                             referrerPolicy="no-referrer"
                           />
                         ) : (
@@ -7041,7 +6879,7 @@ ${textContent}`
                               }
                               className={`w-8 h-8 rounded-full overflow-hidden border flex-shrink-0 transition-all ${
                                 clientForm.avatarUrl === url
-                                  ? "border-[#c5a880] scale-110 ring-2 ring-amber-500/20"
+                                  ? "border-violet-500 scale-110 ring-2 ring-amber-500/20"
                                   : "border-white/5 hover:border-white/30"
                               }`}
                             >
@@ -7061,39 +6899,50 @@ ${textContent}`
 
                 {/* Coluna 2: Dados Financeiros e Contrato */}
                 <div className="space-y-4">
-                                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#c5a880] font-mono">
+                                    <h3 className="text-xs font-bold uppercase tracking-wider text-violet-400 font-mono">
                     2. Valores & Faturamento
                   </h3>
                   <div className="mb-4">
                     <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase">Tipo de Faturamento</label>
                     <div className="flex bg-black p-1 rounded-xl border border-white/5">
-                      <button
-                        type="button"
-                        onClick={() => setClientForm({ ...clientForm, paymentType: "Mensal" })}
-                        className={`flex-1 text-xs py-1.5 rounded-lg transition-colors ${(!clientForm.paymentType || clientForm.paymentType === "Mensal") ? "bg-[#c5a880]/20 text-[#c5a880] font-bold" : "text-zinc-500 hover:text-zinc-300"}`}
-                      >
-                        Recorrente (Mensal)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setClientForm({ ...clientForm, paymentType: "Projeto" })}
-                        className={`flex-1 text-xs py-1.5 rounded-lg transition-colors ${clientForm.paymentType === "Projeto" ? "bg-[#c5a880]/20 text-[#c5a880] font-bold" : "text-zinc-500 hover:text-zinc-300"}`}
-                      >
-                        Projeto Avulso
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setClientForm({ ...clientForm, paymentType: "Sob Demanda" })}
-                        className={`flex-1 text-xs py-1.5 rounded-lg transition-colors ${clientForm.paymentType === "Sob Demanda" ? "bg-[#c5a880]/20 text-[#c5a880] font-bold" : "text-zinc-500 hover:text-zinc-300"}`}
-                      >
-                        Por Entrega
-                      </button>
+                      {(() => {
+                        const pt = (clientForm.paymentType as any) || "Mensal";
+                        const isMonthly = pt === "Mensal";
+                        const isProject = pt === "Projeto" || pt === "Projeto Avulso" || pt === "Avulso";
+                        const isDemand = pt === "Sob Demanda" || pt === "Por Entrega" || pt === "Freelancer";
+
+                        return (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => setClientForm({ ...clientForm, paymentType: "Mensal" })}
+                              className={`flex-1 text-xs py-1.5 rounded-lg transition-colors ${isMonthly ? "bg-violet-500/20 text-violet-400 font-bold" : "text-zinc-500 hover:text-zinc-300"}`}
+                            >
+                              Recorrente (Mensal)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setClientForm({ ...clientForm, paymentType: "Projeto" })}
+                              className={`flex-1 text-xs py-1.5 rounded-lg transition-colors ${isProject ? "bg-violet-500/20 text-violet-400 font-bold" : "text-zinc-500 hover:text-zinc-300"}`}
+                            >
+                              Projeto Avulso
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setClientForm({ ...clientForm, paymentType: "Sob Demanda" })}
+                              className={`flex-1 text-xs py-1.5 rounded-lg transition-colors ${isDemand ? "bg-violet-500/20 text-violet-400 font-bold" : "text-zinc-500 hover:text-zinc-300"}`}
+                            >
+                              Por Entrega
+                            </button>
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase">
-                        {(!clientForm.paymentType || clientForm.paymentType === "Mensal") ? "Mensalidade (R$)" : clientForm.paymentType === "Projeto" ? "Valor do Projeto (R$)" : "Valor por Entrega (R$)"}
+                        {(clientForm.paymentType === "Projeto" || (clientForm.paymentType as any) === "Projeto Avulso" || (clientForm.paymentType as any) === "Avulso") ? "Valor do Projeto / Serviço (R$)" : (clientForm.paymentType === "Sob Demanda" || (clientForm.paymentType as any) === "Por Entrega") ? "Valor por Entrega (R$)" : "Mensalidade (R$)"}
                       </label>
                       <input
                         type="number"
@@ -7104,13 +6953,13 @@ ${textContent}`
                             planValue: Number(e.target.value),
                           })
                         }
-                        className="w-full bg-black border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 focus:ring-1 focus:ring-amber-500/20 font-mono"
+                        className="w-full bg-black border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-amber-500/20 font-mono"
                         placeholder="Ex: 1500"
                       />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-zinc-400 mb-1.5 uppercase">
-                        {(!clientForm.paymentType || clientForm.paymentType === "Mensal") ? "Próximo Vencimento" : clientForm.paymentType === "Projeto" ? "Previsão / Vencimento" : "Próxima Entrega"}
+                        {(clientForm.paymentType === "Projeto" || (clientForm.paymentType as any) === "Projeto Avulso" || (clientForm.paymentType as any) === "Avulso") ? "Previsão / Vencimento" : (clientForm.paymentType === "Sob Demanda" || (clientForm.paymentType as any) === "Por Entrega") ? "Próxima Entrega" : "Próximo Vencimento"}
                       </label>
                       <input
                         type="date"
@@ -7121,7 +6970,7 @@ ${textContent}`
                             dueDate: e.target.value,
                           })
                         }
-                        className="w-full bg-black border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 focus:ring-1 focus:ring-amber-500/20 font-mono"
+                        className="w-full bg-black border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-amber-500/20 font-mono"
                       />
                     </div>
                   </div>
@@ -7140,7 +6989,7 @@ ${textContent}`
                               .value as Client["paymentStatus"],
                           })
                         }
-                        className="w-full bg-black border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 focus:ring-1 focus:ring-amber-500/20"
+                        className="w-full bg-black border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-amber-500/20"
                       >
                         <option value="Em dia">🟢 Em dia</option>
                         <option value="Pendente">🟡 Pendente</option>
@@ -7160,7 +7009,7 @@ ${textContent}`
                             startDate: e.target.value,
                           })
                         }
-                        className="w-full bg-black border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 focus:ring-1 focus:ring-amber-500/20"
+                        className="w-full bg-black border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-amber-500/20"
                       />
                     </div>
                   </div>
@@ -7176,7 +7025,7 @@ ${textContent}`
                           status: e.target.value as Client["status"],
                         })
                       }
-                      className="w-full bg-black border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 focus:ring-1 focus:ring-amber-500/20"
+                      className="w-full bg-black border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-amber-500/20"
                     >
                       <option value="Ativo">Ativo</option>
                       <option value="Inativo">Inativo</option>
@@ -7193,7 +7042,7 @@ ${textContent}`
                       onChange={(e) =>
                         setClientForm({ ...clientForm, notes: e.target.value })
                       }
-                      className="w-full bg-black border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 focus:ring-1 focus:ring-amber-500/20 min-h-[70px]"
+                      className="w-full bg-black border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-amber-500/20 min-h-[70px]"
                       placeholder="Notas adicionais, contatos de emergência, senhas compartilhadas..."
                     />
                   </div>
@@ -7234,7 +7083,7 @@ ${textContent}`
                                 plan: e.target.value,
                               })
                             }
-                            className="w-full bg-black border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50"
+                            className="w-full bg-black border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-violet-500/50"
                             placeholder="Ex: Plano Intermediário"
                           />
                         </div>
@@ -7250,7 +7099,7 @@ ${textContent}`
                                 planDetails: e.target.value,
                               })
                             }
-                            className="w-full bg-black border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50 min-h-[60px]"
+                            className="w-full bg-black border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-violet-500/50 min-h-[60px]"
                             placeholder="Ex: 2 Posts/semana, 1 Reels/semana, R$ 200 tráfego embutido..."
                           />
                         </div>
@@ -7264,7 +7113,7 @@ ${textContent}`
                 savedNotes.filter((n) => n.clientName === editingClient.name)
                   .length > 0 && (
                   <div className="mt-6 pt-6 border-t border-white/5">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#c5a880] font-mono flex items-center gap-2 mb-4">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-violet-400 font-mono flex items-center gap-2 mb-4">
                       <FileText size={14} /> Notas & Documentos do Cliente
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -7313,7 +7162,7 @@ ${textContent}`
                   </button>
                   <button
                     onClick={handleSaveClient}
-                    className="bg-[#c5a880] hover:bg-[#c5a880]/80 text-zinc-950 px-5 py-2.5 rounded-xl font-black text-xs transition-all shadow-md shadow-amber-500/15"
+                    className="bg-[#a855f7] hover:bg-violet-500/80 text-zinc-950 px-5 py-2.5 rounded-xl font-black text-xs transition-all shadow-md shadow-amber-500/15"
                   >
                     Gravar Alterações
                   </button>
@@ -7334,7 +7183,7 @@ ${textContent}`
               <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/5">
                 <div>
                   <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                    <Save size={20} className="text-[#c5a880]" />
+                    <Save size={20} className="text-violet-400" />
                     Salvar Nota / Copy
                   </h2>
                   <p className="text-xs text-zinc-500 mt-0.5">
@@ -7357,7 +7206,7 @@ ${textContent}`
                   <select
                     value={noteClient}
                     onChange={(e) => setNoteClient(e.target.value)}
-                    className="w-full bg-black border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50"
+                    className="w-full bg-black border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-violet-500/50"
                   >
                     <option value="">Selecione o Cliente</option>
                     <option value="Geral (Sem cliente)">
@@ -7378,7 +7227,7 @@ ${textContent}`
                     type="text"
                     value={noteTitle}
                     onChange={(e) => setNoteTitle(e.target.value)}
-                    className="w-full bg-black border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-[#c5a880]/50"
+                    className="w-full bg-black border border-white/5 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-violet-500/50"
                     placeholder="Ex: Copy para Campanha de Black Friday"
                   />
                 </div>
@@ -7410,7 +7259,7 @@ ${textContent}`
                       setNoteTitle("");
                       alert("Nota salva com sucesso!");
                     }}
-                    className="bg-[#c5a880] text-zinc-950 px-6 py-2 rounded-xl font-bold text-sm hover:bg-[#c5a880]/80 transition-colors shadow-lg shadow-amber-500/10 active:scale-95"
+                    className="bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white px-6 py-2 rounded-xl font-bold text-sm hover:bg-violet-500/80 transition-colors shadow-lg shadow-violet-600/10 active:scale-95"
                   >
                     Salvar
                   </button>
@@ -7455,7 +7304,7 @@ ${textContent}`
                   onClick={() => setTaskMode('ai')}
                   className={`flex-1 py-2 text-xs font-bold rounded-lg ${
                     taskMode === 'ai'
-                      ? 'bg-[#c5a880] text-zinc-950'
+                      ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white'
                       : 'text-zinc-500 hover:text-white'
                   }`}
                 >
@@ -7465,8 +7314,8 @@ ${textContent}`
 
               <div className="space-y-4">
                 {taskMode === 'ai' && !editingTask && (
-                  <div className="bg-[#c5a880]/10 border border-[#c5a880]/20 rounded-xl p-8 mb-4">
-                    <h3 className="text-[#c5a880] text-sm font-bold flex items-center gap-1.5 mb-2">
+                  <div className="bg-violet-500/10 border border-violet-500/20 rounded-xl p-8 mb-4">
+                    <h3 className="text-violet-400 text-sm font-bold flex items-center gap-1.5 mb-2">
                       <Sparkles size={14} /> Criação Inteligente com IA
                     </h3>
                     <p className="text-xs text-zinc-400 mb-3">
@@ -7476,7 +7325,7 @@ ${textContent}`
                       value={parseInputText}
                       onChange={(e) => setParseInputText(e.target.value)}
                       placeholder="Descreva a tarefa ou cole anotações..."
-                      className="w-full bg-black border border-[#c5a880]/20 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#c5a880]/50 text-sm min-h-[60px] resize-none mb-2"
+                      className="w-full bg-black border border-violet-500/20 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-violet-500/50 text-sm min-h-[60px] resize-none mb-2"
                     />
                     <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center w-full">
                       <div className="flex flex-1 items-center gap-2 w-full">
@@ -7492,7 +7341,7 @@ ${textContent}`
                       <button
                         onClick={handleParseTask}
                         disabled={isParsingTask}
-                        className="bg-[#c5a880] text-zinc-950 px-3 py-2 rounded-lg text-xs font-bold hover:bg-[#c5a880]/80 whitespace-nowrap disabled:opacity-50 w-full sm:w-auto"
+                        className="bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white px-3 py-2 rounded-lg text-xs font-bold hover:bg-violet-500/80 whitespace-nowrap disabled:opacity-50 w-full sm:w-auto"
                       >
                         {isParsingTask ? "Analisando..." : "Organizar"}
                       </button>
@@ -7578,7 +7427,7 @@ ${textContent}`
                           hasDeadline: e.target.checked,
                         })
                       }
-                      className="rounded border-zinc-700 bg-black text-[#c5a880] focus:ring-amber-500/50 focus:ring-offset-0 w-4 h-4"
+                      className="rounded border-zinc-700 bg-black text-violet-400 focus:ring-amber-500/50 focus:ring-offset-0 w-4 h-4"
                     />
                     <span className="text-sm font-medium text-zinc-300 group-hover:text-white transition-colors">
                       Possui prazo de entrega?
@@ -7653,7 +7502,7 @@ ${textContent}`
             >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                  <DollarSign className="text-[#c5a880]" size={20} />
+                  <DollarSign className="text-violet-400" size={20} />
                   {editingTransaction ? "Editar Transação" : "Nova Transação"}
                 </h2>
                 <button
@@ -7778,7 +7627,7 @@ ${textContent}`
                             placeholder="Nova Categoria"
                             value={newCategoryName}
                             onChange={(e) => setNewCategoryName(e.target.value)}
-                            className="flex-1 bg-black border border-white/5 rounded-lg px-2.5 py-1.5 text-white text-xs focus:outline-none focus:border-[#c5a880]/50"
+                            className="flex-1 bg-black border border-white/5 rounded-lg px-2.5 py-1.5 text-white text-xs focus:outline-none focus:border-violet-500/50"
                             autoFocus
                           />
                           <button
@@ -7802,7 +7651,7 @@ ${textContent}`
                               setNewCategoryName("");
                               setIsAddingNewCategory(false);
                             }}
-                            className="bg-[#c5a880] hover:bg-[#c5a880]/80 text-zinc-950 text-[10px] font-black px-2.5 py-1.5 rounded-lg transition-colors"
+                            className="bg-[#a855f7] hover:bg-violet-500/80 text-zinc-950 text-[10px] font-black px-2.5 py-1.5 rounded-lg transition-colors"
                           >
                             Add
                           </button>
@@ -7835,7 +7684,7 @@ ${textContent}`
                             });
                           }
                         }}
-                        className="w-full bg-black border border-white/5 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#c5a880]/50 text-sm"
+                        className="w-full bg-black border border-white/5 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-violet-500/50 text-sm"
                       >
                         {transactionCategories.map((cat) => (
                           <option key={cat} value={cat}>
@@ -7894,7 +7743,7 @@ ${textContent}`
                   </button>
                   <button
                     onClick={handleSaveTransaction}
-                    className="bg-[#c5a880] text-zinc-950 px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#c5a880]/80 transition-colors"
+                    className="bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-violet-500/80 transition-colors"
                   >
                     Salvar
                   </button>
@@ -7914,7 +7763,7 @@ ${textContent}`
             >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                  <Calendar className="text-[#c5a880]" size={20} />
+                  <Calendar className="text-violet-400" size={20} />
                   {editingEvent ? "Editar Evento" : "Novo Compromisso"}
                 </h2>
                 <button
@@ -7997,9 +7846,9 @@ ${textContent}`
                       }
                       className="w-full bg-black border border-white/5 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500/50 text-sm"
                     >
-                      <option value="post">Post 📝</option>
-                      <option value="reuniao">Reunião 🤝</option>
-                      <option value="entrega">Entrega/Gravação 📦</option>
+                      <option value="post">Post </option>
+                      <option value="reuniao">Reunião </option>
+                      <option value="entrega">Entrega/Gravação </option>
                     </select>
                   </div>
                   <div>
@@ -8067,7 +7916,7 @@ ${textContent}`
                   </button>
                   <button
                     onClick={handleSaveEvent}
-                    className="bg-[#c5a880] text-zinc-950 px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#c5a880]/80 transition-colors"
+                    className="bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-violet-500/80 transition-colors"
                   >
                     Salvar
                   </button>
@@ -8236,7 +8085,7 @@ function Toggle({
       onClick={() => onChange(!checked)}
     >
       <div
-        className={`w-10 h-5 rounded-full transition-colors relative ${checked ? "bg-[#c5a880]" : "bg-[#111]"}`}
+        className={`w-10 h-5 rounded-full transition-colors relative ${checked ? "bg-[#a855f7]" : "bg-[#111]"}`}
       >
         <div
           className={`absolute top-1 left-1 w-3 h-3 rounded-full bg-white transition-transform ${checked ? "translate-x-5" : "translate-x-0"}`}
@@ -8264,14 +8113,14 @@ function SidebarItemMini({
         onClick={onClick}
         className={`p-3 rounded-xl transition-all cursor-pointer ${
           active
-            ? "bg-[#c5a880]/15 text-[#c5a880] border border-[#c5a880]/40 font-bold shadow-md shadow-[#c5a880]/10"
-            : "text-zinc-400 hover:text-white hover:bg-white/[0.05] border border-transparent"
+            ? "bg-violet-600/25 text-violet-300 border border-violet-500/40 font-bold shadow-md shadow-violet-500/15"
+            : "text-zinc-400 hover:text-white hover:bg-white/[0.06] border border-transparent"
         }`}
       >
         {icon}
       </button>
       {/* Tooltip on Hover */}
-      <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-[#090d16] border border-[#c5a880]/20 text-white text-[10px] font-bold py-1.5 px-3 rounded-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap shadow-xl">
+      <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-[#0c0817] border border-violet-500/20 text-white text-[10px] font-bold py-1.5 px-3 rounded-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap shadow-xl">
         {tooltip}
       </div>
     </div>
@@ -8294,16 +8143,16 @@ function SidebarItem({
       onClick={onClick}
       className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-200 text-xs font-medium tracking-wide group cursor-pointer ${
         active
-          ? "bg-[#c5a880]/15 text-white border border-[#c5a880]/40 font-bold shadow-md shadow-[#c5a880]/10"
-          : "text-zinc-400 hover:bg-white/5 hover:text-white border border-transparent"
+          ? "bg-violet-600/25 text-white border border-violet-500/30 font-medium shadow-md shadow-violet-500/10"
+          : "text-zinc-400 hover:bg-white/[0.06] hover:text-white border border-transparent"
       }`}
     >
-      <span className={`transition-colors duration-200 ${active ? "text-[#c5a880]" : "text-zinc-500 group-hover:text-zinc-300"}`}>
+      <span className={`transition-colors duration-200 ${active ? "text-violet-400" : "text-zinc-500 group-hover:text-zinc-300"}`}>
         {icon}
       </span>
       <span className="truncate">{label}</span>
       {active && (
-        <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#c5a880] shadow-[0_0_8px_#c5a880]" />
+        <span className="ml-auto w-1.5 h-1.5 rounded-full bg-violet-400 shadow-[0_0_8px_#a855f7]" />
       )}
     </button>
   );
@@ -8331,7 +8180,7 @@ const TaskCard: React.FC<{
       }`}
     >
       <div className="flex items-center justify-between gap-2 mb-2">
-        <span className="text-[10px] uppercase font-bold tracking-wider text-[#c5a880] bg-[#c5a880]/10 px-2 py-0.5 rounded">
+        <span className="text-[10px] uppercase font-bold tracking-wider text-violet-400 bg-violet-500/10 px-2 py-0.5 rounded">
           {task.client}
         </span>
         <span className="text-[9px] text-zinc-500 font-mono font-medium">
@@ -8355,7 +8204,7 @@ const TaskCard: React.FC<{
             </span>
           ) : (
             <span className="text-[10px] bg-black text-zinc-400 border border-white/5 px-2 py-0.5 rounded flex items-center gap-1 font-medium">
-              <Clock size={10} className="text-[#c5a880]/70" /> Prazo:{" "}
+              <Clock size={10} className="text-violet-400/70" /> Prazo:{" "}
               {typeof task.dueDate === "string" && task.dueDate.includes("-")
                 ? task.dueDate.split("-").reverse().slice(0, 2).join("/")
                 : task.dueDate}

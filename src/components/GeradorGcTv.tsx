@@ -429,15 +429,15 @@ export function GeradorGcTv({ customApiKey, showToast: propShowToast }: GeradorG
       {/* Header Bar */}
       <div className="px-6 py-4 bg-black border-b border-white/5 shrink-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#c5a880]/20 via-[#c5a880]/10 to-transparent border border-[#c5a880]/30 flex items-center justify-center text-[#c5a880] shadow-lg shadow-[#c5a880]/5 shrink-0">
-            <Tv size={22} className="text-[#c5a880]" />
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#a855f7]/20 via-[#a855f7]/10 to-transparent border border-violet-500/30 flex items-center justify-center text-violet-400 shadow-lg shadow-violet-600/5 shrink-0">
+            <Tv size={22} className="text-violet-400" />
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-bold text-white tracking-tight">
                 Copiloto GC de TV & Transmissão
               </h1>
-              <span className="text-[9px] font-black uppercase tracking-widest text-[#c5a880] bg-[#c5a880]/10 px-2 py-0.5 rounded border border-[#c5a880]/20 animate-pulse">
+              <span className="text-[9px] font-black uppercase tracking-widest text-violet-400 bg-violet-500/10 px-2 py-0.5 rounded border border-violet-500/20 animate-pulse">
                 vMix Engine
               </span>
             </div>
@@ -453,7 +453,7 @@ export function GeradorGcTv({ customApiKey, showToast: propShowToast }: GeradorG
             className="p-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white rounded-xl transition-all border border-white/5 text-xs font-bold flex items-center gap-1.5 cursor-pointer h-10 px-3"
             title="Recomeçar animação de entrada"
           >
-            <Play size={14} className="text-amber-500 fill-amber-500" />
+            <Play size={14} className="text-violet-400 fill-amber-500" />
             <span>Ver Animação</span>
           </button>
         </div>
@@ -472,7 +472,7 @@ export function GeradorGcTv({ customApiKey, showToast: propShowToast }: GeradorG
             </label>
             
             {refImageBase64 ? (
-              <div className="relative rounded-2xl overflow-hidden border border-[#c5a880]/40 group aspect-[16/9] bg-black">
+              <div className="relative rounded-2xl overflow-hidden border border-violet-500/40 group aspect-[16/9] bg-black">
                 <img 
                   src={refImageBase64} 
                   alt="GC Referência" 
@@ -496,9 +496,9 @@ export function GeradorGcTv({ customApiKey, showToast: propShowToast }: GeradorG
             ) : (
               <div 
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-zinc-800 hover:border-[#c5a880]/50 rounded-2xl p-6 text-center cursor-pointer transition-all bg-black/20 hover:bg-black/40 flex flex-col items-center justify-center gap-3 aspect-[16/9]"
+                className="border-2 border-dashed border-zinc-800 hover:border-violet-500/50 rounded-2xl p-6 text-center cursor-pointer transition-all bg-black/20 hover:bg-black/40 flex flex-col items-center justify-center gap-3 aspect-[16/9]"
               >
-                <div className="w-12 h-12 rounded-xl bg-zinc-900 border border-white/5 flex items-center justify-center text-zinc-400 group-hover:text-[#c5a880] transition-colors">
+                <div className="w-12 h-12 rounded-xl bg-zinc-900 border border-white/5 flex items-center justify-center text-zinc-400 group-hover:text-violet-400 transition-colors">
                   <Upload size={20} />
                 </div>
                 <div>
@@ -525,7 +525,7 @@ export function GeradorGcTv({ customApiKey, showToast: propShowToast }: GeradorG
               value={userPrompt}
               onChange={(e) => setUserPrompt(e.target.value)}
               placeholder="Ex: Altere o badge de AO VIVO para PLANTÃO e use cores que combinem com a marca..."
-              className="w-full bg-black/60 border border-zinc-800 focus:border-[#c5a880] rounded-xl px-3.5 py-3 text-white text-xs placeholder-zinc-600 focus:outline-none resize-none h-28 leading-relaxed font-medium transition-colors"
+              className="w-full bg-black/60 border border-zinc-800 focus:border-violet-500 rounded-xl px-3.5 py-3 text-white text-xs placeholder-zinc-600 focus:outline-none resize-none h-28 leading-relaxed font-medium transition-colors"
             />
           </div>
 
@@ -537,7 +537,7 @@ export function GeradorGcTv({ customApiKey, showToast: propShowToast }: GeradorG
                 <button
                   key={idx}
                   onClick={() => setUserPrompt(promptText)}
-                  className="text-[10px] text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 border border-white/5 hover:border-[#c5a880]/30 rounded-lg px-2.5 py-1.5 text-left transition-all font-medium cursor-pointer"
+                  className="text-[10px] text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 border border-white/5 hover:border-violet-500/30 rounded-lg px-2.5 py-1.5 text-left transition-all font-medium cursor-pointer"
                 >
                   {promptText}
                 </button>
@@ -553,7 +553,7 @@ export function GeradorGcTv({ customApiKey, showToast: propShowToast }: GeradorG
             <select
               value={layoutStyleHint}
               onChange={(e) => setLayoutStyleHint(e.target.value)}
-              className="w-full bg-black/60 border border-zinc-800 focus:border-[#c5a880] rounded-xl px-3.5 py-2.5 text-white font-bold text-xs focus:outline-none cursor-pointer transition-colors"
+              className="w-full bg-black/60 border border-zinc-800 focus:border-violet-500 rounded-xl px-3.5 py-2.5 text-white font-bold text-xs focus:outline-none cursor-pointer transition-colors"
             >
               <option value="auto">Auto-detectar da imagem (Recomendado)</option>
               <option value="jornalismo">Jornalismo / Tarja Dupla</option>
@@ -572,7 +572,7 @@ export function GeradorGcTv({ customApiKey, showToast: propShowToast }: GeradorG
                 ? "bg-zinc-900 border-zinc-800 text-zinc-500 cursor-not-allowed"
                 : !refImageBase64
                 ? "bg-zinc-900 border-zinc-800 text-zinc-600 cursor-not-allowed"
-                : "bg-amber-500 text-black border-amber-400 hover:bg-amber-400 hover:shadow-lg hover:shadow-amber-500/10"
+                : "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white border-violet-500 hover:bg-violet-600 hover:shadow-lg hover:shadow-violet-600/10"
             }`}
           >
             {isScanning ? (
@@ -657,7 +657,7 @@ export function GeradorGcTv({ customApiKey, showToast: propShowToast }: GeradorG
                   onClick={() => setActiveTab(tab.id as any)}
                   className={`px-4 h-9 rounded-lg text-xs font-black uppercase tracking-wide flex items-center gap-1.5 transition-all cursor-pointer ${
                     activeTab === tab.id
-                      ? "bg-[#c5a880]/15 text-[#c5a880] border border-[#c5a880]/30"
+                      ? "bg-violet-500/15 text-violet-400 border border-violet-500/30"
                       : "text-zinc-400 hover:text-white hover:bg-white/5"
                   }`}
                 >
@@ -678,7 +678,7 @@ export function GeradorGcTv({ customApiKey, showToast: propShowToast }: GeradorG
 
               <button
                 onClick={handleDownloadGtZip}
-                className="h-8 px-3 bg-amber-500 hover:bg-amber-400 text-black rounded-lg text-[10px] font-black uppercase tracking-wider border border-amber-400 flex items-center gap-1.5 cursor-pointer"
+                className="h-8 px-3 bg-[#a855f7] hover:bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-lg text-[10px] font-black uppercase tracking-wider border border-violet-500 flex items-center gap-1.5 cursor-pointer"
               >
                 <FileCheck size={11} />
                 <span>Baixar .gtzip</span>
@@ -693,7 +693,7 @@ export function GeradorGcTv({ customApiKey, showToast: propShowToast }: GeradorG
                 
                 {/* 1. Content Fields */}
                 <div className="space-y-4">
-                  <h4 className="text-xs font-black uppercase tracking-widest text-[#c5a880]">Conteúdo e Textos</h4>
+                  <h4 className="text-xs font-black uppercase tracking-widest text-violet-400">Conteúdo e Textos</h4>
                   
                   {scanData.layoutStyle === "esportes" ? (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -703,7 +703,7 @@ export function GeradorGcTv({ customApiKey, showToast: propShowToast }: GeradorG
                           type="text"
                           value={scanData.roundText || ""}
                           onChange={(e) => setScanData({ ...scanData, roundText: e.target.value })}
-                          className="w-full bg-black/60 border border-zinc-800 rounded-lg px-3 py-2 text-white text-xs font-bold focus:outline-none focus:border-[#c5a880]"
+                          className="w-full bg-black/60 border border-zinc-800 rounded-lg px-3 py-2 text-white text-xs font-bold focus:outline-none focus:border-violet-500"
                         />
                       </div>
                       <div className="space-y-1.5">
@@ -712,7 +712,7 @@ export function GeradorGcTv({ customApiKey, showToast: propShowToast }: GeradorG
                           type="text"
                           value={scanData.clock || ""}
                           onChange={(e) => setScanData({ ...scanData, clock: e.target.value })}
-                          className="w-full bg-black/60 border border-zinc-800 rounded-lg px-3 py-2 text-white text-xs font-mono font-bold focus:outline-none focus:border-[#c5a880]"
+                          className="w-full bg-black/60 border border-zinc-800 rounded-lg px-3 py-2 text-white text-xs font-mono font-bold focus:outline-none focus:border-violet-500"
                         />
                       </div>
                       <div className="space-y-1.5">
@@ -721,7 +721,7 @@ export function GeradorGcTv({ customApiKey, showToast: propShowToast }: GeradorG
                           type="text"
                           value={scanData.score || ""}
                           onChange={(e) => setScanData({ ...scanData, score: e.target.value })}
-                          className="w-full bg-black/60 border border-zinc-800 rounded-lg px-3 py-2 text-white text-xs font-bold focus:outline-none focus:border-[#c5a880] text-center"
+                          className="w-full bg-black/60 border border-zinc-800 rounded-lg px-3 py-2 text-white text-xs font-bold focus:outline-none focus:border-violet-500 text-center"
                         />
                       </div>
                       <div className="space-y-1.5">
@@ -730,7 +730,7 @@ export function GeradorGcTv({ customApiKey, showToast: propShowToast }: GeradorG
                           type="text"
                           value={scanData.homeTeam || ""}
                           onChange={(e) => setScanData({ ...scanData, homeTeam: e.target.value })}
-                          className="w-full bg-black/60 border border-zinc-800 rounded-lg px-3 py-2 text-white text-xs font-bold focus:outline-none focus:border-[#c5a880]"
+                          className="w-full bg-black/60 border border-zinc-800 rounded-lg px-3 py-2 text-white text-xs font-bold focus:outline-none focus:border-violet-500"
                         />
                       </div>
                       <div className="space-y-1.5">
@@ -739,7 +739,7 @@ export function GeradorGcTv({ customApiKey, showToast: propShowToast }: GeradorG
                           type="text"
                           value={scanData.awayTeam || ""}
                           onChange={(e) => setScanData({ ...scanData, awayTeam: e.target.value })}
-                          className="w-full bg-black/60 border border-zinc-800 rounded-lg px-3 py-2 text-white text-xs font-bold focus:outline-none focus:border-[#c5a880]"
+                          className="w-full bg-black/60 border border-zinc-800 rounded-lg px-3 py-2 text-white text-xs font-bold focus:outline-none focus:border-violet-500"
                         />
                       </div>
                     </div>
@@ -751,7 +751,7 @@ export function GeradorGcTv({ customApiKey, showToast: propShowToast }: GeradorG
                           type="text"
                           value={scanData.gcBadge || ""}
                           onChange={(e) => setScanData({ ...scanData, gcBadge: e.target.value })}
-                          className="w-full bg-black/60 border border-zinc-800 rounded-lg px-3 py-2 text-white text-xs font-bold focus:outline-none focus:border-[#c5a880]"
+                          className="w-full bg-black/60 border border-zinc-800 rounded-lg px-3 py-2 text-white text-xs font-bold focus:outline-none focus:border-violet-500"
                         />
                       </div>
                       <div className="space-y-1.5 md:col-span-1">
@@ -760,7 +760,7 @@ export function GeradorGcTv({ customApiKey, showToast: propShowToast }: GeradorG
                           type="text"
                           value={scanData.gcTitle || ""}
                           onChange={(e) => setScanData({ ...scanData, gcTitle: e.target.value })}
-                          className="w-full bg-black/60 border border-zinc-800 rounded-lg px-3 py-2 text-white text-xs font-bold focus:outline-none focus:border-[#c5a880]"
+                          className="w-full bg-black/60 border border-zinc-800 rounded-lg px-3 py-2 text-white text-xs font-bold focus:outline-none focus:border-violet-500"
                         />
                       </div>
                       <div className="space-y-1.5 md:col-span-1">
@@ -769,7 +769,7 @@ export function GeradorGcTv({ customApiKey, showToast: propShowToast }: GeradorG
                           type="text"
                           value={scanData.gcSubtitle || ""}
                           onChange={(e) => setScanData({ ...scanData, gcSubtitle: e.target.value })}
-                          className="w-full bg-black/60 border border-zinc-800 rounded-lg px-3 py-2 text-white text-xs font-bold focus:outline-none focus:border-[#c5a880]"
+                          className="w-full bg-black/60 border border-zinc-800 rounded-lg px-3 py-2 text-white text-xs font-bold focus:outline-none focus:border-violet-500"
                         />
                       </div>
                     </div>
@@ -778,7 +778,7 @@ export function GeradorGcTv({ customApiKey, showToast: propShowToast }: GeradorG
 
                 {/* 2. Color Controls */}
                 <div className="space-y-4">
-                  <h4 className="text-xs font-black uppercase tracking-widest text-[#c5a880]">Cores e Estilo Visual</h4>
+                  <h4 className="text-xs font-black uppercase tracking-widest text-violet-400">Cores e Estilo Visual</h4>
                   
                   <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3">
                     <div className="space-y-1.5">
@@ -879,13 +879,13 @@ export function GeradorGcTv({ customApiKey, showToast: propShowToast }: GeradorG
                   
                   {/* Geometry Sliders */}
                   <div className="space-y-4">
-                    <h4 className="text-xs font-black uppercase tracking-widest text-[#c5a880]">Dimensões e Cantos</h4>
+                    <h4 className="text-xs font-black uppercase tracking-widest text-violet-400">Dimensões e Cantos</h4>
                     
                     <div className="space-y-3.5 bg-black/40 border border-zinc-900 rounded-xl p-4">
                       <div className="space-y-1">
                         <div className="flex justify-between text-[10px] font-bold text-zinc-400 uppercase">
                           <span>Altura da Barra (WPF)</span>
-                          <span className="text-[#c5a880]">{scanData.barHeight || 170} px</span>
+                          <span className="text-violet-400">{scanData.barHeight || 170} px</span>
                         </div>
                         <input
                           type="range"
@@ -900,7 +900,7 @@ export function GeradorGcTv({ customApiKey, showToast: propShowToast }: GeradorG
                       <div className="space-y-1">
                         <div className="flex justify-between text-[10px] font-bold text-zinc-400 uppercase">
                           <span>Arredondamento dos Cantos</span>
-                          <span className="text-[#c5a880]">{scanData.barCornerRadius || 12} px</span>
+                          <span className="text-violet-400">{scanData.barCornerRadius || 12} px</span>
                         </div>
                         <input
                           type="range"
@@ -915,7 +915,7 @@ export function GeradorGcTv({ customApiKey, showToast: propShowToast }: GeradorG
                       <div className="space-y-1">
                         <div className="flex justify-between text-[10px] font-bold text-zinc-400 uppercase">
                           <span>Opacidade de Fundo</span>
-                          <span className="text-[#c5a880]">{Math.round((scanData.barOpacity || 0.95) * 100)} %</span>
+                          <span className="text-violet-400">{Math.round((scanData.barOpacity || 0.95) * 100)} %</span>
                         </div>
                         <input
                           type="range"
@@ -931,7 +931,7 @@ export function GeradorGcTv({ customApiKey, showToast: propShowToast }: GeradorG
 
                   {/* Logo Config */}
                   <div className="space-y-4">
-                    <h4 className="text-xs font-black uppercase tracking-widest text-[#c5a880]">Logotipo da Transmissão</h4>
+                    <h4 className="text-xs font-black uppercase tracking-widest text-violet-400">Logotipo da Transmissão</h4>
                     
                     <div className="bg-black/40 border border-zinc-900 rounded-xl p-4 space-y-4">
                       <div className="flex items-center justify-between">
@@ -965,7 +965,7 @@ export function GeradorGcTv({ customApiKey, showToast: propShowToast }: GeradorG
                           
                           <button
                             onClick={() => logoInputRef.current?.click()}
-                            className="h-7 px-2.5 bg-zinc-900 hover:bg-zinc-800 text-[#c5a880] border border-[#c5a880]/30 rounded-lg text-[9px] font-extrabold uppercase tracking-widest flex items-center gap-1 cursor-pointer transition-colors"
+                            className="h-7 px-2.5 bg-zinc-900 hover:bg-zinc-800 text-violet-400 border border-violet-500/30 rounded-lg text-[9px] font-extrabold uppercase tracking-widest flex items-center gap-1 cursor-pointer transition-colors"
                           >
                             <Upload size={10} />
                             <span>Alterar</span>
@@ -991,7 +991,7 @@ export function GeradorGcTv({ customApiKey, showToast: propShowToast }: GeradorG
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="text-xs font-black uppercase tracking-widest text-[#c5a880]">Código de Markup WPF XAML</h4>
+                    <h4 className="text-xs font-black uppercase tracking-widest text-violet-400">Código de Markup WPF XAML</h4>
                     <p className="text-[10px] text-zinc-500 mt-0.5">Compatível com vMix overlays nativos e renderização por hardware.</p>
                   </div>
                   
@@ -1019,9 +1019,9 @@ export function GeradorGcTv({ customApiKey, showToast: propShowToast }: GeradorG
                   </pre>
                 </div>
 
-                <div className="bg-[#111115] border border-[#c5a880]/20 rounded-xl p-4 flex flex-col sm:flex-row items-center sm:justify-between gap-4">
+                <div className="bg-[#111115] border border-violet-500/20 rounded-xl p-4 flex flex-col sm:flex-row items-center sm:justify-between gap-4">
                   <div className="flex items-start gap-2.5 min-w-0">
-                    <div className="w-8 h-8 rounded bg-[#c5a880]/10 border border-[#c5a880]/20 flex items-center justify-center text-[#c5a880] shrink-0 mt-0.5">
+                    <div className="w-8 h-8 rounded bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400 shrink-0 mt-0.5">
                       <FileCode size={16} />
                     </div>
                     <div>
@@ -1041,7 +1041,7 @@ export function GeradorGcTv({ customApiKey, showToast: propShowToast }: GeradorG
 
                     <button
                       onClick={handleDownloadGtZip}
-                      className="flex-1 sm:flex-none h-9 px-4 bg-amber-500 hover:bg-amber-400 text-black rounded-lg text-xs font-black uppercase tracking-wider border border-amber-400 flex items-center justify-center gap-1.5 cursor-pointer"
+                      className="flex-1 sm:flex-none h-9 px-4 bg-[#a855f7] hover:bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-lg text-xs font-black uppercase tracking-wider border border-violet-500 flex items-center justify-center gap-1.5 cursor-pointer"
                     >
                       <FileCheck size={13} />
                       <span>Baixar .gtzip</span>
@@ -1054,7 +1054,7 @@ export function GeradorGcTv({ customApiKey, showToast: propShowToast }: GeradorG
             {activeTab === "guia" && (
               <div className="max-w-3xl space-y-5">
                 <div className="space-y-1">
-                  <h4 className="text-xs font-black uppercase tracking-widest text-[#c5a880]">Manual Prático de Importação no vMix</h4>
+                  <h4 className="text-xs font-black uppercase tracking-widest text-violet-400">Manual Prático de Importação no vMix</h4>
                   <p className="text-[10px] text-zinc-500">Duas alternativas fáceis para carregar suas artes geradas no software de transmissão.</p>
                 </div>
 
@@ -1076,7 +1076,7 @@ export function GeradorGcTv({ customApiKey, showToast: propShowToast }: GeradorG
 
                   {/* Método 2 */}
                   <div className="bg-black/40 border border-zinc-900 rounded-xl p-4 space-y-2.5">
-                    <span className="text-[9px] font-black uppercase tracking-widest text-amber-400 bg-[#c5a880]/10 border border-[#c5a880]/25 px-2 py-0.5 rounded">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-violet-400 bg-violet-500/10 border border-violet-500/25 px-2 py-0.5 rounded">
                       Método 2: Pacote .gtzip
                     </span>
                     <h5 className="text-[11px] font-bold text-white">Ideal para GT Title Designer</h5>

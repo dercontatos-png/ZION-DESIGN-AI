@@ -388,7 +388,7 @@ export function generateScriptPdf(
 
   // Colors
   const darkBg = [20, 20, 24];
-  const goldAccent = [197, 168, 128];
+  const goldAccent = [188, 132, 35];
   const textColor = [235, 235, 240];
   const subtextColor = [160, 160, 170];
 

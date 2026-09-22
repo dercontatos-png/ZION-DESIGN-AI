@@ -28,6 +28,9 @@ import {
   Plus,
   FolderOpen,
   Maximize2, Settings,
+  Sun,
+  Box,
+  Users,
   Minimize2,
   Loader2,
   Instagram,
@@ -61,40 +64,85 @@ interface ChatAssistenteProps {
   customApiKey: string;
   showToast: (msg: string, type: "success" | "error" | "warning") => void;
   onGenerateImage?: () => void;
+  activeAgentSlug?: string;
+  onApplyPrompt?: (prompt: string) => void;
 }
 
 
 const assistants: AssistantConfig[] = [
+  // ── 6 SUÍTE DE DIRETORES CRIATIVOS POR ÁREA (DESIGN BUILDER / ZION) ──
+  { id: "orion-pro", label: "Diretor: Órion Pro", sublabel: "Direção de Arte Cósmica & Liberdade", desc: "Direção de arte cósmica com liberdade criativa total, cinematografia e prompts mestres.", icon: <Sparkles size={14} />, color: "#ffd500" },
+  { id: "enhance-builder", label: "Diretor: Enhance", sublabel: "Restauração, Upscale 4K & Pele Real", desc: "Restauração, upscale 4K, hiper-realismo de pele/poros e remoção de aspecto artificial de IA.", icon: <Sun size={14} />, color: "#7c3aed" },
+  { id: "ref", label: "Diretor: REF Builder", sublabel: "Clonagem & Engenharia de Referências", desc: "Engenharia reversa de posters do Pinterest/Behance para transpor para sua marca.", icon: <Layers size={14} />, color: "#8B5CF6" },
+  { id: "hydra", label: "Diretor: Hydra", sublabel: "Fotos de Produtos 3D & E-commerce", desc: "Packshots comerciais de alta conversão, estúdio fotográfico, reflexos e sombras realistas.", icon: <Box size={14} />, color: "#8B5CF6" },
+  { id: "design-builder1-2", label: "Diretor: Design Builder 1.2", sublabel: "Flyers Comerciais & Social Media", desc: "Campanhas publicitárias, headlines magnéticas, títulos dominantes e conversão.", icon: <Megaphone size={14} />, color: "#7c3aed" },
+  { id: "altera-facil", label: "Diretor: Altera Fácil", sublabel: "Consistência de Identidade, Poses & Roupas", desc: "Troca de vestimentas, poses e expressões mantendo 100% da fisionomia do sujeito.", icon: <Users size={14} />, color: "#a855f7" },
   // Top Featured Agents
-  { id: "diretor-criativo", label: "Diretor Criativo IA", sublabel: "Direção de Arte & Marca", desc: "Avance além do bloqueio criativo com orientações estratégicas de design de alto impacto.", icon: <Eye size={14} />, color: "#ad8330" },
-  { id: "copy-legendas-instagram", label: "Especialista em Legendas Instagram", sublabel: "Legendas, Engajamento & Hashtags", desc: "Crie legendas altamente engajadoras para Instagram com emojis, chamadas para ação e hashtags de alto alcance prontas para copiar.", icon: <Instagram size={14} />, color: "#e1306c" },
+  { id: "diretor-criativo", label: "Diretor Criativo IA", sublabel: "Direção de Arte & Marca", desc: "Avance além do bloqueio criativo com orientações estratégicas de design de alto impacto.", icon: <Eye size={14} />, color: "#a855f7" },
+  { id: "copy-legendas-instagram", label: "Especialista em Legendas Instagram", sublabel: "Legendas, Engajamento & Hashtags", desc: "Crie legendas altamente engajadoras para Instagram com emojis, chamadas para ação e hashtags de alto alcance prontas para copiar.", icon: <Instagram size={14} />, color: "#a855f7" },
   
   // Designers / Creators
-  { id: "gc-tv-specialist", label: "Gerador de Tarjas & Caracteres (TV)", sublabel: "Especialista em Transmissão", desc: "Crie tarjas, lower-thirds e elementos visuais profissionais para programas, matérias e transmissões ao vivo.", icon: <Zap size={14} />, color: "#38bdf8" },
-  { id: "prompt-extrator", label: "Extrator de Instruções", sublabel: "Analista de Instruções Visuais", desc: "Decodifique a estrutura e os parâmetros técnicos de referências visuais para reprodução exata.", icon: <Code size={14} />, color: "#ad8330" },
-  { id: "creative-assistant", label: "Assistente de Composição", sublabel: "Consultor de Estilo & Iluminação", desc: "Receba direcionamentos conceituais de iluminação, paletas de cores, enquadramento e cenografia.", icon: <Sparkles size={14} />, color: "#d4af37" },
-  { id: "analisador-paginas", label: "Analisador de Design", sublabel: "Auditoria Visual & Usabilidade", desc: "Submeta artes e layouts para diagnósticos profissionais de hierarquia, contraste e legibilidade.", icon: <Search size={14} />, color: "#ffffff" },
+  { id: "gc-tv-specialist", label: "Gerador de Tarjas & Caracteres (TV)", sublabel: "Especialista em Transmissão", desc: "Crie tarjas, lower-thirds e elementos visuais profissionais para programas, matérias e transmissões ao vivo.", icon: <Zap size={14} />, color: "#a855f7" },
+  { id: "prompt-extrator", label: "Extrator de Instruções", sublabel: "Analista de Instruções Visuais", desc: "Decodifique a estrutura e os parâmetros técnicos de referências visuais para reprodução exata.", icon: <Code size={14} />, color: "#7c3aed" },
+  { id: "creative-assistant", label: "Assistente de Composição", sublabel: "Consultor de Estilo & Iluminação", desc: "Receba direcionamentos conceituais de iluminação, paletas de cores, enquadramento e cenografia.", icon: <Sparkles size={14} />, color: "#a855f7" },
+  { id: "analisador-paginas", label: "Analisador de Design", sublabel: "Auditoria Visual & Usabilidade", desc: "Submeta artes e layouts para diagnósticos profissionais de hierarquia, contraste e legibilidade.", icon: <Search size={14} />, color: "#a855f7" },
   
   // Copywriters & Marketers
-  { id: "copy-ads", label: "Redator de Anúncios", sublabel: "Especialista em Performance", desc: "Desenvolva textos de alta conversão estruturados com ganchos, quebra de objeções e chamadas para ação.", icon: <Megaphone size={14} />, color: "#ad8330" },
-  { id: "copy-carroseis", label: "Redator de Carrosséis", sublabel: "Engajamento & Conteúdo", desc: "Crie narrativas envolventes em carrosséis que retêm a atenção e conduzem o público até a conversão.", icon: <Layers size={14} />, color: "#d4af37" },
-  { id: "easy-copy", label: "Redator de Textos de Venda", sublabel: "Textos de Venda & Páginas", desc: "Produza copys completas para landing pages, e-mails e páginas de vendas em qualquer segmento.", icon: <FileText size={14} />, color: "#ad8330" },
+  { id: "copy-ads", label: "Redator de Anúncios", sublabel: "Especialista em Performance", desc: "Desenvolva textos de alta conversão estruturados com ganchos, quebra de objeções e chamadas para ação.", icon: <Megaphone size={14} />, color: "#7c3aed" },
+  { id: "copy-carroseis", label: "Redator de Carrosséis", sublabel: "Engajamento & Conteúdo", desc: "Crie narrativas envolventes em carrosséis que retêm a atenção e conduzem o público até a conversão.", icon: <Layers size={14} />, color: "#a855f7" },
+  { id: "easy-copy", label: "Redator de Textos de Venda", sublabel: "Textos de Venda & Páginas", desc: "Produza copys completas para landing pages, e-mails e páginas de vendas em qualquer segmento.", icon: <FileText size={14} />, color: "#7c3aed" },
   
   // Strategists
-  { id: "analise-estrategica", label: "Análise Estratégica", sublabel: "Inteligência de Mercado", desc: "Mapeie dores reais do cliente, analise concorrentes e estruture propostas de valor irresistíveis.", icon: <Check size={14} />, color: "#4f46e5" },
-  { id: "icp", label: "Cliente Ideal & Posicionamento", sublabel: "Estratégia de Marca", desc: "Defina o perfil de cliente ideal e consolide uma presença de marca com alta autoridade no mercado.", icon: <Check size={14} />, color: "#4f46e5" },
+  { id: "analise-estrategica", label: "Análise Estratégica", sublabel: "Inteligência de Mercado", desc: "Mapeie dores reais do cliente, analise concorrentes e estruture propostas de valor irresistíveis.", icon: <Check size={14} />, color: "#a855f7" },
+  { id: "icp", label: "Cliente Ideal & Posicionamento", sublabel: "Estratégia de Marca", desc: "Defina o perfil de cliente ideal e consolide uma presença de marca com alta autoridade no mercado.", icon: <Check size={14} />, color: "#a855f7" },
   
   // Sales
-  { id: "atendimento", label: "Atendimento & Negociação", sublabel: "Gestão de Objeções", desc: "Conduza reuniões e diálogos comerciais com técnicas que aceleram a decisão do cliente.", icon: <Check size={14} />, color: "#10b981" },
-  { id: "webson-vendedor", label: "Consultor de Vendas IA", sublabel: "Fechamento Comercial", desc: "Analise conversas com clientes em potencial e receba respostas prontas para superar objeções de negociação.", icon: <Check size={14} />, color: "#10b981" },
+  { id: "atendimento", label: "Atendimento & Negociação", sublabel: "Gestão de Objeções", desc: "Conduza reuniões e diálogos comerciais com técnicas que aceleram a decisão do cliente.", icon: <Check size={14} />, color: "#7c3aed" },
+  { id: "webson-vendedor", label: "Consultor de Vendas IA", sublabel: "Fechamento Comercial", desc: "Analise conversas com clientes em potencial e receba respostas prontas para superar objeções de negociação.", icon: <Check size={14} />, color: "#a855f7" },
   
   // Dev & Sites
-  { id: "estrutura-sites", label: "Arquiteto de Páginas de Venda", sublabel: "Arquitetura de Informação", desc: "Estruture wireframes e seções estratégicas otimizadas para taxa de conversão e navegabilidade.", icon: <Code size={14} />, color: "#3b82f6" },
-  { id: "easy-coder", label: "Assistente de Código para Sites", sublabel: "Desenvolvimento Front-end", desc: "Receba trechos de código limpo em HTML, CSS, JavaScript e React prontos para implementação.", icon: <Code size={14} />, color: "#3b82f6" },
-  { id: "easy-image", label: "Gerador Visual de Imagens", sublabel: "Sintetizador Gráfico", desc: "Gere imagens realistas e ilustrações técnicas com alto nível de detalhamento descritivo.", icon: <ImageIcon size={14} />, color: "#ec4899" },
+  { id: "estrutura-sites", label: "Arquiteto de Páginas de Venda", sublabel: "Arquitetura de Informação", desc: "Estruture wireframes e seções estratégicas otimizadas para taxa de conversão e navegabilidade.", icon: <Code size={14} />, color: "#a855f7" },
+  { id: "easy-coder", label: "Assistente de Código para Sites", sublabel: "Desenvolvimento Front-end", desc: "Receba trechos de código limpo em HTML, CSS, JavaScript e React prontos para implementação.", icon: <Code size={14} />, color: "#7c3aed" },
+  { id: "easy-image", label: "Gerador Visual de Imagens", sublabel: "Sintetizador Gráfico", desc: "Gere imagens realistas e ilustrações técnicas com alto nível de detalhamento descritivo.", icon: <ImageIcon size={14} />, color: "#a855f7" },
 ];
 
 const ASSISTANT_SUGGESTIONS: Record<string, string[]> = {
+  "orion-pro": [
+    "Crie uma direção de arte cósmica para lançamento premium",
+    "Sugira iluminação cinematográfica dramática com lente 85mm",
+    "Como harmonizar o sujeito com um cenário futurista minimalista?",
+    "Gere o Prompt Mestre completo com liberdade criativa máxima"
+  ],
+  "enhance-builder": [
+    "Como eliminar o efeito emborrachado/plástico de IA da pele?",
+    "Quais termos de prompt reforçam poros reais e fios de cabelo?",
+    "Instruções para retoque editorial preservando traços do rosto",
+    "Configurar parâmetros para super-resolução e nitidez em 4K"
+  ],
+  "ref": [
+    "Como clonar o estilo deste poster do Pinterest para meu nicho?",
+    "Decodifique a paleta de cores e a iluminação desta referência",
+    "Qual a diagramação de texto ideal inspirada no Behance?",
+    "Como manter a estética da referência sem fazer cópia idêntica?"
+  ],
+  "hydra": [
+    "Iluminação de estúdio para frasco de perfume de luxo com reflexos",
+    "Cenografia para cosmético sobre pódio de mármore e respingos d'água",
+    "Packshot de suplemento com fundo escuro e luz de recorte",
+    "Como criar sombras de contato realistas que eliminam aspecto flutuante?"
+  ],
+  "design-builder1-2": [
+    "Crie 3 opções de títulos dominantes para anúncio de Black Friday",
+    "Estruture a hierarquia visual completa para um flyer de evento",
+    "Sugira elementos gráficos 3D flutuantes que combinam com tecnologia",
+    "Como garantir 100% de contraste de leitura para o feed do Instagram?"
+  ],
+  "altera-facil": [
+    "Como trocar o blazer preto por terno azul mantendo o caimento?",
+    "Instrução para alterar pose de braços cruzados para segurar celular",
+    "Mudar expressão de sério para sorriso discreto mantendo o mesmo rosto",
+    "Crie um lookbook consistente com a mesma modelo em 4 roupas diferentes"
+  ],
   "diretor-criativo": [
     "Como melhorar o contraste e a iluminação desta arte?",
     "Sugira uma paleta de cores premium para marca de luxo",
@@ -190,7 +238,7 @@ const formatMessage = (text: string) => {
       <span key={i}>
         {parts.map((part, j) =>
           part.startsWith("**") && part.endsWith("**") ? (
-            <strong key={j} className="font-black text-[#c5a880]">{part.slice(2, -2)}</strong>
+            <strong key={j} className="font-black text-violet-400">{part.slice(2, -2)}</strong>
           ) : (
             <span key={j}>{part}</span>
           )
@@ -238,11 +286,21 @@ const compressImage = (base64Str: string, maxWidth = 1280, maxHeight = 1280, qua
 
 
 
-export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, showToast, onGenerateImage }) => {
+export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, showToast, onGenerateImage, activeAgentSlug, onApplyPrompt }) => {
   const store = useProjectStore();
   const { clients, activeClientId, setActiveClient, appendAiLearnings } = useClientStore();
   const { chatDrawerOpen, setChatDrawerOpen, chatActiveAssistantId, setChatActiveAssistantId } = useProjectStore();
   const [activeAssistant, setActiveAssistant] = useState<AssistantConfig>(assistants[0]);
+
+  useEffect(() => {
+    const slugToUse = activeAgentSlug || chatActiveAssistantId;
+    if (slugToUse) {
+      const found = assistants.find(a => a.id === slugToUse || a.id.includes(slugToUse));
+      if (found) {
+        setActiveAssistant(found);
+      }
+    }
+  }, [activeAgentSlug, chatActiveAssistantId]);
 
   useEffect(() => {
     if (chatActiveAssistantId) {
@@ -259,10 +317,13 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
   const [agentCategoryFilter, setAgentCategoryFilter] = useState<'all' | 'design' | 'copy' | 'vendas' | 'dev'>('all');
   const [agentSearch, setAgentSearch] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<string>("gemini-3.7-flash");
+  const selectedModel = store.selectedAiModel || "deepseek-v4-flash";
+  const setSelectedModel = store.setSelectedAiModel;
   const [showModelSettings, setShowModelSettings] = useState(false);
   const [isCheckingModels, setIsCheckingModels] = useState(false);
   const [modelStatuses, setModelStatuses] = useState<Record<string, { status: string; statusText: string; latencyMs?: number | null }>>({
+    "deepseek-v4-flash": { status: "online", statusText: "Online 🟢", latencyMs: 1600 },
+    "deepseek-v4-flash-vision-exp": { status: "online", statusText: "Online 🟢", latencyMs: 1800 },
     "gemini-3.7-flash": { status: "online", statusText: "Online 🟢", latencyMs: 800 },
     "gemini-3.6-flash": { status: "online", statusText: "Online 🟢", latencyMs: 650 },
     "gemini-3.1-pro-preview": { status: "online", statusText: "Online 🟢", latencyMs: 1100 },
@@ -401,10 +462,23 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
     try {
       const projId = store.activeProjectId || "default_project";
       idbSet(`zion_assistant_chats_${projId}`, chats).catch(e => console.error("Error saving chat history IDB:", e));
-      localStorage.setItem(`zion_assistant_chats_${projId}`, JSON.stringify(chats));
-      localStorage.setItem("zion_assistant_chats_default", JSON.stringify(chats));
+      
+      try {
+        const safeSerialized = JSON.stringify(chats, (key, value) => {
+          if (typeof value === "string" && value.startsWith("data:") && value.length > 500) {
+            return "[image_data]";
+          }
+          return value;
+        });
+        if (safeSerialized.length < 500000) {
+          localStorage.setItem(`zion_assistant_chats_${projId}`, safeSerialized);
+          localStorage.setItem("zion_assistant_chats_default", safeSerialized);
+        }
+      } catch {
+        // Quota exceeded in localStorage is ignored since IndexedDB contains the complete history
+      }
     } catch (e) {
-      console.error("Error saving chat history:", e);
+      // IndexedDB persistence handler
     }
   }, [chats, store.activeProjectId, isLoaded]);
   const [inputText, setInputText] = useState("");
@@ -629,7 +703,6 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
 
       if (newLogos.length > 0) {
         store.setLogosList(newLogos);
-        store.setLogoBase64(newLogos[0]);
         store.updateConfig({ logoBase64: newLogos[0], useLogo: true });
       }
       if (newScenes.length > 0) {
@@ -667,7 +740,8 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
 
     const configContext = isCopyOrTextAssistant ? "" : `
 [ATENÇÃO DIRETOR CRIATIVO / ASSISTENTE]: Aja como um Diretor de Criação interagindo no bate-papo. Converse naturalmente com o usuário, tire dúvidas e dê opiniões como um humano. NÃO apenas vomite código.
-Quando o usuário pedir para alterar o design, ou enviar arquivos de referência, você deve conversar com ele E incluir um bloco JSON OCULTO no final da sua mensagem para automatizar a interface.
+Quando o usuário pedir para criar um card/flyer/arte para qualquer tema ou nicho (ex: "Crie um card para advogado criminalista", "faça um card para pizzaria"), NUNCA faça perguntas antes de gerar o JSON: tome a iniciativa imediatamente e crie a proposta completa com textos reais persuasivos para o nicho, paleta de cores, enquadramento, cenário, sujeito e efeitos, e inclua SEMPRE o bloco JSON completo no final da sua mensagem com "substituirConfig": true e "substituirImagens": true para preencher o editor automaticamente.
+Quando o usuário pedir para alterar o design, ou enviar arquivos de referência, converse amigavelmente E inclua o bloco JSON no final da mensagem.
 IMPORTANTE: Você é um assistente. Você NÃO gera a imagem diretamente. Você apenas configura a interface. Sempre instrua o usuário a clicar no botão "GERAR IMAGEM" no painel principal após você preparar as configurações.
 
 [CONFIGURAÇÃO ATUAL DO EDITOR]:
@@ -755,6 +829,16 @@ Regras de Automação do JSON (SEMPRE adicione no final se houver mudança de co
     - "promptDesign": "Tela plana e limpa de cor sólida."
     - "promptCenario": "Fundo azul escuro sólido (#0b1c32), acabamento fosco, cor limpa e uniforme, sem pessoas, sem texto, sem formas, sem gradientes."
     - "additionalPrompt": "Fundo totalmente limpo de cor sólida na cor exata #0b1c32, sem modelos, sem sujeitos, sem textos ou gráficos."
+13. REGRA ABSOLUTA DE CARTELA DE CORES / PALETA vs CENÁRIO (SWATCHES NUNCA SÃO CENÁRIO):
+    - Se o usuário anexar uma imagem que seja uma cartela/amostra de cores, blocos de paleta, quadradinhos de cores ou guia de marca:
+      * VOCÊ DEVE USÁ-LA EXCLUSIVAMENTE para extrair os códigos HEX para "cores": { "ambiente": "#...", "recorte": "#...", "complementar": "#..." } e "corDominante".
+      * É TERMINANTEMENTE PROIBIDO mapear imagem de paleta como "scene" (cenário) e É PROIBIDO ativar "useEnvRef": true para paletas!
+      * É TERMINANTEMENTE PROIBIDO descrever no prompt "fundo geométrico de blocos", "quadrados coloridos", "ladrilhos" ou "estampa geométrica". O fundo é uma cor sólida (#0c1c33) ou textura de estúdio limpa!
+14. REGRA ABSOLUTA DE CONTEÚDO DE TEXTO LIMPO EM 'camadasTexto':
+    - O campo "conteudo" de CADA camada de texto DEVE conter ESTRITAMENTE as palavras reais a serem escritas no flyer (ex: "POR QUE UMA NEGOCIAÇÃO NÃO SE RESOLVE DA NOITE PARA O DIA?", "planejamento.", "diálogo.", etc.).
+    - É TERMINANTEMENTE PROIBIDO colocar códigos HEX (como "#ffffff", "#d1aa3a"), asteriscos ("**") ou explicações técnicas (como "dourado #d1aa3a (destacando...)") dentro de "conteudo"!
+    - Cores pertencem EXCLUSIVAMENTE ao campo "cor" (ex: "cor": "#d1aa3a") e explicações visuais pertencem a "promptTipografia".
+    - Na lista do box central, extraia TODOS os tópicos reais da referência linha por linha (planejamento, diálogo, estudos, análise técnica, mobilização).
     - "negativePrompt": "pessoas, modelos, pessoas humanas, rosto, corpo, texto, frases, título, flyer, cartaz, neon, brilho, celular, gradientes, formas"
     - "dimensao": "3:4" (se 4:5) ou "1:1"
     - "corDominante": "#0b1c32", "useCorDominante": true, "coresAutomaticas": false
@@ -898,13 +982,18 @@ MANDATO RIGOROSO: Converse amigavelmente como Diretor de Arte primeiro E, no fin
                  inner.includes('"additionalPrompt"') || 
                  inner.includes('"promptCenario"') ||
                  inner.includes('"coresAutomaticas"') ||
-                 inner.includes('"estilosVisuais"');
+                 inner.includes('"estilosVisuais"') ||
+                 inner.includes('"camadasTexto"') ||
+                 inner.includes('"substituirConfig"') ||
+                 inner.includes('"dimensao"') ||
+                 inner.includes('"poseDescription"') ||
+                 inner.includes('"tipoPainel"');
         }
         return false;
       };
 
       if (data.response && activeAssistant.id !== "prompt-extrator" && (hasJsonBlock(data.response) || (userMsg.files && userMsg.files.length > 0))) {
-        setTimeout(() => applyModelMessageToEditor(-1, data.response, userMsg.files), 100);
+        setTimeout(() => applyModelMessageToEditor(-1, data.response, userMsg.files, userMsg.content), 100);
       }
     } catch (err: any) {
       showToast(err.message || "Falha na comunicação com a IA.", "error");
@@ -957,12 +1046,13 @@ Siga rigorosamente estas orientações de preenchimento para CADA SEÇÃO do edi
    - Caso contrário, defina "tipoPainel": "DESIGNER" (ou "PRODUCT" para produtos soltos, "LOGO" para logos).
 
 2. MAPEAMENTO DE IMAGENS (mapeamentoImagens):
-   - "logo": Logotipos. Ative "useLogo": true.
-   - "subject": Sujeitos principais/modelos/produtos. Ative o sujeito ("desativarSujeito": false, "noPeople": false).
-   - "scene": Cenários/fundo. Ative "useEnvRef": true.
-   - "design": Imagem de Referência do Layout/Design/Card.
+   - "logo": Logotipos de marcas. Ative "useLogo": true.
+   - "subject": Sujeitos principais/modelos/pessoas/produtos recortados. Ative o sujeito ("desativarSujeito": false, "noPeople": false).
+   - "scene": Cenários/fotos de ambientes reais/locais. Ative "useEnvRef": true. NUNCA use "scene" para cartelas de cores ou swatches!
+   - "design": Imagem de Referência do Layout/Design/Card institucional/flyer.
    - "typography": Print/referência de texto/tipografia. Ative "enableTypography": true.
    - "style": Referências estéticas/visuais de estilo.
+   - ATENÇÃO CARTELA DE CORES / PALETA: Se uma imagem anexada for uma cartela de amostras de cor (quadradinhos coloridos, paleta), NÃO MAPEIE COMO "scene"! Extraia apenas os códigos HEX para o campo "cores" e mantenha "useEnvRef": false.
 
 2. SUJEITO PRINCIPAL:
    - REGRA CRÍTICA DE DESATIVAÇÃO: Se a arte for de comunicado, aviso de sindicato, banner informativo, layout institucional, vetor ou se NÃO houver foto de pessoa/modelo/sujeito anexada, você DEVE definir OBRIGATORIAMENTE "desativarSujeito": true e "noPeople": true.
@@ -1118,8 +1208,8 @@ Exemplo de JSON de saída:
       }));
 
       if (data.response) {
-        setTimeout(() => applyModelMessageToEditor(-1, data.response, filesToSend), 100);
-        showToast("✨ Projeto preenchido e configurado pela IA com sucesso!", "success");
+        setTimeout(() => applyModelMessageToEditor(-1, data.response, filesToSend, textPrompt), 100);
+        showToast("Projeto preenchido e configurado pela IA com sucesso!", "success");
       }
     } catch (err: any) {
       console.error(err);
@@ -1163,12 +1253,17 @@ Exemplo de JSON de saída:
     handleSendMessage();
   };
 
-  const applyModelMessageToEditor = (msgIndex: number, content: string, attachedFilesOverride?: any[]) => {
+  const applyModelMessageToEditor = (msgIndex: number, content: string, attachedFilesOverride?: any[], userContentOverride?: string) => {
     let filledItems: string[] = [];
     let logCount = 0;
     let newLogos: string[] = [];
     let desCount = 0;
     let newDesigns: string[] = [];
+    let subCount = 0;
+    let newSubjects: string[] = [];
+    let assetCount = 0;
+    let newAssets: string[] = [];
+    let promptText = "";
     let updates: any = {};
     let jsonImageMap: Record<string, string> = {};
     let jsonStyleDescMap: Record<string, string> = {};
@@ -1454,8 +1549,9 @@ Exemplo de JSON de saída:
     };
 
     // Tenta extrair JSON do texto gerado pela IA (incluindo bloco ou simples chaves)
-    let jsonMatch = content.match(/```json\s*(\{[\s\S]*?\})\s*```/) || content.match(/```\s*(\{[\s\S]*?\})\s*```/);
-    if (!jsonMatch) {
+    let jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || content.match(/```\s*(\{[\s\S]*?\})\s*```/);
+    let jsonStringCandidate: string | null = jsonMatch ? jsonMatch[1].trim() : null;
+    if (!jsonStringCandidate) {
       const startIdx = content.indexOf('{');
       const endIdx = content.lastIndexOf('}');
       if (startIdx !== -1 && endIdx > startIdx) {
@@ -1467,14 +1563,24 @@ Exemplo de JSON de saída:
             potentialJson.includes('"additionalPrompt"') || 
             potentialJson.includes('"promptCenario"') ||
             potentialJson.includes('"coresAutomaticas"') ||
-            potentialJson.includes('"estilosVisuais"')) {
-          jsonMatch = [null, potentialJson] as any;
+            potentialJson.includes('"estilosVisuais"') ||
+            potentialJson.includes('"camadasTexto"') ||
+            potentialJson.includes('"substituirConfig"') ||
+            potentialJson.includes('"dimensao"') ||
+            potentialJson.includes('"poseDescription"')) {
+          jsonStringCandidate = potentialJson;
         }
       }
     }
-    if (jsonMatch) {
+    if (jsonStringCandidate) {
       try {
-        const configJson = JSON.parse(jsonMatch[1]);
+        let configJson: any = null;
+        try {
+          configJson = JSON.parse(jsonStringCandidate);
+        } catch {
+          const sanitized = jsonStringCandidate.replace(/,\s*([\}\]])/g, '$1');
+          configJson = JSON.parse(sanitized);
+        }
         parsedConfigJson = configJson;
                 
         if (configJson.substituirImagens === true || configJson.substituirConfig === true) {
@@ -1839,7 +1945,7 @@ Exemplo de JSON de saída:
       }
 
       // 3. Extrair prompt (inglês ou blocos de código)
-      let promptText = "";
+      promptText = "";
       const promptMatch = content.match(/(?:PROMPT EXTRATOR|PROMPT|SUGESTÃO DE PROMPT|PROMPT SUGERIDO):\s*([\s\S]+)$/i) || content.match(/(?:PROMPT EXTRATOR|PROMPT):\s*(.+)/i);
       if (promptMatch) {
         promptText = promptMatch[1].trim();
@@ -1872,9 +1978,9 @@ Exemplo de JSON de saída:
     }
 
     // 4. Extrair e preencher imagens de referência do histórico (apenas do input imediatamente anterior do usuário)
-    let precedingUserMsg = null;
+    let precedingUserMsg: any = null;
     if (attachedFilesOverride && attachedFilesOverride.length > 0) {
-       precedingUserMsg = { files: attachedFilesOverride, content: "" };
+       precedingUserMsg = { files: attachedFilesOverride, content: userContentOverride || "" };
     } else if (msgIndex > 0) {
       const prevMsg = activeMessages[msgIndex - 1];
       if (prevMsg && prevMsg.role === 'user' && prevMsg.files && prevMsg.files.length > 0) {
@@ -1883,16 +1989,16 @@ Exemplo de JSON de saída:
     }
 
     if (precedingUserMsg && precedingUserMsg.files) {
-      const imagesOnly = precedingUserMsg.files.filter(f => f.type.startsWith("image/"));
+      const imagesOnly = precedingUserMsg.files.filter((f: any) => f.type.startsWith("image/"));
       if (imagesOnly.length > 0) {
         const textLower = content.toLowerCase() + " " + (precedingUserMsg.content || "").toLowerCase();
         
-        let subCount = 0;
+        subCount = 0;
         let sceCount = 0;
         let styCount = 0;
         let typoCount = 0;
         
-        let newSubjects: string[] = [];
+        newSubjects = [];
         let newScenes: string[] = [];
         let newTypographies: string[] = [];
         
@@ -1901,12 +2007,12 @@ Exemplo de JSON de saída:
         const singleMappingVal = jsonMapKeys.length === 1 ? jsonImageMap[jsonMapKeys[0]] : null;
         const singleStyleDescVal = jsonStyleDescKeys.length === 1 ? jsonStyleDescMap[jsonStyleDescKeys[0]] : null;
 
-        const hasExplicitLogo = imagesOnly.some(img => {
+        const hasExplicitLogo = imagesOnly.some((img: any) => {
           const nl = (img.name || "").toLowerCase();
           return img.category === "logo" || nl.includes("logo") || nl.includes("marca") || nl.includes("logomarca") || nl.includes("logotipo");
         });
 
-        imagesOnly.forEach(img => {
+        imagesOnly.forEach((img: any, imgIdx: number) => {
           let styleDescription = "Referência de estilo gerada pelo assistente.";
           let targetType = "design";
 
@@ -1917,10 +2023,12 @@ Exemplo de JSON de saída:
             targetType = "logo";
           } else if (nameLower.includes("fundo") || nameLower.includes("cenario") || nameLower.includes("cenário") || nameLower.includes("background") || nameLower.includes("bg") || nameLower.includes("scene") || nameLower.includes("ambiente")) {
             targetType = "scene";
-          } else if (nameLower.includes("pessoa") || nameLower.includes("modelo") || nameLower.includes("sujeito") || nameLower.includes("homem") || nameLower.includes("mulher") || nameLower.includes("face") || nameLower.includes("portrait")) {
+          } else if (nameLower.includes("pessoa") || nameLower.includes("modelo") || nameLower.includes("sujeito") || nameLower.includes("homem") || nameLower.includes("mulher") || nameLower.includes("face") || nameLower.includes("portrait") || nameLower.includes("whatsapp image") || nameLower.includes("foto") || nameLower.includes("photo") || nameLower.includes("noiv") || nameLower.includes("casal") || nameLower.includes("img_") || nameLower.includes("dsc_")) {
             targetType = "subject";
           } else if (nameLower.includes("texto") || nameLower.includes("tipografia") || nameLower.includes("font") || nameLower.includes("lettering")) {
             targetType = "typography";
+          } else if (nameLower.includes("asset") || nameLower.includes("elemento") || nameLower.includes("proposta") || nameLower.includes("icone") || nameLower.includes("badge") || nameLower.includes("selo")) {
+            targetType = "assets";
           }
           // 2. Categoria selecionada explicitamente pelo usuário no botão de anexo
           else if (img.category && img.category !== "info" && (img.category as string) !== "auto") {
@@ -1938,7 +2046,6 @@ Exemplo de JSON de saída:
             if (matchedKey && jsonImageMap[matchedKey]) {
               targetType = jsonImageMap[matchedKey];
             } else if (hasExplicitLogo && img.category !== "logo") {
-              // Se outra imagem já foi identificada como logo, esta imagem é a referência de design/layout
               targetType = "design";
             } else if (imagesOnly.length === 1 && singleMappingVal) {
               targetType = singleMappingVal;
@@ -1946,10 +2053,20 @@ Exemplo de JSON de saída:
               targetType = jsonImageMap["*"];
             } else if (parsedConfigJson?.imagemAnexadaTipo) {
               targetType = parsedConfigJson.imagemAnexadaTipo;
-            } else if (textLower.includes("estilo") || textLower.includes("style") || textLower.includes("vibe")) {
+            } else if (textLower.includes("estilo") || textLower.includes("style") || textLower.includes("vibe") || textLower.includes("flyer") || textLower.includes("poster")) {
               targetType = "style";
             } else {
-              targetType = "design";
+              // Heurística de posição inteligente quando várias imagens são enviadas juntas:
+              // - Imagem 0: Sujeito Principal / Imagem Principal
+              // - Imagem 1: Referência de Estilo / Design
+              // - Imagem 2+: Assets / Elementos
+              if (imagesOnly.length >= 2) {
+                if (imgIdx === 0) targetType = "subject";
+                else if (imgIdx === 1) targetType = "design";
+                else targetType = "assets";
+              } else {
+                targetType = "design";
+              }
             }
           }
           
@@ -1958,8 +2075,8 @@ Exemplo de JSON de saída:
              if (img.name && jsonStyleDescMap[img.name]) {
                descMatchedKey = img.name;
              } else if (img.name) {
-               const nameLower = img.name.toLowerCase();
-               descMatchedKey = jsonStyleDescKeys.find(k => k.toLowerCase() === nameLower || nameLower.includes(k.toLowerCase()) || k.toLowerCase().includes(nameLower.split('.')[0]));
+               const nLower = img.name.toLowerCase();
+               descMatchedKey = jsonStyleDescKeys.find(k => k.toLowerCase() === nLower || nLower.includes(k.toLowerCase()) || k.toLowerCase().includes(nLower.split('.')[0]));
              }
              
              if (descMatchedKey && jsonStyleDescMap[descMatchedKey]) {
@@ -1994,16 +2111,19 @@ Exemplo de JSON de saída:
             newLogos.push(rawBase64);
             logCount++;
           }
-          if (typesList.includes("design")) {
+          if (typesList.includes("design") || typesList.includes("style")) {
             newDesigns.push(rawBase64);
             desCount++;
+          }
+          if (typesList.includes("assets") || typesList.includes("asset")) {
+            newAssets.push(rawBase64);
+            assetCount++;
           }
           if (typesList.includes("typography")) {
             newTypographies.push(rawBase64);
             typoCount++;
           }
           if (typesList.includes("style")) {
-            // style reference
             if (isReplaceMode && styCount === 0 && store.referenciasEstilo) {
               store.referenciasEstilo.forEach(r => store.removeReferenciaEstilo(r.id));
             }
@@ -2023,6 +2143,7 @@ Exemplo de JSON de saída:
           const currentList = isReplaceMode ? [] : (store.sujeitosBase64List || []);
           const uniqueList = Array.from(new Set([...currentList, ...newSubjects]));
           store.setSujeitoBase64List(uniqueList);
+          if (uniqueList[0]) store.setSujeitoBase64(uniqueList[0]);
           if (updates && updates.desativarSujeito !== undefined) {
              store.updateConfig({ desativarSujeito: updates.desativarSujeito, noPeople: updates.noPeople !== undefined ? updates.noPeople : updates.desativarSujeito });
           } else {
@@ -2055,7 +2176,7 @@ Exemplo de JSON de saída:
         }
         
         if (logCount > 0 || hasExplicitLogo) {
-          const explicitLogoObj = imagesOnly.find(img => {
+          const explicitLogoObj = imagesOnly.find((img: any) => {
             const nl = (img.name || "").toLowerCase();
             return img.category === "logo" || nl.includes("logo") || nl.includes("marca") || nl.includes("logomarca") || nl.includes("logotipo");
           });
@@ -2065,7 +2186,6 @@ Exemplo de JSON de saída:
 
           if (rawLogoBase64) {
             store.setLogosList([rawLogoBase64]);
-            store.setLogoBase64(rawLogoBase64);
             store.updateConfig({ logoBase64: rawLogoBase64, useLogo: true });
             filledItems.push(`Logo da Marca (${explicitLogoObj ? explicitLogoObj.name : "Selecionada"})`);
           }
@@ -2085,6 +2205,10 @@ Exemplo de JSON de saída:
           store.setDesignRefsList(uniqueList);
           if (uniqueList[0]) store.setDesignRefBase64(uniqueList[0]);
           filledItems.push(`${desCount} Design(s)`);
+        }
+
+        if (assetCount > 0) {
+          filledItems.push(`${assetCount} Elemento(s)/Asset(s)`);
         }
 
         if (desCount > 0) {
@@ -2124,7 +2248,7 @@ Exemplo de JSON de saída:
           const newColors = { ...store.cores };
           newColors.ambiente = client.paletaCores[0] || "#000000";
           newColors.recorte = client.paletaCores[1] || "#ffffff";
-          newColors.complementar = client.paletaCores[2] || "#c5a880";
+          newColors.complementar = client.paletaCores[2] || "#a855f7";
           delete newColors.paleta;
           
           store.updateConfig({ cores: newColors, coresAutomaticas: false });
@@ -2142,12 +2266,56 @@ Exemplo de JSON de saída:
       }
     }
 
-    // Fallback
+    // Resolução inteligente do prompt limpo (sem despejar JSON bruto)
+    let resolvedPrompt = "";
+    if (parsedConfigJson?.additionalPrompt && typeof parsedConfigJson.additionalPrompt === "string") {
+      resolvedPrompt = parsedConfigJson.additionalPrompt;
+    } else if (parsedConfigJson?.promptDesign && typeof parsedConfigJson.promptDesign === "string") {
+      resolvedPrompt = parsedConfigJson.promptDesign;
+    } else if (promptText) {
+      resolvedPrompt = promptText;
+    } else if (userContentOverride && userContentOverride.trim().length > 5) {
+      resolvedPrompt = userContentOverride.trim();
+    } else {
+      const stripped = content.replace(/```json[\s\S]*?```/gi, "").trim();
+      if (stripped.length > 20) {
+        resolvedPrompt = stripped;
+      }
+    }
+
+    if (resolvedPrompt) {
+      if (resolvedPrompt.startsWith('"') && resolvedPrompt.endsWith('"')) {
+        resolvedPrompt = resolvedPrompt.slice(1, -1);
+      }
+      if (resolvedPrompt.includes("```json")) {
+        resolvedPrompt = resolvedPrompt.replace(/```json[\s\S]*?```/gi, "").trim();
+      }
+      updates.additionalPrompt = resolvedPrompt;
+      store.updateConfig({ additionalPrompt: resolvedPrompt });
+      if (!filledItems.includes("Prompt")) filledItems.push("Prompt");
+    }
+
+    // Fallback se nada foi preenchido
     if (filledItems.length === 0) {
-      const fallbackText = content.length > 300 ? content.slice(0, 300) + "..." : content;
-      store.updateConfig({ additionalPrompt: fallbackText });
+      const fallbackText = content.replace(/```json[\s\S]*?```/gi, "").trim();
+      const promptToUse = fallbackText.length > 300 ? fallbackText.slice(0, 300) + "..." : fallbackText;
+      store.updateConfig({ additionalPrompt: promptToUse });
       filledItems.push("Prompt (Mapeado)");
     }
+
+    // Disparar evento global para o REF Builder e outros componentes sincronizarem imediatamente
+    const autoFillPayload = {
+      mainPhoto: newSubjects.length > 0 ? newSubjects[0] : (store.sujeitoBase64 || store.sujeitosBase64List?.[0] || null),
+      refPhoto: newDesigns.length > 0 ? newDesigns[0] : (store.designRefBase64 || store.designRefsList?.[0] || null),
+      assetsPhoto: newAssets.length > 0 ? newAssets[0] : null,
+      additionalDescription: resolvedPrompt || updates.additionalPrompt || store.additionalPrompt || "",
+      dimension: updates.dimensao || store.dimensao || "1:1",
+      quality: updates.resolucao || store.resolucao || "1K",
+      subjectPosition: (updates.positioning || "center").toLowerCase().includes("esq") || (updates.positioning || "").toLowerCase().includes("left") ? "left" : (updates.positioning || "").toLowerCase().includes("dir") || (updates.positioning || "").toLowerCase().includes("right") ? "right" : "center",
+      rawUpdates: updates
+    };
+
+    window.dispatchEvent(new CustomEvent("zion:autofill", { detail: autoFillPayload }));
 
     showToast(`Preenchido no editor: ${filledItems.join(", ")}!`, "success");
   };
@@ -2186,16 +2354,16 @@ Exemplo de JSON de saída:
           setIsDropdownOpen(false);
           setIsAttachMenuOpen(false);
         }}
-        className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-[0_4px_24px_rgba(197,168,128,0.25)] flex items-center justify-center cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 bg-black/90 border border-[#c5a880]/30 hover:border-[#c5a880]/60 text-[#c5a880]"
+        className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-[0_4px_24px_rgba(188, 132, 35,0.25)] flex items-center justify-center cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 bg-black/90 border border-violet-500/30 hover:border-violet-500/60 text-violet-400"
         title="Assistente ZION AI"
       >
-        {chatDrawerOpen ? <X size={20} className="text-[#c5a880]" /> : <MessageSquare size={20} className="text-[#c5a880]" />}
-        {!chatDrawerOpen && <span className="absolute inset-0 rounded-full animate-ping opacity-20 bg-[#c5a880]"></span>}
+        {chatDrawerOpen ? <X size={20} className="text-violet-400" /> : <MessageSquare size={20} className="text-violet-400" />}
+        {!chatDrawerOpen && <span className="absolute inset-0 rounded-full animate-ping opacity-20 bg-[#a855f7]"></span>}
       </button>
 
       {/* Painel Interno do Assistente ZION AI */}
       {chatDrawerOpen && (
-        <div className={`border border-[#c5a880]/25 bg-[#090a0f] shadow-[0_25px_80px_rgba(0,0,0,0.98)] flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-300 transition-all ${isExpanded ? 'fixed inset-0 z-[100] rounded-none w-full h-full' : 'fixed sm:absolute bottom-20 right-4 left-4 sm:left-auto sm:right-0 sm:bottom-[68px] rounded-2xl sm:rounded-3xl w-[calc(100vw-32px)] sm:w-[460px] h-[600px] max-h-[85vh]'}`}>
+        <div className={`border border-violet-500/25 bg-[#090a0f] shadow-[0_25px_80px_rgba(0,0,0,0.98)] flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-300 transition-all ${isExpanded ? 'fixed inset-0 z-[100] rounded-none w-full h-full' : 'fixed sm:absolute bottom-20 right-4 left-4 sm:left-auto sm:right-0 sm:bottom-[68px] rounded-2xl sm:rounded-3xl w-[calc(100vw-32px)] sm:w-[460px] h-[600px] max-h-[85vh]'}`}>
           
           {/* Header Minimalista & Elegante */}
           <div className="shrink-0 px-4 py-3 border-b border-white/10 bg-[#0c0d14] flex items-center justify-between gap-2 relative z-20">
@@ -2205,15 +2373,15 @@ Exemplo de JSON de saída:
               className="flex items-center gap-2.5 group cursor-pointer text-left min-w-0 flex-1 hover:opacity-90 transition-opacity"
               title="Trocar Assistente"
             >
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#c5a880] to-[#ad8330] flex items-center justify-center text-zinc-950 font-black shadow-md shrink-0">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center text-zinc-950 font-black shadow-md shrink-0">
                 {activeAssistant.icon}
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-bold text-white group-hover:text-[#c5a880] transition-colors truncate">
+                  <span className="text-xs font-bold text-white group-hover:text-violet-400 transition-colors truncate">
                     {activeAssistant.label}
                   </span>
-                  <ChevronDown size={12} className="text-zinc-400 group-hover:text-[#c5a880] transition-transform shrink-0" style={{ transform: isDropdownOpen ? "rotate(180deg)" : "rotate(0)" }} />
+                  <ChevronDown size={12} className="text-zinc-400 group-hover:text-violet-400 transition-transform shrink-0" style={{ transform: isDropdownOpen ? "rotate(180deg)" : "rotate(0)" }} />
                 </div>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -2230,16 +2398,16 @@ Exemplo de JSON de saída:
                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white text-[10px] font-semibold transition-all cursor-pointer"
                 title="Configurar Modelo de IA e Ver Status"
               >
-                <Zap size={11} className="text-[#c5a880] fill-[#c5a880]" />
+                <Zap size={11} className="text-violet-400 fill-[#a855f7]" />
                 <span className="truncate max-w-[100px]">
-                  {selectedModel === "gemini-3.7-flash" ? "3.7 Flash" :
-                   selectedModel === "gemini-3.6-flash" ? "3.6 Flash" :
-                   selectedModel === "gemini-3.1-pro-preview" ? "3.1 Pro" :
-                   selectedModel === "gemini-3-pro-image" ? "3 Pro Image" : "2.5 Flash"}
+                  {selectedModel === "deepseek-v4-flash" || selectedModel === "deepseek-v4-flash-vision-exp" || selectedModel === "deepseek-v4" ? "DeepSeek V4" :
+                   selectedModel === "gemini-3.7-flash" ? "Gemini 3.7" :
+                   selectedModel === "gemini-3.5-flash" || selectedModel === "gemini-3.5-pro" ? "Gemini 3.5" :
+                   selectedModel === "gemini-3.1-pro-preview" ? "Gemini 3.1 Pro" : "DeepSeek V4"}
                 </span>
                 <span className={`w-1.5 h-1.5 rounded-full ${
                   modelStatuses[selectedModel]?.status === "online" ? "bg-emerald-400" :
-                  modelStatuses[selectedModel]?.status === "busy" ? "bg-amber-400" : "bg-red-400"
+                  modelStatuses[selectedModel]?.status === "busy" ? "bg-[#a855f7]" : "bg-red-400"
                 }`} />
                 <ChevronDown size={10} className="text-zinc-500" />
               </button>
@@ -2253,7 +2421,7 @@ Exemplo de JSON de saída:
                   setActiveClient(null);
                   showToast("Nova conversa iniciada.", "success");
                 }}
-                className="p-1.5 rounded-lg text-zinc-400 hover:text-[#c5a880] hover:bg-white/5 transition-colors cursor-pointer"
+                className="p-1.5 rounded-lg text-zinc-400 hover:text-violet-400 hover:bg-white/5 transition-colors cursor-pointer"
                 title="Nova Conversa"
               >
                 <Plus size={15} />
@@ -2262,7 +2430,7 @@ Exemplo de JSON de saída:
               {/* Histórico */}
               <button
                 onClick={() => { setIsHistoryOpen(!isHistoryOpen); setIsDropdownOpen(false); setIsAttachMenuOpen(false); }}
-                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${isHistoryOpen ? 'text-[#c5a880] bg-white/10' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}
+                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${isHistoryOpen ? 'text-violet-400 bg-white/10' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}
                 title="Histórico de Conversas"
               >
                 <FolderOpen size={15} />
@@ -2287,22 +2455,54 @@ Exemplo de JSON de saída:
               </button>
             </div>
           </div>
+          {/* Barra de Áreas Especializadas do Diretor Criativo (6 Áreas) */}
+          <div className="shrink-0 px-3 py-1.5 bg-black/70 border-b border-white/5 flex items-center gap-1.5 overflow-x-auto scrollbar-hide z-10">
+            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider pl-1 shrink-0">Área:</span>
+            {[
+              { id: "orion-pro", name: "Órion Pro", color: "#ffd500", icon: "✨" },
+              { id: "enhance-builder", name: "Enhance", color: "#7c3aed", icon: "☀️" },
+              { id: "ref", name: "REF", color: "#8B5CF6", icon: "📌" },
+              { id: "hydra", name: "Hydra", color: "#8B5CF6", icon: "📦" },
+              { id: "design-builder1-2", name: "Design Builder 1.2", color: "#7c3aed", icon: "📢" },
+              { id: "altera-facil", name: "Altera Fácil", color: "#a855f7", icon: "👥" }
+            ].map((area) => {
+              const isSelected = activeAssistant.id === area.id || (area.id === "orion-pro" && activeAssistant.id === "diretor-criativo");
+              return (
+                <button
+                  key={area.id}
+                  type="button"
+                  onClick={() => {
+                    const found = assistants.find(a => a.id === area.id);
+                    if (found) setActiveAssistant(found);
+                  }}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                    isSelected
+                      ? "bg-white/15 text-white shadow-sm ring-1 ring-white/20"
+                      : "bg-white/[0.03] text-zinc-400 hover:bg-white/[0.08] hover:text-zinc-200"
+                  }`}
+                >
+                  <span className="text-xs">{area.icon}</span>
+                  <span>{area.name}</span>
+                </button>
+              );
+            })}
+          </div>
 
           {/* Popover de Modelos de IA com Status em Tempo Real */}
           {showModelSettings && (
-            <div className="absolute top-14 right-4 z-50 bg-[#101218] border border-[#c5a880]/30 rounded-2xl shadow-2xl p-3 w-80 animate-in fade-in slide-in-from-top-2 duration-150">
+            <div className="absolute top-14 right-4 z-50 bg-[#101218] border border-violet-500/30 rounded-2xl shadow-2xl p-3 w-80 animate-in fade-in slide-in-from-top-2 duration-150">
               <div className="flex justify-between items-center mb-2 pb-1.5 border-b border-white/10">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#c5a880]">Modelos de IA (3.1+)</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-violet-400">Modelos de IA (3.1+)</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <button 
                     onClick={checkModelsStatus} 
                     disabled={isCheckingModels}
-                    className="flex items-center gap-1 text-[9px] text-zinc-400 hover:text-[#c5a880] transition-colors cursor-pointer"
+                    className="flex items-center gap-1 text-[9px] text-zinc-400 hover:text-violet-400 transition-colors cursor-pointer"
                     title="Testar Conexão dos Modelos"
                   >
-                    <RefreshCw size={10} className={isCheckingModels ? "animate-spin text-[#c5a880]" : ""} />
+                    <RefreshCw size={10} className={isCheckingModels ? "animate-spin text-violet-400" : ""} />
                     <span>{isCheckingModels ? "Testando..." : "Testar Status"}</span>
                   </button>
                   <button onClick={() => setShowModelSettings(false)} className="text-zinc-500 hover:text-white"><X size={11} /></button>
@@ -2310,11 +2510,10 @@ Exemplo de JSON de saída:
               </div>
               <div className="space-y-1 max-h-72 overflow-y-auto custom-scrollbar pr-1">
                 {[
+                  { id: "deepseek-v4-flash", label: "DeepSeek V4", tag: "Recomendado", desc: "Raciocínio veloz, OCR de texto e Visão Multimodal automática", icon: <Zap size={13} /> },
                   { id: "gemini-3.7-flash", label: "Gemini 3.7 Flash", tag: "Mais Avançado", desc: "Raciocínio híbrido e alta velocidade", icon: <Sparkles size={13} /> },
-                  { id: "gemini-3.6-flash", label: "Gemini 3.6 Flash", tag: "Ultra Rápido", desc: "Leitura visual instantânea e estabilidade", icon: <Zap size={13} /> },
-                  { id: "gemini-3.1-pro-preview", label: "Gemini 3.1 Pro Preview", tag: "Pro 3.1", desc: "Raciocínio analítico avançado", icon: <Layers size={13} /> },
-                  { id: "gemini-3-pro-image", label: "Gemini 3 Pro Image", tag: "Nano Banana Pro", desc: "Engenharia e geração de imagens fotorrealistas", icon: <ImageIcon size={13} /> },
-                  { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash", tag: "Estável", desc: "Linha de produção segura", icon: <CheckCircle2 size={13} /> }
+                  { id: "gemini-3.5-flash", label: "Gemini 3.5 Flash", tag: "Ultra Rápido", desc: "Velocidade instantânea e respostas eficientes", icon: <Zap size={13} /> },
+                  { id: "gemini-3.1-pro-preview", label: "Gemini 3.1 Pro", tag: "Pro 3.1", desc: "Raciocínio analítico avançado e raciocínio profundo", icon: <Layers size={13} /> }
                 ].map(m => {
                   const statusInfo = modelStatuses[m.id];
                   const isOnline = statusInfo?.status === "online";
@@ -2325,21 +2524,26 @@ Exemplo de JSON de saída:
                   return (
                     <button
                       key={m.id}
-                      onClick={() => { setSelectedModel(m.id); setShowModelSettings(false); showToast(`Modelo selecionado: ${m.label}`, "success"); }}
+                      onClick={() => { 
+                        setSelectedModel(m.id); 
+                        localStorage.setItem("zion_selected_model", m.id);
+                        setShowModelSettings(false); 
+                        showToast(`Modelo selecionado: ${m.label}`, "success"); 
+                      }}
                       className={`w-full flex items-center gap-2.5 p-2 rounded-xl text-left transition-all cursor-pointer border ${
                         isSelected 
-                          ? "bg-[#c5a880]/15 text-[#c5a880] border-[#c5a880]/40 font-bold" 
+                          ? "bg-violet-500/15 text-violet-400 border-violet-500/40 font-bold" 
                           : "bg-black/40 text-zinc-300 hover:bg-white/5 border-transparent"
                       }`}
                     >
-                      <span className={isSelected ? "text-[#c5a880]" : "text-zinc-400"}>{m.icon}</span>
+                      <span className={isSelected ? "text-violet-400" : "text-zinc-400"}>{m.icon}</span>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-1">
                           <p className="text-xs font-semibold truncate leading-none">{m.label}</p>
                           {/* Badge de Status em Tempo Real */}
                           <span className={`text-[8px] px-1.5 py-0.5 rounded-full font-bold uppercase shrink-0 ${
                             isOnline ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" :
-                            isBusy ? "bg-amber-500/20 text-amber-300 border border-amber-500/30" :
+                            isBusy ? "bg-violet-500/20 text-violet-400 border border-violet-500/30" :
                             isQuota ? "bg-red-500/20 text-red-300 border border-red-500/30" :
                             "bg-zinc-800 text-zinc-400"
                           }`}>
@@ -2357,9 +2561,9 @@ Exemplo de JSON de saída:
 
           {/* Popover de Histórico de Conversas */}
           {isHistoryOpen && (
-            <div className="absolute top-14 right-4 z-50 bg-[#101218] border border-[#c5a880]/30 rounded-2xl shadow-2xl p-3 w-72 max-h-64 overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-top-2 duration-150">
+            <div className="absolute top-14 right-4 z-50 bg-[#101218] border border-violet-500/30 rounded-2xl shadow-2xl p-3 w-72 max-h-64 overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-top-2 duration-150">
               <div className="flex justify-between items-center mb-2 pb-1.5 border-b border-white/10">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#c5a880]">Conversas Salvas</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-violet-400">Conversas Salvas</span>
                 <button onClick={() => setIsHistoryOpen(false)} className="text-zinc-500 hover:text-white"><X size={11} /></button>
               </div>
               <div className="space-y-1">
@@ -2368,7 +2572,7 @@ Exemplo de JSON de saída:
                   return (
                     <div 
                       key={p.id} 
-                      className={`flex items-center justify-between p-2 rounded-xl cursor-pointer transition-colors ${isCurrent ? "bg-[#c5a880]/15 border border-[#c5a880]/30 text-[#c5a880]" : "hover:bg-white/5 text-zinc-300 border border-transparent"}`}
+                      className={`flex items-center justify-between p-2 rounded-xl cursor-pointer transition-colors ${isCurrent ? "bg-violet-500/15 border border-violet-500/30 text-violet-400" : "hover:bg-white/5 text-zinc-300 border border-transparent"}`}
                       onClick={() => {
                         store.loadProjectById(p.id);
                         setIsHistoryOpen(false);
@@ -2419,7 +2623,7 @@ Exemplo de JSON de saída:
                   value={agentSearch}
                   onChange={(e) => setAgentSearch(e.target.value)}
                   placeholder="Buscar especialista..."
-                  className="w-full bg-[#12141c] border border-white/10 rounded-xl pl-8 pr-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#c5a880]"
+                  className="w-full bg-[#12141c] border border-white/10 rounded-xl pl-8 pr-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-violet-500"
                 />
               </div>
 
@@ -2427,10 +2631,10 @@ Exemplo de JSON de saída:
               <div className="flex items-center gap-1 overflow-x-auto pb-2 custom-scrollbar shrink-0">
                 {[
                   { id: "all", label: "Todos" },
-                  { id: "design", label: "🎨 Design" },
-                  { id: "copy", label: "✍️ Copywriting" },
-                  { id: "vendas", label: "📈 Vendas" },
-                  { id: "dev", label: "💻 Sites" }
+                  { id: "design", label: "Design" },
+                  { id: "copy", label: "Copywriting" },
+                  { id: "vendas", label: "Vendas" },
+                  { id: "dev", label: "Sites" }
                 ].map(cat => (
                   <button
                     key={cat.id}
@@ -2438,7 +2642,7 @@ Exemplo de JSON de saída:
                     onClick={() => setAgentCategoryFilter(cat.id as any)}
                     className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all shrink-0 cursor-pointer ${
                       agentCategoryFilter === cat.id
-                        ? "bg-[#c5a880] text-zinc-950 font-extrabold shadow-sm"
+                        ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-extrabold shadow-sm"
                         : "bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10"
                     }`}
                   >
@@ -2470,23 +2674,23 @@ Exemplo de JSON de saída:
                         onClick={() => switchAgent(a)}
                         className={`w-full p-2.5 rounded-xl flex items-center gap-3 transition-all cursor-pointer text-left border ${
                           isSelected 
-                            ? "bg-[#c5a880]/15 border-[#c5a880]/50 shadow-sm" 
-                            : "bg-[#11131a] hover:bg-[#161922] border-white/5 hover:border-[#c5a880]/30"
+                            ? "bg-violet-500/15 border-violet-500/50 shadow-sm" 
+                            : "bg-[#11131a] hover:bg-[#161922] border-white/5 hover:border-violet-500/30"
                         }`}
                       >
-                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 font-bold ${isSelected ? 'bg-[#c5a880] text-zinc-950' : 'bg-white/10 text-[#c5a880]'}`}>
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 font-bold ${isSelected ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white' : 'bg-white/10 text-violet-400'}`}>
                           {a.icon}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2">
                             <span className="text-xs font-bold text-white truncate">{a.label}</span>
                             {isSelected && (
-                              <span className="text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-[#c5a880] text-zinc-950 shrink-0">
+                              <span className="text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shrink-0">
                                 Ativo
                               </span>
                             )}
                           </div>
-                          <span className="text-[9px] font-bold text-[#c5a880]/80 block truncate">{a.sublabel}</span>
+                          <span className="text-[9px] font-bold text-violet-400/80 block truncate">{a.sublabel}</span>
                           <p className="text-[10px] text-zinc-400 line-clamp-1 mt-0.5">{a.desc}</p>
                         </div>
                       </button>
@@ -2506,8 +2710,8 @@ Exemplo de JSON de saída:
           >
             {/* Drag and Drop Zone */}
             {isDraggingOver && (
-              <div className="absolute inset-3 bg-black/95 border-2 border-dashed border-[#c5a880] rounded-2xl flex flex-col items-center justify-center gap-2 z-30 animate-in fade-in duration-150">
-                <UploadCloud size={28} className="text-[#c5a880] animate-bounce" />
+              <div className="absolute inset-3 bg-black/95 border-2 border-dashed border-violet-500 rounded-2xl flex flex-col items-center justify-center gap-2 z-30 animate-in fade-in duration-150">
+                <UploadCloud size={28} className="text-violet-400 animate-bounce" />
                 <p className="text-xs font-bold text-white uppercase tracking-wider">Solte o arquivo aqui</p>
               </div>
             )}
@@ -2515,7 +2719,7 @@ Exemplo de JSON de saída:
             {/* Empty State: Limpo, Direto e Atraente */}
             {activeMessages.length === 0 && !isTyping && (
               <div className="h-full flex flex-col items-center justify-center text-center px-2 py-6 space-y-5">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#c5a880] to-[#ad8330] flex items-center justify-center text-zinc-950 shadow-lg shadow-[#c5a880]/20">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center text-zinc-950 shadow-lg shadow-violet-600/20">
                   {activeAssistant.icon}
                 </div>
                 
@@ -2540,10 +2744,10 @@ Exemplo de JSON de saída:
                           setInputText(sug);
                           textareaRef.current?.focus();
                         }}
-                        className="w-full text-xs font-medium p-2.5 rounded-xl bg-[#11131a] hover:bg-[#181b24] border border-white/5 hover:border-[#c5a880]/40 text-zinc-300 hover:text-white transition-all cursor-pointer text-left shadow-sm flex items-center justify-between gap-2 group"
+                        className="w-full text-xs font-medium p-2.5 rounded-xl bg-[#11131a] hover:bg-[#181b24] border border-white/5 hover:border-violet-500/40 text-zinc-300 hover:text-white transition-all cursor-pointer text-left shadow-sm flex items-center justify-between gap-2 group"
                       >
                         <span className="truncate">{sug}</span>
-                        <span className="text-[#c5a880] opacity-0 group-hover:opacity-100 transition-opacity shrink-0">→</span>
+                        <span className="text-violet-400 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">→</span>
                       </button>
                     ))}
                   </div>
@@ -2574,7 +2778,7 @@ Exemplo de JSON de saída:
                             key={fIdx} 
                             className="flex items-center gap-2 px-3 py-2 bg-[#11131a] border border-white/10 rounded-xl w-48 shadow-sm text-left"
                           >
-                            <File size={15} className="text-[#c5a880] shrink-0" />
+                            <File size={15} className="text-violet-400 shrink-0" />
                             <div className="flex-1 min-w-0">
                               <p className="text-[10px] font-bold text-white truncate">{file.name}</p>
                               <p className="text-[8px] text-zinc-500 uppercase mt-0.5">{formatFileSize(file.size)}</p>
@@ -2590,7 +2794,7 @@ Exemplo de JSON de saída:
                     className={`max-w-[92%] sm:max-w-[88%] px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl text-xs sm:text-[13px] leading-relaxed font-medium shadow-sm transition-all duration-200 break-words overflow-hidden ${
                       isModel 
                         ? "bg-[#101218] border border-white/10 text-zinc-200 rounded-bl-sm" 
-                        : "bg-[#18140c] border border-[#c5a880]/35 text-white rounded-br-sm shadow-md"
+                        : "bg-[#18140c] border border-violet-500/35 text-white rounded-br-sm shadow-md"
                     }`}
                   >
                     {isModel ? formatMessage(msg.content) : <p className="whitespace-pre-wrap">{msg.content}</p>}
@@ -2608,7 +2812,7 @@ Exemplo de JSON de saída:
                               showToast("Gerando nova arte no estúdio...", "warning");
                             }
                           }}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-all bg-gradient-to-r from-[#c5a880] to-[#ad8330] hover:brightness-110 text-zinc-950 shadow-sm"
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-all bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:brightness-110 text-zinc-950 shadow-sm"
                           title="Aplicar alterações e gerar imagem no estúdio"
                         >
                           <Zap size={11} className="fill-zinc-950 text-zinc-950" />
@@ -2650,7 +2854,7 @@ Exemplo de JSON de saída:
                           textareaRef.current?.select();
                         }, 80);
                       }}
-                      className="text-[9px] font-semibold text-zinc-500 hover:text-[#c5a880] transition-colors cursor-pointer mr-1"
+                      className="text-[9px] font-semibold text-zinc-500 hover:text-violet-400 transition-colors cursor-pointer mr-1"
                       title="Editar mensagem"
                     >
                       Editar
@@ -2663,13 +2867,13 @@ Exemplo de JSON de saída:
             {/* Indicador de Digitação */}
             {isTyping && (
               <div className="flex items-start gap-2 animate-pulse">
-                <div className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0 text-zinc-950 bg-[#c5a880]">
+                <div className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0 text-zinc-950 bg-[#a855f7]">
                   {activeAssistant.icon}
                 </div>
                 <div className="px-3.5 py-2.5 bg-[#101218] border border-white/10 rounded-2xl rounded-tl-sm flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full animate-bounce bg-[#c5a880]" style={{ animationDelay: "0ms" }} />
-                  <span className="w-1.5 h-1.5 rounded-full animate-bounce bg-[#c5a880]" style={{ animationDelay: "150ms" }} />
-                  <span className="w-1.5 h-1.5 rounded-full animate-bounce bg-[#c5a880]" style={{ animationDelay: "300ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full animate-bounce bg-[#a855f7]" style={{ animationDelay: "0ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full animate-bounce bg-[#a855f7]" style={{ animationDelay: "150ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full animate-bounce bg-[#a855f7]" style={{ animationDelay: "300ms" }} />
                 </div>
               </div>
             )}
@@ -2693,7 +2897,7 @@ Exemplo de JSON de saída:
 
             {/* Menu Popover de Anexos (quando clica no clipe) */}
             {isAttachMenuOpen && (
-              <div className="absolute bottom-16 left-3 z-50 bg-[#12141c] border border-[#c5a880]/30 rounded-2xl shadow-2xl p-2 w-52 animate-in fade-in slide-in-from-bottom-2 duration-150 space-y-1">
+              <div className="absolute bottom-16 left-3 z-50 bg-[#12141c] border border-violet-500/30 rounded-2xl shadow-2xl p-2 w-52 animate-in fade-in slide-in-from-bottom-2 duration-150 space-y-1">
                 <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-500 px-2 py-1">Anexar ao Editor:</p>
                 <button
                   type="button"
@@ -2701,7 +2905,7 @@ Exemplo de JSON de saída:
                   className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-zinc-300 hover:text-white hover:bg-white/5 transition-colors text-left"
                 >
                   <Paperclip size={13} className="text-zinc-400" />
-                  <span>📄 Arquivo / Documento</span>
+                  <span>Arquivo / Documento</span>
                 </button>
                 {!isCopyOrTextAssistant && (
                   <>
@@ -2710,28 +2914,28 @@ Exemplo de JSON de saída:
                       onClick={() => { fileInputSubjectRef.current?.click(); setIsAttachMenuOpen(false); }}
                       className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-emerald-300 hover:bg-emerald-950/30 transition-colors text-left"
                     >
-                      <span>👤 Sujeito / Pessoa</span>
+                      <span>Sujeito / Pessoa</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => { fileInputLogoRef.current?.click(); setIsAttachMenuOpen(false); }}
-                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[#c5a880] hover:bg-[#c5a880]/10 transition-colors text-left"
+                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-violet-400 hover:bg-violet-500/10 transition-colors text-left"
                     >
-                      <span>🏷️ Logotipo</span>
+                      <span>️ Logotipo</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => { fileInputDesignRef.current?.click(); setIsAttachMenuOpen(false); }}
-                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[#c5a880] hover:bg-[#c5a880]/10 transition-colors text-left"
+                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-violet-400 hover:bg-violet-500/10 transition-colors text-left"
                     >
-                      <span>📐 Referência de Design</span>
+                      <span>Referência de Design</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => { fileInputSceneRef.current?.click(); setIsAttachMenuOpen(false); }}
-                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[#c5a880] hover:bg-[#c5a880]/10 transition-colors text-left"
+                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-violet-400 hover:bg-violet-500/10 transition-colors text-left"
                     >
-                      <span>🏞️ Cenário / Fundo</span>
+                      <span>️ Cenário / Fundo</span>
                     </button>
                   </>
                 )}
@@ -2746,12 +2950,12 @@ Exemplo de JSON de saída:
             <input type="file" ref={fileInputSceneRef} onChange={(e) => handleFileInput(e, "scene")} className="hidden" multiple accept="image/*" />
 
             {/* Campo de Entrada com Botões Integrados */}
-            <div className="flex items-end gap-1.5 bg-[#07080c] border border-white/10 focus-within:border-[#c5a880] rounded-2xl p-1.5 transition-colors">
+            <div className="flex items-end gap-1.5 bg-[#07080c] border border-white/10 focus-within:border-violet-500 rounded-2xl p-1.5 transition-colors">
               {/* Botão de Anexo */}
               <button
                 type="button"
                 onClick={() => setIsAttachMenuOpen(!isAttachMenuOpen)}
-                className={`p-2 rounded-xl transition-colors cursor-pointer shrink-0 ${isAttachMenuOpen ? 'text-[#c5a880] bg-white/10' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}
+                className={`p-2 rounded-xl transition-colors cursor-pointer shrink-0 ${isAttachMenuOpen ? 'text-violet-400 bg-white/10' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}
                 title="Anexar arquivos ou referências"
               >
                 <Paperclip size={16} />
@@ -2784,10 +2988,10 @@ Exemplo de JSON de saída:
                 type="button"
                 onClick={handleImprovePrompt}
                 disabled={isImprovingPrompt || isTyping || !inputText.trim()}
-                className="p-2 rounded-xl text-zinc-400 hover:text-[#c5a880] hover:bg-white/5 transition-colors cursor-pointer shrink-0 disabled:opacity-30 disabled:cursor-not-allowed"
+                className="p-2 rounded-xl text-zinc-400 hover:text-violet-400 hover:bg-white/5 transition-colors cursor-pointer shrink-0 disabled:opacity-30 disabled:cursor-not-allowed"
                 title="Melhorar Prompt com Inteligência Artificial"
               >
-                {isImprovingPrompt ? <Loader2 size={16} className="animate-spin text-[#c5a880]" /> : <Sparkles size={16} />}
+                {isImprovingPrompt ? <Loader2 size={16} className="animate-spin text-violet-400" /> : <Sparkles size={16} />}
               </button>
 
               {/* Botão de Enviar */}
@@ -2795,7 +2999,7 @@ Exemplo de JSON de saída:
                 type="button"
                 onClick={handleSend}
                 disabled={isTyping || isUploading || (inputText.trim() === "" && attachedFiles.length === 0)}
-                className="w-9 h-9 rounded-xl flex items-center justify-center text-zinc-950 bg-gradient-to-r from-[#c5a880] to-[#ad8330] hover:brightness-110 cursor-pointer transition-all active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed shrink-0 shadow-md shadow-[#c5a880]/20"
+                className="w-9 h-9 rounded-xl flex items-center justify-center text-zinc-950 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:brightness-110 cursor-pointer transition-all active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed shrink-0 shadow-md shadow-violet-600/20"
                 title="Enviar mensagem (Enter)"
               >
                 {isTyping ? <RefreshCw size={14} className="animate-spin" /> : <Send size={14} />}

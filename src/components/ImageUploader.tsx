@@ -210,10 +210,10 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
               </button>
             </div>
             
-            <div className="grid grid-cols-4 gap-2 max-h-[140px] overflow-y-auto custom-scrollbar pr-1">
+            <div className="flex flex-wrap gap-2 max-h-[140px] overflow-y-auto custom-scrollbar pr-1">
               {currentList.map((item, idx) => (
-                <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-zinc-800 bg-black group">
-                  <img src={item.startsWith("data:image/") ? item : `data:image/jpeg;base64,${item}`} className="w-full h-full object-cover" alt={`Ref ${idx + 1}`} />
+                <div key={idx} className="relative h-16 rounded-lg overflow-hidden border border-zinc-800 group">
+                  <img src={item.startsWith("data:image/") ? item : `data:image/jpeg;base64,${item}`} className="h-full w-auto block" alt={`Ref ${idx + 1}`} />
                   <button
                     onClick={() => removeImage(idx)}
                     className="absolute top-1 right-1 p-1 bg-black/80 hover:bg-red-600 rounded text-white transition-colors cursor-pointer"
@@ -223,7 +223,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
                 </div>
               ))}
               
-              <div className="relative aspect-square rounded-lg border border-dashed border-zinc-800 hover:border-[#ad8330]/40 flex flex-col items-center justify-center cursor-pointer bg-black/40 hover:bg-black/20 transition-all">
+              <div className="relative h-16 w-16 rounded-lg border border-dashed border-zinc-800 hover:border-[#ad8330]/40 flex flex-col items-center justify-center cursor-pointer bg-black/40 hover:bg-black/20 transition-all">
                 <Plus size={16} className="text-zinc-400 group-hover:text-zinc-400 mb-0.5" />
                 <span className="text-[8px] font-black text-zinc-400 uppercase tracking-wider">Adicionar</span>
                 <input
@@ -242,8 +242,8 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       // Single mode
       if (base64) {
         return (
-          <div className="relative aspect-square w-24 rounded-lg overflow-hidden border border-zinc-800 bg-black group" onClick={(e) => e.stopPropagation()}>
-            <img src={base64.startsWith("data:image/") ? base64 : `data:image/jpeg;base64,${base64}`} className="w-full h-full object-cover" alt="Anexo Ref" />
+          <div className="relative w-24 rounded-lg overflow-hidden border border-zinc-800 group" onClick={(e) => e.stopPropagation()}>
+            <img src={base64.startsWith("data:image/") ? base64 : `data:image/jpeg;base64,${base64}`} className="w-full h-auto block" alt="Anexo Ref" />
             <button
               onClick={(e) => {
                 e.stopPropagation();

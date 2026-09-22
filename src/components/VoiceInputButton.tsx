@@ -63,7 +63,7 @@ export const VoiceInputButton: React.FC<VoiceInputButtonProps> = ({ onTranscript
       className={`p-1.5 rounded-lg transition-all flex items-center justify-center shrink-0 ${
         isListening 
           ? 'bg-red-500/20 text-red-500 animate-pulse border border-red-500/30' 
-          : 'bg-[#111]/40 border border-white/5 text-zinc-400 hover:text-amber-500 hover:bg-[#111]'
+          : 'bg-[#111]/40 border border-white/5 text-zinc-400 hover:text-violet-400 hover:bg-[#111]'
       } ${className}`}
       title={isListening ? "Ouvindo... Fale agora." : "Digitar por voz"}
     >

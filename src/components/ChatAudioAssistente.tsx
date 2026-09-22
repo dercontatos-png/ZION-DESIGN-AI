@@ -38,7 +38,7 @@ const assistants: AssistantConfig[] = [
     sublabel: "Produção de Trilhas", 
     desc: "Produza trilhas cinematográficas, comerciais ou instrumentais com foco em progressão e emoção.", 
     icon: <AudioWaveform size={14} />, 
-    color: "#ad8330",
+    color: "#7c3aed",
     suggestions: [
       "Trilha cinematográfica de suspense com violinos e metais épicos.",
       "Música Pop animada para vídeo de lançamento de produto no Instagram.",
@@ -234,15 +234,15 @@ Seja muito solícito, técnico e direto ao ponto. Responda em Português do Bras
       
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-[0_4px_24px_rgba(197,168,128,0.25)] flex items-center justify-center cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 bg-black/90 border border-[#c5a880]/30 hover:border-[#c5a880]/60 text-[#c5a880]"
+        className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-[0_4px_24px_rgba(188, 132, 35,0.25)] flex items-center justify-center cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 bg-black/90 border border-violet-500/30 hover:border-violet-500/60 text-violet-400"
         title="Assistente de Áudio"
       >
-        {isOpen ? <X size={20} className="text-[#c5a880]" /> : <MessageSquare size={20} className="text-[#c5a880]" />}
-        {!isOpen && <span className="absolute inset-0 rounded-full animate-ping opacity-20 bg-[#c5a880]"></span>}
+        {isOpen ? <X size={20} className="text-violet-400" /> : <MessageSquare size={20} className="text-violet-400" />}
+        {!isOpen && <span className="absolute inset-0 rounded-full animate-ping opacity-20 bg-[#a855f7]"></span>}
       </button>
 
       {isOpen && (
-        <div className={`border border-[#c5a880]/30 bg-[#07080a] shadow-[0_25px_80px_rgba(0,0,0,0.98)] flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-300 transition-all fixed sm:absolute bottom-20 right-4 left-4 sm:left-auto sm:right-0 sm:bottom-[68px] rounded-2xl sm:rounded-3xl w-[calc(100vw-32px)] sm:w-[460px] h-[580px] max-h-[84vh]`}>
+        <div className={`border border-violet-500/30 bg-[#07080a] shadow-[0_25px_80px_rgba(0,0,0,0.98)] flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-300 transition-all fixed sm:absolute bottom-20 right-4 left-4 sm:left-auto sm:right-0 sm:bottom-[68px] rounded-2xl sm:rounded-3xl w-[calc(100vw-32px)] sm:w-[460px] h-[580px] max-h-[84vh]`}>
           
           {/* Header */}
           <div className="flex items-center justify-between p-4 bg-zinc-950/80 backdrop-blur-xl border-b border-white/5 shrink-0">
@@ -313,10 +313,10 @@ Seja muito solícito, técnico e direto ao ponto. Responda em Português do Bras
                     <button 
                       key={idx} 
                       onClick={() => handleSendMessage(sug)} 
-                      className="text-[11px] text-zinc-300 bg-zinc-900/80 hover:bg-zinc-800 border border-white/5 hover:border-[#c5a880]/30 py-2.5 px-3 rounded-xl text-left transition-all truncate flex items-center justify-between group"
+                      className="text-[11px] text-zinc-300 bg-zinc-900/80 hover:bg-zinc-800 border border-white/5 hover:border-violet-500/30 py-2.5 px-3 rounded-xl text-left transition-all truncate flex items-center justify-between group"
                     >
                       <span className="truncate">{sug}</span>
-                      <Sparkles size={12} className="text-[#c5a880] opacity-50 group-hover:opacity-100 shrink-0 ml-2" />
+                      <Sparkles size={12} className="text-violet-400 opacity-50 group-hover:opacity-100 shrink-0 ml-2" />
                     </button>
                   ))}
                 </div>
@@ -326,7 +326,7 @@ Seja muito solícito, técnico e direto ao ponto. Responda em Português do Bras
                 <div key={i} className={`flex flex-col ${m.role === "user" ? "items-end" : "items-start"}`}>
                   <div className={`max-w-[88%] p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed ${
                     m.role === "user" 
-                      ? "bg-[#c5a880] text-zinc-950 rounded-tr-sm font-medium shadow-md" 
+                      ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-tr-sm font-medium shadow-md" 
                       : "bg-[#18181b] border border-white/10 text-zinc-200 rounded-tl-sm shadow-md whitespace-pre-wrap"
                   }`}>
                     {m.content}
@@ -344,9 +344,9 @@ Seja muito solícito, técnico e direto ao ponto. Responda em Português do Bras
               <div className="flex items-start">
                 <div className="bg-[#18181b] border border-white/5 p-3 rounded-2xl rounded-tl-sm">
                   <div className="flex gap-1.5 items-center">
-                    <span className="w-2 h-2 bg-[#c5a880] rounded-full animate-bounce" />
-                    <span className="w-2 h-2 bg-[#c5a880] rounded-full animate-bounce delay-75" />
-                    <span className="w-2 h-2 bg-[#c5a880] rounded-full animate-bounce delay-150" />
+                    <span className="w-2 h-2 bg-[#a855f7] rounded-full animate-bounce" />
+                    <span className="w-2 h-2 bg-[#a855f7] rounded-full animate-bounce delay-75" />
+                    <span className="w-2 h-2 bg-[#a855f7] rounded-full animate-bounce delay-150" />
                   </div>
                 </div>
               </div>
@@ -356,7 +356,7 @@ Seja muito solícito, técnico e direto ao ponto. Responda em Português do Bras
 
           {/* Input */}
           <div className="p-3 bg-zinc-950 border-t border-white/5 shrink-0">
-            <div className="flex items-end gap-2 bg-[#111] border border-white/10 p-2 rounded-2xl focus-within:border-[#c5a880]/50 focus-within:bg-black transition-all">
+            <div className="flex items-end gap-2 bg-[#111] border border-white/10 p-2 rounded-2xl focus-within:border-violet-500/50 focus-within:bg-black transition-all">
               <textarea
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
@@ -370,7 +370,7 @@ Seja muito solícito, técnico e direto ao ponto. Responda em Português do Bras
                 disabled={!inputText.trim() || isTyping}
                 className={`p-3 rounded-xl shrink-0 transition-all ${
                   inputText.trim() && !isTyping
-                    ? "bg-[#c5a880] text-zinc-950 hover:bg-[#b59b75] shadow-lg shadow-[#c5a880]/20"
+                    ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white hover:bg-[#b59b75] shadow-lg shadow-violet-600/20"
                     : "bg-white/5 text-zinc-600 cursor-not-allowed"
                 }`}
               >

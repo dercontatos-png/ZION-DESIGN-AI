@@ -158,9 +158,9 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
           className="bg-black border border-white/5 rounded-3xl p-6 sm:p-10 w-full max-w-lg text-center shadow-2xl relative overflow-hidden"
         >
           {/* Decorative light reflection */}
-          <div className="absolute top-0 right-0 w-48 h-48 bg-[#c5a880]/5 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute top-0 right-0 w-48 h-48 bg-violet-500/5 rounded-full blur-3xl pointer-events-none" />
 
-          <div className="w-16 h-16 bg-[#c5a880]/10 border border-[#c5a880]/20 rounded-xl flex items-center justify-center mx-auto mb-6 text-[#c5a880] shadow-lg">
+          <div className="w-16 h-16 bg-violet-500/10 border border-violet-500/20 rounded-xl flex items-center justify-center mx-auto mb-6 text-violet-400 shadow-lg">
             <User size={32} />
           </div>
 
@@ -172,8 +172,8 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
           </p>
 
           {activeClients.length === 0 ? (
-            <div className="bg-[#c5a880]/5 border border-[#c5a880]/10 rounded-xl p-4 text-left">
-              <div className="flex gap-2 text-[#c5a880] mb-1">
+            <div className="bg-violet-500/5 border border-violet-500/10 rounded-xl p-4 text-left">
+              <div className="flex gap-2 text-violet-400 mb-1">
                 <AlertCircle size={16} className="shrink-0 mt-0.5" />
                 <span className="text-xs font-bold uppercase tracking-wider">
                   Nenhum Cliente Ativo
@@ -193,7 +193,7 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
                   <button
                     key={client.id}
                     onClick={() => onSelectClient(client.id)}
-                    className="w-full text-left p-4 rounded-xl bg-black border border-white/5 hover:border-[#c5a880]/30 text-white flex items-center justify-between group transition-all"
+                    className="w-full text-left p-4 rounded-xl bg-black border border-white/5 hover:border-violet-500/30 text-white flex items-center justify-between group transition-all"
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       {client.avatarUrl ? (
@@ -203,12 +203,12 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
                           className="w-10 h-10 rounded-full object-cover border border-white/5 shrink-0"
                         />
                       ) : (
-                        <div className="w-10 h-10 rounded-full bg-[#111] text-[#c5a880] flex items-center justify-center text-sm font-bold uppercase shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-[#111] text-violet-400 flex items-center justify-center text-sm font-bold uppercase shrink-0">
                           {client.name.substring(0, 2)}
                         </div>
                       )}
                       <div className="min-w-0 text-left">
-                        <p className="font-bold text-sm truncate group-hover:text-[#c5a880] transition-colors">
+                        <p className="font-bold text-sm truncate group-hover:text-violet-400 transition-colors">
                           {client.name}
                         </p>
                         <p className="text-xs text-zinc-500 truncate">{client.niche}</p>
@@ -216,7 +216,7 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
                     </div>
                     <ArrowRight
                       size={16}
-                      className="text-zinc-500 group-hover:text-[#c5a880] group-hover:translate-x-1 transition-all shrink-0"
+                      className="text-zinc-500 group-hover:text-violet-400 group-hover:translate-x-1 transition-all shrink-0"
                     />
                   </button>
                 ))}
@@ -237,7 +237,7 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
     >
       {/* Top Welcome Banner */}
       <div className="bg-gradient-to-r from-zinc-900 to-zinc-950 border border-white/5 rounded-3xl p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-[#c5a880]/5 rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute top-0 right-0 w-80 h-80 bg-violet-500/5 rounded-full blur-[100px] pointer-events-none" />
         <div className="flex items-center gap-4 relative z-10">
           {currentClient.avatarUrl ? (
             <img
@@ -246,12 +246,12 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
               className="w-16 h-16 rounded-xl object-cover border border-white/5"
             />
           ) : (
-            <div className="w-16 h-16 rounded-xl bg-[#111] text-[#c5a880] flex items-center justify-center text-xl font-bold uppercase">
+            <div className="w-16 h-16 rounded-xl bg-[#111] text-violet-400 flex items-center justify-center text-xl font-bold uppercase">
               {currentClient.name.substring(0, 2)}
             </div>
           )}
           <div>
-            <span className="bg-[#c5a880]/10 text-[#c5a880] text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider border border-[#c5a880]/20">
+            <span className="bg-violet-500/10 text-violet-400 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider border border-violet-500/20">
               Área Exclusiva do Cliente
             </span>
             <h1 className="text-xl sm:text-2xl font-bold text-white mt-1.5 flex items-center gap-2">
@@ -306,7 +306,7 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
                     <AlertCircle size={12} /> Atrasado
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 bg-[#c5a880]/10 text-[#c5a880] text-xs px-2.5 py-1 rounded-full font-bold">
+                  <span className="inline-flex items-center gap-1 bg-violet-500/10 text-violet-400 text-xs px-2.5 py-1 rounded-full font-bold">
                     <Clock size={12} /> Pendente
                   </span>
                 )}
@@ -326,7 +326,7 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
               </p>
               <div className="w-full bg-black h-1.5 rounded-full mt-2 overflow-hidden border border-white/5">
                 <div
-                  className="bg-[#c5a880] h-full rounded-full transition-all duration-500"
+                  className="bg-[#a855f7] h-full rounded-full transition-all duration-500"
                   style={{ width: `${progressPercent}%` }}
                 />
               </div>
@@ -357,7 +357,7 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
             <div className="bg-black border border-white/5 rounded-xl p-8 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] flex flex-col">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                  <CheckSquare size={16} className="text-[#c5a880]" /> Atividades Recentes
+                  <CheckSquare size={16} className="text-violet-400" /> Atividades Recentes
                 </h3>
                 <span className="text-[10px] text-zinc-400 font-mono">
                   Total: {totalTasks}
@@ -382,7 +382,7 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
                             t.status === "done"
                               ? "bg-emerald-500"
                               : t.status === "doing"
-                              ? "bg-[#c5a880]"
+                              ? "bg-[#a855f7]"
                               : "bg-zinc-600"
                           }`}
                         />
@@ -395,7 +395,7 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
                           t.status === "done"
                             ? "bg-emerald-500/10 text-emerald-400"
                             : t.status === "doing"
-                            ? "bg-[#c5a880]/10 text-[#c5a880]"
+                            ? "bg-violet-500/10 text-violet-400"
                             : "bg-[#111] text-zinc-400"
                         }`}
                       >
@@ -410,7 +410,7 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
             {/* Inbound Schedule Calendar Events */}
             <div className="bg-black border border-white/5 rounded-xl p-8 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.3)] flex flex-col">
               <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2 mb-4">
-                <Calendar size={16} className="text-[#c5a880]" /> Próximos Compromissos & Postagens
+                <Calendar size={16} className="text-violet-400" /> Próximos Compromissos & Postagens
               </h3>
 
               {clientEvents.length === 0 ? (
@@ -432,7 +432,7 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
                             <span
                               className={`text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full ${
                                 ev.type === "reuniao"
-                                  ? "bg-[#c5a880]/10 text-[#c5a880]"
+                                  ? "bg-violet-500/10 text-violet-400"
                                   : ev.type === "post"
                                   ? "bg-violet-500/10 text-violet-400"
                                   : "bg-rose-500/10 text-rose-400"
@@ -447,7 +447,7 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
                           )}
                         </div>
                         <div className="text-left sm:text-right shrink-0">
-                          <p className="text-xs font-bold text-[#c5a880]">
+                          <p className="text-xs font-bold text-violet-400">
                             {ev.date.split("-").reverse().join("/")}
                           </p>
                           <p className="text-[10px] text-zinc-400 font-mono mt-0.5">{ev.time}</p>
@@ -498,15 +498,15 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
             <div className="space-y-4">
               <div className="flex items-center justify-between border-b border-white/5 pb-2">
                 <span className="text-xs font-bold uppercase text-zinc-400 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-[#c5a880] animate-pulse" /> Em Execução ({clientTasks.filter((t) => t.status === "doing").length})
+                  <span className="w-2 h-2 rounded-full bg-[#a855f7] animate-pulse" /> Em Execução ({clientTasks.filter((t) => t.status === "doing").length})
                 </span>
               </div>
               <div className="space-y-3">
                 {clientTasks.filter((t) => t.status === "doing").map((t) => (
-                  <div key={t.id} className="p-4 rounded-xl bg-black border border-[#c5a880]/10 hover:border-[#c5a880]/20 transition-colors">
+                  <div key={t.id} className="p-4 rounded-xl bg-black border border-violet-500/10 hover:border-violet-500/20 transition-colors">
                     <p className="text-xs font-bold text-white leading-snug">{t.title}</p>
                     {t.dueDate && (
-                      <div className="mt-3 flex items-center gap-1.5 text-[10px] text-[#c5a880]">
+                      <div className="mt-3 flex items-center gap-1.5 text-[10px] text-violet-400">
                         <Clock size={12} /> Limite: {formatTaskDueDate(t.dueDate)}
                       </div>
                     )}
@@ -553,7 +553,7 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
             </div>
             <div className="bg-black border border-white/5 rounded-xl px-4 py-3 flex items-center gap-3 self-start sm:self-center shrink-0">
               <span className="text-xs text-zinc-500 font-semibold">{(!currentClient.paymentType || currentClient.paymentType === "Mensal") ? "Mensalidade Atual:" : currentClient.paymentType === "Projeto" ? "Valor do Projeto:" : "Valor por Entrega:"}</span>
-              <span className="text-sm font-black text-[#c5a880]">
+              <span className="text-sm font-black text-violet-400">
                 R$ {currentClient.planValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
               </span>
             </div>
@@ -589,7 +589,7 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
                             <CheckCircle2 size={10} /> Pago
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 bg-[#c5a880]/10 text-[#c5a880] text-[10px] font-black uppercase px-2 py-0.5 rounded">
+                          <span className="inline-flex items-center gap-1 bg-violet-500/10 text-violet-400 text-[10px] font-black uppercase px-2 py-0.5 rounded">
                             <Clock size={10} /> Aberto
                           </span>
                         )}
@@ -625,7 +625,7 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
                     <div
                       className={`absolute -left-[31px] top-1.5 w-4 h-4 rounded-full border-2 border-zinc-900 shadow-md ${
                         ev.type === "reuniao"
-                          ? "bg-[#c5a880]"
+                          ? "bg-[#a855f7]"
                           : ev.type === "post"
                           ? "bg-violet-500"
                           : "bg-rose-500"
@@ -635,7 +635,7 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
                     <div className="p-4 rounded-xl bg-black border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-white/5 transition-colors">
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-black text-[#c5a880] font-mono">
+                          <span className="text-xs font-black text-violet-400 font-mono">
                             {ev.date.split("-").reverse().join("/")} às {ev.time}
                           </span>
                           <span className="text-[10px] text-zinc-500">•</span>
@@ -675,25 +675,25 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
                 <div
                   key={note.id}
                   onClick={() => setSelectedNote(note)}
-                  className="bg-black border border-white/5 hover:border-[#c5a880]/20 rounded-xl p-5 cursor-pointer flex flex-col justify-between h-52 group transition-all"
+                  className="bg-black border border-white/5 hover:border-violet-500/20 rounded-xl p-5 cursor-pointer flex flex-col justify-between h-52 group transition-all"
                 >
                   <div>
                     <div className="flex items-center justify-between mb-3">
-                      <span className="text-[10px] font-black uppercase bg-[#c5a880]/10 text-[#c5a880] px-2.5 py-0.5 rounded-full border border-[#c5a880]/10">
+                      <span className="text-[10px] font-black uppercase bg-violet-500/10 text-violet-400 px-2.5 py-0.5 rounded-full border border-violet-500/10">
                         {note.type || "Briefing"}
                       </span>
                       <span className="text-[10px] text-zinc-500 font-mono">
                         {note.date.split("-").reverse().join("/")}
                       </span>
                     </div>
-                    <h4 className="font-bold text-sm text-white group-hover:text-[#c5a880] line-clamp-1 transition-colors">
+                    <h4 className="font-bold text-sm text-white group-hover:text-violet-400 line-clamp-1 transition-colors">
                       {note.title}
                     </h4>
                     <p className="text-xs text-zinc-400 mt-2 line-clamp-4 leading-normal">
                       {note.content}
                     </p>
                   </div>
-                  <span className="text-[10px] font-bold text-[#c5a880] flex items-center gap-1 mt-3 group-hover:underline">
+                  <span className="text-[10px] font-bold text-violet-400 flex items-center gap-1 mt-3 group-hover:underline">
                     Ver Completo <ExternalLink size={10} />
                   </span>
                 </div>
@@ -711,7 +711,7 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
               >
                 <div className="flex justify-between items-start border-b border-white/5 pb-4 mb-4">
                   <div>
-                    <span className="text-[10px] font-black uppercase bg-[#c5a880]/10 text-[#c5a880] px-2.5 py-0.5 rounded-full border border-[#c5a880]/10">
+                    <span className="text-[10px] font-black uppercase bg-violet-500/10 text-violet-400 px-2.5 py-0.5 rounded-full border border-violet-500/10">
                       {selectedNote.type || "Briefing"}
                     </span>
                     <h3 className="text-lg font-black text-white mt-2">{selectedNote.title}</h3>

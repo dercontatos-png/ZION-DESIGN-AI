@@ -284,7 +284,7 @@ const VideoAnalysis: React.FC<VideoAnalysisProps> = ({ customApiKey }) => {
       <div className="shrink-0 px-6 py-4 border-b border-zinc-800/80 bg-black/40 backdrop-blur-sm">
         <div className="flex items-center justify-between max-w-6xl mx-auto">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 flex items-center justify-center shadow-lg shadow-amber-500/20">
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#a855f7] via-[#d8be98] to-[#7c3aed] flex items-center justify-center shadow-lg shadow-violet-600/20">
               <Video size={18} className="text-white" />
             </div>
             <div>
@@ -309,7 +309,7 @@ const VideoAnalysis: React.FC<VideoAnalysisProps> = ({ customApiKey }) => {
                   <div
                     className={`w-8 h-px ${
                       activeStep >= step.num
-                        ? "bg-amber-500"
+                        ? "bg-[#a855f7]"
                         : "bg-zinc-800"
                     }`}
                   />
@@ -317,7 +317,7 @@ const VideoAnalysis: React.FC<VideoAnalysisProps> = ({ customApiKey }) => {
                 <div
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${
                     activeStep >= step.num
-                      ? "bg-amber-500/15 text-amber-400 border border-amber-500/30"
+                      ? "bg-violet-500/15 text-violet-400 border border-violet-500/30"
                       : "bg-zinc-900 text-zinc-600 border border-zinc-800"
                   }`}
                 >
@@ -356,7 +356,7 @@ const VideoAnalysis: React.FC<VideoAnalysisProps> = ({ customApiKey }) => {
             {/* Upload Zone */}
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-md bg-amber-500/20 flex items-center justify-center text-amber-400 text-[10px] font-black">
+                <div className="w-6 h-6 rounded-md bg-violet-500/20 flex items-center justify-center text-violet-400 text-[10px] font-black">
                   1
                 </div>
                 <h2 className="text-xs font-black uppercase tracking-wider text-zinc-300">
@@ -374,8 +374,8 @@ const VideoAnalysis: React.FC<VideoAnalysisProps> = ({ customApiKey }) => {
                   onClick={() => fileInputRef.current?.click()}
                   className={`relative cursor-pointer group rounded-2xl border-2 border-dashed transition-all duration-300 overflow-hidden ${
                     isDragging
-                      ? "border-amber-500 bg-amber-500/10 scale-[1.02]"
-                      : "border-zinc-700/50 hover:border-amber-500/50 bg-zinc-900/40 hover:bg-zinc-900/60"
+                      ? "border-violet-500 bg-violet-500/10 scale-[1.02]"
+                      : "border-zinc-700/50 hover:border-violet-500/50 bg-zinc-900/40 hover:bg-zinc-900/60"
                   }`}
                   style={{ minHeight: 320 }}
                 >
@@ -388,10 +388,10 @@ const VideoAnalysis: React.FC<VideoAnalysisProps> = ({ customApiKey }) => {
                   <div className="relative flex flex-col items-center justify-center h-full py-16 px-8">
                     <div className={`w-20 h-20 rounded-2xl flex items-center justify-center mb-6 transition-all duration-300 ${
                       isDragging
-                        ? "bg-amber-500/20 scale-110 rotate-3"
-                        : "bg-zinc-800/80 group-hover:bg-amber-500/10 group-hover:scale-105"
+                        ? "bg-violet-500/20 scale-110 rotate-3"
+                        : "bg-zinc-800/80 group-hover:bg-violet-500/10 group-hover:scale-105"
                     }`}>
-                      <FileVideo size={32} className={`transition-colors ${isDragging ? "text-amber-400" : "text-zinc-500 group-hover:text-amber-500"}`} />
+                      <FileVideo size={32} className={`transition-colors ${isDragging ? "text-violet-400" : "text-zinc-500 group-hover:text-violet-400"}`} />
                     </div>
 
                     <p className="text-sm font-bold text-zinc-300 mb-1">
@@ -401,7 +401,7 @@ const VideoAnalysis: React.FC<VideoAnalysisProps> = ({ customApiKey }) => {
                       ou clique para selecionar • MP4, MOV, WebM • até 500MB
                     </p>
 
-                    <div className="px-5 py-2.5 bg-amber-500/10 border border-amber-500/25 rounded-xl text-amber-400 text-[10px] font-bold uppercase tracking-wider group-hover:bg-amber-500/15 transition-colors">
+                    <div className="px-5 py-2.5 bg-violet-500/10 border border-violet-500/25 rounded-xl text-violet-400 text-[10px] font-bold uppercase tracking-wider group-hover:bg-violet-500/15 transition-colors">
                       Escolher Arquivo
                     </div>
                   </div>
@@ -437,7 +437,7 @@ const VideoAnalysis: React.FC<VideoAnalysisProps> = ({ customApiKey }) => {
                   {/* Video Info */}
                   <div className="px-4 py-3 border-t border-zinc-800/80 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Play size={12} className="text-amber-500" />
+                      <Play size={12} className="text-violet-400" />
                       <span className="text-[11px] font-bold text-zinc-300 truncate max-w-[200px]">
                         {videoFile.name}
                       </span>
@@ -449,7 +449,7 @@ const VideoAnalysis: React.FC<VideoAnalysisProps> = ({ customApiKey }) => {
                     <button
                       onClick={analyzeVideo}
                       disabled={isAnalyzing}
-                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 disabled:opacity-50 disabled:cursor-not-allowed text-black text-[10px] font-black uppercase tracking-wider rounded-lg transition-all shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 active:scale-95"
+                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed text-black text-[10px] font-black uppercase tracking-wider rounded-lg transition-all shadow-lg shadow-violet-600/20 hover:shadow-violet-600/30 active:scale-95"
                     >
                       {isAnalyzing ? (
                         <>
@@ -474,8 +474,8 @@ const VideoAnalysis: React.FC<VideoAnalysisProps> = ({ customApiKey }) => {
                         exit={{ opacity: 0 }}
                         className="absolute inset-0 bg-black/70 backdrop-blur-sm flex flex-col items-center justify-center gap-4"
                       >
-                        <div className="w-16 h-16 rounded-2xl bg-amber-500/20 flex items-center justify-center">
-                          <Loader2 size={28} className="animate-spin text-amber-400" />
+                        <div className="w-16 h-16 rounded-2xl bg-violet-500/20 flex items-center justify-center">
+                          <Loader2 size={28} className="animate-spin text-violet-400" />
                         </div>
                         <div className="text-center">
                           <p className="text-xs font-bold text-white mb-1">Analisando o vídeo com IA...</p>
@@ -483,7 +483,7 @@ const VideoAnalysis: React.FC<VideoAnalysisProps> = ({ customApiKey }) => {
                         </div>
                         <div className="w-48 h-1 bg-zinc-800 rounded-full overflow-hidden">
                           <motion.div
-                            className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full"
+                            className="h-full bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-full"
                             initial={{ width: "0%" }}
                             animate={{ width: "85%" }}
                             transition={{ duration: 25, ease: "easeOut" }}
@@ -500,7 +500,7 @@ const VideoAnalysis: React.FC<VideoAnalysisProps> = ({ customApiKey }) => {
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <div className={`w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-black ${
-                  analysis ? "bg-amber-500/20 text-amber-400" : "bg-zinc-800 text-zinc-600"
+                  analysis ? "bg-violet-500/20 text-violet-400" : "bg-zinc-800 text-zinc-600"
                 }`}>
                   2
                 </div>
@@ -577,7 +577,7 @@ const VideoAnalysis: React.FC<VideoAnalysisProps> = ({ customApiKey }) => {
                               disabled={n > analysis.scenes.length}
                               className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${
                                 numFrames === n
-                                  ? "bg-amber-500 text-black shadow-lg shadow-amber-500/20"
+                                  ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-600/20"
                                   : n > analysis.scenes.length
                                   ? "bg-zinc-900 text-zinc-700 cursor-not-allowed"
                                   : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
@@ -638,7 +638,7 @@ const VideoAnalysis: React.FC<VideoAnalysisProps> = ({ customApiKey }) => {
                             {/* Transcription */}
                             {analysis.transcription && (
                               <div className="space-y-1">
-                                <span className="text-[9px] font-bold text-amber-500/80 uppercase tracking-wider">Transcrição</span>
+                                <span className="text-[9px] font-bold text-violet-400/80 uppercase tracking-wider">Transcrição</span>
                                 <p className="text-[11px] text-zinc-400 leading-relaxed bg-black/40 p-3 rounded-lg border border-zinc-800/50">
                                   {analysis.transcription}
                                 </p>
@@ -648,21 +648,21 @@ const VideoAnalysis: React.FC<VideoAnalysisProps> = ({ customApiKey }) => {
                             {/* Central Elements */}
                             {analysis.central_elements && (
                               <div className="space-y-1">
-                                <span className="text-[9px] font-bold text-amber-500/80 uppercase tracking-wider">Elementos Centrais</span>
+                                <span className="text-[9px] font-bold text-violet-400/80 uppercase tracking-wider">Elementos Centrais</span>
                                 <p className="text-[11px] text-zinc-400">{analysis.central_elements}</p>
                               </div>
                             )}
 
                             {/* Scenes */}
                             <div className="space-y-1">
-                              <span className="text-[9px] font-bold text-amber-500/80 uppercase tracking-wider">
+                              <span className="text-[9px] font-bold text-violet-400/80 uppercase tracking-wider">
                                 Cenas ({analysis.scenes.length})
                               </span>
                               <div className="space-y-2">
                                 {analysis.scenes.map((scene, i) => (
                                   <div key={i} className="bg-black/40 p-3 rounded-lg border border-zinc-800/50 space-y-1.5">
                                     <div className="flex items-center justify-between">
-                                      <span className="text-[10px] font-bold text-amber-400">
+                                      <span className="text-[10px] font-bold text-violet-400">
                                         {scene.timestamp}
                                       </span>
                                       <span className="text-[9px] bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-full font-medium">
@@ -672,7 +672,7 @@ const VideoAnalysis: React.FC<VideoAnalysisProps> = ({ customApiKey }) => {
                                     <p className="text-[10px] text-zinc-400">{scene.description}</p>
                                     {scene.caption_text && (
                                       <p className="text-[10px] text-zinc-300 font-medium flex items-center gap-1">
-                                        <Type size={9} className="text-amber-500 shrink-0" />
+                                        <Type size={9} className="text-violet-400 shrink-0" />
                                         "{scene.caption_text}"
                                       </p>
                                     )}
@@ -707,7 +707,7 @@ const VideoAnalysis: React.FC<VideoAnalysisProps> = ({ customApiKey }) => {
                   <button
                     onClick={generateFrames}
                     disabled={isGenerating}
-                    className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 hover:from-amber-400 hover:via-orange-400 hover:to-red-400 disabled:opacity-50 disabled:cursor-not-allowed text-black text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-amber-500/20 hover:shadow-amber-500/40 active:scale-[0.98]"
+                    className="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-gradient-to-r from-[#a855f7] via-[#d8be98] to-[#7c3aed] hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed text-black text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-violet-600/20 hover:shadow-violet-600/40 active:scale-[0.98]"
                   >
                     {isGenerating ? (
                       <>
@@ -733,11 +733,11 @@ const VideoAnalysis: React.FC<VideoAnalysisProps> = ({ customApiKey }) => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-6 flex flex-col items-center gap-4"
+                className="rounded-2xl border border-violet-500/20 bg-violet-500/5 p-6 flex flex-col items-center gap-4"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
-                    <Loader2 size={20} className="animate-spin text-amber-400" />
+                  <div className="w-10 h-10 rounded-xl bg-violet-500/20 flex items-center justify-center">
+                    <Loader2 size={20} className="animate-spin text-violet-400" />
                   </div>
                   <div>
                     <p className="text-sm font-bold text-white">Gerando Styleframes com IA...</p>
@@ -746,7 +746,7 @@ const VideoAnalysis: React.FC<VideoAnalysisProps> = ({ customApiKey }) => {
                 </div>
                 <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
                   <motion.div
-                    className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full"
+                    className="h-full bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-full"
                     initial={{ width: "0%" }}
                     animate={{ width: `${Math.min(generatingProgress + 10, 90)}%` }}
                     transition={{ duration: numFrames * 20, ease: "easeOut" }}
@@ -765,7 +765,7 @@ const VideoAnalysis: React.FC<VideoAnalysisProps> = ({ customApiKey }) => {
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-md bg-amber-500/20 flex items-center justify-center text-amber-400 text-[10px] font-black">
+                  <div className="w-6 h-6 rounded-md bg-violet-500/20 flex items-center justify-center text-violet-400 text-[10px] font-black">
                     3
                   </div>
                   <h2 className="text-xs font-black uppercase tracking-wider text-zinc-300">
@@ -784,7 +784,7 @@ const VideoAnalysis: React.FC<VideoAnalysisProps> = ({ customApiKey }) => {
                   </button>
                   <button
                     onClick={downloadAll}
-                    className="flex items-center gap-1.5 px-3 py-2 bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 border border-amber-500/25 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all"
+                    className="flex items-center gap-1.5 px-3 py-2 bg-violet-500/15 hover:bg-violet-500/25 text-violet-400 border border-violet-500/25 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all"
                   >
                     <Download size={10} />
                     Baixar Todos
@@ -800,7 +800,7 @@ const VideoAnalysis: React.FC<VideoAnalysisProps> = ({ customApiKey }) => {
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: i * 0.1 }}
-                    className="group rounded-2xl border border-zinc-800/80 bg-zinc-900/60 overflow-hidden hover:border-amber-500/30 transition-all duration-300"
+                    className="group rounded-2xl border border-zinc-800/80 bg-zinc-900/60 overflow-hidden hover:border-violet-500/30 transition-all duration-300"
                   >
                     {/* Image */}
                     <div
@@ -825,7 +825,7 @@ const VideoAnalysis: React.FC<VideoAnalysisProps> = ({ customApiKey }) => {
                               e.stopPropagation();
                               downloadImage(frame.imageUrl, `styleframe_${i + 1}.jpg`);
                             }}
-                            className="w-10 h-10 bg-amber-500/80 backdrop-blur-sm rounded-xl flex items-center justify-center text-black hover:bg-amber-400 transition-colors"
+                            className="w-10 h-10 bg-violet-500/80 backdrop-blur-sm rounded-xl flex items-center justify-center text-black hover:bg-violet-600 transition-colors"
                           >
                             <Download size={16} />
                           </button>
@@ -833,7 +833,7 @@ const VideoAnalysis: React.FC<VideoAnalysisProps> = ({ customApiKey }) => {
                       </div>
 
                       {/* Scene badge */}
-                      <div className="absolute top-3 left-3 px-2.5 py-1 bg-black/70 backdrop-blur-sm rounded-lg text-[9px] font-bold text-amber-400 uppercase tracking-wider">
+                      <div className="absolute top-3 left-3 px-2.5 py-1 bg-black/70 backdrop-blur-sm rounded-lg text-[9px] font-bold text-violet-400 uppercase tracking-wider">
                         {frame.scene.timestamp}
                       </div>
                     </div>
@@ -905,7 +905,7 @@ const VideoAnalysis: React.FC<VideoAnalysisProps> = ({ customApiKey }) => {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => downloadImage(previewFrame.imageUrl, "styleframe_preview.jpg")}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all"
+                    className="flex items-center gap-1.5 px-4 py-2 bg-[#a855f7] hover:bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all"
                   >
                     <Download size={12} />
                       Baixar

@@ -82,7 +82,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
 
   // Local UI States
   const [modoCriacao, setModoCriacao] = useState("Criativo (Padrão)");
-  const [paletaCores, setPaletaCores] = useState("#ad8330, #000000, #ffffff");
+  const [paletaCores, setPaletaCores] = useState("#7c3aed, #000000, #ffffff");
   const [usarImagensFundo, setUsarImagensFundo] = useState(true);
 
   // Active Image Format/Zoom States
@@ -160,7 +160,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
       <div className="lg:col-span-4 bg-black border border-white/5 rounded-2xl flex flex-col min-h-0 overflow-hidden shadow-2xl relative">
         <div className="p-4 border-b border-white/5 bg-black/40 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
-            <SlidersHorizontal size={14} className="text-amber-500" />
+            <SlidersHorizontal size={14} className="text-violet-400" />
             <span className="text-xs font-black tracking-wider text-zinc-300 uppercase">
               Mesa de Direção de Arte
             </span>
@@ -186,7 +186,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
                   environment: "",
                   useEnvRef: false,
                   envColor: "Neutro",
-                  colorCode: "#ad8330",
+                  colorCode: "#7c3aed",
                   enableAmbientColor: false,
                   rimLight: "Nenhuma",
                   enableRimLight: false,
@@ -224,7 +224,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
               onClick={() => toggleSection("config")}
               className="w-full flex items-center justify-between p-3 bg-black hover:bg-[#111]/80 transition-colors"
             >
-              <span className="text-xs font-black text-amber-500 uppercase tracking-wider">
+              <span className="text-xs font-black text-violet-400 uppercase tracking-wider">
                 1. Configurações da Arte
               </span>
               {openSections.includes("config") ? <ChevronUp size={14} className="text-zinc-500" /> : <ChevronDown size={14} className="text-zinc-500" />}
@@ -237,7 +237,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
                   <select
                     value={modoCriacao}
                     onChange={(e) => setModoCriacao(e.target.value)}
-                    className="w-full bg-black border border-white/5 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-amber-500/50"
+                    className="w-full bg-black border border-white/5 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-violet-500/50"
                   >
                     <option>Criativo (Padrão)</option>
                     <option>Fiel ao Rascunho</option>
@@ -255,7 +255,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
                         onClick={() => updateImgConfig({ imageSize: size })}
                         className={`py-1.5 rounded-lg text-xs font-black uppercase transition-all ${
                           imgConfig.imageSize === size
-                            ? "bg-amber-500 text-zinc-950 scale-[1.02]"
+                            ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white scale-[1.02]"
                             : "bg-black hover:bg-[#111] border border-white/5 text-zinc-400"
                         }`}
                       >
@@ -275,7 +275,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
                         onClick={() => updateImgConfig({ aspectRatio: ratio })}
                         className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all ${
                           imgConfig.aspectRatio === ratio
-                            ? "bg-amber-500 text-zinc-950"
+                            ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white"
                             : "bg-black hover:bg-[#111] border border-white/5 text-zinc-400"
                         }`}
                       >
@@ -295,7 +295,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
                         onClick={() => updateImgConfig({ variations: v })}
                         className={`py-1.5 rounded-lg text-xs font-black transition-all ${
                           imgConfig.variations === v
-                            ? "bg-amber-500 text-zinc-950 scale-105"
+                            ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white scale-105"
                             : "bg-black hover:bg-[#111] border border-white/5 text-zinc-400"
                         }`}
                       >
@@ -312,8 +312,8 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
                     type="text"
                     value={paletaCores}
                     onChange={(e) => setPaletaCores(e.target.value)}
-                    placeholder="Ex: #ad8330, #000000, #ffffff"
-                    className="w-full bg-black border border-white/5 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-amber-500/50"
+                    placeholder="Ex: #7c3aed, #000000, #ffffff"
+                    className="w-full bg-black border border-white/5 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-violet-500/50"
                   />
                 </div>
 
@@ -325,7 +325,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
                       setUsarImagensFundo(!usarImagensFundo);
                       updateImgConfig({ useEnvRef: !usarImagensFundo });
                     }}
-                    className={`w-9 h-5 rounded-full transition-colors relative p-0.5 ${usarImagensFundo ? "bg-amber-500" : "bg-[#111]"}`}
+                    className={`w-9 h-5 rounded-full transition-colors relative p-0.5 ${usarImagensFundo ? "bg-[#a855f7]" : "bg-[#111]"}`}
                   >
                     <span className={`block w-4 h-4 bg-white rounded-full transition-transform ${usarImagensFundo ? "translate-x-4" : ""}`} />
                   </button>
@@ -340,7 +340,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
               onClick={() => toggleSection("sujeito")}
               className="w-full flex items-center justify-between p-3 bg-black hover:bg-[#111]/80 transition-colors"
             >
-              <span className="text-xs font-black text-amber-500 uppercase tracking-wider">
+              <span className="text-xs font-black text-violet-400 uppercase tracking-wider">
                 2. Sujeito & Composição
               </span>
               {openSections.includes("sujeito") ? <ChevronUp size={14} className="text-zinc-500" /> : <ChevronDown size={14} className="text-zinc-500" />}
@@ -353,7 +353,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
                   <select
                     value={imgConfig.gender}
                     onChange={(e) => updateImgConfig({ gender: e.target.value })}
-                    className="w-full bg-black border border-white/5 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-amber-500/50"
+                    className="w-full bg-black border border-white/5 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-violet-500/50"
                   >
                     <option>Masculino</option>
                     <option>Feminino</option>
@@ -368,7 +368,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
                   <select
                     value={imgConfig.framing}
                     onChange={(e) => updateImgConfig({ framing: e.target.value })}
-                    className="w-full bg-black border border-white/5 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-amber-500/50"
+                    className="w-full bg-black border border-white/5 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-violet-500/50"
                   >
                     <option>Close-up</option>
                     <option>Plano Médio</option>
@@ -388,7 +388,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
                         onClick={() => updateImgConfig({ positioning: pos })}
                         className={`py-1.5 rounded-lg text-xs font-black uppercase transition-all ${
                           imgConfig.positioning === pos
-                            ? "bg-amber-500 text-zinc-950"
+                            ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white"
                             : "bg-black hover:bg-[#111] border border-white/5 text-zinc-400"
                         }`}
                       >
@@ -405,7 +405,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
                     value={imgConfig.clothingPose}
                     onChange={(e) => updateImgConfig({ clothingPose: e.target.value })}
                     placeholder="Ex: Terno azul marinho, braços cruzados..."
-                    className="w-full min-h-[60px] bg-black border border-white/5 rounded-lg p-2 text-xs text-white resize-none focus:outline-none focus:border-amber-500/50"
+                    className="w-full min-h-[60px] bg-black border border-white/5 rounded-lg p-2 text-xs text-white resize-none focus:outline-none focus:border-violet-500/50"
                   />
                 </div>
 
@@ -413,10 +413,10 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold tracking-wider text-zinc-500 uppercase block">Fotos de Referência (Pessoas)</label>
                   
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="flex flex-wrap gap-2">
                     {personRefs.map((ref, idx) => (
-                      <div key={idx} className="relative w-full aspect-square border border-white/5 rounded-lg overflow-hidden group bg-black">
-                        <img src={ref.url} className="w-full h-full object-cover" alt="" />
+                      <div key={idx} className="relative h-20 border border-white/5 rounded-lg overflow-hidden group">
+                        <img src={ref.url} className="h-full w-auto block" alt="" />
                         <button
                           onClick={() => removePersonRef(idx)}
                           className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-red-500 transition-opacity"
@@ -426,7 +426,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
                       </div>
                     ))}
                     
-                    <label className="border border-dashed border-white/20 hover:border-amber-500/50 rounded-lg flex flex-col items-center justify-center aspect-square cursor-pointer transition-colors bg-black/20">
+                    <label className="border border-dashed border-white/20 hover:border-violet-500/50 rounded-lg flex flex-col items-center justify-center h-20 w-20 cursor-pointer transition-colors bg-black/20">
                       <Plus size={16} className="text-zinc-500" />
                       <span className="text-[8px] text-zinc-500 mt-1 font-bold">Adicionar</span>
                       <input
@@ -448,7 +448,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
               onClick={() => toggleSection("cenario")}
               className="w-full flex items-center justify-between p-3 bg-black hover:bg-[#111]/80 transition-colors"
             >
-              <span className="text-xs font-black text-amber-500 uppercase tracking-wider">
+              <span className="text-xs font-black text-violet-400 uppercase tracking-wider">
                 3. Cenário & Iluminação
               </span>
               {openSections.includes("cenario") ? <ChevronUp size={14} className="text-zinc-500" /> : <ChevronDown size={14} className="text-zinc-500" />}
@@ -463,7 +463,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
                     value={imgConfig.niche}
                     onChange={(e) => updateImgConfig({ niche: e.target.value })}
                     placeholder="Ex: Trader de Elite, Clínica de Estética..."
-                    className="w-full bg-black border border-white/5 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-amber-500/50"
+                    className="w-full bg-black border border-white/5 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-violet-500/50"
                   />
                 </div>
 
@@ -474,7 +474,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
                     value={imgConfig.environment}
                     onChange={(e) => updateImgConfig({ environment: e.target.value })}
                     placeholder="Ex: Escritório moderno de vidro com vista para cidade..."
-                    className="w-full min-h-[60px] bg-black border border-white/5 rounded-lg p-2 text-xs text-white resize-none focus:outline-none focus:border-amber-500/50"
+                    className="w-full min-h-[60px] bg-black border border-white/5 rounded-lg p-2 text-xs text-white resize-none focus:outline-none focus:border-violet-500/50"
                   />
                 </div>
 
@@ -484,7 +484,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
                   <div className="flex gap-2">
                     <select
                       value={imgConfig.envColor}
-                      onChange={(e) => updateImgConfig({ envColor: e.target.value, colorCode: e.target.value === "Neutro" ? "#ad8330" : e.target.value })}
+                      onChange={(e) => updateImgConfig({ envColor: e.target.value, colorCode: e.target.value === "Neutro" ? "#7c3aed" : e.target.value })}
                       className="flex-1 bg-black border border-white/5 rounded-lg p-2 text-xs text-white focus:outline-none"
                     >
                       <option value="Neutro">Neutro (Dourado/Preto)</option>
@@ -497,7 +497,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
                     </select>
                     <input
                       type="color"
-                      value={imgConfig.colorCode || "#ad8330"}
+                      value={imgConfig.colorCode || "#7c3aed"}
                       onChange={(e) => updateImgConfig({ colorCode: e.target.value, enableAmbientColor: true })}
                       className="w-8 h-8 rounded-lg bg-black border border-white/5 p-0.5 cursor-pointer shrink-0"
                     />
@@ -543,10 +543,10 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
                 {/* Upload Fotos de Referência (Estilo) */}
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold tracking-wider text-zinc-500 uppercase block">Fotos de Referência (Estilo)</label>
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="flex flex-wrap gap-2">
                     {styleRefs.map((ref, idx) => (
-                      <div key={idx} className="relative w-full aspect-square border border-white/5 rounded-lg overflow-hidden group bg-black">
-                        <img src={ref.url} className="w-full h-full object-cover" alt="" />
+                      <div key={idx} className="relative h-20 border border-white/5 rounded-lg overflow-hidden group">
+                        <img src={ref.url} className="h-full w-auto block" alt="" />
                         <button
                           onClick={() => removeStyleRef(idx)}
                           className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-red-500 transition-opacity"
@@ -556,7 +556,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
                       </div>
                     ))}
                     
-                    <label className="border border-dashed border-white/20 hover:border-amber-500/50 rounded-lg flex flex-col items-center justify-center aspect-square cursor-pointer transition-colors bg-black/20">
+                    <label className="border border-dashed border-white/20 hover:border-violet-500/50 rounded-lg flex flex-col items-center justify-center h-20 w-20 cursor-pointer transition-colors bg-black/20">
                       <Plus size={16} className="text-zinc-500" />
                       <span className="text-[8px] text-zinc-500 mt-1 font-bold">Adicionar</span>
                       <input
@@ -574,7 +574,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
                   <span className="text-xs font-bold text-zinc-400">Extrair Estilo Tipográfico</span>
                   <button
                     onClick={() => updateImgConfig({ extractTypography: !imgConfig.extractTypography })}
-                    className={`w-9 h-5 rounded-full transition-colors relative p-0.5 ${imgConfig.extractTypography ? "bg-amber-500" : "bg-[#111]"}`}
+                    className={`w-9 h-5 rounded-full transition-colors relative p-0.5 ${imgConfig.extractTypography ? "bg-[#a855f7]" : "bg-[#111]"}`}
                   >
                     <span className={`block w-4 h-4 bg-white rounded-full transition-transform ${imgConfig.extractTypography ? "translate-x-4" : ""}`} />
                   </button>
@@ -583,10 +583,10 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
                 {/* Upload Logos */}
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold tracking-wider text-zinc-500 uppercase block">Logos</label>
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="flex flex-wrap gap-2">
                     {logoRefs.map((ref, idx) => (
-                      <div key={idx} className="relative w-full aspect-square border border-white/5 rounded-lg overflow-hidden group bg-black">
-                        <img src={ref.url} className="w-full h-full object-contain p-1" alt="" />
+                      <div key={idx} className="relative h-20 border border-white/5 rounded-lg overflow-hidden group">
+                        <img src={ref.url} className="h-full w-auto block p-1" alt="" />
                         <button
                           onClick={() => removeLogoRef(idx)}
                           className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-red-500 transition-opacity"
@@ -596,7 +596,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
                       </div>
                     ))}
                     
-                    <label className="border border-dashed border-white/20 hover:border-amber-500/50 rounded-lg flex flex-col items-center justify-center aspect-square cursor-pointer transition-colors bg-black/20">
+                    <label className="border border-dashed border-white/20 hover:border-violet-500/50 rounded-lg flex flex-col items-center justify-center h-20 w-20 cursor-pointer transition-colors bg-black/20">
                       <Plus size={16} className="text-zinc-500" />
                       <span className="text-[8px] text-zinc-500 mt-1 font-bold">Adicionar</span>
                       <input
@@ -618,7 +618,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
               onClick={() => toggleSection("estilo")}
               className="w-full flex items-center justify-between p-3 bg-black hover:bg-[#111]/80 transition-colors"
             >
-              <span className="text-xs font-black text-amber-500 uppercase tracking-wider">
+              <span className="text-xs font-black text-violet-400 uppercase tracking-wider">
                 4. Estilo & Efeitos
               </span>
               {openSections.includes("estilo") ? <ChevronUp size={14} className="text-zinc-500" /> : <ChevronDown size={14} className="text-zinc-500" />}
@@ -669,7 +669,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
                         onClick={() => updateImgConfig({ style: styleOption })}
                         className={`px-2 py-1.5 rounded-lg text-[10px] font-semibold transition-all border text-left truncate ${
                           imgConfig.style === styleOption
-                            ? "bg-amber-500 text-zinc-950 border-amber-400"
+                            ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white border-violet-500"
                             : "bg-black text-zinc-400 border-white/5 hover:border-zinc-700"
                         }`}
                       >
@@ -685,7 +685,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
                     <span className="text-xs font-bold text-zinc-400">Desfoque (Blur/Bokeh)</span>
                     <button
                       onClick={() => updateImgConfig({ enableBlur: !imgConfig.enableBlur })}
-                      className={`w-9 h-5 rounded-full transition-colors relative p-0.5 ${imgConfig.enableBlur ? "bg-amber-500" : "bg-[#111]"}`}
+                      className={`w-9 h-5 rounded-full transition-colors relative p-0.5 ${imgConfig.enableBlur ? "bg-[#a855f7]" : "bg-[#111]"}`}
                     >
                       <span className={`block w-4 h-4 bg-white rounded-full transition-transform ${imgConfig.enableBlur ? "translate-x-4" : ""}`} />
                     </button>
@@ -695,7 +695,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
                     <span className="text-xs font-bold text-zinc-400">Degradê Lateral</span>
                     <button
                       onClick={() => updateImgConfig({ lateralGradient: !imgConfig.lateralGradient })}
-                      className={`w-9 h-5 rounded-full transition-colors relative p-0.5 ${imgConfig.lateralGradient ? "bg-amber-500" : "bg-[#111]"}`}
+                      className={`w-9 h-5 rounded-full transition-colors relative p-0.5 ${imgConfig.lateralGradient ? "bg-[#a855f7]" : "bg-[#111]"}`}
                     >
                       <span className={`block w-4 h-4 bg-white rounded-full transition-transform ${imgConfig.lateralGradient ? "translate-x-4" : ""}`} />
                     </button>
@@ -705,7 +705,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
                     <span className="text-xs font-bold text-zinc-400">Sem Pessoas</span>
                     <button
                       onClick={() => updateImgConfig({ noPeople: !imgConfig.noPeople })}
-                      className={`w-9 h-5 rounded-full transition-colors relative p-0.5 ${imgConfig.noPeople ? "bg-amber-500" : "bg-[#111]"}`}
+                      className={`w-9 h-5 rounded-full transition-colors relative p-0.5 ${imgConfig.noPeople ? "bg-[#a855f7]" : "bg-[#111]"}`}
                     >
                       <span className={`block w-4 h-4 bg-white rounded-full transition-transform ${imgConfig.noPeople ? "translate-x-4" : ""}`} />
                     </button>
@@ -715,7 +715,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
                     <span className="text-xs font-bold text-zinc-400">Elementos Flutuantes</span>
                     <button
                       onClick={() => updateImgConfig({ floatingElements: !imgConfig.floatingElements })}
-                      className={`w-9 h-5 rounded-full transition-colors relative p-0.5 ${imgConfig.floatingElements ? "bg-amber-500" : "bg-[#111]"}`}
+                      className={`w-9 h-5 rounded-full transition-colors relative p-0.5 ${imgConfig.floatingElements ? "bg-[#a855f7]" : "bg-[#111]"}`}
                     >
                       <span className={`block w-4 h-4 bg-white rounded-full transition-transform ${imgConfig.floatingElements ? "translate-x-4" : ""}`} />
                     </button>
@@ -726,7 +726,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
                       value={imgConfig.floatingElementsDescription}
                       onChange={(e) => updateImgConfig({ floatingElementsDescription: e.target.value })}
                       placeholder="Descreva os elementos (ex: partículas de ouro, moedas...)"
-                      className="w-full bg-black border border-white/5 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-amber-500/50"
+                      className="w-full bg-black border border-white/5 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-violet-500/50"
                     />
                   )}
 
@@ -734,7 +734,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
                     <span className="text-xs font-bold text-zinc-400">Permitir Texto na Arte</span>
                     <button
                       onClick={() => updateImgConfig({ enableText: !imgConfig.enableText })}
-                      className={`w-9 h-5 rounded-full transition-colors relative p-0.5 ${imgConfig.enableText ? "bg-amber-500" : "bg-[#111]"}`}
+                      className={`w-9 h-5 rounded-full transition-colors relative p-0.5 ${imgConfig.enableText ? "bg-[#a855f7]" : "bg-[#111]"}`}
                     >
                       <span className={`block w-4 h-4 bg-white rounded-full transition-transform ${imgConfig.enableText ? "translate-x-4" : ""}`} />
                     </button>
@@ -775,7 +775,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
               onClick={() => toggleSection("ajustes")}
               className="w-full flex items-center justify-between p-3 bg-black hover:bg-[#111]/80 transition-colors"
             >
-              <span className="text-xs font-black text-amber-500 uppercase tracking-wider">
+              <span className="text-xs font-black text-violet-400 uppercase tracking-wider">
                 5. Ajustes Finais e Geração
               </span>
               {openSections.includes("ajustes") ? <ChevronUp size={14} className="text-zinc-500" /> : <ChevronDown size={14} className="text-zinc-500" />}
@@ -788,7 +788,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
                     value={imgConfig.additionalPrompt}
                     onChange={(e) => updateImgConfig({ additionalPrompt: e.target.value })}
                     placeholder="Adicione qualquer outro detalhe específico aqui..."
-                    className="w-full min-h-[70px] bg-black border border-white/5 rounded-lg p-2 text-xs text-white resize-none focus:outline-none focus:border-amber-500/50"
+                    className="w-full min-h-[70px] bg-black border border-white/5 rounded-lg p-2 text-xs text-white resize-none focus:outline-none focus:border-violet-500/50"
                   />
                 </div>
               </div>
@@ -802,7 +802,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
           <button
             onClick={() => generateImage(customApiKey, { type: "color", colors: paletaCores.split(",").map((c) => c.trim()) })}
             disabled={isGeneratingImage}
-            className="w-full bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-zinc-950 py-3 rounded-xl font-black text-sm tracking-wider uppercase transition-all shadow-lg shadow-amber-500/10 active:scale-98 flex items-center justify-center gap-2"
+            className="w-full bg-[#a855f7] hover:bg-violet-600 disabled:opacity-40 text-zinc-950 py-3 rounded-xl font-black text-sm tracking-wider uppercase transition-all shadow-lg shadow-violet-600/10 active:scale-98 flex items-center justify-center gap-2"
           >
             <Sparkles size={16} />
             <span>Gerar Arte(s)</span>
@@ -844,7 +844,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
           {isGeneratingImage ? (
             <div className="text-center space-y-4">
               <div className="relative w-16 h-16 mx-auto">
-                <div className="absolute inset-0 rounded-full border-4 border-amber-500/20" />
+                <div className="absolute inset-0 rounded-full border-4 border-violet-500/20" />
                 <div className="absolute inset-0 rounded-full border-4 border-t-amber-500 animate-spin" />
               </div>
               <p className="text-xs text-zinc-400 font-black animate-pulse uppercase tracking-widest">
@@ -902,7 +902,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
                       setBrushMode(brushMode === "draw" ? "erase" : "draw");
                     }}
                     className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${
-                      brushMode === "draw" ? "bg-amber-500 text-zinc-950" : "bg-[#111] text-zinc-400"
+                      brushMode === "draw" ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white" : "bg-[#111] text-zinc-400"
                     }`}
                   >
                     Pintar Máscara
@@ -955,7 +955,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
                               alert(`Pronto para exportar em ${format}!`);
                             }}
                             className={`px-2.5 py-1.5 rounded text-[10px] font-bold text-left hover:bg-white/5 ${
-                              activeExportFormat === format ? "text-amber-500" : "text-zinc-400"
+                              activeExportFormat === format ? "text-violet-400" : "text-zinc-400"
                             }`}
                           >
                             Exportar {format}
@@ -985,12 +985,12 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
               value={inpaintPrompt}
               onChange={(e) => setInpaintPrompt(e.target.value)}
               placeholder="Descreva o ajuste ou inpainting a aplicar (ex: coloque luz neon azul nas bordas, mude o fundo para cyberpunk...)"
-              className="flex-1 bg-black border border-white/5 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-amber-500/50"
+              className="flex-1 bg-black border border-white/5 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-violet-500/50"
             />
             <button
               onClick={() => applyInpainting(customApiKey)}
               disabled={isInpainting || !inpaintPrompt.trim()}
-              className="px-6 py-3 bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-zinc-950 font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md active:scale-98"
+              className="px-6 py-3 bg-[#a855f7] hover:bg-violet-600 disabled:opacity-40 text-zinc-950 font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md active:scale-98"
             >
               {isInpainting ? "Refinando..." : "Refinar"}
             </button>
@@ -1006,11 +1006,11 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
                 <div
                   key={idx}
                   onClick={() => setCanvasImage(img)}
-                  className={`relative aspect-square rounded-lg border overflow-hidden cursor-pointer bg-black hover:scale-102 transition-transform ${
-                    canvasImage === img ? "border-amber-500 shadow-md" : "border-white/5"
+                  className={`relative rounded-lg border overflow-hidden cursor-pointer bg-black hover:scale-102 transition-transform ${
+                    canvasImage === img ? "border-violet-500 shadow-md" : "border-white/5"
                   }`}
                 >
-                  <img src={img} className="w-full h-full object-cover" alt="" />
+                  <img src={img} className="w-full h-auto object-contain" alt="" />
                 </div>
               ))}
             </div>
@@ -1069,7 +1069,7 @@ export default function VisualStudio({ customApiKey, myProfile }: VisualStudioPr
       ? `<div class="absolute inset-0 flex flex-col justify-end p-6 space-y-2">
     <h1 class="text-xl font-bold tracking-tight text-white">${imgConfig.h1}</h1>
     <p class="text-sm text-zinc-300">${imgConfig.h2}</p>
-    <button class="bg-amber-500 text-zinc-950 font-black text-xs px-4 py-2 rounded-lg self-start mt-2">${imgConfig.cta}</button>
+    <button class="bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-black text-xs px-4 py-2 rounded-lg self-start mt-2">${imgConfig.cta}</button>
   </div>`
       : ""
   }

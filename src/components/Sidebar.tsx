@@ -18,7 +18,8 @@ import {
   Compass,
   Users,
   Image as ImageIcon,
-  Layers
+  Layers,
+  Brain
 } from "lucide-react";
 
 interface SidebarProps {
@@ -49,7 +50,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const activeProject = store.projectsList.find((p) => p.id === store.activeProjectId);
-  const activeProjectName = activeProject?.name || "Projeto Alpha";
+  const activeProjectName = activeProject?.name || "Aba 1";
 
   const startEditingName = () => {
     setTempProjectName(activeProjectName);
@@ -80,20 +81,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   return (
-    <div className="w-64 sm:w-72 lg:w-64 xl:w-72 max-w-[85vw] bg-black border-r border-[#c5a880]/15 flex flex-col h-full shrink-0 select-none">
+    <div className="w-64 sm:w-72 lg:w-64 xl:w-72 max-w-[85vw] bg-black border-r border-violet-500/15 flex flex-col h-full shrink-0 select-none">
       
       {/* Header da Sidebar com Nome do Projeto Editável e Badge */}
-      <div className="p-4 sm:p-5 flex flex-col gap-3 border-b border-[#c5a880]/15 shrink-0 relative bg-black/60 backdrop-blur-md">
+      <div className="p-4 sm:p-5 flex flex-col gap-3 border-b border-violet-500/15 shrink-0 relative bg-black/60 backdrop-blur-md">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#c5a880] to-[#ad8330] flex items-center justify-center font-black text-black text-xs shadow-md shadow-[#c5a880]/15 shrink-0">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center font-black text-black text-xs shadow-md shadow-violet-600/15 shrink-0">
               <Layers size={16} />
             </div>
             <div className="flex flex-col">
               <span className="font-extrabold text-xs uppercase tracking-wider text-white">
                 Designer Zion
               </span>
-              <span className="text-[9px] text-[#c5a880] font-mono tracking-widest uppercase">
+              <span className="text-[9px] text-violet-400 font-mono tracking-widest uppercase">
                 Estúdio Criativo
               </span>
             </div>
@@ -101,7 +102,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           
           <button 
             onClick={handleNewProject}
-            className="w-7 h-7 rounded-lg bg-[#c5a880]/10 hover:bg-[#c5a880]/25 text-[#c5a880] flex items-center justify-center transition-all cursor-pointer hover:scale-105 active:scale-95"
+            className="w-7 h-7 rounded-lg bg-violet-500/10 hover:bg-violet-500/25 text-violet-400 flex items-center justify-center transition-all cursor-pointer hover:scale-105 active:scale-95"
             title="Novo Projeto Limpo (Zerar Configurações)"
           >
             <Plus size={14} />
@@ -109,7 +110,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
         
         {/* Nome do projeto editável */}
-        <div className="mt-0.5 flex items-center justify-between gap-1.5 bg-[#0a0a0a] p-2 rounded-xl border border-white/10 group hover:border-[#c5a880]/30 transition-colors">
+        <div className="mt-0.5 flex items-center justify-between gap-1.5 bg-[#0a0a0a] p-2 rounded-xl border border-white/10 group hover:border-violet-500/30 transition-colors">
           {isEditingName ? (
             <input
               type="text"
@@ -122,7 +123,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             />
           ) : (
             <span 
-              className="text-[11px] font-bold uppercase tracking-wider text-zinc-300 truncate max-w-[85%] cursor-pointer hover:text-[#c5a880] transition-colors"
+              className="text-[11px] font-bold uppercase tracking-wider text-zinc-300 truncate max-w-[85%] cursor-pointer hover:text-violet-400 transition-colors"
               onClick={() => setShowProjectSelector(!showProjectSelector)}
               title="Clique para alternar projeto"
             >
@@ -132,14 +133,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
           
           <button
             onClick={isEditingName ? saveProjectName : startEditingName}
-            className="text-zinc-500 hover:text-[#c5a880] transition-colors shrink-0 p-1 cursor-pointer"
+            className="text-zinc-500 hover:text-violet-400 transition-colors shrink-0 p-1 cursor-pointer"
           >
-            {isEditingName ? <Check size={12} className="text-[#c5a880]" /> : <Edit2 size={11} className="opacity-60 group-hover:opacity-100 transition-opacity" />}
+            {isEditingName ? <Check size={12} className="text-violet-400" /> : <Edit2 size={11} className="opacity-60 group-hover:opacity-100 transition-opacity" />}
           </button>
         </div>
         
         {showProjectSelector && !isEditingName && (
-          <div className="absolute top-full left-4 right-4 mt-1 bg-[#0a0a0a] border border-[#c5a880]/30 rounded-xl shadow-2xl z-50 max-h-56 overflow-y-auto custom-scrollbar animate-fade-in p-1">
+          <div className="absolute top-full left-4 right-4 mt-1 bg-[#0a0a0a] border border-violet-500/30 rounded-xl shadow-2xl z-50 max-h-56 overflow-y-auto custom-scrollbar animate-fade-in p-1">
             {store.projectsList.map((p) => {
               const isProjGenerating = !!store.generatingProjectIds?.[p.id];
               const isCurrent = p.id === store.activeProjectId;
@@ -147,7 +148,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <div
                   key={p.id}
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-all cursor-pointer ${
-                    isCurrent ? "bg-[#c5a880]/15 text-[#c5a880] font-extrabold" : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
+                    isCurrent ? "bg-violet-500/15 text-violet-400 font-extrabold" : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
                   }`}
                   onClick={() => {
                     store.loadProjectById(p.id);
@@ -156,7 +157,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   }}
                 >
                   <div className="flex items-center gap-2 truncate mr-2">
-                    {isProjGenerating && <Loader2 size={11} className="animate-spin text-[#c5a880] shrink-0" />}
+                    {isProjGenerating && <Loader2 size={11} className="animate-spin text-violet-400 shrink-0" />}
                     <span className="text-[10px] font-bold uppercase tracking-wider truncate">
                       {p.name}
                     </span>
@@ -172,7 +173,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         setShowProjectSelector(false);
                         showToast(`Projeto "${p.name}" duplicado!`, "success");
                       }}
-                      className="text-zinc-500 hover:text-[#c5a880] transition-colors p-1"
+                      className="text-zinc-500 hover:text-violet-400 transition-colors p-1"
                       title="Duplicar Projeto"
                     >
                       <Copy size={11} />
@@ -194,8 +195,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
 
         <div className="flex justify-between items-center">
-          <span className="inline-flex items-center gap-1 bg-[#c5a880]/15 border border-[#c5a880]/30 text-[#c5a880] text-[9.5px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full truncate">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#c5a880] animate-pulse" />
+          <span className="inline-flex items-center gap-1 bg-violet-500/15 border border-violet-500/30 text-violet-400 text-[9.5px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full truncate">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#a855f7] animate-pulse" />
             Projeto Ativo
           </span>
         </div>
@@ -205,6 +206,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto custom-scrollbar">
         {[
           { name: "Designer Zion", icon: <Sparkles size={14} />, active: activeMenuTab === "Design Builder" || activeMenuTab === "Designer Zion" },
+          { name: "Sistema Operacional IA", icon: <Brain size={14} />, active: activeMenuTab === "Sistema Operacional IA" || activeMenuTab === "sistema-ia" },
           { name: "Copiloto da Agência", icon: <Bot size={14} />, active: activeMenuTab === "Copiloto da Agência" },
           { name: "Inspiração", icon: <Compass size={14} />, active: activeMenuTab === "Inspiração" },
           { name: "Comunidade", icon: <Users size={14} />, active: activeMenuTab === "Comunidade" },
@@ -215,12 +217,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
             onClick={() => setActiveMenuTab(tab.name === "Designer Zion" ? "Design Builder" : tab.name)}
             className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
               tab.active || (activeMenuTab === tab.name)
-                ? "bg-[#c5a880] text-black font-extrabold shadow-md shadow-[#c5a880]/20"
+                ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-extrabold shadow-md shadow-violet-600/20"
                 : "text-zinc-400 hover:text-white hover:bg-white/5"
             }`}
           >
             <div className="flex items-center gap-2.5">
-              <span className={tab.active || (activeMenuTab === tab.name) ? "text-black" : "text-[#c5a880]"}>
+              <span className={tab.active || (activeMenuTab === tab.name) ? "text-black" : "text-violet-400"}>
                 {tab.icon}
               </span>
               <span>{tab.name}</span>
@@ -231,7 +233,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Seção de Fontes Externas */}
         <div className="pt-5 px-1">
-          <span className="text-[9.5px] font-black tracking-widest text-[#c5a880]/70 uppercase block mb-2 px-2">Fontes Externas</span>
+          <span className="text-[9.5px] font-black tracking-widest text-violet-400/70 uppercase block mb-2 px-2">Fontes Externas</span>
           <div className="space-y-1">
             {["Todas as Fontes", "Pinterest", "Freepik", "Behance", "Comunidade"].map(source => (
               <a
@@ -249,7 +251,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Painel de Status da API */}
-      <div className="p-4 border-t border-[#c5a880]/15 bg-black/40 shrink-0 space-y-2.5">
+      <div className="p-4 border-t border-violet-500/15 bg-black/40 shrink-0 space-y-2.5">
         {/* Status Indicator */}
         <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-[#0a0a0a] border border-white/10">
           <div className="flex items-center gap-2">
@@ -265,16 +267,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <button
           onClick={handleTestToken}
           disabled={isTesting}
-          className="w-full flex items-center justify-center gap-2 py-2 bg-[#0a0a0a] hover:bg-white/5 border border-white/10 hover:border-[#c5a880]/40 active:scale-95 disabled:opacity-50 text-[10px] font-extrabold uppercase tracking-widest text-zinc-200 hover:text-[#c5a880] rounded-xl transition-all cursor-pointer"
+          className="w-full flex items-center justify-center gap-2 py-2 bg-[#0a0a0a] hover:bg-white/5 border border-white/10 hover:border-violet-500/40 active:scale-95 disabled:opacity-50 text-[10px] font-extrabold uppercase tracking-widest text-zinc-200 hover:text-violet-400 rounded-xl transition-all cursor-pointer"
         >
           {isTesting ? (
             <>
-              <RefreshCw size={11} className="animate-spin text-[#c5a880]" />
+              <RefreshCw size={11} className="animate-spin text-violet-400" />
               <span>Testando...</span>
             </>
           ) : (
             <>
-              <Play size={11} className="text-[#c5a880]" />
+              <Play size={11} className="text-violet-400" />
               <span>Testar Conexão</span>
             </>
           )}

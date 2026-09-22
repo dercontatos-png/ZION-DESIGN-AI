@@ -199,7 +199,7 @@ export default function MotorGenerativoMagnific({
             </label>
           </div>
 
-          <div className="relative aspect-square rounded-xl bg-slate-950/80 border border-slate-800 overflow-hidden flex items-center justify-center group">
+          <div className="relative rounded-xl bg-slate-950/80 border border-slate-800 overflow-hidden flex items-center justify-center group">
             {currentImage ? (
               <img
                 src={currentImage}
@@ -439,8 +439,8 @@ export default function MotorGenerativoMagnific({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <span className="text-xs font-semibold text-slate-400 block">Antes (Com Manchas de Difusão):</span>
-              <div className="aspect-square rounded-xl bg-slate-950 border border-slate-800 overflow-hidden">
-                <img src={currentImage!} alt="Original" className="w-full h-full object-contain" />
+              <div className="rounded-xl bg-slate-950 border border-slate-800 overflow-hidden">
+                <img src={currentImage!} alt="Original" className="w-full h-auto object-contain" />
               </div>
             </div>
 
@@ -448,8 +448,8 @@ export default function MotorGenerativoMagnific({
               <span className="text-xs font-semibold text-emerald-400 block flex items-center gap-1">
                 <Sparkles className="w-3.5 h-3.5" /> Depois (Fundo Sólido Puro & Micro-texturas SUPIR):
               </span>
-              <div className="aspect-square rounded-xl bg-slate-950 border border-amber-500/40 overflow-hidden shadow-2xl shadow-amber-500/10">
-                <img src={resultImage} alt="Perfeita" className="w-full h-full object-contain" />
+              <div className="rounded-xl bg-slate-950 border border-amber-500/40 overflow-hidden shadow-2xl shadow-amber-500/10">
+                <img src={resultImage} alt="Perfeita" className="w-full h-auto object-contain" />
               </div>
             </div>
           </div>

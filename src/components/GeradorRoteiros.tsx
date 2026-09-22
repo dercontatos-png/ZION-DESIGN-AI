@@ -110,26 +110,26 @@ function PdfSheetPreview({ scriptText, clientName, target }: PdfSheetPreviewProp
     : extractEditorSection(scriptText);
 
   return (
-    <div className="w-full h-full overflow-y-auto pr-1 bg-zinc-950 rounded-xl border border-zinc-800 p-2 sm:p-4 selection:bg-amber-500/30">
-      <div className="max-w-3xl mx-auto bg-zinc-900 border border-zinc-800/90 rounded-2xl shadow-2xl overflow-hidden flex flex-col my-1">
+    <div className="w-full h-full overflow-y-auto pr-1 bg-black rounded-xl border border-violet-500/20 p-2 sm:p-4 selection:bg-violet-500/30">
+      <div className="max-w-3xl mx-auto bg-zinc-900 border border-violet-500/20/90 rounded-2xl shadow-2xl overflow-hidden flex flex-col my-1">
         {/* Top Gold Stripe */}
-        <div className="h-1.5 w-full bg-[#c5a880]" />
+        <div className="h-1.5 w-full bg-[#a855f7]" />
 
         {/* Header Banner */}
-        <div className="bg-zinc-950 px-5 py-4 border-b border-zinc-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="bg-black px-5 py-4 border-b border-violet-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold tracking-wider text-[#c5a880] uppercase">
+              <span className="text-xs font-bold tracking-wider text-violet-400 uppercase">
                 {target === "CLIENTE" ? "ROTEIRO DE VÍDEO" : "GUIA TÉCNICO DE EDIÇÃO"}
               </span>
               <span
                 className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold border ${
                   target === "CLIENTE"
-                    ? "bg-amber-500/10 text-amber-300 border-amber-500/30"
+                    ? "bg-violet-500/10 text-violet-400 border-violet-500/30"
                     : "bg-blue-500/10 text-blue-300 border-blue-500/30"
                 }`}
               >
-                {target === "CLIENTE" ? "📱 ROTEIRO DE VÍDEO" : "🎬 GUIA DO EDITOR"}
+                {target === "CLIENTE" ? "ROTEIRO DE VÍDEO" : "GUIA DO EDITOR"}
               </span>
             </div>
             <h3 className="text-sm font-extrabold text-zinc-100 uppercase tracking-wide">
@@ -156,17 +156,17 @@ function PdfSheetPreview({ scriptText, clientName, target }: PdfSheetPreviewProp
             remarkPlugins={[remarkGfm]}
             components={{
               h1: ({ children }) => (
-                <h1 className="text-base sm:text-lg font-extrabold text-[#c5a880] border-b border-amber-500/20 pb-1.5 mt-4 mb-2 uppercase tracking-wide">
+                <h1 className="text-base sm:text-lg font-extrabold text-violet-400 border-b border-violet-500/20 pb-1.5 mt-4 mb-2 uppercase tracking-wide">
                   {children}
                 </h1>
               ),
               h2: ({ children }) => (
-                <h2 className="text-sm sm:text-base font-bold text-zinc-100 border-b border-zinc-800 pb-1 mt-3 mb-2">
+                <h2 className="text-sm sm:text-base font-bold text-zinc-100 border-b border-violet-500/20 pb-1 mt-3 mb-2">
                   {children}
                 </h2>
               ),
               h3: ({ children }) => (
-                <h3 className="text-xs sm:text-sm font-semibold text-amber-200 mt-3 mb-1">
+                <h3 className="text-xs sm:text-sm font-semibold text-violet-400 mt-3 mb-1">
                   {children}
                 </h3>
               ),
@@ -192,19 +192,19 @@ function PdfSheetPreview({ scriptText, clientName, target }: PdfSheetPreviewProp
                 <li className="my-0.5 text-zinc-300">{children}</li>
               ),
               table: ({ children }) => (
-                <div className="my-4 overflow-x-auto rounded-xl border border-zinc-800 shadow-md">
+                <div className="my-4 overflow-x-auto rounded-xl border border-violet-500/20 shadow-md">
                   <table className="w-full text-left text-xs border-collapse">
                     {children}
                   </table>
                 </div>
               ),
               thead: ({ children }) => (
-                <thead className="bg-[#c5a880]/15 text-[#c5a880] uppercase text-[11px] font-bold border-b border-amber-500/30">
+                <thead className="bg-violet-500/15 text-violet-400 uppercase text-[11px] font-bold border-b border-violet-500/30">
                   {children}
                 </thead>
               ),
               tbody: ({ children }) => (
-                <tbody className="divide-y divide-zinc-800/80 bg-zinc-950/60">
+                <tbody className="divide-y divide-zinc-800/80 bg-black/60">
                   {children}
                 </tbody>
               ),
@@ -228,7 +228,7 @@ function PdfSheetPreview({ scriptText, clientName, target }: PdfSheetPreviewProp
         </div>
 
         {/* Footer Banner */}
-        <div className="bg-zinc-950 px-5 py-3 border-t border-zinc-800 text-[10px] text-zinc-500 flex items-center justify-between">
+        <div className="bg-black px-5 py-3 border-t border-violet-500/20 text-[10px] text-zinc-500 flex items-center justify-between">
           <span className="font-medium">
             {target === "CLIENTE" ? "ROTEIRO DE VÍDEO" : "GUIA TÉCNICO DE EDIÇÃO"} • {clientName}
           </span>
@@ -265,14 +265,14 @@ ${crossSessionMemory || "Nenhuma conversa anterior registrada ainda."}
    - **D - DESEJO (Meio / Desenvolvimento)**: Desperte um desejo ardente através de descrições sensoriais e benefícios irresistíveis do produto/serviço do cliente.
    - **A - AÇÃO (Fim / Chamada para Ação - CTA)**: Faça um fechamento com uma ação direta, urgente e irresistível focada em converter.
 4. OBRIGATÓRIO ENTREGAR 2 VERSÕES EM CADA ROTEIRO:
-   a) 📱 **1. ROTEIRO PARA O CLIENTE**: Versão limpa, focada EXCLUSIVAMENTE nas falas e texto do apresentador para o cliente aprovar a mensagem do vídeo. DEVE conter:
+   a) **1. ROTEIRO PARA O CLIENTE**: Versão limpa, focada EXCLUSIVAMENTE nas falas e texto do apresentador para o cliente aprovar a mensagem do vídeo. DEVE conter:
       - TEMA DO VÍDEO: [Tema curto e explicativo do vídeo]
       - Estruturado estritamente em:
         * ATENÇÃO / INÍCIO (Gatilho de 0 a 3s) -> APENAS a fala do apresentador: - FALA & ÁUDIO: "..."
         * INTERESSE & DESEJO / MEIO (Desenvolvimento) -> APENAS a fala do apresentador: - FALA & ÁUDIO: "..."
         * AÇÃO / FIM (Chamada para Ação / CTA) -> APENAS a chamada para ação do apresentador: - FALA & ÁUDIO: "..."
       - ESTREITAMENTE PROIBIDO incluir descrições visuais, ações do apresentador, cortes ou movimentos de câmera (ex: "Pâmela aparece sorrindo...", "Takes rápidos...") nesta seção do cliente. Todas as ações visuais e de gravação pertencem 100% à versão do editor!
-   b) 🎬 **2. ROTEIRO COMPLETO PARA O EDITOR & GRAVAÇÃO**: Guia técnico completo com todos os detalhes de como deve ser gravado e editado o vídeo:
+   b) **2. ROTEIRO COMPLETO PARA O EDITOR & GRAVAÇÃO**: Guia técnico completo com todos os detalhes de como deve ser gravado e editado o vídeo:
       - Especificações Técnicas de Gravação (Enquadramento, Ângulo de Câmera, Iluminação, Tom e Ritmo da Fala, Posição no Cenário, Microfone/Lapela Lark M2 em modo luz azul para preservar textura natural).
       - Tabela Markdown Completa com 4 colunas: (Cena / Tempo | Visual & B-Roll / Câmera | Fala & Áudio | Texto na Tela, SFX & Cortes)
       - Diretrizes Detalhadas de Pós-Produção & Edição no CapCut (Uso de Keyframes para zoom dinâmico em takes estáticos, Match Cuts com post-it/objetos, Efeito Obturador Lento / Low Shutter, Filtros de Cor 'Conto de Verão' + 'Retrô Americano', Isolamento de Voz no CapCut + Efeito 'Super Grave'/'Podcast', e sincronia de texto palavra por palavra).
@@ -586,7 +586,7 @@ export function GeradorRoteiros({
         const entry = `\n\n[INFORMAÇÕES & MÉTODO REGISTRADOS EM ${timestamp}]:\n${userPrompt.trim()}`;
         const updatedK = (currentK + entry).trim();
         saveClientKnowledge(updatedK);
-        showToast("Novo conhecimento memorizado automaticamente! 🧠");
+        showToast("Novo conhecimento memorizado automaticamente! ");
       }
     }
   };
@@ -787,7 +787,7 @@ ${combinedPermanent}\n\n`;
     );
     saveSessions(updated);
     const target = updated.find((s) => s.id === id);
-    showToast(target?.pinned ? "Conversa fixada no topo! 📌" : "Conversa desfixada.");
+    showToast(target?.pinned ? "Conversa fixada no topo! " : "Conversa desfixada.");
   };
 
   const handleSelectClient = (clientId: number) => {
@@ -905,7 +905,7 @@ ${combinedPermanent}\n\n`;
     try {
       showToast(target === "CLIENTE" ? "Gerando PDF para Cliente (Aprovação)..." : "Gerando PDF para Editor (Edição)...");
       exportSingleScriptPdf(text, activeClient.name, target, customFileName);
-      showToast(target === "CLIENTE" ? "PDF Cliente baixado! 📱" : "PDF Editor baixado! 🎬");
+      showToast(target === "CLIENTE" ? "PDF Cliente baixado! " : "PDF Editor baixado! ");
     } catch (e) {
       console.error(e);
       showToast("Erro ao gerar PDF.");
@@ -916,7 +916,7 @@ ${combinedPermanent}\n\n`;
     try {
       showToast("Gerando lote de PDFs (.zip)...");
       await exportBatchScriptsZip(text, activeClient.name);
-      showToast("Lote de PDFs baixado (.zip)! 📦");
+      showToast("Lote de PDFs baixado (.zip)! ");
     } catch (e) {
       console.error(e);
       showToast("Erro ao gerar ZIP.");
@@ -985,7 +985,7 @@ ${combinedPermanent}\n\n`;
       return nextSessions;
     });
 
-    showToast("Alterações salvas na conversa! 💾");
+    showToast("Alterações salvas na conversa! ");
   };
 
   const handleInPlaceRefineScript = async (
@@ -1025,7 +1025,7 @@ ${combinedPermanent}\n\n`;
     setActiveRefinePanel(null);
     setCustomRefinePrompt("");
     setRefineAttachedFiles([]); // Clear early or right after capturing to avoid state carryover
-    showToast(`Aprimorando Roteiro ${scriptIndex} com IA no mesmo local... ✨`);
+    showToast(`Aprimorando Roteiro ${scriptIndex} com IA no mesmo local... `);
 
     try {
       const crossSessionMemory = getClientCrossSessionMemory();
@@ -1102,7 +1102,7 @@ ${targetScript.content}`;
         return nextSessions;
       });
 
-      showToast(`Roteiro ${scriptIndex} aprimorado no mesmo local! 🎯`);
+      showToast(`Roteiro ${scriptIndex} aprimorado no mesmo local! `);
     } catch (err: any) {
       console.error(err);
       showToast(`Erro ao refinar: ${err.message || "Tente novamente."}`);
@@ -1197,7 +1197,7 @@ ${activeScript.content}`;
         }
 
         setModalRefineInput("");
-        showToast("Roteiro refinado com IA e atualizado no local! ✨");
+        showToast("Roteiro refinado com IA e atualizado no local! ");
       }
     } catch (e: any) {
       console.error(e);
@@ -1327,7 +1327,7 @@ ${activeScript.content}`;
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         sender: "ai",
-        text: `⚠️ **Erro ao comunicar com o servidor:** ${error.message || "Tente novamente."}`,
+        text: `**Erro ao comunicar com o servidor:** ${error.message || "Tente novamente."}`,
         timestamp: new Date().toISOString()
       };
 
@@ -1447,7 +1447,7 @@ ${activeScript.content}`;
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         sender: "ai",
-        text: `⚠️ **Erro ao comunicar com o servidor:** ${error.message || "Tente novamente."}`,
+        text: `**Erro ao comunicar com o servidor:** ${error.message || "Tente novamente."}`,
         timestamp: new Date().toISOString()
       };
 
@@ -1483,27 +1483,27 @@ ${activeScript.content}`;
     {
       title: "4 Roteiros em Lote",
       prompt: `Crie 4 roteiros completos para Reels/TikTok de alto engajamento para o cliente (${activeClient.name} - ${activeClient.niche || "Geral"}). Entregue todos organizados numerados de 1 a 4 com tabelas de gravação e cabeçalhos claros (ex: ### ROTEIRO 1, ### ROTEIRO 2) para eu poder baixar tudo em PDF/ZIP.`,
-      icon: <Film size={15} className="text-[#c5a880]" />
+      icon: <Film size={15} className="text-violet-400" />
     },
     {
       title: "Roteiro Reels Viral",
       prompt: `Crie 1 roteiro completo para Reels/TikTok de alto engajamento focado no nicho do cliente (${activeClient.niche || "Geral"}). Inclua Gancho de 3s, falas e instruções de edição em Tabela.`,
-      icon: <Film size={15} className="text-[#c5a880]" />
+      icon: <Film size={15} className="text-violet-400" />
     },
     {
       title: "Carrossel de 5 Lâminas",
       prompt: `Gere uma estrutura de Carrossel Educativo para Instagram em 5 lâminas. Para cada lâmina forneça a Headline, Texto Principal e Design sugerido.`,
-      icon: <Layers size={15} className="text-[#c5a880]" />
+      icon: <Layers size={15} className="text-violet-400" />
     },
     {
       title: "5 Ideias de Conteúdo",
       prompt: `Analise o nicho do cliente (${activeClient.niche || "Geral"}) e forneça 5 ideias inéditas de posts/vídeos com alto potencial de engajamento para este mês.`,
-      icon: <Lightbulb size={15} className="text-[#c5a880]" />
+      icon: <Lightbulb size={15} className="text-violet-400" />
     }
   ];
 
   return (
-    <div className="w-full h-full flex bg-[#0e0e10] text-zinc-100 rounded-2xl border border-zinc-800/80 shadow-2xl overflow-hidden font-sans relative">
+    <div className="w-full h-full flex bg-black text-zinc-100 rounded-2xl border border-violet-500/15 shadow-2xl overflow-hidden font-sans relative">
       {/* Toast Notification */}
       <AnimatePresence>
         {toastMessage && (
@@ -1511,7 +1511,7 @@ ${activeScript.content}`;
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="absolute top-5 left-1/2 -translate-x-1/2 z-50 bg-[#c5a880] text-zinc-950 font-bold px-4 py-2 rounded-full shadow-2xl text-xs flex items-center gap-2 border border-amber-300"
+            className="absolute top-5 left-1/2 -translate-x-1/2 z-50 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-bold px-4 py-2 rounded-full shadow-2xl text-xs flex items-center gap-2 border border-violet-500/50"
           >
             <CheckCircle2 size={15} />
             {toastMessage}
@@ -1525,16 +1525,16 @@ ${activeScript.content}`;
       <div
         className={`${
           sidebarOpen ? "w-64 sm:w-72" : "w-0 sm:w-0"
-        } transition-all duration-300 bg-[#131314] border-r border-zinc-800/60 flex flex-col shrink-0 overflow-hidden relative z-30`}
+        } transition-all duration-300 bg-[#090a0f] border-r border-violet-500/15 flex flex-col shrink-0 overflow-hidden relative z-30`}
       >
         {/* Top Branding & Sparkle */}
         <div className="p-4 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-amber-500 via-amber-300 to-amber-100 flex items-center justify-center text-zinc-950 shadow-md">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-violet-600 to-fuchsia-600 flex items-center justify-center text-zinc-950 shadow-md">
               <Sparkles size={16} className="fill-zinc-950" />
             </div>
             <span className="font-bold text-sm tracking-wide text-zinc-100">
-              Gemini <span className="text-[#c5a880] font-normal text-xs">Roteiros</span>
+              Gemini <span className="text-violet-400 font-normal text-xs">Roteiros</span>
             </span>
           </div>
 
@@ -1551,9 +1551,9 @@ ${activeScript.content}`;
         <div className="px-3 py-2 shrink-0">
           <button
             onClick={handleCreateNewSession}
-            className="w-full bg-[#1e1f20] hover:bg-zinc-800/90 text-zinc-100 font-medium text-xs sm:text-sm py-2.5 px-4 rounded-full flex items-center gap-3 transition-all border border-zinc-700/40 shadow-sm active:scale-98"
+            className="w-full bg-[#121216] hover:bg-zinc-800/90 text-zinc-100 font-medium text-xs sm:text-sm py-2.5 px-4 rounded-full flex items-center gap-3 transition-all border border-violet-500/20 shadow-sm active:scale-98"
           >
-            <Plus size={18} className="text-[#c5a880]" />
+            <Plus size={18} className="text-violet-400" />
             <span>Nova conversa</span>
           </button>
         </div>
@@ -1588,7 +1588,7 @@ ${activeScript.content}`;
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Digite para buscar..."
-                    className="w-full bg-zinc-900 border border-zinc-700 rounded-lg pl-3 pr-7 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#c5a880]"
+                    className="w-full bg-zinc-900 border border-violet-500/30 rounded-lg pl-3 pr-7 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-violet-500"
                     autoFocus
                   />
                   {searchQuery && (
@@ -1612,7 +1612,7 @@ ${activeScript.content}`;
 
         {/* Divider */}
         <div className="px-4 py-2">
-          <div className="border-t border-zinc-800/80" />
+          <div className="border-t border-violet-500/15" />
         </div>
 
         {/* Recentes List Section */}
@@ -1641,7 +1641,7 @@ ${activeScript.content}`;
                     }}
                     className={`group flex items-center justify-between px-3 py-2 rounded-full text-xs font-medium cursor-pointer transition-all ${
                       isActive
-                        ? "bg-[#282a2c] text-zinc-100 font-semibold"
+                        ? "bg-[#181920] text-zinc-100 font-semibold"
                         : "text-zinc-300 hover:bg-zinc-800/50 hover:text-zinc-100"
                     }`}
                   >
@@ -1656,11 +1656,11 @@ ${activeScript.content}`;
                             if (e.key === "Escape") setEditingSessionId(null);
                           }}
                           autoFocus
-                          className="w-full bg-zinc-900 border border-[#c5a880] rounded-md px-2 py-0.5 text-xs text-white focus:outline-none"
+                          className="w-full bg-zinc-900 border border-violet-500 rounded-md px-2 py-0.5 text-xs text-white focus:outline-none"
                         />
                         <button
                           onClick={() => handleSaveRename(s.id)}
-                          className="p-1 bg-[#c5a880] text-black rounded hover:bg-[#b09369]"
+                          className="p-1 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded hover:bg-[#7c3aed]"
                         >
                           <Check size={12} />
                         </button>
@@ -1669,7 +1669,7 @@ ${activeScript.content}`;
                       <>
                         <span className="truncate pr-2 flex-1">{s.title}</span>
                         <div className="flex items-center gap-1">
-                          <Pin size={12} className="text-[#c5a880] fill-[#c5a880] shrink-0" />
+                          <Pin size={12} className="text-violet-400 fill-[#a855f7] shrink-0" />
                           <div className="hidden group-hover:flex items-center gap-1">
                             <button
                               onClick={(e) => handleStartRename(s, e)}
@@ -1706,7 +1706,7 @@ ${activeScript.content}`;
                     }}
                     className={`group flex items-center justify-between px-3 py-2 rounded-full text-xs font-medium cursor-pointer transition-all ${
                       isActive
-                        ? "bg-[#282a2c] text-zinc-100 font-semibold"
+                        ? "bg-[#181920] text-zinc-100 font-semibold"
                         : "text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200"
                     }`}
                   >
@@ -1721,11 +1721,11 @@ ${activeScript.content}`;
                             if (e.key === "Escape") setEditingSessionId(null);
                           }}
                           autoFocus
-                          className="w-full bg-zinc-900 border border-[#c5a880] rounded-md px-2 py-0.5 text-xs text-white focus:outline-none"
+                          className="w-full bg-zinc-900 border border-violet-500 rounded-md px-2 py-0.5 text-xs text-white focus:outline-none"
                         />
                         <button
                           onClick={() => handleSaveRename(s.id)}
-                          className="p-1 bg-[#c5a880] text-black rounded hover:bg-[#b09369]"
+                          className="p-1 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded hover:bg-[#7c3aed]"
                         >
                           <Check size={12} />
                         </button>
@@ -1736,7 +1736,7 @@ ${activeScript.content}`;
                         <div className="hidden group-hover:flex items-center gap-1 shrink-0">
                           <button
                             onClick={(e) => handleTogglePin(s.id, e)}
-                            className="p-1 text-zinc-400 hover:text-[#c5a880]"
+                            className="p-1 text-zinc-400 hover:text-violet-400"
                             title="Fixar no topo"
                           >
                             <Pin size={11} />
@@ -1766,21 +1766,21 @@ ${activeScript.content}`;
         </div>
 
         {/* Footer User Profile & Client Selector */}
-        <div className="p-3 border-t border-zinc-800/80 shrink-0 bg-[#131314]">
+        <div className="p-3 border-t border-violet-500/15 shrink-0 bg-[#090a0f]">
           <div className="relative">
             <button
               onClick={() => setShowClientSelector(!showClientSelector)}
               className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-zinc-800/60 transition-colors text-left"
             >
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-full bg-[#c5a880] text-zinc-950 font-bold flex items-center justify-center text-xs shrink-0 shadow-sm">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-bold flex items-center justify-center text-xs shrink-0 shadow-sm">
                   {activeClient.name.charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="text-xs font-semibold text-zinc-200 truncate">
                     {activeClient.name}
                   </div>
-                  <div className="text-[10px] text-[#c5a880] font-medium">
+                  <div className="text-[10px] text-violet-400 font-medium">
                     {activeClient.niche || "Cliente Ativo"}
                   </div>
                 </div>
@@ -1795,7 +1795,7 @@ ${activeScript.content}`;
                   initial={{ opacity: 0, y: -8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
-                  className="absolute bottom-full left-0 mb-2 w-full bg-zinc-950 border border-zinc-800 rounded-xl shadow-2xl z-50 overflow-hidden"
+                  className="absolute bottom-full left-0 mb-2 w-full bg-black border border-violet-500/20 rounded-xl shadow-2xl z-50 overflow-hidden"
                 >
                   <div className="p-2 max-h-56 overflow-y-auto space-y-1">
                     <div className="text-[10px] uppercase font-bold text-zinc-500 px-2 py-1">
@@ -1807,12 +1807,12 @@ ${activeScript.content}`;
                         onClick={() => handleSelectClient(c.id)}
                         className={`flex items-center justify-between w-full p-2 rounded-lg text-xs transition-colors text-left ${
                           activeClientId === c.id
-                            ? "bg-[#c5a880]/20 text-[#c5a880] font-bold"
+                            ? "bg-violet-500/20 text-violet-400 font-bold"
                             : "text-zinc-300 hover:bg-zinc-900"
                         }`}
                       >
                         <span className="truncate">{c.name}</span>
-                        {activeClientId === c.id && <CheckCircle2 size={13} className="text-[#c5a880]" />}
+                        {activeClientId === c.id && <CheckCircle2 size={13} className="text-violet-400" />}
                       </button>
                     ))}
                   </div>
@@ -1826,9 +1826,9 @@ ${activeScript.content}`;
       {/* ========================================== */}
       {/* MAIN CHAT AREA (GEMINI STYLE) */}
       {/* ========================================== */}
-      <div className="flex-1 flex flex-col h-full bg-[#0e0e10] overflow-hidden relative">
+      <div className="flex-1 flex flex-col h-full bg-black overflow-hidden relative">
         {/* Top Header Bar */}
-        <div className="h-14 px-4 border-b border-zinc-800/40 flex items-center justify-between shrink-0 bg-[#0e0e10]/80 backdrop-blur-md z-20">
+        <div className="h-14 px-4 border-b border-violet-500/15 flex items-center justify-between shrink-0 bg-black/80 backdrop-blur-md z-20">
           <div className="flex items-center gap-3">
             {!sidebarOpen && (
               <button
@@ -1845,10 +1845,10 @@ ${activeScript.content}`;
             <div className="relative">
               <button
                 onClick={() => setShowHeaderClientSelector(!showHeaderClientSelector)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#1e1f20] hover:bg-zinc-800 text-[#c5a880] font-semibold text-xs border border-amber-500/30 transition-all cursor-pointer shadow-sm"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#121216] hover:bg-zinc-800 text-violet-400 font-semibold text-xs border border-violet-500/30 transition-all cursor-pointer shadow-sm"
                 title="Clique para alternar o cliente ativo"
               >
-                <User size={13} className="text-[#c5a880]" />
+                <User size={13} className="text-violet-400" />
                 <span className="truncate max-w-[140px] sm:max-w-[200px]">{activeClient.name}</span>
                 <ChevronDown size={13} className="text-zinc-400" />
               </button>
@@ -1859,7 +1859,7 @@ ${activeScript.content}`;
                     initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 6 }}
-                    className="absolute top-full left-0 mt-2 w-64 bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl z-50 overflow-hidden"
+                    className="absolute top-full left-0 mt-2 w-64 bg-black border border-violet-500/20 rounded-2xl shadow-2xl z-50 overflow-hidden"
                   >
                     <div className="p-2 space-y-1">
                       <div className="text-[10px] uppercase font-bold text-zinc-500 px-3 py-1.5">
@@ -1874,7 +1874,7 @@ ${activeScript.content}`;
                           }}
                           className={`flex items-center justify-between w-full p-2.5 rounded-xl text-xs transition-colors text-left ${
                             activeClientId === c.id
-                              ? "bg-[#c5a880]/20 text-[#c5a880] font-bold"
+                              ? "bg-violet-500/20 text-violet-400 font-bold"
                               : "text-zinc-300 hover:bg-zinc-900"
                           }`}
                         >
@@ -1882,7 +1882,7 @@ ${activeScript.content}`;
                             <div className="truncate font-semibold">{c.name}</div>
                             <div className="text-[10px] text-zinc-400">{c.niche || "Cliente"}</div>
                           </div>
-                          {activeClientId === c.id && <CheckCircle2 size={14} className="text-[#c5a880] shrink-0" />}
+                          {activeClientId === c.id && <CheckCircle2 size={14} className="text-violet-400 shrink-0" />}
                         </button>
                       ))}
                     </div>
@@ -1903,11 +1903,12 @@ ${activeScript.content}`;
             <select
               value={selectedModel}
               onChange={(e) => setSelectedModel(e.target.value)}
-              className="bg-[#1e1f20] hover:bg-zinc-800 border border-zinc-700/50 text-zinc-200 text-xs font-medium rounded-full px-3 py-1.5 focus:outline-none transition-colors cursor-pointer"
+              className="bg-[#121216] hover:bg-zinc-800 border border-violet-500/30 text-zinc-200 text-xs font-medium rounded-full px-3 py-1.5 focus:outline-none transition-colors cursor-pointer"
             >
+              <option value="deepseek-v4-flash">DeepSeek V4</option>
               <option value="gemini-3.7-flash">Gemini 3.7 Flash</option>
-              <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro Preview</option>
-              <option value="gemini-3.5-pro">Gemini 3.5 Pro</option>
+              <option value="gemini-3.5-flash">Gemini 3.5 Flash</option>
+              <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro</option>
             </select>
 
             {/* New Conversation Icon */}
@@ -1928,14 +1929,14 @@ ${activeScript.content}`;
             <div className="h-full flex flex-col items-center justify-center text-center max-w-2xl mx-auto my-auto py-12 space-y-6">
               <div className="space-y-3">
                 {/* Cross-session Memory Badge */}
-                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-zinc-900/90 border border-amber-500/30 text-[#c5a880] text-xs font-medium shadow-md">
+                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-zinc-900/90 border border-violet-500/30 text-violet-400 text-xs font-medium shadow-md">
                   <BookOpen size={14} />
                   <span>
                     Memória Viva Ativa: {sessions.length} conversa(s) e {totalClientMessages} msgs integradas para {activeClient.name}
                   </span>
                 </div>
 
-                <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-zinc-100 via-amber-100 to-[#c5a880]">
+                <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-zinc-100 via-amber-100 to-[#a855f7]">
                   Qual é o roteiro de hoje, {activeClient.name.split(" ")[0]}?
                 </h1>
                 <p className="text-xs sm:text-sm text-zinc-400 max-w-md mx-auto leading-relaxed">
@@ -1949,9 +1950,9 @@ ${activeScript.content}`;
                   <button
                     key={idx}
                     onClick={() => sendMessage(item.prompt)}
-                    className="flex flex-col items-start gap-2 p-4 rounded-2xl bg-[#131314] hover:bg-[#1e1f20] border border-zinc-800/80 hover:border-zinc-700 transition-all text-left group shadow-lg"
+                    className="flex flex-col items-start gap-2 p-4 rounded-2xl bg-[#090a0f] hover:bg-[#121216] border border-violet-500/15 hover:border-violet-500/30 transition-all text-left group shadow-lg"
                   >
-                    <div className="flex items-center gap-2 font-semibold text-xs text-zinc-200 group-hover:text-[#c5a880]">
+                    <div className="flex items-center gap-2 font-semibold text-xs text-zinc-200 group-hover:text-violet-400">
                       {item.icon}
                       <span>{item.title}</span>
                     </div>
@@ -1969,13 +1970,13 @@ ${activeScript.content}`;
                 {msg.sender === "user" ? (
                   /* User Message Capsule (Gemini Style) */
                   <div className="flex justify-end group/usermsg">
-                    <div className="bg-[#282a2c] text-zinc-100 rounded-[24px] px-5 py-3.5 max-w-[85%] text-xs sm:text-sm leading-relaxed shadow-sm font-normal relative">
+                    <div className="bg-[#181920] text-zinc-100 rounded-[24px] px-5 py-3.5 max-w-[85%] text-xs sm:text-sm leading-relaxed shadow-sm font-normal relative">
                       {editingUserMsgId === msg.id ? (
                         /* Inline Prompt Edit Mode */
                         <div className="space-y-3 min-w-[280px] sm:min-w-[420px]">
-                          <div className="flex items-center justify-between text-xs font-bold text-amber-300">
+                          <div className="flex items-center justify-between text-xs font-bold text-violet-400">
                             <span className="flex items-center gap-1.5">
-                              <Edit3 size={13} className="text-[#c5a880]" />
+                              <Edit3 size={13} className="text-violet-400" />
                               <span>Editar Prompt</span>
                             </span>
                             <span className="text-[10px] text-zinc-400 font-normal">
@@ -1992,7 +1993,7 @@ ${activeScript.content}`;
                                 handleUpdateUserPromptAndRegenerate(msg.id, editingUserMsgText);
                               }
                             }}
-                            className="w-full bg-zinc-950/90 border border-zinc-700 focus:border-[#c5a880] rounded-xl p-3 text-xs sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none resize-none leading-relaxed"
+                            className="w-full bg-black/90 border border-violet-500/30 focus:border-violet-500 rounded-xl p-3 text-xs sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none resize-none leading-relaxed"
                             rows={3}
                             autoFocus
                           />
@@ -2007,7 +2008,7 @@ ${activeScript.content}`;
 
                             <button
                               onClick={() => handleSaveUserPromptOnly(msg.id, editingUserMsgText)}
-                              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition-colors flex items-center gap-1"
+                              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-violet-500/30 transition-colors flex items-center gap-1"
                               title="Salvar alteração no texto do prompt"
                             >
                               <Check size={12} />
@@ -2017,11 +2018,11 @@ ${activeScript.content}`;
                             <button
                               onClick={() => handleUpdateUserPromptAndRegenerate(msg.id, editingUserMsgText)}
                               disabled={isGenerating || !editingUserMsgText.trim()}
-                              className="px-4 py-1.5 rounded-lg text-xs font-bold bg-[#c5a880] text-zinc-950 hover:bg-[#b09369] transition-all shadow-md flex items-center gap-1.5 disabled:opacity-50"
+                              className="px-4 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white hover:bg-[#7c3aed] transition-all shadow-md flex items-center gap-1.5 disabled:opacity-50"
                               title="Atualizar o prompt e regerar o roteiro com o Gemini"
                             >
                               <RotateCcw size={13} />
-                              <span>🔄 Atualizar Roteiro</span>
+                              <span>Atualizar Roteiro</span>
                             </button>
                           </div>
                         </div>
@@ -2036,7 +2037,7 @@ ${activeScript.content}`;
                                   key={idx}
                                   src={img}
                                   alt="Anexo"
-                                  className="w-24 h-24 object-cover rounded-xl border border-zinc-700"
+                                  className="w-24 h-24 object-cover rounded-xl border border-violet-500/30"
                                 />
                               ))}
                             </div>
@@ -2045,27 +2046,27 @@ ${activeScript.content}`;
                           <div className="whitespace-pre-wrap">{msg.text}</div>
 
                           {/* Quick Edit & Update Action Buttons */}
-                          <div className="flex items-center justify-end gap-1.5 pt-1.5 border-t border-zinc-700/40 text-zinc-400">
+                          <div className="flex items-center justify-end gap-1.5 pt-1.5 border-t border-violet-500/20 text-zinc-400">
                             <button
                               onClick={() => {
                                 setEditingUserMsgId(msg.id);
                                 setEditingUserMsgText(msg.text);
                               }}
-                              className="px-2.5 py-1 rounded-lg hover:bg-zinc-700/70 text-zinc-300 hover:text-white transition-colors flex items-center gap-1.5 text-[11px] font-semibold border border-zinc-700/50"
+                              className="px-2.5 py-1 rounded-lg hover:bg-zinc-700/70 text-zinc-300 hover:text-white transition-colors flex items-center gap-1.5 text-[11px] font-semibold border border-violet-500/30/50"
                               title="Editar este prompt enviado"
                             >
-                              <Edit3 size={12} className="text-[#c5a880]" />
+                              <Edit3 size={12} className="text-violet-400" />
                               <span>Editar</span>
                             </button>
 
                             <button
                               onClick={() => handleUpdateUserPromptAndRegenerate(msg.id, msg.text)}
                               disabled={isGenerating}
-                              className="px-2.5 py-1 rounded-lg hover:bg-amber-500/20 text-amber-300 hover:text-amber-200 transition-colors flex items-center gap-1.5 text-[11px] font-bold border border-amber-500/30"
+                              className="px-2.5 py-1 rounded-lg hover:bg-violet-500/20 text-violet-400 hover:text-violet-400 transition-colors flex items-center gap-1.5 text-[11px] font-bold border border-violet-500/30"
                               title="Atualizar / Regerar resposta para este prompt"
                             >
-                              <RotateCcw size={12} className="text-[#c5a880]" />
-                              <span>🔄 Atualizar</span>
+                              <RotateCcw size={12} className="text-violet-400" />
+                              <span>Atualizar</span>
                             </button>
                           </div>
                         </div>
@@ -2075,28 +2076,28 @@ ${activeScript.content}`;
                 ) : (
                   /* AI Response Stream (Clean Flowing Text, Gemini Style) */
                   <div className="flex gap-3 items-start max-w-full">
-                    <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-amber-500 via-amber-300 to-amber-100 flex items-center justify-center text-zinc-950 shrink-0 mt-0.5 shadow-md">
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-violet-600 to-fuchsia-600 flex items-center justify-center text-zinc-950 shrink-0 mt-0.5 shadow-md">
                       <Sparkles size={14} className="fill-zinc-950" />
                     </div>
 
                     <div className="flex-1 space-y-3 overflow-hidden">
-                      <div className="prose prose-invert max-w-none text-xs sm:text-sm space-y-3 prose-headings:text-white prose-headings:font-bold prose-headings:tracking-tight prose-h1:text-lg prose-h2:text-base prose-h3:text-sm prose-strong:text-[#c5a880] prose-strong:font-bold prose-ul:list-disc prose-ul:pl-4 prose-p:leading-relaxed prose-code:text-[#c5a880] prose-code:bg-zinc-900 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-pre:bg-black prose-pre:border prose-pre:border-zinc-800 prose-pre:rounded-xl overflow-x-auto">
+                      <div className="prose prose-invert max-w-none text-xs sm:text-sm space-y-3 prose-headings:text-white prose-headings:font-bold prose-headings:tracking-tight prose-h1:text-lg prose-h2:text-base prose-h3:text-sm prose-strong:text-violet-400 prose-strong:font-bold prose-ul:list-disc prose-ul:pl-4 prose-p:leading-relaxed prose-code:text-violet-400 prose-code:bg-zinc-900 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-pre:bg-black prose-pre:border prose-pre:border-violet-500/20 prose-pre:rounded-xl overflow-x-auto">
                         <ReactMarkdown
                           remarkPlugins={[remarkGfm]}
                           components={{
                             table: ({ node, ...props }) => (
-                              <div className="my-4 overflow-x-auto rounded-xl border border-zinc-800/80 bg-zinc-950/90 shadow-2xl">
+                              <div className="my-4 overflow-x-auto rounded-xl border border-violet-500/15 bg-black/90 shadow-2xl">
                                 <table className="w-full text-left border-collapse text-xs sm:text-sm min-w-[640px]" {...props} />
                               </div>
                             ),
                             thead: ({ node, ...props }) => (
-                              <thead className="bg-zinc-900 text-[#c5a880] uppercase tracking-wider font-bold border-b border-zinc-800 text-[11px]" {...props} />
+                              <thead className="bg-zinc-900 text-violet-400 uppercase tracking-wider font-bold border-b border-violet-500/20 text-[11px]" {...props} />
                             ),
                             th: ({ node, ...props }) => (
-                              <th className="px-4 py-3 font-bold border-r border-zinc-800/80 last:border-r-0 bg-zinc-900/90 text-[#c5a880]" {...props} />
+                              <th className="px-4 py-3 font-bold border-r border-violet-500/15 last:border-r-0 bg-zinc-900/90 text-violet-400" {...props} />
                             ),
                             td: ({ node, ...props }) => (
-                              <td className="px-4 py-3 border-t border-zinc-800/50 border-r border-zinc-800/30 last:border-r-0 align-top text-zinc-200 leading-relaxed" {...props} />
+                              <td className="px-4 py-3 border-t border-violet-500/20/50 border-r border-violet-500/20/30 last:border-r-0 align-top text-zinc-200 leading-relaxed" {...props} />
                             ),
                             tr: ({ node, ...props }) => (
                               <tr className="hover:bg-zinc-800/40 transition-colors even:bg-zinc-900/30 odd:bg-black/40" {...props} />
@@ -2116,10 +2117,10 @@ ${activeScript.content}`;
                           <div className="space-y-3 pt-2">
                             {/* If multiple scripts generated in this response, display individual download cards */}
                             {isMulti && (
-                              <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3.5 space-y-3 shadow-lg">
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-bold text-amber-200/90 pb-2 border-b border-zinc-800/80">
+                              <div className="bg-zinc-900/90 border border-violet-500/20 rounded-2xl p-3.5 space-y-3 shadow-lg">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-bold text-violet-400/90 pb-2 border-b border-violet-500/15">
                                   <span className="flex items-center gap-1.5">
-                                    <Sparkles size={14} className="text-[#c5a880]" />
+                                    <Sparkles size={14} className="text-violet-400" />
                                     <span>{extracted.length} Roteiros Gerados nesta Resposta (Download Individual):</span>
                                   </span>
                                   <button
@@ -2136,12 +2137,12 @@ ${activeScript.content}`;
                                   {extracted.map((scriptItem) => (
                                     <div
                                       key={scriptItem.index}
-                                      className="bg-black/50 hover:bg-black/70 border border-zinc-800/80 hover:border-zinc-700 rounded-xl p-3 flex flex-col gap-2.5 transition-all"
+                                      className="bg-black/50 hover:bg-black/70 border border-violet-500/15 hover:border-violet-500/30 rounded-xl p-3 flex flex-col gap-2.5 transition-all"
                                     >
                                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 w-full">
                                         <div className="space-y-0.5 min-w-0 flex-1">
                                           <div className="flex items-center gap-2">
-                                            <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-[#c5a880] text-[11px] font-bold border border-amber-500/30 shrink-0">
+                                            <span className="px-2 py-0.5 rounded-md bg-violet-500/20 text-violet-400 text-[11px] font-bold border border-violet-500/30 shrink-0">
                                               Roteiro {scriptItem.index}
                                             </span>
                                             <span className="text-xs font-semibold text-zinc-100 truncate">
@@ -2156,11 +2157,11 @@ ${activeScript.content}`;
                                             onClick={() =>
                                               openEditPdfModal(msg.text, msg.id, scriptItem.index, "CLIENTE")
                                             }
-                                            className="px-2.5 py-1 rounded-lg bg-zinc-800/90 hover:bg-zinc-700 text-zinc-200 transition-colors flex items-center gap-1.5 text-[11px] font-bold border border-zinc-700"
+                                            className="px-2.5 py-1 rounded-lg bg-zinc-800/90 hover:bg-zinc-700 text-zinc-200 transition-colors flex items-center gap-1.5 text-[11px] font-bold border border-violet-500/30"
                                             title={`Editar Roteiro ${scriptItem.index} e ver prévia do PDF em tempo real`}
                                           >
-                                            <Edit3 size={12} className="text-[#c5a880]" />
-                                            <span>✏️ Editar / Prévia PDF</span>
+                                            <Edit3 size={12} className="text-violet-400" />
+                                            <span>Editar / Prévia PDF</span>
                                           </button>
 
                                           {/* Download PDF Cliente for this single script */}
@@ -2172,11 +2173,11 @@ ${activeScript.content}`;
                                                 `Roteiro_${scriptItem.index}_[CLIENTE]_${activeClient.name.replace(/\s+/g, "_")}_${scriptItem.topic.replace(/[^a-zA-Z0-9À-ÿ]+/g, "_")}.pdf`
                                               )
                                             }
-                                            className="px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-[#c5a880] transition-colors flex items-center gap-1.5 text-[11px] font-bold border border-amber-500/40"
+                                            className="px-2.5 py-1 rounded-lg bg-violet-500/15 hover:bg-violet-500/25 text-violet-400 transition-colors flex items-center gap-1.5 text-[11px] font-bold border border-violet-500/40"
                                             title={`Baixar PDF para Cliente do Roteiro ${scriptItem.index}`}
                                           >
                                             <FileText size={12} />
-                                            <span>📱 PDF Cliente</span>
+                                            <span>PDF Cliente</span>
                                           </button>
 
                                           {/* Download PDF Editor for this single script */}
@@ -2192,7 +2193,7 @@ ${activeScript.content}`;
                                             title={`Baixar PDF para Editor do Roteiro ${scriptItem.index}`}
                                           >
                                             <FileText size={12} />
-                                            <span>🎬 PDF Editor</span>
+                                            <span>PDF Editor</span>
                                           </button>
 
                                           {/* In-place Refine Button for this specific script */}
@@ -2217,21 +2218,21 @@ ${activeScript.content}`;
                                             className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 text-[11px] font-bold border ${
                                               activeRefinePanel?.msgId === msg.id &&
                                               activeRefinePanel?.scriptIndex === scriptItem.index
-                                                ? "bg-[#c5a880] text-white border-[#c5a880] shadow-md"
-                                                : "bg-[#c5a880]/15 hover:bg-[#c5a880]/25 text-[#c5a880] border-[#c5a880]/40"
+                                                ? "bg-[#a855f7] text-white border-violet-500 shadow-md"
+                                                : "bg-violet-500/15 hover:bg-violet-500/25 text-violet-400 border-violet-500/40"
                                             }`}
                                             title={`Melhorar o Roteiro ${scriptItem.index} no mesmo local sem criar nova resposta`}
                                           >
                                             <Sparkles size={12} />
-                                            <span>✨ Melhore este Roteiro</span>
+                                            <span>Melhore este Roteiro</span>
                                           </button>
                                         </div>
                                       </div>
 
                                       {/* In-place Loading Spinner */}
                                       {refiningScriptKey === `${msg.id}-${scriptItem.index}` && (
-                                        <div className="w-full p-3 bg-[#c5a880]/40 border border-[#c5a880]/40 rounded-xl flex items-center justify-center gap-2.5 text-[#c5a880] text-xs font-bold animate-pulse">
-                                          <Loader2 size={16} className="animate-spin text-[#c5a880]" />
+                                        <div className="w-full p-3 bg-violet-500/40 border border-violet-500/40 rounded-xl flex items-center justify-center gap-2.5 text-violet-400 text-xs font-bold animate-pulse">
+                                          <Loader2 size={16} className="animate-spin text-violet-400" />
                                           <span>Aprimorando Roteiro {scriptItem.index} com IA no mesmo local...</span>
                                         </div>
                                       )}
@@ -2242,11 +2243,11 @@ ${activeScript.content}`;
                                           initial={{ opacity: 0, height: 0 }}
                                           animate={{ opacity: 1, height: "auto" }}
                                           exit={{ opacity: 0, height: 0 }}
-                                          className="w-full bg-zinc-950 border border-[#c5a880]/40 rounded-xl p-3 space-y-2.5 shadow-xl"
+                                          className="w-full bg-black border border-violet-500/40 rounded-xl p-3 space-y-2.5 shadow-xl"
                                         >
                                           <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-1.5 text-xs font-bold text-[#c5a880]">
-                                              <Sparkles size={13} className="text-[#c5a880]" />
+                                            <div className="flex items-center gap-1.5 text-xs font-bold text-violet-400">
+                                              <Sparkles size={13} className="text-violet-400" />
                                               <span>Aprimorar Roteiro {scriptItem.index} ("{scriptItem.topic}") no local:</span>
                                             </div>
                                             <button
@@ -2260,17 +2261,17 @@ ${activeScript.content}`;
                                           {/* Quick Presets */}
                                           <div className="flex flex-wrap gap-1.5">
                                             {[
-                                              "🎯 Gancho inicial mais forte e chamativo",
+                                              "Gancho inicial mais forte e chamativo",
                                               "⏱️ Encurtar para 30s (Reels dinâmico)",
-                                              "🎬 Enriquecer cenas de apoio e Tabela do Editor",
-                                              "📱 CTA mais direta para Bio / WhatsApp",
-                                              "🌶️ Linguagem mais viva e engajante"
+                                              "Enriquecer cenas de apoio e Tabela do Editor",
+                                              "CTA mais direta para Bio / WhatsApp",
+                                              "Linguagem mais viva e engajante"
                                             ].map((preset, pIdx) => (
                                               <button
                                                 key={pIdx}
                                                 onClick={() => handleInPlaceRefineScript(msg.id, scriptItem.index, preset)}
                                                 disabled={refiningScriptKey !== null}
-                                                className="px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-[#c5a880]/60 text-zinc-300 hover:text-[#c5a880] text-[11px] font-medium border border-zinc-800 hover:border-[#c5a880]/40 transition-all text-left"
+                                                className="px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-violet-500/60 text-zinc-300 hover:text-violet-400 text-[11px] font-medium border border-violet-500/20 hover:border-violet-500/40 transition-all text-left"
                                               >
                                                 {preset}
                                               </button>
@@ -2283,12 +2284,12 @@ ${activeScript.content}`;
                                               {refineAttachedFiles.map((f, idx) => (
                                                 <div
                                                   key={idx}
-                                                  className="relative flex items-center gap-1.5 pl-2 pr-6 py-1 rounded-lg bg-zinc-900 border border-[#c5a880]/40 text-[10px] text-zinc-300 max-w-[150px] truncate shrink-0"
+                                                  className="relative flex items-center gap-1.5 pl-2 pr-6 py-1 rounded-lg bg-zinc-900 border border-violet-500/40 text-[10px] text-zinc-300 max-w-[150px] truncate shrink-0"
                                                 >
                                                   {f.mimeType?.startsWith("image/") ? (
                                                     <img src={f.url} className="w-4 h-4 rounded object-cover shrink-0" referrerPolicy="no-referrer" />
                                                   ) : (
-                                                    <FileText size={10} className="text-[#c5a880] shrink-0" />
+                                                    <FileText size={10} className="text-violet-400 shrink-0" />
                                                   )}
                                                   <span className="truncate text-zinc-400">{f.name || "Arquivo"}</span>
                                                   <button
@@ -2307,7 +2308,7 @@ ${activeScript.content}`;
                                             {/* File upload button */}
                                             <label
                                               title="Anexar arquivo/imagem para esta melhoria"
-                                              className="w-8 h-8 rounded-lg bg-zinc-900 hover:bg-[#c5a880]/60 border border-zinc-800 hover:border-[#c5a880]/40 flex items-center justify-center text-zinc-400 hover:text-white cursor-pointer transition-colors shrink-0"
+                                              className="w-8 h-8 rounded-lg bg-zinc-900 hover:bg-violet-500/60 border border-violet-500/20 hover:border-violet-500/40 flex items-center justify-center text-zinc-400 hover:text-white cursor-pointer transition-colors shrink-0"
                                             >
                                               <Paperclip size={14} />
                                               <input
@@ -2328,12 +2329,12 @@ ${activeScript.content}`;
                                                 }
                                               }}
                                               placeholder="Ou digite o que quer ajustar neste roteiro..."
-                                              className="flex-1 bg-zinc-900 border border-zinc-800 focus:border-[#c5a880] rounded-lg px-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none"
+                                              className="flex-1 bg-zinc-900 border border-violet-500/20 focus:border-violet-500 rounded-lg px-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none"
                                             />
                                             <button
                                               onClick={() => handleInPlaceRefineScript(msg.id, scriptItem.index, customRefinePrompt || "Refinar com base nas referências anexas")}
                                               disabled={(!customRefinePrompt.trim() && refineAttachedFiles.length === 0) || refiningScriptKey !== null}
-                                              className="px-3 py-1.5 bg-[#c5a880] hover:bg-[#c5a880] disabled:opacity-40 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-md"
+                                              className="px-3 py-1.5 bg-[#a855f7] hover:bg-violet-600 disabled:opacity-40 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-md"
                                             >
                                               <Sparkles size={12} />
                                               <span>Refinar</span>
@@ -2352,13 +2353,13 @@ ${activeScript.content}`;
                               <div className="flex flex-wrap items-center gap-1.5">
                                 <button
                                   onClick={() => handleCopyText(msg.text, msg.id)}
-                                  className="px-2.5 py-1 rounded-lg bg-zinc-900/80 hover:bg-zinc-800 hover:text-white transition-colors flex items-center gap-1.5 text-[11px] font-medium border border-zinc-800"
+                                  className="px-2.5 py-1 rounded-lg bg-zinc-900/80 hover:bg-zinc-800 hover:text-white transition-colors flex items-center gap-1.5 text-[11px] font-medium border border-violet-500/20"
                                   title="Copiar texto"
                                 >
                                   {copiedMsgId === msg.id ? (
                                     <>
-                                      <Check size={13} className="text-[#c5a880]" />
-                                      <span className="text-[#c5a880]">Copiado</span>
+                                      <Check size={13} className="text-violet-400" />
+                                      <span className="text-violet-400">Copiado</span>
                                     </>
                                   ) : (
                                     <>
@@ -2373,21 +2374,21 @@ ${activeScript.content}`;
                                     {/* Edit script before download */}
                                     <button
                                       onClick={() => openEditPdfModal(msg.text, msg.id, 1, "CLIENTE")}
-                                      className="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 transition-colors flex items-center gap-1.5 text-[11px] font-semibold border border-zinc-700"
+                                      className="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 transition-colors flex items-center gap-1.5 text-[11px] font-semibold border border-violet-500/30"
                                       title="Editar o texto do roteiro manualmente com prévia do PDF em tempo real"
                                     >
-                                      <Edit3 size={13} className="text-[#c5a880]" />
-                                      <span>✏️ Editar / Prévia PDF</span>
+                                      <Edit3 size={13} className="text-violet-400" />
+                                      <span>Editar / Prévia PDF</span>
                                     </button>
 
                                     {/* Download Single PDF Cliente */}
                                     <button
                                       onClick={() => handleDownloadPdf(msg.text, "CLIENTE")}
-                                      className="px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-[#c5a880] transition-colors flex items-center gap-1.5 text-[11px] font-semibold border border-amber-500/30"
+                                      className="px-2.5 py-1 rounded-lg bg-violet-500/10 hover:bg-violet-500/20 text-violet-400 transition-colors flex items-center gap-1.5 text-[11px] font-semibold border border-violet-500/30"
                                       title="Baixar PDF Limpo para enviar ao Cliente (Aprovação sem informações técnicas)"
                                     >
                                       <FileText size={13} />
-                                      <span>📱 PDF Cliente</span>
+                                      <span>PDF Cliente</span>
                                     </button>
 
                                     {/* Download Single PDF Editor */}
@@ -2397,7 +2398,7 @@ ${activeScript.content}`;
                                       title="Baixar PDF Completo para o Editor (Tabela de edição, B-rolls e SFX)"
                                     >
                                       <FileText size={13} />
-                                      <span>🎬 PDF Editor</span>
+                                      <span>PDF Editor</span>
                                     </button>
 
                                     {/* In-place Refine button for single script */}
@@ -2422,13 +2423,13 @@ ${activeScript.content}`;
                                       className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 text-[11px] font-bold border ${
                                         activeRefinePanel?.msgId === msg.id &&
                                         activeRefinePanel?.scriptIndex === 1
-                                          ? "bg-[#c5a880] text-white border-[#c5a880] shadow-md"
-                                          : "bg-[#c5a880]/15 hover:bg-[#c5a880]/25 text-[#c5a880] border-[#c5a880]/40"
+                                          ? "bg-[#a855f7] text-white border-violet-500 shadow-md"
+                                          : "bg-violet-500/15 hover:bg-violet-500/25 text-violet-400 border-violet-500/40"
                                       }`}
                                       title="Pedir ao Gemini para melhorar este roteiro no mesmo local"
                                     >
                                       <Sparkles size={13} />
-                                      <span>✨ Melhore este Roteiro</span>
+                                      <span>Melhore este Roteiro</span>
                                     </button>
                                   </>
                                 )}
@@ -2436,7 +2437,7 @@ ${activeScript.content}`;
                                 {/* Download TXT Button */}
                                 <button
                                   onClick={() => handleDownloadTxt(msg.text)}
-                                  className="px-2.5 py-1 rounded-lg bg-zinc-900/80 hover:bg-zinc-800 hover:text-white transition-colors flex items-center gap-1.5 text-[11px] font-medium border border-zinc-800"
+                                  className="px-2.5 py-1 rounded-lg bg-zinc-900/80 hover:bg-zinc-800 hover:text-white transition-colors flex items-center gap-1.5 text-[11px] font-medium border border-violet-500/20"
                                   title="Baixar Texto Simples (.txt)"
                                 >
                                   <Download size={13} />
@@ -2445,7 +2446,7 @@ ${activeScript.content}`;
 
                                 <button
                                   onClick={() => handleSaveToNotes(msg.text, msg.id)}
-                                  className="px-2.5 py-1 rounded-lg bg-zinc-900/80 hover:bg-zinc-800 hover:text-white transition-colors flex items-center gap-1.5 text-[11px] font-medium border border-zinc-800"
+                                  className="px-2.5 py-1 rounded-lg bg-zinc-900/80 hover:bg-zinc-800 hover:text-white transition-colors flex items-center gap-1.5 text-[11px] font-medium border border-violet-500/20"
                                   title="Salvar em Notas"
                                 >
                                   <Save size={13} />
@@ -2454,7 +2455,7 @@ ${activeScript.content}`;
 
                                 <button
                                   onClick={() => sendMessage("Pode reformular ou dar mais opções para este roteiro?")}
-                                  className="p-1.5 rounded-lg bg-zinc-900/80 hover:bg-zinc-800 hover:text-white transition-colors border border-zinc-800 flex items-center justify-center"
+                                  className="p-1.5 rounded-lg bg-zinc-900/80 hover:bg-zinc-800 hover:text-white transition-colors border border-violet-500/20 flex items-center justify-center"
                                   title="Recriar resposta"
                                 >
                                   <RotateCcw size={13} />
@@ -2463,8 +2464,8 @@ ${activeScript.content}`;
 
                               {/* Single Script In-place Loading Spinner */}
                               {!isMulti && refiningScriptKey === `${msg.id}-1` && (
-                                <div className="w-full p-3 bg-[#c5a880]/40 border border-[#c5a880]/40 rounded-xl flex items-center justify-center gap-2.5 text-[#c5a880] text-xs font-bold animate-pulse">
-                                  <Loader2 size={16} className="animate-spin text-[#c5a880]" />
+                                <div className="w-full p-3 bg-violet-500/40 border border-violet-500/40 rounded-xl flex items-center justify-center gap-2.5 text-violet-400 text-xs font-bold animate-pulse">
+                                  <Loader2 size={16} className="animate-spin text-violet-400" />
                                   <span>Aprimorando Roteiro com IA no mesmo local...</span>
                                 </div>
                               )}
@@ -2475,11 +2476,11 @@ ${activeScript.content}`;
                                   initial={{ opacity: 0, height: 0 }}
                                   animate={{ opacity: 1, height: "auto" }}
                                   exit={{ opacity: 0, height: 0 }}
-                                  className="w-full bg-zinc-950 border border-[#c5a880]/40 rounded-xl p-3 space-y-2.5 shadow-xl"
+                                  className="w-full bg-black border border-violet-500/40 rounded-xl p-3 space-y-2.5 shadow-xl"
                                 >
                                   <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-1.5 text-xs font-bold text-[#c5a880]">
-                                      <Sparkles size={13} className="text-[#c5a880]" />
+                                    <div className="flex items-center gap-1.5 text-xs font-bold text-violet-400">
+                                      <Sparkles size={13} className="text-violet-400" />
                                       <span>Aprimorar Roteiro no mesmo local:</span>
                                     </div>
                                     <button
@@ -2493,17 +2494,17 @@ ${activeScript.content}`;
                                   {/* Quick Presets */}
                                   <div className="flex flex-wrap gap-1.5">
                                     {[
-                                      "🎯 Gancho inicial mais forte e chamativo",
+                                      "Gancho inicial mais forte e chamativo",
                                       "⏱️ Encurtar para 30s (Reels dinâmico)",
-                                      "🎬 Enriquecer cenas de apoio e Tabela do Editor",
-                                      "📱 CTA mais direta para Bio / WhatsApp",
-                                      "🌶️ Linguagem mais viva e engajante"
+                                      "Enriquecer cenas de apoio e Tabela do Editor",
+                                      "CTA mais direta para Bio / WhatsApp",
+                                      "Linguagem mais viva e engajante"
                                     ].map((preset, pIdx) => (
                                       <button
                                         key={pIdx}
                                         onClick={() => handleInPlaceRefineScript(msg.id, 1, preset)}
                                         disabled={refiningScriptKey !== null}
-                                        className="px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-[#c5a880]/60 text-zinc-300 hover:text-[#c5a880] text-[11px] font-medium border border-zinc-800 hover:border-[#c5a880]/40 transition-all text-left"
+                                        className="px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-violet-500/60 text-zinc-300 hover:text-violet-400 text-[11px] font-medium border border-violet-500/20 hover:border-violet-500/40 transition-all text-left"
                                       >
                                         {preset}
                                       </button>
@@ -2516,12 +2517,12 @@ ${activeScript.content}`;
                                       {refineAttachedFiles.map((f, idx) => (
                                         <div
                                           key={idx}
-                                          className="relative flex items-center gap-1.5 pl-2 pr-6 py-1 rounded-lg bg-zinc-900 border border-[#c5a880]/40 text-[10px] text-zinc-300 max-w-[150px] truncate shrink-0"
+                                          className="relative flex items-center gap-1.5 pl-2 pr-6 py-1 rounded-lg bg-zinc-900 border border-violet-500/40 text-[10px] text-zinc-300 max-w-[150px] truncate shrink-0"
                                         >
                                           {f.mimeType?.startsWith("image/") ? (
                                             <img src={f.url} className="w-4 h-4 rounded object-cover shrink-0" referrerPolicy="no-referrer" />
                                           ) : (
-                                            <FileText size={10} className="text-[#c5a880] shrink-0" />
+                                            <FileText size={10} className="text-violet-400 shrink-0" />
                                           )}
                                           <span className="truncate text-zinc-400">{f.name || "Arquivo"}</span>
                                           <button
@@ -2540,7 +2541,7 @@ ${activeScript.content}`;
                                     {/* File upload button */}
                                     <label
                                       title="Anexar arquivo/imagem para esta melhoria"
-                                      className="w-8 h-8 rounded-lg bg-zinc-900 hover:bg-[#c5a880]/60 border border-zinc-800 hover:border-[#c5a880]/40 flex items-center justify-center text-zinc-400 hover:text-white cursor-pointer transition-colors shrink-0"
+                                      className="w-8 h-8 rounded-lg bg-zinc-900 hover:bg-violet-500/60 border border-violet-500/20 hover:border-violet-500/40 flex items-center justify-center text-zinc-400 hover:text-white cursor-pointer transition-colors shrink-0"
                                     >
                                       <Paperclip size={14} />
                                       <input
@@ -2561,12 +2562,12 @@ ${activeScript.content}`;
                                         }
                                       }}
                                       placeholder="Ou digite o que quer ajustar neste roteiro..."
-                                      className="flex-1 bg-zinc-900 border border-zinc-800 focus:border-[#c5a880] rounded-lg px-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none"
+                                      className="flex-1 bg-zinc-900 border border-violet-500/20 focus:border-violet-500 rounded-lg px-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none"
                                     />
                                     <button
                                       onClick={() => handleInPlaceRefineScript(msg.id, 1, customRefinePrompt || "Refinar com base nas referências anexas")}
                                       disabled={(!customRefinePrompt.trim() && refineAttachedFiles.length === 0) || refiningScriptKey !== null}
-                                      className="px-3 py-1.5 bg-[#c5a880] hover:bg-[#c5a880] disabled:opacity-40 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-md"
+                                      className="px-3 py-1.5 bg-[#a855f7] hover:bg-violet-600 disabled:opacity-40 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-md"
                                     >
                                       <Sparkles size={12} />
                                       <span>Refinar</span>
@@ -2588,11 +2589,11 @@ ${activeScript.content}`;
           {/* Generation Loader */}
           {isGenerating && (
             <div className="flex gap-3 items-center">
-              <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-amber-500 via-amber-300 to-amber-100 flex items-center justify-center text-zinc-950 shrink-0">
+              <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-violet-600 to-fuchsia-600 flex items-center justify-center text-zinc-950 shrink-0">
                 <Sparkles size={14} className="fill-zinc-950 animate-pulse" />
               </div>
               <div className="flex items-center gap-2 text-xs text-zinc-400 font-medium">
-                <Loader2 size={15} className="animate-spin text-[#c5a880]" />
+                <Loader2 size={15} className="animate-spin text-violet-400" />
                 <span>Pensando e gerando roteiro...</span>
               </div>
             </div>
@@ -2604,7 +2605,7 @@ ${activeScript.content}`;
         {/* ========================================== */}
         {/* FLOATING BOTTOM INPUT BAR (GEMINI PILL STYLE) */}
         {/* ========================================== */}
-        <div className="p-4 sm:p-6 shrink-0 bg-[#0e0e10]/90 backdrop-blur-lg">
+        <div className="p-4 sm:p-6 shrink-0 bg-black/90 backdrop-blur-lg">
           <div className="max-w-3xl w-full mx-auto">
             {/* Attached Images Chips */}
             {attachedImages.length > 0 && (
@@ -2612,7 +2613,7 @@ ${activeScript.content}`;
                 {attachedImages.map((img, idx) => (
                   <div
                     key={idx}
-                    className="relative w-12 h-12 rounded-lg overflow-hidden border border-[#c5a880] shrink-0 bg-black"
+                    className="relative w-12 h-12 rounded-lg overflow-hidden border border-violet-500 shrink-0 bg-black"
                   >
                     <img src={img.url} className="w-full h-full object-cover" />
                     <button
@@ -2627,7 +2628,7 @@ ${activeScript.content}`;
             )}
 
             {/* Main Pill Input Box */}
-            <div className="bg-[#1e1f20] hover:bg-[#282a2c] focus-within:bg-[#282a2c] border border-zinc-700/50 focus-within:border-zinc-500 rounded-[28px] p-2 sm:px-4 sm:py-2.5 flex items-center gap-2 shadow-2xl transition-all">
+            <div className="bg-[#121216] hover:bg-[#181920] focus-within:bg-[#181920] border border-violet-500/30/50 focus-within:border-zinc-500 rounded-[28px] p-2 sm:px-4 sm:py-2.5 flex items-center gap-2 shadow-2xl transition-all">
               {/* Attachment Button */}
               <label
                 title="Anexar imagem"
@@ -2673,7 +2674,7 @@ ${activeScript.content}`;
                 <button
                   onClick={() => sendMessage()}
                   disabled={isGenerating || (!inputText.trim() && attachedImages.length === 0)}
-                  className="w-9 h-9 rounded-full bg-[#c5a880] text-zinc-950 flex items-center justify-center disabled:opacity-30 hover:bg-[#b09369] transition-all shadow-md shrink-0"
+                  className="w-9 h-9 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white flex items-center justify-center disabled:opacity-30 hover:bg-[#7c3aed] transition-all shadow-md shrink-0"
                   title="Enviar mensagem"
                 >
                   <Send size={15} className="ml-0.5" />
@@ -2699,17 +2700,17 @@ ${activeScript.content}`;
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-[#18181b] border border-zinc-700/80 rounded-2xl p-6 max-w-2xl w-full shadow-2xl flex flex-col space-y-4 max-h-[90vh] overflow-hidden"
+              className="bg-[#18181b] border border-violet-500/30/80 rounded-2xl p-6 max-w-2xl w-full shadow-2xl flex flex-col space-y-4 max-h-[90vh] overflow-hidden"
             >
               {/* Header */}
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-[#c5a880]">
+                  <div className="w-10 h-10 rounded-xl bg-violet-500/20 border border-violet-500/40 flex items-center justify-center text-violet-400">
                     <BookOpen size={20} />
                   </div>
                   <div>
                     <h2 className="text-base font-bold text-zinc-100 flex items-center gap-2">
-                      Base de Conhecimento Permanente: <span className="text-[#c5a880]">{activeClient.name}</span>
+                      Base de Conhecimento Permanente: <span className="text-violet-400">{activeClient.name}</span>
                     </h2>
                     <p className="text-xs text-zinc-400 mt-0.5">
                       Memória fixa do cliente (Cardápios, Preços, Unidades, Pessoas, Regras)
@@ -2725,8 +2726,8 @@ ${activeScript.content}`;
               </div>
 
               {/* Status Banner */}
-              <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-xs text-amber-200/90 leading-relaxed flex items-start gap-2.5">
-                <Sparkles size={16} className="text-[#c5a880] shrink-0 mt-0.5" />
+              <div className="bg-violet-500/10 border border-violet-500/30 rounded-xl p-3 text-xs text-violet-400/90 leading-relaxed flex items-start gap-2.5">
+                <Sparkles size={16} className="text-violet-400 shrink-0 mt-0.5" />
                 <div>
                   <strong>Segurança de Memória Total:</strong> As informações salvas abaixo ficam gravadas de forma <strong>permanente</strong> na ficha do cliente. <strong>Mesmo que você exclua conversas e históricos de chat, essa memória NUNCA será apagada!</strong> O Gemini usará este conhecimento em todos os roteiros futuros.
                 </div>
@@ -2746,13 +2747,13 @@ ${activeScript.content}`;
                   value={knowledgeText}
                   onChange={(e) => setKnowledgeText(e.target.value)}
                   placeholder={`Cole ou digite aqui todas as informações importantes do cliente ${activeClient.name}...\nExemplo:\n- Cardápio: Esfihas R$ 5,90, Cuscuz recheado R$ 14,90, Tapioca R$ 12,00\n- Unidades: Prefeitura, Banco do Brasil e Centro\n- Apresentadoras/Equipe: Pâmela e Letícia\n- Estilo: Tom jovem, dinâmico e direto ao ponto`}
-                  className="w-full flex-1 bg-zinc-950 border border-zinc-700 focus:border-[#c5a880] rounded-xl p-3 text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none resize-none leading-relaxed font-mono"
+                  className="w-full flex-1 bg-black border border-violet-500/30 focus:border-violet-500 rounded-xl p-3 text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none resize-none leading-relaxed font-mono"
                   rows={10}
                 />
               </div>
 
               {/* Actions Footer */}
-              <div className="flex items-center justify-between pt-2 border-t border-zinc-800">
+              <div className="flex items-center justify-between pt-2 border-t border-violet-500/20">
                 <button
                   onClick={() => {
                     if (confirm("Deseja realmente limpar toda a memória permanente deste cliente?")) {
@@ -2778,7 +2779,7 @@ ${activeScript.content}`;
                       saveClientKnowledge(knowledgeText);
                       setShowKnowledgeModal(false);
                     }}
-                    className="px-5 py-2 text-xs font-bold bg-[#c5a880] text-zinc-950 hover:bg-[#b09369] rounded-xl transition-all shadow-md flex items-center gap-2"
+                    className="px-5 py-2 text-xs font-bold bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white hover:bg-[#7c3aed] rounded-xl transition-all shadow-md flex items-center gap-2"
                   >
                     <Save size={14} />
                     <span>Salvar Memória Permanente</span>
@@ -2803,19 +2804,19 @@ ${activeScript.content}`;
                 initial={{ opacity: 0, scale: 0.96, y: 12 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.96, y: 12 }}
-                className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-6xl h-[92vh] flex flex-col shadow-2xl overflow-hidden"
+                className="bg-black border border-violet-500/20 rounded-2xl w-full max-w-6xl h-[92vh] flex flex-col shadow-2xl overflow-hidden"
               >
                 {/* Modal Header */}
-                <div className="flex flex-col gap-3 px-5 py-3.5 border-b border-zinc-800 bg-zinc-900/90 shrink-0">
+                <div className="flex flex-col gap-3 px-5 py-3.5 border-b border-violet-500/20 bg-zinc-900/90 shrink-0">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5">
-                      <div className="p-2 rounded-xl bg-amber-500/10 text-[#c5a880] border border-amber-500/20">
+                      <div className="p-2 rounded-xl bg-violet-500/10 text-violet-400 border border-violet-500/20">
                         <Edit3 size={18} />
                       </div>
                       <div>
                         <h2 className="text-sm font-bold text-zinc-100 flex items-center gap-2">
                           <span>Editar & Prévia do PDF</span>
-                          <span className="text-[10px] px-2 py-0.5 rounded-md bg-amber-500/20 text-[#c5a880] font-bold border border-amber-500/30">
+                          <span className="text-[10px] px-2 py-0.5 rounded-md bg-violet-500/20 text-violet-400 font-bold border border-violet-500/30">
                             Cliente: {activeClient.name}
                           </span>
                         </h2>
@@ -2827,7 +2828,7 @@ ${activeScript.content}`;
 
                     <div className="flex items-center gap-2">
                       {/* View Mode Toggle */}
-                      <div className="hidden sm:flex items-center gap-1 bg-zinc-950 p-1 rounded-xl border border-zinc-800">
+                      <div className="hidden sm:flex items-center gap-1 bg-black p-1 rounded-xl border border-violet-500/20">
                         <button
                           onClick={() =>
                             setEditingScriptModal((prev) =>
@@ -2836,11 +2837,11 @@ ${activeScript.content}`;
                           }
                           className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-colors ${
                             editingScriptModal.viewMode === "split"
-                              ? "bg-zinc-800 text-amber-200 border border-zinc-700"
+                              ? "bg-zinc-800 text-violet-400 border border-violet-500/30"
                               : "text-zinc-400 hover:text-white"
                           }`}
                         >
-                          📐 Dividido
+                          Dividido
                         </button>
                         <button
                           onClick={() =>
@@ -2850,11 +2851,11 @@ ${activeScript.content}`;
                           }
                           className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-colors ${
                             editingScriptModal.viewMode === "editor"
-                              ? "bg-zinc-800 text-amber-200 border border-zinc-700"
+                              ? "bg-zinc-800 text-violet-400 border border-violet-500/30"
                               : "text-zinc-400 hover:text-white"
                           }`}
                         >
-                          ✏️ Editor
+                          Editor
                         </button>
                         <button
                           onClick={() =>
@@ -2864,11 +2865,11 @@ ${activeScript.content}`;
                           }
                           className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-colors ${
                             editingScriptModal.viewMode === "preview"
-                              ? "bg-zinc-800 text-amber-200 border border-zinc-700"
+                              ? "bg-zinc-800 text-violet-400 border border-violet-500/30"
                               : "text-zinc-400 hover:text-white"
                           }`}
                         >
-                          📄 Prévia PDF
+                          Prévia PDF
                         </button>
                       </div>
 
@@ -2895,8 +2896,8 @@ ${activeScript.content}`;
                           }
                           className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 border ${
                             editingScriptModal.activeScriptIndex === sc.index
-                              ? "bg-[#c5a880] text-zinc-950 border-[#c5a880] shadow-sm"
-                              : "bg-zinc-800/80 text-zinc-300 border-zinc-700 hover:bg-zinc-700"
+                              ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white border-violet-500 shadow-sm"
+                              : "bg-zinc-800/80 text-zinc-300 border-violet-500/30 hover:bg-zinc-700"
                           }`}
                         >
                           <span>Roteiro {sc.index}</span>
@@ -2907,8 +2908,8 @@ ${activeScript.content}`;
                       ))}
                     </div>
 
-                    {/* Version Selector Toggle (📱 Cliente vs 🎬 Editor) */}
-                    <div className="flex items-center gap-1 bg-zinc-950 p-1 rounded-xl border border-zinc-800 shrink-0 self-start sm:self-auto">
+                    {/* Version Selector Toggle (Cliente vs Editor) */}
+                    <div className="flex items-center gap-1 bg-black p-1 rounded-xl border border-violet-500/20 shrink-0 self-start sm:self-auto">
                       <button
                         onClick={() =>
                           setEditingScriptModal((prev) =>
@@ -2917,11 +2918,11 @@ ${activeScript.content}`;
                         }
                         className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
                           editingScriptModal.target === "CLIENTE"
-                            ? "bg-amber-500/20 text-[#c5a880] border border-amber-500/40"
+                            ? "bg-violet-500/20 text-violet-400 border border-violet-500/40"
                             : "text-zinc-400 hover:text-white"
                         }`}
                       >
-                        <span>📱 Versão CLIENTE</span>
+                        <span>Versão CLIENTE</span>
                       </button>
                       <button
                         onClick={() =>
@@ -2935,14 +2936,14 @@ ${activeScript.content}`;
                             : "text-zinc-400 hover:text-white"
                         }`}
                       >
-                        <span>🎬 Versão EDITOR</span>
+                        <span>Versão EDITOR</span>
                       </button>
                     </div>
                   </div>
                 </div>
 
                 {/* Modal Main Body (Interactive Split View or Full Screen) */}
-                <div className="flex-1 overflow-hidden p-3 sm:p-4 flex flex-col md:flex-row gap-3 bg-zinc-950">
+                <div className="flex-1 overflow-hidden p-3 sm:p-4 flex flex-col md:flex-row gap-3 bg-black">
                   {/* Left Column: Text Area Editor */}
                   {(editingScriptModal.viewMode === "split" || editingScriptModal.viewMode === "editor") && (
                     <div
@@ -2951,7 +2952,7 @@ ${activeScript.content}`;
                       }`}
                     >
                       <div className="flex items-center justify-between text-xs text-zinc-400 font-semibold px-1 shrink-0">
-                        <span>✏️ Conteúdo do Roteiro {activeScript.index} (Editável em Markdown):</span>
+                        <span>Conteúdo do Roteiro {activeScript.index} (Editável em Markdown):</span>
                         <span className="text-[11px] text-zinc-500 font-mono">
                           {activeScript.content.length} caracteres
                         </span>
@@ -2970,7 +2971,7 @@ ${activeScript.content}`;
                           });
                         }}
                         placeholder="Edite o texto do roteiro aqui..."
-                        className="w-full flex-1 bg-zinc-900 border border-zinc-800 focus:border-[#c5a880] rounded-xl p-3.5 text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none resize-none leading-relaxed font-mono selection:bg-amber-500/30 shadow-inner"
+                        className="w-full flex-1 bg-zinc-900 border border-violet-500/20 focus:border-violet-500 rounded-xl p-3.5 text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none resize-none leading-relaxed font-mono selection:bg-violet-500/30 shadow-inner"
                       />
                     </div>
                   )}
@@ -2985,14 +2986,14 @@ ${activeScript.content}`;
                       <div className="flex items-center justify-between text-xs text-zinc-400 font-semibold px-1 shrink-0">
                         <span className="flex items-center gap-1.5">
                           <span>
-                            📄 Prévia do PDF (
+                            Prévia do PDF (
                             {editingScriptModal.target === "CLIENTE"
-                              ? "📱 Layout Cliente"
-                              : "🎬 Layout do Editor"}
+                              ? "Layout Cliente"
+                              : "Layout do Editor"}
                             ):
                           </span>
                         </span>
-                        <span className="text-[10px] text-amber-400/80 font-mono">
+                        <span className="text-[10px] text-violet-400/80 font-mono">
                           • Atualização em Tempo Real
                         </span>
                       </div>
@@ -3009,7 +3010,7 @@ ${activeScript.content}`;
                 </div>
 
                 {/* Modal Footer Actions */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between p-3.5 border-t border-zinc-800 bg-zinc-900/90 gap-3 shrink-0">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between p-3.5 border-t border-violet-500/20 bg-zinc-900/90 gap-3 shrink-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     {editingScriptModal.msgId && (
                       <button
@@ -3055,11 +3056,11 @@ ${activeScript.content}`;
                           `Roteiro_${activeScript.index}_[CLIENTE]_${activeClient.name.replace(/\s+/g, "_")}_${activeScript.topic.replace(/[^a-zA-Z0-9À-ÿ]+/g, "_")}.pdf`
                         );
                       }}
-                      className="px-4 py-2 text-xs font-bold bg-amber-500/20 hover:bg-amber-500/30 text-[#c5a880] rounded-xl transition-all border border-amber-500/40 flex items-center gap-1.5 shadow-sm"
+                      className="px-4 py-2 text-xs font-bold bg-violet-500/20 hover:bg-violet-500/30 text-violet-400 rounded-xl transition-all border border-violet-500/40 flex items-center gap-1.5 shadow-sm"
                       title="Baixar PDF Limpo para Aprovação do Cliente"
                     >
                       <FileText size={14} />
-                      <span>📱 Baixar PDF Cliente</span>
+                      <span>Baixar PDF Cliente</span>
                     </button>
 
                     {/* Download PDF Editor */}
@@ -3076,7 +3077,7 @@ ${activeScript.content}`;
                       title="Baixar PDF Técnico Completo para o Editor"
                     >
                       <FileText size={14} />
-                      <span>🎬 Baixar PDF Editor</span>
+                      <span>Baixar PDF Editor</span>
                     </button>
                   </div>
                 </div>

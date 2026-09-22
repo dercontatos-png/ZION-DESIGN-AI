@@ -1,13 +1,39 @@
 @import "tailwindcss";
 
+
 @theme {
-  --font-sans: "Inter", "Poppins", system-ui, -apple-system, sans-serif;
+  --font-sans: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "Geist Mono", monospace;
+  --font-display: "Goldman", sans-serif;
+  --font-goldman: "Goldman", sans-serif;
   --font-montserrat: "Montserrat", sans-serif;
   --font-poppins: "Poppins", sans-serif;
+
+  /* Brand Colors — Design Builder Production Palette */
+  --color-brand-accent: #a855f7;
+  --color-brand-deep: #0d0716;
+  --color-brand-violet: #7c3aed;
+  --color-brand-purple: #9333ea;
+}
+
+:root {
+  --font-geist-sans: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-geist-mono: "Geist Mono", monospace;
+  --font-goldman: "Goldman", sans-serif;
+  --font-display: "Goldman", sans-serif;
+}
+
+html, body {
+  font-family: var(--font-geist-sans), sans-serif !important;
+}
+
+.font-display, [class*="font-display"], .font-goldman {
+  font-family: "Goldman", sans-serif;
+  letter-spacing: 0.05em;
 }
 
 @layer utilities {
-  /* Zion Studio Theme: Preto Sólido Puro (#000000), Dourado Nobre (#c5a880 / #ad8330) e Branco (#ffffff) */
+  /* Design Builder Theme: Preto Sólido Puro (#000000), Violeta / Fúcsia Neon (#a855f7 / #7c3aed) e Branco (#ffffff) */
   .bg-gravyx-theme {
     background-color: #000000;
   }
@@ -17,34 +43,34 @@
   }
 
   .bg-zion-surface {
-    background-color: #0a0a0a;
+    background-color: #08060d;
   }
 
   .bg-zion-card {
-    background-color: #0d0d0d;
-    border: 1px solid rgba(197, 168, 128, 0.18);
+    background-color: #0d0914;
+    border: 1px solid rgba(168, 85, 247, 0.18);
   }
 
   .bg-zion-card:hover {
-    border-color: rgba(197, 168, 128, 0.35);
+    border-color: rgba(168, 85, 247, 0.38);
   }
 
   /* Surface Card Preto Sólido */
   .gravyx-card {
-    background-color: #0a0a0a;
-    border: 1px solid rgba(197, 168, 128, 0.22);
+    background-color: #0a0710;
+    border: 1px solid rgba(168, 85, 247, 0.22);
     border-radius: 1.25rem;
     box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.9);
   }
 
   /* Inset Inner Container Preto */
   .gravyx-inset-card {
-    background-color: #050505;
-    border: 1px solid rgba(197, 168, 128, 0.15);
+    background-color: #050308;
+    border: 1px solid rgba(168, 85, 247, 0.15);
     border-radius: 1rem;
   }
 
-  /* Scrollbar Aesthetics Dourado */
+  /* Scrollbar Aesthetics Design Builder Violeta */
   .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -53,11 +79,11 @@
     background: #000000;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(197, 168, 128, 0.35);
+    background: rgba(168, 85, 247, 0.3);
     border-radius: 9999px;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #c5a880;
+    background: #a855f7;
   }
 
   .scrollbar-none::-webkit-scrollbar,
@@ -72,25 +98,25 @@
 
   /* Glassmorphism & Surface Cards em Preto Sólido */
   .glass-card {
-    background: rgba(10, 10, 10, 0.85);
+    background: rgba(13, 9, 20, 0.85);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(197, 168, 128, 0.2);
+    border: 1px solid rgba(168, 85, 247, 0.2);
   }
 
   .glass-card-gold {
-    background: rgba(17, 14, 8, 0.9);
+    background: rgba(18, 11, 30, 0.9);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(197, 168, 128, 0.4);
+    border: 1px solid rgba(168, 85, 247, 0.4);
   }
 
   .glow-gold-sm {
-    box-shadow: 0 0 15px -3px rgba(197, 168, 128, 0.2);
+    box-shadow: 0 0 15px -3px rgba(168, 85, 247, 0.25);
   }
 
   .glow-gold-lg {
-    box-shadow: 0 0 30px -5px rgba(197, 168, 128, 0.35);
+    box-shadow: 0 0 30px -5px rgba(168, 85, 247, 0.4);
   }
 
   /* Card Hover Effects */
@@ -99,14 +125,14 @@
   }
   .card-hover-effect:hover {
     transform: translateY(-2px);
-    border-color: #c5a880;
-    box-shadow: 0 8px 24px -6px rgba(197, 168, 128, 0.15);
+    border-color: #a855f7;
+    box-shadow: 0 8px 24px -6px rgba(168, 85, 247, 0.2);
   }
 
   /* Form Control Polish */
   .custom-input {
-    background-color: #050505;
-    border: 1px solid rgba(197, 168, 128, 0.22);
+    background-color: #08060d;
+    border: 1px solid rgba(168, 85, 247, 0.22);
     color: #ffffff;
     border-radius: 0.75rem;
     padding: 0.625rem 0.875rem;
@@ -115,13 +141,13 @@
   }
   .custom-input:focus {
     outline: none;
-    border-color: #c5a880;
-    box-shadow: 0 0 0 2px rgba(197, 168, 128, 0.25);
+    border-color: #a855f7;
+    box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.25);
   }
 
   .custom-select {
-    background-color: #050505;
-    border: 1px solid rgba(197, 168, 128, 0.22);
+    background-color: #08060d;
+    border: 1px solid rgba(168, 85, 247, 0.22);
     color: #ffffff;
     border-radius: 0.75rem;
     padding: 0.625rem 0.875rem;
@@ -131,25 +157,25 @@
   }
   .custom-select:focus {
     outline: none;
-    border-color: #c5a880;
-    box-shadow: 0 0 0 2px rgba(197, 168, 128, 0.25);
+    border-color: #a855f7;
+    box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.25);
   }
 
-  /* Gold action buttons */
+  /* Action buttons (Design Builder Gradient) */
   .btn-gold {
-    background: linear-gradient(135deg, #c5a880 0%, #ad8330 100%);
-    color: #050505;
+    background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+    color: #ffffff;
     font-weight: 800;
     letter-spacing: 0.05em;
     text-transform: uppercase;
     border-radius: 0.5rem;
     transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-    box-shadow: 0 4px 14px 0 rgba(197, 168, 128, 0.25);
+    box-shadow: 0 4px 14px 0 rgba(168, 85, 247, 0.3);
   }
   .btn-gold:hover {
-    filter: brightness(1.1);
+    filter: brightness(1.15);
     transform: translateY(-1px);
-    box-shadow: 0 6px 20px 0 rgba(197, 168, 128, 0.35);
+    box-shadow: 0 6px 20px 0 rgba(168, 85, 247, 0.45);
   }
   .btn-gold:active {
     transform: translateY(0);
@@ -158,7 +184,7 @@
 
   /* Slider Styling */
   input[type="range"] {
-    accent-color: #c5a880;
+    accent-color: #a855f7;
   }
 
   /* Animations */
@@ -187,19 +213,19 @@
   }
 
   /* Markdown Styles */
-  .markdown-body h1 { @apply text-xl font-bold mb-2 text-white border-b border-[#c5a880]/30 pb-1; }
+  .markdown-body h1 { @apply text-xl font-bold mb-2 text-white border-b border-violet-500/30 pb-1; }
   .markdown-body h2 { @apply text-lg font-bold mb-2 text-zinc-100; }
   .markdown-body h3 { @apply text-base font-semibold mb-1.5 text-zinc-200; }
   .markdown-body p { @apply mb-2 leading-relaxed text-zinc-300 text-xs sm:text-sm; }
   .markdown-body ul { @apply list-disc list-inside mb-2 text-zinc-300 text-xs sm:text-sm space-y-1; }
   .markdown-body ol { @apply list-decimal list-inside mb-2 text-zinc-300 text-xs sm:text-sm space-y-1; }
-  .markdown-body code { @apply bg-[#050505] text-[#c5a880] px-1.5 py-0.5 rounded border border-[#c5a880]/30 font-mono text-xs; }
-  .markdown-body blockquote { @apply border-l-2 border-[#c5a880] pl-3 italic text-zinc-300 my-2 bg-[#050505] py-1 rounded-r; }
+  .markdown-body code { @apply bg-[#050308] text-[#a855f7] px-1.5 py-0.5 rounded border border-violet-500/30 font-mono text-xs; }
+  .markdown-body blockquote { @apply border-l-2 border-[#a855f7] pl-3 italic text-zinc-300 my-2 bg-[#050308] py-1 rounded-r; }
 }
 
 /* Global Selection & Smooth Transitions */
 ::selection {
-  background: rgba(197, 168, 128, 0.4);
+  background: rgba(168, 85, 247, 0.4);
   color: #ffffff;
 }
 
@@ -219,4 +245,512 @@ body {
   background-color: rgba(0, 0, 0, 0.85);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+}
+
+/* Design Builder 1.2 & Órion Pro Official Tokens (Idêntico a Zion Studio.html) */
+.pb-card {
+  background: linear-gradient(#0e09236b, #0a061985) padding-box padding-box,
+              linear-gradient(135deg, #8b5cf617, #3c1e780a) border-box;
+  border: 1px solid transparent;
+}
+
+.pb-ctrl-btn {
+  background: linear-gradient(#100a2866, #0a071c80) padding-box padding-box,
+              linear-gradient(135deg, #8b5cf614, #5028a00a) border-box;
+  border: 1px solid transparent;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+.pb-ctrl-btn:hover:not(.pb-ctrl-active) {
+  background: linear-gradient(#160e348c, #0e0926a6) padding-box padding-box,
+              linear-gradient(135deg, #8b5cf638, #5028a014) border-box;
+}
+
+.pb-ctrl-active {
+  box-shadow: inset -14px -14px 28px -10px #a855f766,
+              inset -4px -4px 10px -4px #e879f92e,
+              4px 4px 14px -6px #8b5cf633 !important;
+  background: linear-gradient(#1e104699, #140a32b3) padding-box padding-box,
+              linear-gradient(135deg, #a855f773, #5028c81f 50%, #e879f947 100%) border-box !important;
+  color: #ffffff !important;
+}
+
+.pb-tabbar {
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  background: linear-gradient(#0e0923bf, #0a0619cc) padding-box padding-box,
+              linear-gradient(135deg, #8b5cf62e, #3c1e780f) border-box;
+  border: 1px solid transparent;
+  border-radius: 9999px;
+  padding: 4px;
+  display: inline-flex;
+  box-shadow: 0 4px 20px #0006;
+}
+
+.pb-tab-active {
+  box-shadow: 0 2px 12px #7c3aed66;
+  color: #fff !important;
+  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%) !important;
+}
+
+.pb-glass-input {
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  color: #f0ecff;
+  background: linear-gradient(#0e09238c, #0a06199e) padding-box padding-box,
+              linear-gradient(135deg, #8b5cf61f, #3c1e780a) border-box;
+  border: 1px solid transparent;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+.pb-glass-input::placeholder {
+  color: #5c5278;
+}
+
+.pb-glass-input:focus {
+  background: linear-gradient(#120c2aa6, #0c081eb8) padding-box padding-box,
+              linear-gradient(135deg, #8b5cf64d, #5028a014 50%, #e879f929) border-box;
+  outline: none;
+  box-shadow: 0 0 0 3px #8b5cf614;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Atmospheric Ambient Lighting (Oficial Zion Studio / Design Builder) */
+@keyframes orb-float {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-20px) scale(1.05); }
+}
+.bg-orb {
+  pointer-events: none;
+  z-index: 0;
+  border-radius: 50%;
+  animation: 14s ease-in-out infinite orb-float;
+  position: fixed;
+}
+.bg-orb-1 {
+  filter: blur(60px);
+  background: radial-gradient(circle, #6d28d938 0%, #0000 70%);
+  width: 520px;
+  height: 520px;
+  animation-delay: 0s;
+  top: -160px;
+  left: -120px;
+}
+.bg-orb-2 {
+  filter: blur(70px);
+  background: radial-gradient(circle, #a855f729 0%, #0000 70%);
+  width: 420px;
+  height: 420px;
+  animation-delay: -5s;
+  top: 20%;
+  right: -100px;
+}
+.bg-orb-3 {
+  filter: blur(80px);
+  background: radial-gradient(circle, #e879f91a 0%, #0000 70%);
+  width: 360px;
+  height: 360px;
+  animation-delay: -9s;
+  bottom: 8%;
+  left: 28%;
+}
+
+/* Efeito Oficial Órion Pro: Ícone (i) de informação aparece apenas ao encostar o mouse no campo */
+@media (hover: hover) and (pointer: fine) {
+  .campo-com-info [data-field-info] {
+    opacity: 0;
+    transition: opacity 0.15s ease-out;
+  }
+  .campo-com-info:hover [data-field-info],
+  .campo-com-info:focus-within [data-field-info] {
+    opacity: 1;
+  }
+}
+
+/* Animação oficial sub-area-entra para o gestor de imagens */
+@keyframes subAreaEntra {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.sub-area-entra {
+  animation: subAreaEntra 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Customização estética violeta para Cropper.js */
+.cropper-view-box {
+  outline: 2px solid rgba(139, 92, 246, 0.9) !important;
+  outline-color: rgba(139, 92, 246, 0.9) !important;
+}
+.cropper-line {
+  background-color: rgba(139, 92, 246, 0.7) !important;
+}
+.cropper-point {
+  background-color: rgb(139, 92, 246) !important;
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 2px !important;
+}
+.cropper-dashed {
+  border-color: rgba(139, 92, 246, 0.5) !important;
+}
+.cropper-modal {
+  background-color: rgba(0, 0, 0, 0.75) !important;
+  opacity: 0.8 !important;
+}
+
+/* Zoom Lento Oficial Design Builder */
+.zoom-lento {
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  will-change: transform;
+  backface-visibility: hidden;
+}
+.group:hover .zoom-lento, a:hover .zoom-lento {
+  transform: scale(1.06) !important;
+}
+
+/* 4. BOTÃO EXTERNO WITH ROTATING GLOW BEAM (DESIGN BUILDER ORIGINAL) */
+@property --db-angulo {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+@keyframes db-gira-brilho {
+  to { --db-angulo: 360deg; }
+}
+@keyframes db-seta-da-volta {
+  0% { transform: translate(0); }
+  50% { transform: translate(12px, -12px); opacity: 0; }
+  51% { transform: translate(-12px, 12px); opacity: 0; }
+  100% { transform: translate(0); opacity: 1; }
+}
+
+.botao-externo {
+  --db-fundo: #0d0716;
+  --db-brilho: #a855f7;
+  --db-brilho-claro: #f5f3ff;
+  --db-avanco: 210px;
+  --db-angulo: 0deg;
+  --db-fatia: 15%;
+  --db-recuo-do-angulo: 45deg;
+  isolation: isolate;
+  cursor: pointer;
+  color: #fff;
+  background: linear-gradient(var(--db-fundo), var(--db-fundo)) padding-box,
+              conic-gradient(from var(--db-angulo), transparent, var(--db-brilho) var(--db-fatia), var(--db-brilho-claro) calc(var(--db-fatia) * 2), var(--db-brilho) calc(var(--db-fatia) * 3), transparent calc(var(--db-fatia) * 4)) border-box;
+  border: 1px solid transparent;
+  border-radius: 360px;
+  flex-direction: row-reverse;
+  align-items: center;
+  gap: 0;
+  padding: 6px 6px 6px 26px;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.4s ease;
+  animation: 4s linear infinite db-gira-brilho;
+  display: inline-flex;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 0 25px rgba(168, 85, 247, 0.25);
+}
+.botao-externo:hover {
+  box-shadow: 0 0 35px rgba(168, 85, 247, 0.45);
+  transform: translateY(-1px);
+}
+.botao-externo__seta {
+  color: #0d0716;
+  background: #fff;
+  border-radius: 360px;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  transition: all 0.38s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.botao-externo:hover .botao-externo__seta {
+  background: #c084fc;
+  color: #fff;
+}
+.botao-externo:hover .botao-externo__seta > * {
+  animation: 0.32s db-seta-da-volta;
+}
+.botao-externo__texto {
+  margin-right: 14px;
+}
+
+/* 5. HYDRA 3D FAN INTERACTIVE HOVER */
+[style*="1400px"] > div {
+  transition: transform 0.6s cubic-bezier(0.32, 0.72, 0, 1), filter 0.6s cubic-bezier(0.32, 0.72, 0, 1) !important;
+}
+[style*="1400px"]:hover > div:nth-child(1) {
+  transform: translate(40px, -50%) rotate(-4deg) scale(1.04) !important;
+  filter: brightness(1.1) !important;
+}
+[style*="1400px"]:hover > div:nth-child(2) {
+  transform: translate(-100px, -50%) rotate(-9deg) scale(0.98) !important;
+  filter: brightness(1.0) !important;
+}
+[style*="1400px"]:hover > div:nth-child(3) {
+  transform: translate(-230px, -50%) rotate(-14deg) scale(0.91) !important;
+  filter: brightness(0.9) !important;
+}
+[style*="1400px"]:hover > div:nth-child(4) {
+  transform: translate(-345px, -50%) rotate(-19deg) scale(0.84) !important;
+  filter: brightness(0.8) !important;
+}
+[style*="1400px"]:hover > div:nth-child(5) {
+  transform: translate(-445px, -50%) rotate(-24deg) scale(0.77) !important;
+  filter: brightness(0.7) !important;
+}
+[style*="1400px"]:hover > div:nth-child(6) {
+  transform: translate(-530px, -50%) rotate(-29deg) scale(0.71) !important;
+  filter: brightness(0.6) !important;
+}
+
+/* 6. COMMUNITY CAROUSEL AVATAR EXPAND HOVER */
+.group:hover .group-hover\:max-w-\[240px\] {
+  max-width: 240px !important;
+  opacity: 1 !important;
+  transform: translateX(0) !important;
+}
+.group:hover .group-hover\:opacity-100 {
+  opacity: 1 !important;
+}
+
+/* 7. CARDS HOVER SHADOW & BORDER GLOW */
+section a.group {
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+section a.group:hover {
+  box-shadow: 0 10px 40px -10px rgba(147, 51, 234, 0.25) !important;
+}
+
+/* 8. SCROLLBAR HIDE BUT SCROLLABLE */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* 9. CROPPER JS OFFICIAL STYLES */
+.cropper-container{-ms-touch-action:none;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;direction:ltr;font-size:0;line-height:0;position:relative}
+.cropper-container img{backface-visibility:hidden;image-orientation:0deg;width:100%;height:100%;display:block;min-width:0!important;max-width:none!important;min-height:0!important;max-height:none!important}
+.cropper-wrap-box,.cropper-canvas,.cropper-drag-box,.cropper-crop-box,.cropper-modal{position:absolute;inset:0}
+.cropper-wrap-box,.cropper-canvas{overflow:hidden}
+.cropper-drag-box{opacity:0;background-color:#fff}
+.cropper-modal{opacity:.5;background-color:#000}
+.cropper-view-box{outline:1px solid #3399ffbf;width:100%;height:100%;display:block;overflow:hidden}
+.cropper-dashed{opacity:.5;border:0 dashed #eee;display:block;position:absolute}
+.cropper-dashed.dashed-h{border-top-width:1px;border-bottom-width:1px;width:100%;height:33.3333%;top:33.3333%;left:0}
+.cropper-dashed.dashed-v{border-left-width:1px;border-right-width:1px;width:33.3333%;height:100%;top:0;left:33.3333%}
+.cropper-center{opacity:.75;width:0;height:0;display:block;position:absolute;top:50%;left:50%}
+.cropper-center:before,.cropper-center:after{content:" ";background-color:#eee;display:block;position:absolute}
+.cropper-center:before{width:7px;height:1px;top:0;left:-3px}
+.cropper-center:after{width:1px;height:7px;top:-3px;left:0}
+.cropper-face,.cropper-line,.cropper-point{opacity:.1;width:100%;height:100%;display:block;position:absolute}
+.cropper-face{background-color:#fff;top:0;left:0}
+.cropper-line{background-color:#39f}
+.cropper-line.line-e{cursor:ew-resize;width:5px;top:0;right:-3px}
+.cropper-line.line-n{cursor:ns-resize;height:5px;top:-3px;left:0}
+.cropper-line.line-w{cursor:ew-resize;width:5px;top:0;left:-3px}
+.cropper-line.line-s{cursor:ns-resize;height:5px;bottom:-3px;left:0}
+.cropper-point{opacity:.75;background-color:#39f;width:5px;height:5px}
+.cropper-point.point-e{cursor:ew-resize;margin-top:-3px;top:50%;right:-3px}
+.cropper-point.point-n{cursor:ns-resize;margin-left:-3px;top:-3px;left:50%}
+.cropper-point.point-w{cursor:ew-resize;margin-top:-3px;top:50%;left:-3px}
+.cropper-point.point-s{cursor:s-resize;margin-left:-3px;bottom:-3px;left:50%}
+.cropper-point.point-ne{cursor:nesw-resize;top:-3px;right:-3px}
+.cropper-point.point-nw{cursor:nwse-resize;top:-3px;left:-3px}
+.cropper-point.point-sw{cursor:nesw-resize;bottom:-3px;left:-3px}
+.cropper-point.point-se{cursor:nwse-resize;opacity:1;width:20px;height:20px;bottom:-3px;right:-3px}
+@media (min-width:768px){.cropper-point.point-se{width:15px;height:15px}}
+@media (min-width:992px){.cropper-point.point-se{width:10px;height:10px}}
+@media (min-width:1200px){.cropper-point.point-se{opacity:.75;width:5px;height:5px}}
+.cropper-point.point-se:before{content:" ";opacity:0;background-color:#39f;width:200%;height:200%;display:block;position:absolute;bottom:-50%;right:-50%}
+.cropper-invisible{opacity:0}
+.cropper-bg{background-image:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQAQMAAAAlPW0iAAAAA3NCSVQICAjb4U/gAAAABlBMVEXMzMz////TjRV2AAAACXBIWXMAAArrAAAK6wGCiw1aAAAAHHRFWHRTb2Z0d2FyZQBBZG9iZSBGaXJld29ya3MgQ1M26LyyjAAAABFJREFUCJlj+M/AgBVhF/0PAH6/D/HkDxOGAAAAAElFTkSuQmCC)}
+.cropper-hide{width:0;height:0;display:block;position:absolute}
+.cropper-hidden{display:none!important}
+.cropper-move{cursor:move}
+.cropper-crop{cursor:crosshair}
+.cropper-disabled .cropper-drag-box,.cropper-disabled .cropper-face,.cropper-disabled .cropper-line,.cropper-disabled .cropper-point{cursor:not-allowed}
+
+/* ==========================================================================
+   DESIGN BUILDER / REF BUILDER OFFICIAL CLASSES (CLONE 100%)
+   ========================================================================== */
+
+.palco-da-arte {
+  background: radial-gradient(circle at center, rgba(139, 92, 246, 0.03) 0%, transparent 70%);
+}
+
+.acoes-da-arte {
+  pointer-events: auto;
+}
+.acoes-da-arte button {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.acoes-da-arte button:hover {
+  border-color: rgba(139, 92, 246, 0.4);
+  background: rgba(0, 0, 0, 0.85);
+}
+.rotulo-da-acao {
+  margin-left: 6px;
+  font-size: 11px;
+}
+
+.magic-bar {
+  background: linear-gradient(#0e0923d9, #0a0619eb) padding-box padding-box,
+              linear-gradient(135deg, rgba(139, 92, 246, 0.35), rgba(60, 30, 120, 0.15)) border-box;
+  border: 1px solid transparent;
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.8), 0 0 24px rgba(139, 92, 246, 0.18);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+.campo-de-refino {
+  font-family: inherit;
+}
+
+.publish-alert-card {
+  background: linear-gradient(#fff, #fff) padding-box,
+              linear-gradient(var(--alert-idv, #7C3AED), var(--alert-idv, #7C3AED)) border-box;
+  border: 2px solid transparent;
+}
+
+.coluna-de-historico {
+  transition: width 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.historico-lateral {
+  background-color: #000000;
+}
+
+.magic-bar-dragging {
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.8), 0 0 32px rgba(139, 92, 246, 0.35);
+  border-color: rgba(139, 92, 246, 0.45);
+}
+
+.magic-bar-em-uso {
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.8), 0 0 28px rgba(139, 92, 246, 0.25);
+}
+
+.refine-send-active {
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.4);
+}
+
+@keyframes dropdown-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.96) translateY(-4px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* ==========================================================================
+   DESIGN BUILDER 1.2 OFFICIAL BUTTONS & CONTROLS
+   ========================================================================== */
+.pb-glass-input {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #f0ecff !important;
+}
+.pb-glass-input:focus {
+  border-color: rgba(139, 92, 246, 0.5) !important;
+  background: rgba(255, 255, 255, 0.07) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.2) !important;
+}
+
+
+/* BACKGROUND ORBS */
+.bg-orb {
+  position: fixed;
+  border-radius: 9999px;
+  filter: blur(120px);
+  pointer-events: none;
+  opacity: 0.15;
+  z-index: 0;
+}
+.bg-orb-1 {
+  width: 500px;
+  height: 500px;
+  top: -100px;
+  left: 20%;
+  background: radial-gradient(circle, #7c3aed 0%, transparent 70%);
+}
+.bg-orb-2 {
+  width: 450px;
+  height: 450px;
+  bottom: 50px;
+  right: 15%;
+  background: radial-gradient(circle, #4f46e5 0%, transparent 70%);
+}
+.bg-orb-3 {
+  width: 350px;
+  height: 350px;
+  top: 40%;
+  left: 45%;
+  background: radial-gradient(circle, #ec4899 0%, transparent 70%);
+}
+
+.barra-lateral {
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* Largura Exata do Formulário Lateral do Agente (Design Builder 1.2) */
+.agent-form-col {
+  width: var(--agent-form-col-w, 420px);
+  min-width: 280px;
+  max-width: 700px;
+}
+
+@media (max-width: 1023px) {
+  .agent-form-col {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+/* Utilities for official Design Builder components */
+.bg-brand-gradient {
+  background: linear-gradient(135deg, #7c3aed 0%, #9333ea 50%, #c026d3 100%) !important;
+}
+
+@keyframes pulseSlow {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
+
+.animate-pulse-slow {
+  animation: pulseSlow 3s ease-in-out infinite;
+}
+
+@keyframes dropdownIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+[style*="animation: 150ms ease-out 0s 1 normal none running dropdown-in"],
+.dropdown-in {
+  animation: dropdownIn 150ms ease-out forwards;
 }

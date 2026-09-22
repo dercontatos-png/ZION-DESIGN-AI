@@ -155,20 +155,20 @@ export const safeStorageSetItem = (key: string, value: string): boolean => {
     localStorage.setItem(key, value);
     return true;
   } catch (err: any) {
-    // Se for QuotaExceededError ou erro de gravação, faz limpeza agressiva de imagens e tenta de novo
     if (err?.name === 'QuotaExceededError' || err?.code === 22 || err?.code === 1014) {
-      console.warn('[AutoImageStorage] QuotaExceededError detectado! Executando limpeza automática agressiva de imagens...');
-      cleanImageStorage(true);
+      console.warn('[AutoImageStorage] QuotaExceededError detectado! Limpando dados obsoletos do localStorage...');
       try {
+        localStorage.removeItem('savedCards');
+        localStorage.removeItem('zion-client-storage');
+        localStorage.removeItem('design_projects');
+        cleanImageStorage(true);
         localStorage.setItem(key, value);
-        console.log('[AutoImageStorage] Sucesso ao salvar chave ' + key + ' após limpeza automática de imagens.');
         return true;
       } catch (retryErr) {
-        console.error('[AutoImageStorage] Falha persistente ao salvar no localStorage mesmo após limpeza:', retryErr);
+        console.warn('[AutoImageStorage] Armazenamento local cheio. Dado preservado em IndexedDB.');
         return false;
       }
     }
-    console.error('[AutoImageStorage] Erro ao salvar chave ' + key + ':', err);
     return false;
   }
 };

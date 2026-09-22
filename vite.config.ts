@@ -28,10 +28,14 @@ export default defineConfig(({mode}) => {
           '**/*.txt',
           '**/server-log.txt',
           '**/server-err.txt',
+          '**/local_storage/**',
+          '**/public/uploads/**',
+          '**/public/generations_data.json',
           '**/public/generated-images/**',
           '**/dist/**',
           '**/chave-vertex.json',
-          '**/.tempmediaStorage/**'
+          '**/.tempmediaStorage/**',
+          '**/whatsapp-sessions/**'
         ]
       }
     },

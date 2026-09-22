@@ -1,14 +1,55 @@
 import { useProjectStore } from "../store/useProjectStore";
 import { buildMasterPrompt } from "../utils/buildMasterPrompt";
-import { optimizeBase64Image, optimizeBase64List } from "../utils/compressBase64";
 import { recordImageGeneration } from "../utils/apiUsageManager";
 import { checkAdminOrOpenPlan, getAuthHeaders, openPlanModal } from "../utils/userAuth";
+
+/**
+ * Converte uma string base64 (com ou sem prefixo data:) em um File/Blob nativo
+ * para envio em FormData sem perda de qualidade (evita re-compressão).
+ */
+const imageSourceToFile = async (source: string, filename: string): Promise<File | null> => {
+  if (!source || typeof source !== "string" || !source.trim()) return null;
+  const cleanSource = source.trim();
+  try {
+    // 1. Data URL (base64)
+    if (cleanSource.startsWith("data:")) {
+      const res = await fetch(cleanSource);
+      const blob = await res.blob();
+      const mime = blob.type || "image/png";
+      const ext = mime.includes("png") ? "png" : mime.includes("webp") ? "webp" : "jpg";
+      return new File([blob], `${filename}.${ext}`, { type: mime });
+    }
+
+    // 2. Relative or Absolute URL (/uploads/..., http..., /Design Builder...)
+    const fullUrl = cleanSource.startsWith("http://") || cleanSource.startsWith("https://")
+      ? cleanSource
+      : `${typeof window !== "undefined" ? window.location.origin : "http://localhost:3000"}${cleanSource.startsWith("/") ? "" : "/"}${cleanSource}`;
+
+    const res = await fetch(fullUrl);
+    if (!res.ok) {
+      console.warn(`[imageSourceToFile] Falha ao carregar imagem em ${fullUrl}: status ${res.status}`);
+      return null;
+    }
+    const blob = await res.blob();
+    const mime = blob.type && blob.type !== "application/octet-stream"
+      ? blob.type
+      : cleanSource.toLowerCase().endsWith(".png") ? "image/png"
+      : cleanSource.toLowerCase().endsWith(".webp") ? "image/webp"
+      : cleanSource.toLowerCase().endsWith(".avif") ? "image/avif"
+      : "image/jpeg";
+    const ext = mime.includes("png") ? "png" : mime.includes("webp") ? "webp" : mime.includes("avif") ? "avif" : "jpg";
+    return new File([blob], `${filename}.${ext}`, { type: mime });
+  } catch (err) {
+    console.error(`[imageSourceToFile] Erro ao converter imagem ${filename}: `, err);
+    return null;
+  }
+};
 
 export const useGenerateImage = (
   customApiKey: string,
   showToast: (msg: string, type: "success" | "error" | "warning") => void,
   onStart?: () => void,
-  onSuccess?: () => void,
+  onSuccess?: (newImage?: string, previousImage?: string) => void,
   onError?: (errMessage: string) => void
 ) => {
   const store = useProjectStore();
@@ -19,10 +60,25 @@ export const useGenerateImage = (
       return;
     }
 
-    const targetProjectId = store.activeProjectId;
+    let targetProjectId = store.activeProjectId;
     if (!targetProjectId) {
-      showToast("Nenhum projeto ativo selecionado.", "warning");
-      return;
+      if (store.projectsList && store.projectsList.length > 0) {
+        targetProjectId = store.projectsList[0].id;
+        store.loadProjectById(targetProjectId);
+      } else {
+        store.createProject();
+        targetProjectId = useProjectStore.getState().activeProjectId;
+      }
+    }
+
+    if (!targetProjectId) {
+      showToast("Criando projeto inicial para salvar sua arte...", "warning");
+      store.createProject();
+      targetProjectId = useProjectStore.getState().activeProjectId;
+      if (!targetProjectId) {
+        showToast("Nenhum projeto ativo selecionado.", "warning");
+        return;
+      }
     }
 
     const targetProjectName = store.projectsList.find((p) => p.id === targetProjectId)?.name || "Projeto";
@@ -31,8 +87,6 @@ export const useGenerateImage = (
     let desativarSujeitoAtual = store.desativarSujeito;
     const hasSujeito = (store.sujeitoBase64 && store.sujeitoBase64.trim() !== "") || (store.sujeitosBase64List && store.sujeitosBase64List.length > 0);
     if (!desativarSujeitoAtual && !hasSujeito) {
-      showToast("Nenhuma imagem de Sujeito detectada. Ativando modo 'Sem Sujeito' e gerando composição de Background...", "warning");
-      store.updateConfig({ desativarSujeito: true });
       desativarSujeitoAtual = true;
     }
 
@@ -51,214 +105,397 @@ export const useGenerateImage = (
       store.setLastGeneratedPrompt(masterPrompt);
     }
 
-const currentActiveImg = store.galeriaImages?.[store.activeImageIndex] || "";
+    const currentActiveImg = store.galeriaImages?.[store.activeImageIndex] || "";
     const rawPreviousImage = options?.previousImageBase64 || (options?.isRefinement ? currentActiveImg : "");
 
-    const is4K = (store.resolucao || "1K") === "4K";
-
-    // Limite seguro do corpo da requisição (permite envio de imagens em alta definição sem bloqueio indevido no cliente)
-    const MAX_PAYLOAD_BYTES = 35_000_000;
-
-    const buildPayloadObj = async (maxDim: number, quality: number, essentialOnly: boolean) => {
-      const [optPreviousImage, optSujeito, optSujeitosList, optCenario, optCenariosList, optTipografiaRef, optTipografiaRefsList, optDesignRef, optDesignRefsList, optLogo, optLogosList] = await Promise.all([
-        optimizeBase64Image(rawPreviousImage, maxDim, quality - 0.03),
-        optimizeBase64Image(store.sujeitoBase64 || "", maxDim, quality),
-        optimizeBase64List(store.sujeitosBase64List || [], maxDim, quality),
-        optimizeBase64Image(store.cenarioBase64 || "", maxDim, quality),
-        optimizeBase64List(store.cenariosBase64List || [], maxDim, quality),
-        optimizeBase64Image(store.tipografiaRefBase64 || "", maxDim, quality),
-        optimizeBase64List(store.tipografiaRefsList || [], maxDim, quality),
-        optimizeBase64Image(store.designRefBase64 || "", maxDim, quality),
-        optimizeBase64List(store.designRefsList || [], maxDim, quality),
-        optimizeBase64Image(store.logoBase64 || "", maxDim, 0.9, true),
-        optimizeBase64List(store.logosList || [], maxDim, 0.9, true)
-      ]);
-      const optReferenciasEstilo = essentialOnly
-        ? []
-        : await Promise.all((store.referenciasEstilo || []).map(async (ref) => ({
-            ...ref,
-            data: await optimizeBase64Image(ref.data || "", maxDim, quality)
-          })));
-
-        return {
-          previousImageBase64: optPreviousImage,
-      base64DoSujeito: optSujeito,
-      sujeitosBase64List: optSujeitosList,
-      base64DoCenario: optCenario,
-      cenariosBase64List: optCenariosList,
-      promptTraduzido: masterPrompt,
-      resolutionInput: store.resolucao || "1K",
-      formato: store.formatoExportacao || "PNG",
-      useEnvRef: store.useEnvRef,
-      tipografiaRefBase64: optTipografiaRef,
-      tipografiaRefsList: optTipografiaRefsList,
-      designRefBase64: optDesignRef,
-      designRefsList: optDesignRefsList,
-      referenciasEstilo: optReferenciasEstilo,
-      negativePrompt: store.negativePrompt || "",
-      customApiKey: customApiKey || localStorage.getItem("custom_gemini_api_key") || "",
-      desativarSujeito: desativarSujeitoAtual,
-      logoBase64: optLogo,
-      logosList: optLogosList,
-      useLogo: store.useLogo,
-      logoInclusionType: store.logoInclusionType || "overlay",
-      logoPosOverlay: store.logoPosOverlay || "top_center",
-      logoSizeOverlay: store.logoSizeOverlay || 20,
-      dimensao: store.dimensao,
-      somentePrompt: store.somentePrompt,
-      modelId: store.modelId,
-      coresAutomaticas: store.coresAutomaticas,
-      seedUsuario: store.seedUsuario
-    };
-    };
-
-    // Níveis progressivos de compressão: tenta alta qualidade, mas reduz automaticamente
-    // até o payload caber no limite do servidor (evita 413 Payload Too Large)
-    const compressionLevels: Array<[number, number]> = [
-      [768, 0.75],
-      [640, 0.68],
-      [512, 0.60],
-      [448, 0.52],
-      [384, 0.45]
-    ];
-
-    const sendAttempt = async (payloadObj: any, isLastChance: boolean = false) => {
-      const payloadString = JSON.stringify(payloadObj);
-      console.log("[FRONT] Tamanho do Payload (bytes):", payloadString.length, "| Limite seguro:", MAX_PAYLOAD_BYTES);
-      if (payloadString.length > MAX_PAYLOAD_BYTES && !isLastChance) {
-        console.warn("[FRONT] Payload excede o limite seguro. Avançando para o próximo nível de compressão...");
-        return null;
-      }
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 300000); // 300s (5 min) timeout estendido para alta qualidade 4K
-      try {
-        const response = await fetch("/api/gerar", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", ...getAuthHeaders(customApiKey) },
-          body: payloadString,
-          signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-        return { response };
-      } catch (firstErr: any) {
-        clearTimeout(timeoutId);
-        console.warn("[FRONT] Envio abortado ou falhou na rede. Tentando próximo nível de compressão...", firstErr?.message || firstErr);
-        return null;
-      }
-    };
-
-    let response: Response | null = null;
+    const selectedQuality = store.qualidade || store.resolucao || "1K";
+    const is4K = selectedQuality === "4K";
+    const is2K = selectedQuality === "2K";
 
     if (is4K) {
       showToast("⏳ Gerando imagem em 4K Ultra HD...", "warning");
-    }
-
-    for (let i = 0; i < compressionLevels.length; i++) {
-      const [maxDim, quality] = compressionLevels[i];
-      const isLast = i === compressionLevels.length - 1;
-      console.log(`[FRONT] Compressão nível ${maxDim}px / q${quality}...`);
-      const payloadObj = await buildPayloadObj(maxDim, quality, false);
-      const attempt = await sendAttempt(payloadObj, isLast);
-      if (!attempt) continue;
-      response = attempt.response;
-      if (response.status !== 413) break;
-      console.warn(`[FRONT] Erro 413 no nível ${maxDim}px. Esgotando retentativa do nível anterior e re-comprimindo...`);
-    }
-
-    // Último recurso: apenas referências essenciais (sem estilos) na compressão máxima
-    if (!response || response.status === 413) {
-      console.warn("[FRONT] 413 persistente ou envio pendente. Tentando último recurso com apenas referências essenciais...");
-      const essentialPayload = await buildPayloadObj(400, 0.45, true);
-      const attempt = await sendAttempt(essentialPayload, true);
-      if (attempt) response = attempt.response;
-    }
-
-    // Se mesmo assim estourou o limite, informa o usuário de forma clara
-    if (response && response.status === 413) {
-      const errMsg = "Erro de Envio (413 Payload Too Large): As imagens anexadas ainda ultrapassam o limite do servidor. Por favor, reduza a quantidade de imagens de referência (principalmente as fotos de pessoas do layout).";
-      showToast(errMsg, "error");
-      onError?.(errMsg);
-      store.setIsProjectGenerating(targetProjectId, false);
-      return;
-    }
-
-    if (!response) {
-      const errMsg = "⏱️ Conexão ou tempo limite de envio excedido. Clique em Gerar Novamente para reconectar automaticamente.";
-      showToast(errMsg, "error");
-      onError?.(errMsg);
-      store.setIsProjectGenerating(targetProjectId, false);
-      return;
+    } else if (is2K) {
+      showToast("⏳ Gerando imagem em 2K Alta Definição...", "warning");
+    } else {
+      showToast("⏳ Gerando imagem em 1K Rápido...", "warning");
     }
 
     try {
-      if (response.status === 400) {
-        const data = await response.json();
-        const errMsg = data.error || "Por favor, faça o upload da imagem do Sujeito.";
-        showToast(errMsg, "warning");
-        onError?.(errMsg);
-        return;
+      // ══════════════════════════════════════════════════════════════
+      // PIPELINE OFICIAL DESIGN BUILDER 1.2: FormData + SSE/Polling
+      // ══════════════════════════════════════════════════════════════
+
+      // 1. Construir o FormData com os 21 campos oficiais
+      const formData = new FormData();
+      const activeSlug = (store as any).activeAgentSlug || (store as any).activeAgent || (store as any).selectedAgent || "orion-pro";
+      formData.append("agent_slug", activeSlug);
+
+      // Campo 1: fotos_do_sujeito_produto (File) - Coleta TODAS as fotos enviadas
+      const allSubjectPhotos: string[] = [];
+      if (store.sujeitoBase64 && store.sujeitoBase64.trim()) {
+        allSubjectPhotos.push(store.sujeitoBase64);
+      }
+      if (Array.isArray(store.sujeitosBase64List)) {
+        for (const s of store.sujeitosBase64List) {
+          const sStr = typeof s === "string" ? s : ((s as any)?.url || (s as any)?.data || "");
+          if (sStr && !allSubjectPhotos.includes(sStr)) {
+            allSubjectPhotos.push(sStr);
+          }
+        }
+      }
+      for (let i = 0; i < allSubjectPhotos.length; i++) {
+        const file = await imageSourceToFile(allSubjectPhotos[i], `sujeito_${i}`);
+        if (file) {
+          formData.append("fotos_do_sujeito_produto", file);
+          console.log(`[FRONT] Anexado fotos_do_sujeito_produto #${i + 1}: ${file.name} (${file.size} bytes)`);
+        }
       }
 
-      if (response.status === 403) {
-        const errMsg = "Erro API (403): Permissão do Vertex rejeitada. Verifique as credenciais IAM do GCP.";
-        showToast(errMsg, "error");
-        onError?.(errMsg);
-        return;
+      // Brand Identity / Logotipos da Marca (Órion Pro e Design Builder)
+      const allLogos: string[] = [];
+      if (store.logoBase64 && store.logoBase64.trim()) {
+        allLogos.push(store.logoBase64);
+      }
+      if (Array.isArray(store.logosList)) {
+        for (const l of store.logosList) {
+          const lStr = typeof l === "string" ? l : ((l as any)?.url || (l as any)?.data || "");
+          if (lStr && !allLogos.includes(lStr)) {
+            allLogos.push(lStr);
+          }
+        }
+      }
+      for (let i = 0; i < allLogos.length; i++) {
+        const file = await imageSourceToFile(allLogos[i], `brand_logo_${i}`);
+        if (file) {
+          formData.append("brand_identity_images", file);
+          console.log(`[FRONT] Anexado brand_identity_images #${i + 1}: ${file.name} (${file.size} bytes)`);
+        }
+      }
+      if (allLogos.length > 0) {
+        formData.append("brand_identity_images_descriptions", JSON.stringify(allLogos.map(() => "Logotipo oficial da marca")));
       }
 
-      if (response.status === 504 || response.status === 524) {
-        const errMsg = "⏱️ Timeout (504): O servidor demorou muito para responder. Tente novamente em alguns instantes ou use a resolução 1K/2K.";
-        showToast(errMsg, "error");
-        onError?.(errMsg);
-        return;
+      // Campo 2: quantidade
+      formData.append("quantidade", String(store.quantidade || 1));
+
+      // Campo 3: genero ("female" | "male")
+      const rawGender = (store.gender || "Masculino").toLowerCase();
+      const mappedGender = rawGender.includes("fem") || rawGender === "female" ? "female" : "male";
+      formData.append("genero", mappedGender);
+
+      // Campo 4: subject_description
+      formData.append("subject_description", store.poseDescription || store.composicaoCustom || "");
+
+      // Campo 5: subject_position ("left" | "right" | "center")
+      const rawPos = (store.positioning || "Centro").toLowerCase();
+      const mappedPos = rawPos.includes("esq") || rawPos === "left" ? "left" : rawPos.includes("dir") || rawPos === "right" ? "right" : "center";
+      formData.append("subject_position", mappedPos);
+
+      // Campo 6: dimensions ("1:1", "4:5", "9:16", "16:9")
+      formData.append("dimensions", store.dimensao || "1:1");
+
+      // Campo 7: quality ("1K", "2K", "4K")
+      formData.append("quality", selectedQuality);
+
+      // Campo 8: nicho_projeto
+      formData.append("nicho_projeto", store.nicho || store.additionalPrompt?.split(".")[0] || "");
+
+      // Campo 9: scene_description
+      formData.append("scene_description", store.promptCenario || store.cenarioPredefinido || store.cenario || "");
+
+      // Campo 10: referencias_de_ambiente (File) - Coleta TODAS as referências de ambiente
+      const allEnvPhotos: string[] = [];
+      if (store.cenarioBase64 && store.cenarioBase64.trim()) {
+        allEnvPhotos.push(store.cenarioBase64);
+      }
+      if (Array.isArray(store.cenariosBase64List)) {
+        for (const c of store.cenariosBase64List) {
+          const cStr = typeof c === "string" ? c : ((c as any)?.url || (c as any)?.data || "");
+          if (cStr && !allEnvPhotos.includes(cStr)) {
+            allEnvPhotos.push(cStr);
+          }
+        }
+      }
+      for (let i = 0; i < allEnvPhotos.length; i++) {
+        const file = await imageSourceToFile(allEnvPhotos[i], `ambiente_${i}`);
+        if (file) {
+          formData.append("referencias_de_ambiente", file);
+          console.log(`[FRONT] Anexado referencias_de_ambiente #${i + 1}: ${file.name} (${file.size} bytes)`);
+        }
+      }
+      if (allEnvPhotos.length > 0) {
+        formData.append("referencias_de_ambiente_descriptions", JSON.stringify(allEnvPhotos.map(() => "estilo de formato")));
       }
 
-      if (response.status === 429) {
-        const errMsg = "⚠️ Limite de Cota por Minuto Atingido (Erro 429). A API do Google limita gerações rápidas. Por favor, aguarde de 30 a 60 segundos antes de gerar a próxima imagem!";
-        showToast(errMsg, "warning");
-        onError?.(errMsg);
+      // Referência de Layout/Design (se presente no RefBuilder)
+      if (store.designRefBase64) {
+        const designFile = await imageSourceToFile(store.designRefBase64, "design_ref");
+        if (designFile) {
+          formData.append("design_reference", designFile);
+        }
+      }
+
+      // Campo 11: text_blocks (JSON array com { type, weight, content } exato do HAR)
+      const textBlocks = (store.camadasTexto || [])
+        .filter((c: any) => c.conteudo && c.conteudo.trim())
+        .map((c: any) => {
+          let type = "text";
+          const fn = (c.funcao || "").toLowerCase();
+          const tb = (c.tipoBloco || "").toLowerCase();
+          if (tb === "h1" || fn.includes("headline") || fn.includes("h1")) type = "h1";
+          else if (tb === "h2" || fn.includes("subheadline") || fn.includes("h2")) type = "h2";
+          else if (tb === "cta" || fn.includes("cta")) type = "cta";
+          else if (tb === "bullets" || fn.includes("bullet")) type = "bullets";
+          else type = "text";
+
+          return {
+            type,
+            weight: c.pesoVisual || (type === "h1" ? 5 : type === "h2" ? 3 : type === "cta" ? 4 : 2),
+            content: c.conteudo.trim(),
+            color: c.cor || "#FFFFFF",
+            position: c.posicao || "top-center"
+          };
+        });
+      formData.append("text_blocks", JSON.stringify(textBlocks));
+
+      // Campo 12: degrade ("false" | "true")
+      formData.append("degrade", String(store.degradeLeitura || false));
+
+      // Campo 13: posicao_do_texto ("align-left" | "align-right" | "align-center")
+      const rawTextPos = (store.typographyPosition || "Centro").toLowerCase();
+      const mappedTextPos = rawTextPos.includes("esq") || rawTextPos.includes("left") ? "align-left" : rawTextPos.includes("dir") || rawTextPos.includes("right") ? "align-right" : "align-center";
+      formData.append("posicao_do_texto", mappedTextPos);
+
+      // Campo 14: color_palette (JSON)
+      const colorPalette = {
+        ambient_color: store.cores?.ambiente || "#1A1A2E",
+        complementary_color: store.cores?.complementar || "#E2E2E2",
+        complementary_light: store.cores?.recorte || "#FFD500"
+      };
+      formData.append("color_palette", JSON.stringify(colorPalette));
+
+      // Campo 15: plano ("close-up" | "medium" | "american")
+      const rawPlano = (store.composicao || "medium").toLowerCase();
+      const mappedPlano = rawPlano.includes("close") ? "close-up" : rawPlano.includes("american") ? "american" : "medium";
+      formData.append("plano", mappedPlano);
+
+      // Campo 16: elementos_flutuantes
+      const shouldIncludeFloating = !!store.elementosFlutuantes && store.floatingElementsMode !== "none" && store.floatingElementsMode !== "off";
+      const floatingVal = shouldIncludeFloating ? (store.floatingElementsCustom || store.elementosFlutuantesTexto || "").trim() : "";
+      formData.append("elementos_flutuantes", floatingVal);
+
+      // Campo 17: estilo_visual ("ultra_realistic" | "3d_render" | "cinematic" | etc.)
+      const rawEstilo = (store.estiloVisual || (store.estilosVisuais || ["Ultra Realista"])[0] || "ultra_realistic").toLowerCase();
+      const mappedEstilo = rawEstilo.includes("realis") ? "ultra_realistic" : rawEstilo.includes("3d") ? "3d_render" : rawEstilo.includes("cinema") ? "cinematic" : rawEstilo.replace(/\s+/g, "_");
+      formData.append("estilo_visual", mappedEstilo);
+
+      // Campo 18: referencias_de_estilo (File) - Coleta TODAS as referências de estilo
+      if (Array.isArray(store.referenciasEstilo) && store.referenciasEstilo.length > 0) {
+        const descList: string[] = [];
+        for (let i = 0; i < store.referenciasEstilo.length; i++) {
+          const styleRef = store.referenciasEstilo[i];
+          const styleData = styleRef?.data || styleRef?.url || (typeof styleRef === "string" ? styleRef : "");
+          if (styleData) {
+            const styleFile = await imageSourceToFile(styleData, `estilo_${i}`);
+            if (styleFile) {
+              formData.append("referencias_de_estilo", styleFile);
+              descList.push(styleRef.descricao || "estilo");
+              console.log(`[FRONT] Anexado referencias_de_estilo #${i + 1}: ${styleFile.name} (${styleFile.size} bytes)`);
+            }
+          }
+        }
+        if (descList.length > 0) {
+          formData.append("referencias_de_estilo_descriptions", JSON.stringify(descList));
+        }
+      }
+
+      // Campo 19: sobriedade_criatividade
+      formData.append("sobriedade_criatividade", String(store.nivelCriativo ?? 50));
+
+      // Campo 20: usar_desfoque_blur
+      formData.append("usar_desfoque_blur", String(store.enableBlur || false));
+
+      // Campo 21: prompt_adicional
+      formData.append("prompt_adicional", store.additionalPrompt || "");
+
+      // Master prompt completo compilado (Directives de Flyer BR, Composição e Iluminação)
+      if (masterPrompt) {
+        formData.append("master_prompt", masterPrompt);
+      }
+
+      // Custom API key
+      if (customApiKey) {
+        formData.append("customApiKey", customApiKey);
+      }
+
+      console.log("[FRONT] Pipeline Design Builder 1.2: Enviando FormData para /api/bff/api/generate...");
+
+      // 2. Enviar POST /api/bff/api/generate com FormData
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 min timeout
+
+      let response: Response;
+      try {
+        response = await fetch("/api/bff/api/generate", {
+          method: "POST",
+          headers: { ...getAuthHeaders(customApiKey) },
+          body: formData,
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+      } catch (fetchErr: any) {
+        clearTimeout(timeoutId);
+        // Fallback to legacy /api/gerar endpoint
+        console.warn("[FRONT] /api/bff/api/generate failed, falling back to /api/gerar...", fetchErr?.message);
+        await fallbackLegacyGeneration(masterPrompt, rawPreviousImage, targetProjectId, targetProjectName, is4K);
         return;
       }
 
       if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        if (data.prompt && store.activeProjectId === targetProjectId) store.setLastGeneratedPrompt(data.prompt);
-        if (data.systemInstruction && store.activeProjectId === targetProjectId) store.setLastSystemInstruction(data.systemInstruction);
-        throw new Error(data.error || `Erro de rede ou proxy. Status: ${response.status} ${response.statusText}`);
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || `Erro ${response.status}: ${response.statusText}`);
       }
 
-      const data = await response.json();
-      const promptToStore = (masterPrompt && masterPrompt.length >= (data.prompt || "").length) ? masterPrompt : (data.prompt || masterPrompt);
-      if (promptToStore && store.activeProjectId === targetProjectId) store.setLastGeneratedPrompt(promptToStore);
-      if (data.systemInstruction && store.activeProjectId === targetProjectId) store.setLastSystemInstruction(data.systemInstruction);
-      
-      if (store.somentePrompt) {
-        showToast("Prompt Mestre e Instrução gerados com sucesso!", "success");
-        onSuccess?.();
-        return;
+      const createData = await response.json();
+      const generationId = createData.generation_id;
+      const taskId = createData.task_id;
+
+      if (!generationId) {
+        throw new Error("Nenhum generation_id retornado pela API.");
       }
 
-      const imageUrl = data.image || data.imageUrl;
-      const newImages: string[] = [];
-      if (imageUrl) {
-        newImages.push(imageUrl);
-      } else if (data.images && data.images.length > 0) {
-        newImages.push(...data.images);
-      }
+      console.log(`[FRONT] Generation criada: id=${generationId}, task=${taskId}, status=${createData.status}`);
 
-      if (newImages.length > 0) {
-        recordImageGeneration(newImages.length);
-        const isActive = store.addImagesToProjectGallery(targetProjectId, newImages);
-        const clusterInfo = data.modelUsed ? ` (${data.modelUsed.replace(/Service Account Vertex AI\s*/i, "").replace(/\(gerador[^\)]+\)/i, "").trim()})` : "";
-        if (isActive) {
-          showToast(`Imagem ${is4K ? "4K Ultra HD" : "premium"} gerada com sucesso${clusterInfo}! ✅`, "success");
-        } else {
-          showToast(`Imagem do '${targetProjectName}' foi gerada no plano de fundo${clusterInfo}!`, "success");
+      // 3. Conectar no SSE stream para acompanhar progresso em tempo real
+      const resultUrl = await new Promise<string>((resolve, reject) => {
+        let resolved = false;
+        let pollTimer: ReturnType<typeof setInterval> | null = null;
+        const sseController = new AbortController();
+
+        // Timeout de segurança (5 min)
+        const safetyTimeout = setTimeout(() => {
+          if (!resolved) {
+            resolved = true;
+            sseController.abort();
+            if (pollTimer) clearInterval(pollTimer);
+            reject(new Error("⏱️ Tempo limite de geração excedido (5 min). Tente novamente."));
+          }
+        }, 300000);
+
+        const cleanup = () => {
+          clearTimeout(safetyTimeout);
+          if (pollTimer) clearInterval(pollTimer);
+          sseController.abort();
+        };
+
+        // SSE stream
+        fetch(`/api/bff/api/generations/${generationId}/stream`, {
+          headers: { Accept: "text/event-stream" },
+          signal: sseController.signal
+        }).then(async (sseRes) => {
+          if (!sseRes.ok || !sseRes.body) {
+            // SSE failed, fall back to polling
+            console.warn("[FRONT] SSE stream failed, falling back to polling...");
+            startPolling();
+            return;
+          }
+
+          const reader = sseRes.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = "";
+
+          try {
+            while (true) {
+              const { value, done } = await reader.read();
+              if (done || resolved) break;
+
+              buffer += decoder.decode(value, { stream: true });
+              const lines = buffer.split("\n");
+              buffer = lines.pop() || "";
+
+              for (const line of lines) {
+                if (!line.startsWith("data: ")) continue;
+                try {
+                  const payload = JSON.parse(line.slice(6));
+                  console.log(`[FRONT] SSE: status=${payload.status}, progress=${payload.progress}`);
+
+                  if (payload.status === "done" && payload.result_url) {
+                    if (!resolved) {
+                      resolved = true;
+                      cleanup();
+                      resolve(payload.result_url);
+                    }
+                    return;
+                  }
+
+                  if (payload.status === "error") {
+                    if (!resolved) {
+                      resolved = true;
+                      cleanup();
+                      reject(new Error(payload.error_message || payload.message || "Falha na geração."));
+                    }
+                    return;
+                  }
+                } catch { /* ignore parse errors */ }
+              }
+            }
+          } catch (readErr: any) {
+            if (!resolved && readErr?.name !== "AbortError") {
+              console.warn("[FRONT] SSE read error, falling back to polling:", readErr?.message);
+              startPolling();
+            }
+          }
+        }).catch((sseErr) => {
+          if (!resolved && sseErr?.name !== "AbortError") {
+            console.warn("[FRONT] SSE connection failed, falling back to polling:", sseErr?.message);
+            startPolling();
+          }
+        });
+
+        // Polling fallback
+        function startPolling() {
+          if (pollTimer || resolved) return;
+          console.log("[FRONT] Starting status polling...");
+          pollTimer = setInterval(async () => {
+            if (resolved) {
+              if (pollTimer) clearInterval(pollTimer);
+              return;
+            }
+            try {
+              const statusRes = await fetch(`/api/bff/api/generations/${generationId}/status`);
+              if (!statusRes.ok) return;
+              const statusData = await statusRes.json();
+              console.log(`[FRONT] Poll: status=${statusData.status}, progress=${statusData.progress}`);
+
+              if (statusData.status === "done" && statusData.result_url) {
+                if (!resolved) {
+                  resolved = true;
+                  cleanup();
+                  resolve(statusData.result_url);
+                }
+              } else if (statusData.status === "error") {
+                if (!resolved) {
+                  resolved = true;
+                  cleanup();
+                  reject(new Error(statusData.error_message || statusData.message || "Falha na geração."));
+                }
+              }
+            } catch { /* ignore poll errors */ }
+          }, 3000);
         }
-        onSuccess?.();
+      });
+
+      // 4. Imagem recebida! Carregar no projeto
+      console.log(`[FRONT] ✅ Imagem recebida: ${resultUrl}`);
+      recordImageGeneration(1);
+      const isActive = store.addImagesToProjectGallery(targetProjectId, [resultUrl]);
+      if (isActive) {
+        showToast(`Imagem ${is4K ? "4K Ultra HD" : "premium"} gerada com sucesso! ✅`, "success");
       } else {
-        throw new Error("Nenhum dado de imagem retornado pela API.");
+        showToast(`Imagem do '${targetProjectName}' foi gerada no plano de fundo!`, "success");
       }
+      onSuccess?.(resultUrl, rawPreviousImage);
+
     } catch (err: any) {
       console.error(`Geração falhou para o projeto ${targetProjectName}:`, err);
       let errMsg = err.message || "Falha de conexão com a API de geração.";
@@ -273,9 +510,133 @@ const currentActiveImg = store.galeriaImages?.[store.activeImageIndex] || "";
     }
   };
 
+  /**
+   * Fallback: usa o pipeline legado /api/gerar com JSON + base64
+   * Ativado apenas quando /api/bff/api/generate está indisponível.
+   */
+  const fallbackLegacyGeneration = async (
+    masterPrompt: string,
+    rawPreviousImage: string,
+    targetProjectId: string,
+    targetProjectName: string,
+    is4K: boolean
+  ) => {
+    try {
+      console.log("[FRONT] Fallback: Enviando para /api/gerar (legado)...");
+      const { optimizeBase64Image, optimizeBase64List } = await import("../utils/compressBase64");
+
+      const maxDim = is4K ? 2048 : 1536;
+      const quality = is4K ? 0.9 : 0.88;
+
+      // Coletar todas as imagens de sujeito e cenário para o payload
+      const allSubjectPhotos: string[] = [];
+      if (store.sujeitoBase64 && store.sujeitoBase64.trim()) {
+        allSubjectPhotos.push(store.sujeitoBase64);
+      }
+      if (Array.isArray(store.sujeitosBase64List)) {
+        for (const s of store.sujeitosBase64List) {
+          const sStr = typeof s === "string" ? s : ((s as any)?.url || (s as any)?.data || "");
+          if (sStr && !allSubjectPhotos.includes(sStr)) {
+            allSubjectPhotos.push(sStr);
+          }
+        }
+      }
+
+      const allEnvPhotos: string[] = [];
+      if (store.cenarioBase64 && store.cenarioBase64.trim()) {
+        allEnvPhotos.push(store.cenarioBase64);
+      }
+      if (Array.isArray(store.cenariosBase64List)) {
+        for (const c of store.cenariosBase64List) {
+          const cStr = typeof c === "string" ? c : ((c as any)?.url || (c as any)?.data || "");
+          if (cStr && !allEnvPhotos.includes(cStr)) {
+            allEnvPhotos.push(cStr);
+          }
+        }
+      }
+
+      const allLogos: string[] = [];
+      if (store.logoBase64 && store.logoBase64.trim()) {
+        allLogos.push(store.logoBase64);
+      }
+      if (Array.isArray(store.logosList)) {
+        for (const l of store.logosList) {
+          const lStr = typeof l === "string" ? l : ((l as any)?.url || (l as any)?.data || "");
+          if (lStr && !allLogos.includes(lStr)) {
+            allLogos.push(lStr);
+          }
+        }
+      }
+
+      const [optSujeito, optCenario, optSujeitosList, optCenariosList] = await Promise.all([
+        optimizeBase64Image(store.sujeitoBase64 || allSubjectPhotos[0] || "", maxDim, quality),
+        optimizeBase64Image(store.cenarioBase64 || allEnvPhotos[0] || "", maxDim, quality),
+        optimizeBase64List(allSubjectPhotos, maxDim, quality),
+        optimizeBase64List(allEnvPhotos, maxDim, quality)
+      ]);
+
+      const payload = {
+        base64DoSujeito: optSujeito || optSujeitosList[0] || "",
+        sujeitosBase64List: optSujeitosList,
+        base64DoCenario: optCenario || optCenariosList[0] || "",
+        cenariosBase64List: optCenariosList,
+        logoBase64: store.logoBase64 || allLogos[0] || "",
+        logosList: allLogos,
+        useLogo: allLogos.length > 0,
+        referenciasEstilo: store.referenciasEstilo || [],
+        designRefBase64: store.designRefBase64 || "",
+        promptTraduzido: masterPrompt,
+        resolutionInput: store.resolucao || "1K",
+        formato: store.formatoExportacao || "PNG",
+        useEnvRef: store.useEnvRef,
+        negativePrompt: store.negativePrompt || "",
+        customApiKey: customApiKey || localStorage.getItem("custom_gemini_api_key") || "",
+        desativarSujeito: store.desativarSujeito,
+        dimensao: store.dimensao,
+        somentePrompt: store.somentePrompt,
+        modelId: store.modelId,
+        coresAutomaticas: store.coresAutomaticas,
+        seedUsuario: store.seedUsuario
+      };
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 300000);
+      const response = await fetch("/api/gerar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders(customApiKey) },
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || `Erro ${response.status}`);
+      }
+
+      const data = await response.json();
+      const imageUrl = data.image || data.imageUrl;
+      const newImages: string[] = [];
+      if (imageUrl) newImages.push(imageUrl);
+      else if (data.images?.length > 0) newImages.push(...data.images);
+
+      if (newImages.length > 0) {
+        recordImageGeneration(newImages.length);
+        store.addImagesToProjectGallery(targetProjectId, newImages);
+        showToast(`Imagem gerada com sucesso (fallback)! ✅`, "success");
+        onSuccess?.(newImages[0], rawPreviousImage);
+      } else {
+        throw new Error("Nenhum dado de imagem retornado pela API.");
+      }
+    } catch (err: any) {
+      console.error("[FRONT] Fallback /api/gerar also failed:", err);
+      showToast(err.message || "Falha na geração.", "error");
+      onError?.(err.message || "Falha na geração.");
+    }
+  };
+
   return {
     generatePremiumImage,
     isGenerating: store.isGenerating
   };
 };
-

@@ -75,13 +75,13 @@ const SettingsModal: React.FC<{
           });
           const data = await resp.json();
           if (data.success) {
-            setUploadNotice(`✅ ${data.message}`);
+            setUploadNotice(`${data.message}`);
             setVertexStatus({ hasKey: true, projectId: data.projectId, clientEmail: data.clientEmail });
           } else {
-            setUploadNotice(`⚠️ ${data.error}`);
+            setUploadNotice(`${data.error}`);
           }
         } catch (err: any) {
-          setUploadNotice(`⚠️ Erro ao salvar no servidor: ${err.message}`);
+          setUploadNotice(`Erro ao salvar no servidor: ${err.message}`);
         }
       }
     } else {
@@ -114,13 +114,13 @@ const SettingsModal: React.FC<{
       if (data.success) {
         localStorage.setItem('custom_gemini_api_key', text);
         setMyProfile({ ...myProfile, geminiApiKey: text });
-        setUploadNotice(`✅ ${data.message}`);
+        setUploadNotice(`${data.message}`);
         setVertexStatus({ hasKey: true, projectId: data.projectId, clientEmail: data.clientEmail });
       } else {
-        setUploadNotice(`❌ ${data.error}`);
+        setUploadNotice(`${data.error}`);
       }
     } catch (err: any) {
-      setUploadNotice(`❌ Erro na leitura do arquivo: ${err.message}`);
+      setUploadNotice(`Erro na leitura do arquivo: ${err.message}`);
     }
   };
 
@@ -140,7 +140,7 @@ const SettingsModal: React.FC<{
 
   return (
     <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
-      <div className="bg-[#0a0a0a] border border-[#c5a880]/20 rounded-2xl sm:rounded-3xl p-5 sm:p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl custom-scrollbar my-auto animate-fade-in">
+      <div className="bg-[#0a0a0a] border border-violet-500/20 rounded-2xl sm:rounded-3xl p-5 sm:p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl custom-scrollbar my-auto animate-fade-in">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight">Configurações de Credenciais</h2>
           <button onClick={onClose} className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-white/5 transition-colors cursor-pointer"><X size={20} /></button>
@@ -160,7 +160,7 @@ const SettingsModal: React.FC<{
         {/* API Key / JSON Credentials Section */}
         <div className="mb-6 p-4 bg-black rounded-2xl border border-white/5 space-y-3">
           <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-2">
-            <Key size={14} className="text-[#c5a880]" /> Chave API ou JSON do Vertex AI
+            <Key size={14} className="text-violet-400" /> Chave API ou JSON do Vertex AI
           </label>
           
           <div className="space-y-2">
@@ -169,14 +169,14 @@ const SettingsModal: React.FC<{
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               placeholder="Cole sua Chave API (AIzaSy...) ou cole o conteúdo JSON da sua Conta de Serviço do Vertex AI ({...})"
-              className="w-full bg-black border border-white/5 rounded-xl px-3 py-2 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#c5a880]/50 font-mono"
+              className="w-full bg-black border border-white/5 rounded-xl px-3 py-2 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-violet-500/50 font-mono"
             />
 
             <div className="flex gap-2">
               <button 
                 onClick={handleSaveKey}
                 className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 ${
-                  saved ? 'bg-emerald-500 text-zinc-950' : 'bg-[#c5a880] text-zinc-950 hover:bg-[#b59b75]'
+                  saved ? 'bg-emerald-500 text-zinc-950' : 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white hover:bg-[#b59b75]'
                 }`}
               >
                 {saved ? <Check size={14} /> : 'Salvar Credenciais'}
@@ -187,7 +187,7 @@ const SettingsModal: React.FC<{
                 className="px-3 py-2 bg-[#111] hover:bg-zinc-700 border border-white/5 text-xs font-bold text-zinc-300 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
                 title="Carregar arquivo chave-vertex.json do seu computador"
               >
-                <Upload size={14} className="text-[#c5a880]" />
+                <Upload size={14} className="text-violet-400" />
                 <span>Carregar .JSON</span>
               </button>
               <input 
@@ -207,7 +207,7 @@ const SettingsModal: React.FC<{
           )}
 
           <p className="text-[10px] text-zinc-500 leading-normal">
-            Você pode colar o arquivo JSON da sua Conta de Serviço (Service Account) do Vertex AI ou fazer o upload do arquivo <code className="text-[#c5a880] font-mono">chave-vertex.json</code>. O sistema utilizará suas credenciais diretamente nas requisições.
+            Você pode colar o arquivo JSON da sua Conta de Serviço (Service Account) do Vertex AI ou fazer o upload do arquivo <code className="text-violet-400 font-mono">chave-vertex.json</code>. O sistema utilizará suas credenciais diretamente nas requisições.
           </p>
         </div>
 
@@ -217,22 +217,22 @@ const SettingsModal: React.FC<{
             <span className="flex items-center gap-2">
               <Wifi size={14} className="text-emerald-500" /> Diagnóstico e Cota da API
             </span>
-            <span className="text-[10px] text-[#c5a880] font-mono font-bold">{usageStats.generatedToday} artes hoje</span>
+            <span className="text-[10px] text-violet-400 font-mono font-bold">{usageStats.generatedToday} artes hoje</span>
           </label>
           <div className="flex items-center justify-between bg-black/50 p-2.5 rounded-xl border border-white/[0.03]">
             <div className="flex items-center gap-2">
-              <span className={`w-2 h-2 rounded-full ${liveQuotaInfo?.status === 'quota_exceeded' ? 'bg-amber-400' : 'bg-emerald-500'} animate-pulse`} />
+              <span className={`w-2 h-2 rounded-full ${liveQuotaInfo?.status === 'quota_exceeded' ? 'bg-[#a855f7]' : 'bg-emerald-500'} animate-pulse`} />
               <span className="text-xs text-zinc-300 font-medium">Status da Conexão:</span>
             </div>
-            <span className={`text-xs font-bold ${liveQuotaInfo?.status === 'quota_exceeded' ? 'text-amber-400' : 'text-emerald-400'}`}>
+            <span className={`text-xs font-bold ${liveQuotaInfo?.status === 'quota_exceeded' ? 'text-violet-400' : 'text-emerald-400'}`}>
               {liveQuotaInfo?.status === 'quota_exceeded' ? 'Cota Atingida (429)' : 'Ativa (Vertex AI / Google API)'}
             </span>
           </div>
 
           {/* Cooldown Status Badge */}
-          <div className={`p-3 rounded-xl border flex items-center justify-between ${cooldownSec > 0 ? 'bg-amber-950/30 border-amber-500/30 text-amber-300' : 'bg-emerald-950/30 border-emerald-500/30 text-emerald-300'}`}>
+          <div className={`p-3 rounded-xl border flex items-center justify-between ${cooldownSec > 0 ? 'bg-amber-950/30 border-violet-500/30 text-violet-400' : 'bg-emerald-950/30 border-emerald-500/30 text-emerald-300'}`}>
             <div className="flex items-center gap-2">
-              <Clock size={16} className={cooldownSec > 0 ? "animate-pulse text-amber-400 shrink-0" : "text-emerald-400 shrink-0"} />
+              <Clock size={16} className={cooldownSec > 0 ? "animate-pulse text-violet-400 shrink-0" : "text-emerald-400 shrink-0"} />
               <div className="text-xs">
                 <span className="font-bold block">
                   {cooldownSec > 0 ? `Aguarde ${cooldownSec}s para próximo disparo seguro` : 'Pronto para gerar nova arte!'}
@@ -246,7 +246,7 @@ const SettingsModal: React.FC<{
 
           {/* Frequência Recomendada & Limites Box */}
           <div className="p-3 bg-zinc-950 border border-white/5 rounded-xl text-xs space-y-2">
-            <h4 className="text-[#c5a880] font-bold text-[11px] uppercase tracking-wider flex items-center gap-1.5">
+            <h4 className="text-violet-400 font-bold text-[11px] uppercase tracking-wider flex items-center gap-1.5">
               <Info size={13} /> Guia Prático de Frequência & Cotas
             </h4>
             <div className="grid grid-cols-2 gap-2 text-[11px]">
@@ -271,7 +271,7 @@ const SettingsModal: React.FC<{
 
           {liveQuotaInfo && (
             <div className="p-2.5 bg-black/60 border border-white/5 rounded-xl text-xs space-y-1">
-              <p className="font-bold text-[#c5a880]">{liveQuotaInfo.keyType}</p>
+              <p className="font-bold text-violet-400">{liveQuotaInfo.keyType}</p>
               <p className="text-[11px] text-zinc-300">{liveQuotaInfo.message}</p>
               <p className="text-[10px] text-zinc-500">Estimativa: {liveQuotaInfo.dailyEstimate}</p>
             </div>
@@ -282,7 +282,7 @@ const SettingsModal: React.FC<{
             disabled={isTesting}
             className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-black hover:bg-[#111] border border-white/5 hover:border-white/5 text-xs font-bold text-zinc-300 rounded-xl transition-all cursor-pointer disabled:opacity-50"
           >
-            <RefreshCw size={12} className={isTesting ? "animate-spin text-[#c5a880]" : "text-[#c5a880]"} />
+            <RefreshCw size={12} className={isTesting ? "animate-spin text-violet-400" : "text-violet-400"} />
             <span>{isTesting ? "Verificando Cota e Conexão..." : testSuccess ? "Conexão OK!" : "Testar Token & Cota da API"}</span>
           </button>
         </div>
@@ -290,23 +290,23 @@ const SettingsModal: React.FC<{
         {/* Image Storage Section */}
         <div className="mb-6 p-4 bg-black rounded-2xl border border-white/5 space-y-3">
           <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-2">
-            <HardDrive size={14} className="text-[#c5a880]" /> Armazenamento de Imagens
+            <HardDrive size={14} className="text-violet-400" /> Armazenamento de Imagens
           </label>
           <div className="space-y-1.5 bg-black/50 p-3 rounded-xl border border-white/[0.03]">
             <div className="flex justify-between items-center text-xs">
               <span className="text-zinc-400">Ocupação do Navegador:</span>
-              <span className={`font-mono font-bold ${storageStats.isNearLimit ? 'text-amber-400' : 'text-emerald-400'}`}>
+              <span className={`font-mono font-bold ${storageStats.isNearLimit ? 'text-violet-400' : 'text-emerald-400'}`}>
                 {storageStats.percentageUsed}% (~{Math.round(storageStats.totalChars / 1024)} KB)
               </span>
             </div>
             <div className="w-full bg-[#111] h-1.5 rounded-full overflow-hidden">
               <div 
-                className={`h-full transition-all duration-300 ${storageStats.isNearLimit ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                className={`h-full transition-all duration-300 ${storageStats.isNearLimit ? 'bg-[#a855f7]' : 'bg-emerald-500'}`}
                 style={{ width: `${Math.min(100, storageStats.percentageUsed)}%` }}
               />
             </div>
             <p className="text-[10px] text-zinc-500 mt-1 leading-relaxed">
-              ⚡ <strong className="text-zinc-400">Limpeza Automática Ativa:</strong> Quando o armazenamento de imagens ultrapassar 75% ou atingir o limite, imagens e galerias antigas são limpas automaticamente. Seus dados de clientes e tarefas permanecem intactos.
+              <strong className="text-zinc-400">Limpeza Automática Ativa:</strong> Quando o armazenamento de imagens ultrapassar 75% ou atingir o limite, imagens e galerias antigas são limpas automaticamente. Seus dados de clientes e tarefas permanecem intactos.
             </p>
           </div>
 
@@ -318,7 +318,7 @@ const SettingsModal: React.FC<{
 
           <button
             onClick={handleCleanImageStorageNow}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-black hover:bg-[#111] border border-white/5 text-xs font-bold text-amber-400 rounded-xl transition-all"
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-black hover:bg-[#111] border border-white/5 text-xs font-bold text-violet-400 rounded-xl transition-all"
           >
             <Trash2 size={12} />
             <span>Executar Limpeza Manual de Imagens</span>

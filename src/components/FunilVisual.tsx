@@ -153,7 +153,7 @@ export const FunilVisual: React.FC = () => {
       metric: "Autoridade Visual",
       desc: "Um portfólio projetado não para impressionar designers, mas para provar capacidade técnica e valor comercial direto para clientes de alto ticket.",
       checklist: [
-        "Apresentar projetos com foco no retorno financeiro e decisões estratégicas",
+        "Apresentar projetos com foco no retorno financeiro e decis��es estratégicas",
         "Incluir depoimentos e contexto do desafio de cada cliente",
         "Adicionar chamada direta para reunião ou WhatsApp no final do projeto",
         "Criar capas minimalistas e de altíssimo impacto estético"
@@ -524,8 +524,8 @@ export const FunilVisual: React.FC = () => {
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pb-6 border-b border-white/5">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#c5a880] animate-pulse"></span>
-              <h3 className="text-sm font-black text-[#c5a880] uppercase tracking-wider">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#a855f7] animate-pulse"></span>
+              <h3 className="text-sm font-black text-violet-400 uppercase tracking-wider">
                 Simulador Dinâmico do Funil
               </h3>
             </div>
@@ -545,7 +545,7 @@ export const FunilVisual: React.FC = () => {
               <RotateCcw size={10} />
               Resetar
             </button>
-            <div className="bg-black px-3 py-1.5 rounded-lg border border-white/5 text-2xs font-black text-[#c5a880] uppercase">
+            <div className="bg-black px-3 py-1.5 rounded-lg border border-white/5 text-2xs font-black text-violet-400 uppercase">
               Modelo Matemático Ativo
             </div>
           </div>
@@ -556,7 +556,7 @@ export const FunilVisual: React.FC = () => {
           <div className="space-y-2 bg-black/50 p-4 rounded-xl border border-white/5">
             <div className="flex justify-between text-2xs font-black text-zinc-400 uppercase">
               <span>Tráfego Inicial (Visitas/Mês)</span>
-              <span className="text-[#c5a880]">{visitorCount.toLocaleString()}</span>
+              <span className="text-violet-400">{visitorCount.toLocaleString()}</span>
             </div>
             <input
               type="range"
@@ -565,7 +565,7 @@ export const FunilVisual: React.FC = () => {
               step="500"
               value={visitorCount}
               onChange={(e) => setVisitorCount(parseInt(e.target.value))}
-              className="w-full accent-[#c5a880]"
+              className="w-full accent-violet-500"
             />
             <div className="flex justify-between text-3xs text-zinc-500 font-mono">
               <span>500</span>
@@ -577,7 +577,7 @@ export const FunilVisual: React.FC = () => {
           <div className="space-y-2 bg-black/50 p-4 rounded-xl border border-white/5">
             <div className="flex justify-between text-2xs font-black text-zinc-400 uppercase">
               <span>Ticket Médio Contrato (R$)</span>
-              <span className="text-[#c5a880]">R$ {ticketMedio.toLocaleString()}</span>
+              <span className="text-violet-400">R$ {ticketMedio.toLocaleString()}</span>
             </div>
             <input
               type="range"
@@ -586,7 +586,7 @@ export const FunilVisual: React.FC = () => {
               step="500"
               value={ticketMedio}
               onChange={(e) => setTicketMedio(parseInt(e.target.value))}
-              className="w-full accent-[#c5a880]"
+              className="w-full accent-violet-500"
             />
             <div className="flex justify-between text-3xs text-zinc-500 font-mono">
               <span>R$ 1k</span>
@@ -595,23 +595,23 @@ export const FunilVisual: React.FC = () => {
             </div>
           </div>
 
-          <div className="space-y-1 bg-[#c5a880]/5 p-4 rounded-xl border border-[#c5a880]/15 flex flex-col justify-center">
+          <div className="space-y-1 bg-violet-500/5 p-4 rounded-xl border border-violet-500/15 flex flex-col justify-center">
             <span className="text-[10px] font-black text-zinc-400 uppercase tracking-wider">
               Contratos Fechados/Mês
             </span>
             <span className="text-2xl font-black text-white">
-              {clientsClosed} <span className="text-xs text-[#c5a880]">Novos clientes</span>
+              {clientsClosed} <span className="text-xs text-violet-400">Novos clientes</span>
             </span>
             <span className="text-3xs text-zinc-500 font-bold leading-tight">
               Taxa Geral de Conversão: ~{( (clientsClosed / visitorCount) * 100 ).toFixed(2)}%
             </span>
           </div>
 
-          <div className="space-y-1 bg-[#c5a880]/5 p-4 rounded-xl border border-[#c5a880]/15 flex flex-col justify-center">
-            <span className="text-[10px] font-black text-[#c5a880] uppercase tracking-wider">
+          <div className="space-y-1 bg-violet-500/5 p-4 rounded-xl border border-violet-500/15 flex flex-col justify-center">
+            <span className="text-[10px] font-black text-violet-400 uppercase tracking-wider">
               Faturamento Recorrente Novo (MRR)
             </span>
-            <span className="text-2xl font-black text-[#c5a880]">
+            <span className="text-2xl font-black text-violet-400">
               R$ {monthlyRevenue.toLocaleString()}
             </span>
             <span className="text-3xs text-zinc-500 font-bold leading-tight">
@@ -624,7 +624,7 @@ export const FunilVisual: React.FC = () => {
       {/* EXPLICATIVO: LÓGICA DE CONEXÃO DE PONTA A PONTA */}
       <div className="bg-black/40 border border-white/5 rounded-2xl p-6 shadow-xl space-y-6">
         <div className="flex items-center gap-2.5 pb-4 border-b border-white/5">
-          <div className="w-8 h-8 rounded-lg bg-[#c5a880]/10 flex items-center justify-center text-[#c5a880]">
+          <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center text-violet-400">
             <Sparkles size={16} />
           </div>
           <div className="text-left">
@@ -639,10 +639,10 @@ export const FunilVisual: React.FC = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Base */}
-          <div className="space-y-2 text-left bg-black/40 p-4 rounded-xl border border-white/5 relative group hover:border-[#c5a880]/20 transition-all">
+          <div className="space-y-2 text-left bg-black/40 p-4 rounded-xl border border-white/5 relative group hover:border-violet-500/20 transition-all">
             <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-[#c5a880]/15 text-[#c5a880] flex items-center justify-center text-2xs font-extrabold">1</span>
-              <span className="text-[10px] font-black text-[#c5a880] uppercase tracking-widest">A Base Fundamental</span>
+              <span className="w-5 h-5 rounded-full bg-violet-500/15 text-violet-400 flex items-center justify-center text-2xs font-extrabold">1</span>
+              <span className="text-[10px] font-black text-violet-400 uppercase tracking-widest">A Base Fundamental</span>
             </div>
             <h5 className="text-xs font-bold text-zinc-100 uppercase">Plano de Negócios e ICP</h5>
             <p className="text-[11px] text-zinc-400 leading-relaxed">
@@ -651,10 +651,10 @@ export const FunilVisual: React.FC = () => {
           </div>
 
           {/* O Fluxo */}
-          <div className="space-y-2 text-left bg-black/40 p-4 rounded-xl border border-white/5 relative group hover:border-[#c5a880]/20 transition-all">
+          <div className="space-y-2 text-left bg-black/40 p-4 rounded-xl border border-white/5 relative group hover:border-violet-500/20 transition-all">
             <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-[#c5a880]/15 text-[#c5a880] flex items-center justify-center text-2xs font-extrabold">2</span>
-              <span className="text-[10px] font-black text-[#c5a880] uppercase tracking-widest">O Fluxo do Funil</span>
+              <span className="w-5 h-5 rounded-full bg-violet-500/15 text-violet-400 flex items-center justify-center text-2xs font-extrabold">2</span>
+              <span className="text-[10px] font-black text-violet-400 uppercase tracking-widest">O Fluxo do Funil</span>
             </div>
             <h5 className="text-xs font-bold text-zinc-100 uppercase">Conexão das Etapas</h5>
             <div className="space-y-1 text-[11px] text-zinc-400 leading-relaxed">
@@ -665,10 +665,10 @@ export const FunilVisual: React.FC = () => {
           </div>
 
           {/* O Ciclo */}
-          <div className="space-y-2 text-left bg-black/40 p-4 rounded-xl border border-white/5 relative group hover:border-[#c5a880]/20 transition-all">
+          <div className="space-y-2 text-left bg-black/40 p-4 rounded-xl border border-white/5 relative group hover:border-violet-500/20 transition-all">
             <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-[#c5a880]/15 text-[#c5a880] flex items-center justify-center text-2xs font-extrabold">3</span>
-              <span className="text-[10px] font-black text-[#c5a880] uppercase tracking-widest">O Ciclo de Retroalimentação</span>
+              <span className="w-5 h-5 rounded-full bg-violet-500/15 text-violet-400 flex items-center justify-center text-2xs font-extrabold">3</span>
+              <span className="text-[10px] font-black text-violet-400 uppercase tracking-widest">O Ciclo de Retroalimentação</span>
             </div>
             <h5 className="text-xs font-bold text-zinc-100 uppercase">A Roda Antiprospecção</h5>
             <p className="text-[11px] text-zinc-400 leading-relaxed">
@@ -678,24 +678,24 @@ export const FunilVisual: React.FC = () => {
         </div>
 
         {/* Resumo da Lógica */}
-        <div className="bg-black/80 border border-[#c5a880]/10 p-3.5 rounded-xl flex flex-col lg:flex-row items-center justify-between gap-4">
-          <span className="text-[10px] font-black text-[#c5a880] uppercase tracking-wider shrink-0 bg-[#c5a880]/10 px-2 py-0.5 rounded">
+        <div className="bg-black/80 border border-violet-500/10 p-3.5 rounded-xl flex flex-col lg:flex-row items-center justify-between gap-4">
+          <span className="text-[10px] font-black text-violet-400 uppercase tracking-wider shrink-0 bg-violet-500/10 px-2 py-0.5 rounded">
             Resumo da Lógica de Conexão
           </span>
           <div className="flex flex-wrap items-center justify-center gap-1.5 text-3xs font-mono font-bold text-zinc-300">
             <span className="bg-black border border-white/5 px-2 py-1 rounded">ICP / Plano</span>
-            <span className="text-[#c5a880]">➔</span>
+            <span className="text-violet-400">➔</span>
             <span className="bg-black border border-white/5 px-2 py-1 rounded">Comunicação</span>
-            <span className="text-[#c5a880]">➔</span>
-            <span className="bg-black border border-[#c5a880]/20 px-2 py-1 rounded text-[#c5a880]">Posicionamento</span>
-            <span className="text-[#c5a880]">➔</span>
+            <span className="text-violet-400">➔</span>
+            <span className="bg-black border border-violet-500/20 px-2 py-1 rounded text-violet-400">Posicionamento</span>
+            <span className="text-violet-400">➔</span>
             <span className="bg-black border border-white/5 px-2 py-1 rounded">Qualificação de Lead</span>
-            <span className="text-[#c5a880]">➔</span>
+            <span className="text-violet-400">➔</span>
             <span className="bg-black border border-white/5 px-2 py-1 rounded text-white">Venda Fechada</span>
-            <span className="text-[#c5a880]">➔</span>
-            <span className="bg-black border border-[#c5a880]/20 px-2 py-1 rounded text-[#c5a880]">Resultado / Depoimento</span>
-            <span className="text-[#c5a880]">➔</span>
-            <span className="bg-black border border-[#c5a880]/40 px-2 py-1 rounded text-white font-extrabold">Posicionamento Reforçado (Loop)</span>
+            <span className="text-violet-400">➔</span>
+            <span className="bg-black border border-violet-500/20 px-2 py-1 rounded text-violet-400">Resultado / Depoimento</span>
+            <span className="text-violet-400">➔</span>
+            <span className="bg-black border border-violet-500/40 px-2 py-1 rounded text-white font-extrabold">Posicionamento Reforçado (Loop)</span>
           </div>
         </div>
       </div>
@@ -706,8 +706,8 @@ export const FunilVisual: React.FC = () => {
         <div className="absolute inset-0 bg-[radial-gradient(#ffffff03_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none"></div>
 
         {/* Divisor de Região Visual (Fronteira Atração / Retenção) */}
-        <div className="absolute top-[340px] left-0 right-0 h-[2px] bg-[#c5a880]/10 border-t border-dashed border-[#c5a880]/30 z-0">
-          <span className="absolute top-1 right-6 text-3xs text-[#c5a880] uppercase font-black tracking-wider bg-black px-2 py-0.5 rounded-full border border-[#c5a880]/20 shadow-sm">
+        <div className="absolute top-[340px] left-0 right-0 h-[2px] bg-violet-500/10 border-t border-dashed border-violet-500/30 z-0">
+          <span className="absolute top-1 right-6 text-3xs text-violet-400 uppercase font-black tracking-wider bg-black px-2 py-0.5 rounded-full border border-violet-500/20 shadow-sm">
             Linha de Qualificação / Divisão de Ambientes
           </span>
         </div>
@@ -723,15 +723,15 @@ export const FunilVisual: React.FC = () => {
               whileHover={{ scale: 1.02 }}
               onClick={() => handleNodeClick("plano_icp")}
               className={`cursor-pointer w-full max-w-2xl bg-gradient-to-r from-zinc-900 to-zinc-950 border-2 rounded-2xl p-4 shadow-xl flex items-center gap-4 transition-all ${
-                selectedNode === "plano_icp" ? "border-[#c5a880] shadow-[#c5a880]/15" : "border-white/5 hover:border-white/20"
+                selectedNode === "plano_icp" ? "border-violet-500 shadow-violet-600/15" : "border-white/5 hover:border-white/20"
               }`}
             >
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#c5a880] to-[#ad8330] text-zinc-950 flex items-center justify-center shrink-0 shadow-lg shadow-[#c5a880]/10">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-600 to-fuchsia-600 text-zinc-950 flex items-center justify-center shrink-0 shadow-lg shadow-violet-600/10">
                 <Target size={22} className="text-black" />
               </div>
               <div className="flex-1 text-left space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-black uppercase text-[#c5a880] tracking-widest bg-[#c5a880]/10 px-1.5 py-0.5 rounded">PASSO 1: A BASE</span>
+                  <span className="text-[10px] font-black uppercase text-violet-400 tracking-widest bg-violet-500/10 px-1.5 py-0.5 rounded">PASSO 1: A BASE</span>
                   <span className="text-[10px] text-zinc-500 font-bold">• O início de tudo</span>
                 </div>
                 <h4 className="text-sm font-black text-white uppercase tracking-wider">Plano de Negócios & ICP</h4>
@@ -740,13 +740,13 @@ export const FunilVisual: React.FC = () => {
                 </p>
               </div>
               <div className="flex flex-col items-end gap-1.5">
-                <span className="text-[9px] bg-[#c5a880]/20 text-[#c5a880] px-2 py-0.5 rounded-full uppercase font-black tracking-wider">Fundação</span>
-                <ChevronDown size={16} className={`text-[#c5a880] transition-transform duration-300 ${selectedNode === "plano_icp" ? "rotate-180" : ""}`} />
+                <span className="text-[9px] bg-violet-500/20 text-violet-400 px-2 py-0.5 rounded-full uppercase font-black tracking-wider">Fundação</span>
+                <ChevronDown size={16} className={`text-violet-400 transition-transform duration-300 ${selectedNode === "plano_icp" ? "rotate-180" : ""}`} />
               </div>
             </motion.div>
             
             {/* Downward connecting line from Base to Atração */}
-            <div className="h-6 w-[2px] bg-gradient-to-b from-[#c5a880]/40 to-transparent mt-3"></div>
+            <div className="h-6 w-[2px] bg-gradient-to-b from-[#a855f7]/40 to-transparent mt-3"></div>
           </div>
           
           {/* =========================================================================
@@ -764,7 +764,7 @@ export const FunilVisual: React.FC = () => {
                   <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#3b82f6" opacity="0.8" />
                 </marker>
                 <marker id="gold-arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                  <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#c5a880" />
+                  <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#a855f7" />
                 </marker>
                 <marker id="green-arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
                   <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#25d366" />
@@ -873,7 +873,7 @@ export const FunilVisual: React.FC = () => {
               <div className="text-[10px] text-zinc-300 font-extrabold text-center leading-tight">Pesca em Balde</div>
               <div className="w-14 h-14 rounded-full bg-[#e1306c] flex items-center justify-center text-white shadow-lg border border-white/5 relative">
                 <Instagram size={20} />
-                <div className="absolute -top-1 -right-1 bg-black border border-[#c5a880]/30 px-1 py-0.5 rounded-full text-[7px] font-black text-[#c5a880] uppercase">Ativo</div>
+                <div className="absolute -top-1 -right-1 bg-black border border-violet-500/30 px-1 py-0.5 rounded-full text-[7px] font-black text-violet-400 uppercase">Ativo</div>
               </div>
             </motion.div>
 
@@ -887,7 +887,7 @@ export const FunilVisual: React.FC = () => {
               <div className="text-[10px] text-zinc-300 font-extrabold text-center leading-tight">Conteúdo N3</div>
               <div className="w-14 h-14 rounded-full bg-[#e1306c] flex items-center justify-center text-white shadow-lg border border-white/5 relative">
                 <Instagram size={20} />
-                {selectedNode === "conteudo" && <div className="absolute inset-0 rounded-full border border-[#c5a880] animate-ping opacity-75"></div>}
+                {selectedNode === "conteudo" && <div className="absolute inset-0 rounded-full border border-violet-500 animate-ping opacity-75"></div>}
               </div>
             </motion.div>
 
@@ -1005,29 +1005,29 @@ export const FunilVisual: React.FC = () => {
                 whileHover={{ scale: 1.02 }}
                 onClick={() => handleNodeClick("instagram_posicionado")}
                 className={`w-full bg-black rounded-xl border transition-all cursor-pointer p-3.5 shadow-2xl overflow-hidden relative flex-1 flex flex-col justify-between ${
-                  selectedNode === "instagram_posicionado" ? "border-[#c5a880] shadow-[#c5a880]/15" : "border-zinc-800 hover:border-zinc-800"
+                  selectedNode === "instagram_posicionado" ? "border-violet-500 shadow-violet-600/15" : "border-zinc-800 hover:border-zinc-800"
                 }`}
               >
                 {/* Profile Info */}
                 <div className="flex gap-2 items-center">
-                  <div className="w-8 h-8 rounded-full border border-[#c5a880] p-0.5 bg-black overflow-hidden flex items-center justify-center font-black text-[9px] text-white">
+                  <div className="w-8 h-8 rounded-full border border-violet-500 p-0.5 bg-black overflow-hidden flex items-center justify-center font-black text-[9px] text-white">
                     ZION
                   </div>
                   <div className="flex-1 space-y-0.5">
                     <div className="text-[10px] font-extrabold text-white">agencia_zion</div>
-                    <div className="text-[8px] text-[#c5a880] font-bold">Design & Tráfego Premium</div>
+                    <div className="text-[8px] text-violet-400 font-bold">Design & Tráfego Premium</div>
                   </div>
                 </div>
 
                 {/* Bio */}
                 <div className="text-[8px] text-zinc-400 pt-1.5 leading-normal flex-1">
-                  ⚙️ Criamos funis de vendas de altíssimo ticket.<br/>
-                  💼 O fim da prospecção fria.<br/>
-                  📈 <span className="text-[#c5a880] font-bold">Aperte no link abaixo</span> e mude sua escala:
+                  Criamos funis de vendas de altíssimo ticket.<br/>
+                  O fim da prospecção fria.<br/>
+                  <span className="text-violet-400 font-bold">Aperte no link abaixo</span> e mude sua escala:
                 </div>
 
                 {/* Link bio mock */}
-                <div className="mt-1 p-1 bg-black rounded text-center text-[8px] font-black text-[#c5a880] uppercase tracking-wider border border-white/5 flex items-center justify-center gap-1">
+                <div className="mt-1 p-1 bg-black rounded text-center text-[8px] font-black text-violet-400 uppercase tracking-wider border border-white/5 flex items-center justify-center gap-1">
                   <Link size={8} />
                   linktree.ms/zion_agencia
                 </div>
@@ -1035,13 +1035,13 @@ export const FunilVisual: React.FC = () => {
                 {/* Grid Preview (3 items) */}
                 <div className="grid grid-cols-3 gap-1 pt-2">
                   <div className="aspect-square bg-black border border-white/5 rounded-xs flex flex-col justify-end p-0.5">
-                    <span className="text-[6px] font-black text-[#c5a880] text-center">CASE</span>
+                    <span className="text-[6px] font-black text-violet-400 text-center">CASE</span>
                   </div>
-                  <div className="aspect-square bg-[#c5a880] rounded-xs flex flex-col justify-end p-0.5">
+                  <div className="aspect-square bg-[#a855f7] rounded-xs flex flex-col justify-end p-0.5">
                     <span className="text-[6px] font-black text-black text-center">MÉTODO</span>
                   </div>
                   <div className="aspect-square bg-black border border-white/5 rounded-xs flex flex-col justify-end p-0.5">
-                    <span className="text-[6px] font-black text-[#c5a880] text-center">DEPOIMENTOS</span>
+                    <span className="text-[6px] font-black text-violet-400 text-center">DEPOIMENTOS</span>
                   </div>
                 </div>
               </motion.div>
@@ -1077,7 +1077,7 @@ export const FunilVisual: React.FC = () => {
                 whileHover={{ scale: 1.02 }}
                 onClick={() => handleNodeClick("link_bio")}
                 className={`cursor-pointer w-full bg-black border-2 rounded-2xl overflow-hidden shadow-2xl transition-all ${
-                  selectedNode === "link_bio" ? "border-[#c5a880] shadow-[#c5a880]/10" : "border-white/5 hover:border-white/20"
+                  selectedNode === "link_bio" ? "border-violet-500 shadow-violet-600/10" : "border-white/5 hover:border-white/20"
                 }`}
               >
                 {/* Browser Bar */}
@@ -1093,26 +1093,26 @@ export const FunilVisual: React.FC = () => {
                 <div className="p-2 space-y-1.5 bg-black h-[190px] overflow-y-auto scrollbar-none text-left">
                   {/* Mini Profile Header */}
                   <div className="flex flex-col items-center text-center pb-1.5 border-b border-white/5">
-                    <div className="w-7 h-7 rounded-full border border-[#c5a880] p-0.5 bg-black overflow-hidden flex items-center justify-center font-black text-[7px] text-white">
+                    <div className="w-7 h-7 rounded-full border border-violet-500 p-0.5 bg-black overflow-hidden flex items-center justify-center font-black text-[7px] text-white">
                       ZION
                     </div>
                     <div className="text-[7px] font-extrabold text-white mt-0.5">@agencia_zion</div>
                   </div>
                   {/* Mock Button 1 */}
-                  <div className="p-1 bg-black rounded border border-white/5 text-center text-[7px] font-bold text-[#c5a880]">
-                    💼 Ver Portfólio Premium
+                  <div className="p-1 bg-black rounded border border-white/5 text-center text-[7px] font-bold text-violet-400">
+                    Ver Portfólio Premium
                   </div>
                   {/* Mock Button 2 */}
-                  <div className="p-1 bg-[#c5a880] rounded text-center text-[7px] font-black text-black">
-                    ⚡ Quero meu Funil de Vendas
+                  <div className="p-1 bg-[#a855f7] rounded text-center text-[7px] font-black text-black">
+                    Quero meu Funil de Vendas
                   </div>
                    {/* Mock Button 3 */}
                   <div className="p-1 bg-[#25d366]/10 rounded border border-[#25d366]/30 text-center text-[7px] font-extrabold text-[#25d366] flex items-center justify-center gap-1 hover:bg-[#25d366]/20 transition-all">
-                    <span>💬</span> Falar no WhatsApp (Direto)
+                    <span></span> Falar no WhatsApp (Direto)
                   </div>
                 </div>
                 {activeSim && (
-                  <div className="text-[8px] text-[#c5a880] font-black bg-[#c5a880]/10 py-1 border-t border-[#c5a880]/10 text-center">
+                  <div className="text-[8px] text-violet-400 font-black bg-violet-500/10 py-1 border-t border-violet-500/10 text-center">
                     {linkBioVisitors.toLocaleString()} cliques/mês
                   </div>
                 )}
@@ -1151,7 +1151,7 @@ export const FunilVisual: React.FC = () => {
                 whileHover={{ scale: 1.03 }}
                 onClick={() => handleNodeClick("behance_intencional")}
                 className={`cursor-pointer w-full bg-zinc-100 border-2 rounded-2xl overflow-hidden shadow-2xl transition-all ${
-                  selectedNode === "behance_intencional" ? "border-[#c5a880] shadow-[#c5a880]/15" : "border-white/5 hover:border-white/20"
+                  selectedNode === "behance_intencional" ? "border-violet-500 shadow-violet-600/15" : "border-white/5 hover:border-white/20"
                 }`}
               >
                 {/* Browser Bar */}
@@ -1178,7 +1178,7 @@ export const FunilVisual: React.FC = () => {
                     </div>
                     
                     {/* Follow button */}
-                    <div className="w-full bg-blue-600 text-white text-[4.5px] font-bold py-0.5 rounded shadow-xs text-center select-none hover:bg-blue-700 mb-0.5">
+                    <div className="w-full bg-[#a855f7] text-white text-[4.5px] font-bold py-0.5 rounded shadow-xs text-center select-none hover:bg-[#7c3aed] mb-0.5">
                       Seguir
                     </div>
                     
@@ -1200,23 +1200,23 @@ export const FunilVisual: React.FC = () => {
                     <div className="text-[5px] font-black text-zinc-400 uppercase tracking-widest mb-1">Portfolio Premium</div>
                     <div className="grid grid-cols-2 gap-1 overflow-y-auto scrollbar-none flex-1">
                       {/* Card 1 */}
-                      <div className="rounded overflow-hidden h-[34px] relative bg-gradient-to-br from-[#c5a880] to-zinc-900 p-1 flex flex-col justify-between shadow-xs">
+                      <div className="rounded overflow-hidden h-[34px] relative bg-gradient-to-br from-[#a855f7] to-zinc-900 p-1 flex flex-col justify-between shadow-xs">
                         <div className="text-[4px] font-black text-white leading-none uppercase bg-black/40 px-1 py-0.5 rounded-xs w-fit">
                           Design System
                         </div>
                         <div className="text-[3px] text-zinc-300 flex justify-between">
-                          <span>👁️ 1.2k</span>
-                          <span>❤️ 450</span>
+                          <span>1.2k</span>
+                          <span>450</span>
                         </div>
                       </div>
                       {/* Card 2 */}
-                      <div className="rounded overflow-hidden h-[34px] relative bg-gradient-to-br from-[#c5a880] via-[#d5b890] to-[#e5c8a0] p-1 flex flex-col justify-between shadow-xs">
+                      <div className="rounded overflow-hidden h-[34px] relative bg-gradient-to-br from-[#a855f7] via-[#d5b890] to-[#e5c8a0] p-1 flex flex-col justify-between shadow-xs">
                         <div className="text-[4px] font-black text-white leading-none uppercase bg-black/40 px-1 py-0.5 rounded-xs w-fit">
                           Web N3
                         </div>
                         <div className="text-[3px] text-zinc-300 flex justify-between">
-                          <span>👁️ 3.1k</span>
-                          <span>❤️ 890</span>
+                          <span>3.1k</span>
+                          <span>890</span>
                         </div>
                       </div>
                       {/* Card 3 */}
@@ -1225,8 +1225,8 @@ export const FunilVisual: React.FC = () => {
                           Brand Identity
                         </div>
                         <div className="text-[3px] text-zinc-300 flex justify-between">
-                          <span>👁️ 890</span>
-                          <span>❤️ 320</span>
+                          <span>890</span>
+                          <span>320</span>
                         </div>
                       </div>
                       {/* Card 4 */}
@@ -1235,8 +1235,8 @@ export const FunilVisual: React.FC = () => {
                           Social Growth
                         </div>
                         <div className="text-[3px] text-zinc-300 flex justify-between">
-                          <span>👁️ 2.4k</span>
-                          <span>❤️ 1.1k</span>
+                          <span>2.4k</span>
+                          <span>1.1k</span>
                         </div>
                       </div>
                     </div>
@@ -1245,7 +1245,7 @@ export const FunilVisual: React.FC = () => {
                 
                 {/* Simulation / Stats info overlay */}
                 {activeSim && (
-                  <div className="text-[8px] text-[#c5a880] font-black bg-black py-1 border-t border-white/5 text-center">
+                  <div className="text-[8px] text-violet-400 font-black bg-black py-1 border-t border-white/5 text-center">
                     Cliques: {Math.round(assetVisitors * 0.4).toLocaleString()} /mês
                   </div>
                 )}
@@ -1259,7 +1259,7 @@ export const FunilVisual: React.FC = () => {
                 whileHover={{ scale: 1.03 }}
                 onClick={() => handleNodeClick("pagina_vendas")}
                 className={`cursor-pointer w-full bg-black border-2 rounded-2xl overflow-hidden shadow-2xl transition-all ${
-                  selectedNode === "pagina_vendas" ? "border-[#c5a880] shadow-[#c5a880]/15" : "border-white/5 hover:border-white/20"
+                  selectedNode === "pagina_vendas" ? "border-violet-500 shadow-violet-600/15" : "border-white/5 hover:border-white/20"
                 }`}
               >
                 {/* Browser Bar */}
@@ -1277,14 +1277,14 @@ export const FunilVisual: React.FC = () => {
                   <div className="flex gap-2 flex-1 items-center">
                     {/* Left Hero Column */}
                     <div className="flex-1 space-y-1">
-                      <div className="text-[5px] font-black text-[#c5a880] uppercase tracking-wider">Metodologia N3</div>
+                      <div className="text-[5px] font-black text-violet-400 uppercase tracking-wider">Metodologia N3</div>
                       <div className="text-[8px] font-black text-white leading-tight uppercase">COMO ESCALAR SUA AGÊNCIA</div>
                       <div className="text-[4px] text-zinc-400 leading-snug">
                         Assista ao vídeo curto e aprenda como captar e filtrar leads qualificados em piloto automático.
                       </div>
                       
                       {/* Mini CTA button */}
-                      <div className="bg-[#c5a880] hover:bg-[#b0936d] text-zinc-950 text-[4.5px] font-black py-0.5 px-1.5 rounded-xs w-fit flex items-center gap-0.5 shadow-sm select-none">
+                      <div className="bg-[#a855f7] hover:bg-[#b0936d] text-zinc-950 text-[4.5px] font-black py-0.5 px-1.5 rounded-xs w-fit flex items-center gap-0.5 shadow-sm select-none">
                         ASSISTIR VSL <Play size={4} fill="currentColor" />
                       </div>
                     </div>
@@ -1292,7 +1292,7 @@ export const FunilVisual: React.FC = () => {
                     {/* Right Video Mockup Column (Highly Styled) */}
                     <div className="w-[105px] h-[95px] bg-black rounded-lg border border-white/5 relative overflow-hidden flex items-center justify-center shadow-inner group">
                       {/* Ambient Background Light Overlay */}
-                      <div className="absolute inset-0 bg-radial-gradient from-[#c5a880]/20 to-transparent pointer-events-none"></div>
+                      <div className="absolute inset-0 bg-radial-gradient from-[#a855f7]/20 to-transparent pointer-events-none"></div>
                       
                       {/* Abstract SVG Portrait Face with Glasses (Highly polished, resembling Lorenzi) */}
                       <svg className="w-full h-full absolute inset-0 z-0" viewBox="0 0 105 95" fill="none">
@@ -1318,8 +1318,8 @@ export const FunilVisual: React.FC = () => {
                           <line x1="67" y1="36" x2="70" y2="36" />
                         </g>
                         {/* Sleek Golden Earring or highlights */}
-                        <circle cx="36" cy="48" r="1" fill="#c5a880" />
-                        <circle cx="69" cy="48" r="1" fill="#c5a880" />
+                        <circle cx="36" cy="48" r="1" fill="#a855f7" />
+                        <circle cx="69" cy="48" r="1" fill="#a855f7" />
                       </svg>
 
                       {/* Play Button Overlay */}
@@ -1330,7 +1330,7 @@ export const FunilVisual: React.FC = () => {
                       {/* Video Scrubber and Control Bar */}
                       <div className="absolute bottom-0 left-0 w-full h-1.5 bg-black/40 backdrop-blur-xs flex items-center px-1 justify-between z-10 border-t border-white/5">
                         <div className="flex-1 h-0.5 bg-zinc-700 rounded-full overflow-hidden mr-1">
-                          <div className="w-[45%] h-full bg-[#c5a880]"></div>
+                          <div className="w-[45%] h-full bg-[#a855f7]"></div>
                         </div>
                         <span className="text-[4px] text-zinc-400 font-mono">03:14 / 08:00</span>
                       </div>
@@ -1339,7 +1339,7 @@ export const FunilVisual: React.FC = () => {
                 </div>
 
                 {activeSim && (
-                  <div className="text-[8px] text-[#c5a880] font-black bg-black py-1 border-t border-white/5 text-center">
+                  <div className="text-[8px] text-violet-400 font-black bg-black py-1 border-t border-white/5 text-center">
                     Cliques: {Math.round(assetVisitors * 0.6).toLocaleString()} /mês
                   </div>
                 )}
@@ -1379,13 +1379,13 @@ export const FunilVisual: React.FC = () => {
                 className="cursor-pointer w-full flex flex-col items-center gap-1.5 transition-all text-center"
               >
                 <div className="text-[11px] font-extrabold text-zinc-300 uppercase tracking-widest">Reunião</div>
-                <div className={`w-14 h-14 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-xl border-2 transition-colors duration-200 ${
-                  selectedNode === "reuniao_diagnostico" ? "border-[#c5a880] shadow-[#c5a880]/25" : "border-white/5 hover:border-white/20"
+                <div className={`w-14 h-14 rounded-full bg-[#a855f7] flex items-center justify-center text-white shadow-xl border-2 transition-colors duration-200 ${
+                  selectedNode === "reuniao_diagnostico" ? "border-violet-500 shadow-violet-600/25" : "border-white/5 hover:border-white/20"
                 }`}>
                   <Video size={22} fill="currentColor" />
                 </div>
                 {activeSim && (
-                  <div className="text-[8px] text-blue-400 font-black bg-black border border-white/5 px-2 py-0.5 rounded-full mt-1 whitespace-nowrap">
+                  <div className="text-[8px] text-violet-400 font-black bg-black border border-white/5 px-2 py-0.5 rounded-full mt-1 whitespace-nowrap">
                     {meetingsScheduled.toLocaleString()} agendamentos
                   </div>
                 )}
@@ -1401,7 +1401,7 @@ export const FunilVisual: React.FC = () => {
               >
                 <div className="text-[11px] font-extrabold text-zinc-300 uppercase tracking-widest">Proposta</div>
                 <div className={`w-14 h-14 rounded-full bg-orange-600 flex items-center justify-center text-white shadow-xl border-2 transition-colors duration-200 ${
-                  selectedNode === "proposta_comercial" ? "border-[#c5a880] shadow-[#c5a880]/25" : "border-white/5 hover:border-white/20"
+                  selectedNode === "proposta_comercial" ? "border-violet-500 shadow-violet-600/25" : "border-white/5 hover:border-white/20"
                 }`}>
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                     <rect x="2" y="3" width="20" height="14" rx="2" />
@@ -1411,7 +1411,7 @@ export const FunilVisual: React.FC = () => {
                   </svg>
                 </div>
                 {activeSim && (
-                  <div className="text-[8px] text-orange-400 font-black bg-black border border-white/5 px-2 py-0.5 rounded-full mt-1 whitespace-nowrap">
+                  <div className="text-[8px] text-violet-400 font-black bg-black border border-white/5 px-2 py-0.5 rounded-full mt-1 whitespace-nowrap">
                     {offersPresented.toLocaleString()} geradas
                   </div>
                 )}
@@ -1427,7 +1427,7 @@ export const FunilVisual: React.FC = () => {
               >
                 <div className="text-[11px] font-extrabold text-zinc-300 uppercase tracking-widest">Mensagem</div>
                 <div className={`w-14 h-14 rounded-full bg-sky-500 flex items-center justify-center text-white shadow-xl border-2 transition-colors duration-200 ${
-                  selectedNode === "mensagem_fechamento" ? "border-[#c5a880] shadow-[#c5a880]/25" : "border-white/5 hover:border-white/20"
+                  selectedNode === "mensagem_fechamento" ? "border-violet-500 shadow-violet-600/25" : "border-white/5 hover:border-white/20"
                 }`}>
                   <MessageSquare size={22} className="text-white" fill="currentColor" />
                 </div>
@@ -1448,7 +1448,7 @@ export const FunilVisual: React.FC = () => {
               >
                 <div className="text-[11px] font-extrabold text-zinc-300 uppercase tracking-widest">Oferta Apresentada</div>
                 <div className={`w-14 h-14 bg-orange-600 rotate-45 flex items-center justify-center text-white shadow-xl relative rounded-md border transition-all ${
-                  selectedNode === "oferta_apresentada" ? "border-[#c5a880] shadow-[#c5a880]/25" : "border-white/5 hover:border-white/20"
+                  selectedNode === "oferta_apresentada" ? "border-violet-500 shadow-violet-600/25" : "border-white/5 hover:border-white/20"
                 }`}>
                   <div className="-rotate-45">
                     <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
@@ -1544,7 +1544,7 @@ export const FunilVisual: React.FC = () => {
                 >
                   <div className="text-[11px] font-extrabold text-zinc-300 uppercase tracking-widest">Cliente Fechado</div>
                   <div className={`w-14 h-14 bg-emerald-600 rotate-45 flex items-center justify-center text-white shadow-xl relative rounded-md border-2 transition-all duration-200 ${
-                    selectedNode === "cliente_fechado" ? "border-[#c5a880] shadow-[#c5a880]/25" : "border-white/5 hover:border-white/20"
+                    selectedNode === "cliente_fechado" ? "border-violet-500 shadow-violet-600/25" : "border-white/5 hover:border-white/20"
                   }`}>
                     <div className="-rotate-45">
                       <DollarSign size={24} className="text-white" />
@@ -1567,7 +1567,7 @@ export const FunilVisual: React.FC = () => {
                 >
                   <div className="text-[11px] font-extrabold text-zinc-300 uppercase tracking-widest">Cliente Não Satisfeito</div>
                   <div className={`w-14 h-14 bg-teal-800 rotate-45 flex items-center justify-center text-white shadow-xl relative rounded-md border-2 transition-all duration-200 ${
-                    selectedNode === "cliente_insatisfeito" ? "border-[#c5a880] shadow-[#c5a880]/25" : "border-white/5 hover:border-white/20"
+                    selectedNode === "cliente_insatisfeito" ? "border-violet-500 shadow-violet-600/25" : "border-white/5 hover:border-white/20"
                   }`}>
                     <div className="-rotate-45 flex items-center justify-center">
                       <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
@@ -1589,8 +1589,8 @@ export const FunilVisual: React.FC = () => {
                   className="cursor-pointer flex flex-col items-center gap-1.5 transition-all text-center"
                 >
                   <div className="text-[11px] font-extrabold text-zinc-300 uppercase tracking-widest">Bom Relacionamento</div>
-                  <div className={`w-14 h-14 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-xl border-2 transition-all duration-200 ${
-                    selectedNode === "bom_relacionamento" ? "border-[#c5a880] shadow-[#c5a880]/25" : "border-white/5 hover:border-white/20"
+                  <div className={`w-14 h-14 bg-[#a855f7] rounded-full flex items-center justify-center text-white shadow-xl border-2 transition-all duration-200 ${
+                    selectedNode === "bom_relacionamento" ? "border-violet-500 shadow-violet-600/25" : "border-white/5 hover:border-white/20"
                   }`}>
                     <MessageSquare size={24} fill="currentColor" />
                   </div>
@@ -1607,7 +1607,7 @@ export const FunilVisual: React.FC = () => {
                 >
                   <div className="text-[11px] font-extrabold text-zinc-300 uppercase tracking-widest">Boa Entrega</div>
                   <div className={`w-14 h-14 bg-black rounded-full flex items-center justify-center text-white shadow-xl border-2 transition-all duration-200 ${
-                    selectedNode === "boa_entrega" ? "border-[#c5a880] shadow-[#c5a880]/25" : "border-white/5 hover:border-white/20"
+                    selectedNode === "boa_entrega" ? "border-violet-500 shadow-violet-600/25" : "border-white/5 hover:border-white/20"
                   }`}>
                     <Zap size={24} fill="currentColor" className="text-white" />
                   </div>
@@ -1624,7 +1624,7 @@ export const FunilVisual: React.FC = () => {
                 >
                   <div className="text-[11px] font-extrabold text-zinc-300 uppercase tracking-widest">Cliente Satisfeito</div>
                   <div className={`w-14 h-14 bg-emerald-500 rotate-45 flex items-center justify-center text-white shadow-xl relative rounded-md border-2 transition-all duration-200 ${
-                    selectedNode === "cliente_satisfeito" ? "border-[#c5a880] shadow-[#c5a880]/25" : "border-white/5 hover:border-white/20"
+                    selectedNode === "cliente_satisfeito" ? "border-violet-500 shadow-violet-600/25" : "border-white/5 hover:border-white/20"
                   }`}>
                     <div className="-rotate-45">
                       <HeartHandshake size={24} className="text-white" />
@@ -1643,7 +1643,7 @@ export const FunilVisual: React.FC = () => {
                 >
                   <div className="text-[11px] font-extrabold text-zinc-300 uppercase tracking-widest">Mecanismo de Depoimentos</div>
                   <div className={`w-14 h-14 bg-red-600 rotate-45 flex items-center justify-center text-white shadow-xl relative rounded-md border-2 transition-all duration-200 ${
-                    selectedNode === "depoimento_loop" ? "border-[#c5a880] shadow-[#c5a880]/25" : "border-white/5 hover:border-white/20"
+                    selectedNode === "depoimento_loop" ? "border-violet-500 shadow-violet-600/25" : "border-white/5 hover:border-white/20"
                   }`}>
                     <div className="-rotate-45">
                       <Play size={20} fill="currentColor" className="text-white ml-0.5" />
@@ -1667,8 +1667,8 @@ export const FunilVisual: React.FC = () => {
                       className="cursor-pointer flex flex-col items-center gap-1 transition-all text-center"
                     >
                       <div className="text-[10px] font-extrabold text-zinc-300 uppercase tracking-widest">Pesca em Balde</div>
-                      <div className={`w-14 h-14 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-lg border-2 transition-all duration-200 ${
-                        selectedNode === "pesca_balde" ? "border-[#c5a880] shadow-[#c5a880]/25" : "border-white/5 hover:border-white/20"
+                      <div className={`w-14 h-14 bg-[#a855f7] rounded-full flex items-center justify-center text-white shadow-lg border-2 transition-all duration-200 ${
+                        selectedNode === "pesca_balde" ? "border-violet-500 shadow-violet-600/25" : "border-white/5 hover:border-white/20"
                       }`}>
                         <Target size={18} className="text-white" />
                       </div>
@@ -1684,7 +1684,7 @@ export const FunilVisual: React.FC = () => {
                     >
                       <div className="text-[10px] font-extrabold text-zinc-300 uppercase tracking-widest">Conteúdo N3</div>
                       <div className={`w-14 h-14 bg-red-600 rounded-full flex items-center justify-center text-white shadow-lg border-2 transition-all duration-200 ${
-                        selectedNode === "conteudo" ? "border-[#c5a880] shadow-[#c5a880]/25" : "border-white/5 hover:border-white/20"
+                        selectedNode === "conteudo" ? "border-violet-500 shadow-violet-600/25" : "border-white/5 hover:border-white/20"
                       }`}>
                         <Play size={18} fill="currentColor" className="text-white ml-0.5" />
                       </div>
@@ -1700,7 +1700,7 @@ export const FunilVisual: React.FC = () => {
                     >
                       <div className="text-[10px] font-extrabold text-zinc-300 uppercase tracking-widest">Indicações</div>
                       <div className={`w-14 h-14 bg-emerald-500 rounded-full flex items-center justify-center text-white shadow-lg border-2 transition-all duration-200 ${
-                        selectedNode === "indicacoes" ? "border-[#c5a880] shadow-[#c5a880]/25" : "border-white/5 hover:border-white/20"
+                        selectedNode === "indicacoes" ? "border-violet-500 shadow-violet-600/25" : "border-white/5 hover:border-white/20"
                       }`}>
                         <Share2 size={18} className="text-white" />
                       </div>
@@ -1716,7 +1716,7 @@ export const FunilVisual: React.FC = () => {
                     >
                       <div className="text-[10px] font-extrabold text-zinc-300 uppercase tracking-widest">Tráfego Gratuito</div>
                       <div className={`w-14 h-14 bg-black rounded-full flex items-center justify-center text-white shadow-lg border-2 transition-all duration-200 ${
-                        selectedNode === "trafego_gratuito" ? "border-[#c5a880] shadow-[#c5a880]/25" : "border-white/5 hover:border-[#c5a880]/20"
+                        selectedNode === "trafego_gratuito" ? "border-violet-500 shadow-violet-600/25" : "border-white/5 hover:border-violet-500/20"
                       }`}>
                         <TrendingUp size={18} className="text-white" />
                       </div>
@@ -1745,7 +1745,7 @@ export const FunilVisual: React.FC = () => {
                         <div className="p-1 flex-1 flex flex-col justify-between">
                           <div className="grid grid-cols-2 gap-1">
                             <div className="h-4 bg-black rounded border border-white/5 flex items-center justify-center">
-                              <div className="w-2 h-2 rounded-full bg-blue-600 flex items-center justify-center text-[4px] text-white font-bold">B</div>
+                              <div className="w-2 h-2 rounded-full bg-[#a855f7] flex items-center justify-center text-[4px] text-white font-bold">B</div>
                             </div>
                             <div className="h-4 bg-black rounded border border-white/5 flex items-center justify-center">
                               <div className="w-3 h-0.5 bg-zinc-700 rounded-full"></div>
@@ -1774,29 +1774,29 @@ export const FunilVisual: React.FC = () => {
                   whileHover={{ scale: 1.02 }}
                   onClick={() => handleNodeClick("instagram_posicionado")}
                   className={`w-full bg-black rounded-xl border transition-all cursor-pointer p-3.5 shadow-2xl overflow-hidden relative flex-1 flex flex-col justify-between ${
-                    selectedNode === "instagram_posicionado" ? "border-[#c5a880] shadow-[#c5a880]/15" : "border-zinc-800 hover:border-zinc-800"
+                    selectedNode === "instagram_posicionado" ? "border-violet-500 shadow-violet-600/15" : "border-zinc-800 hover:border-zinc-800"
                   }`}
                 >
                   {/* Profile Info */}
                   <div className="flex gap-2 items-center">
-                    <div className="w-8 h-8 rounded-full border border-[#c5a880] p-0.5 bg-black overflow-hidden flex items-center justify-center font-black text-[9px] text-white">
+                    <div className="w-8 h-8 rounded-full border border-violet-500 p-0.5 bg-black overflow-hidden flex items-center justify-center font-black text-[9px] text-white">
                       ZION
                     </div>
                     <div className="flex-1 space-y-0.5 text-left">
                       <div className="text-[10px] font-extrabold text-white">agencia_zion</div>
-                      <div className="text-[8px] text-[#c5a880] font-bold">Design & Tráfego Premium</div>
+                      <div className="text-[8px] text-violet-400 font-bold">Design & Tráfego Premium</div>
                     </div>
                   </div>
 
                   {/* Bio */}
                   <div className="text-[8px] text-zinc-400 pt-1.5 leading-normal flex-1 text-left">
-                    ⚙️ Criamos funis de vendas de altíssimo ticket.<br/>
-                    💼 O fim da prospecção fria.<br/>
-                    📈 <span className="text-[#c5a880] font-bold">Aperte no link abaixo</span> e mude sua escala:
+                    Criamos funis de vendas de altíssimo ticket.<br/>
+                    O fim da prospecção fria.<br/>
+                    <span className="text-violet-400 font-bold">Aperte no link abaixo</span> e mude sua escala:
                   </div>
 
                   {/* Link bio mock */}
-                  <div className="mt-1 p-1 bg-black rounded text-center text-[8px] font-black text-[#c5a880] uppercase tracking-wider border border-white/5 flex items-center justify-center gap-1">
+                  <div className="mt-1 p-1 bg-black rounded text-center text-[8px] font-black text-violet-400 uppercase tracking-wider border border-white/5 flex items-center justify-center gap-1">
                     <Link size={8} />
                     linktree.ms/zion_agencia
                   </div>
@@ -1804,13 +1804,13 @@ export const FunilVisual: React.FC = () => {
                   {/* Grid Preview (3 items) */}
                   <div className="grid grid-cols-3 gap-1 pt-2">
                     <div className="aspect-square bg-black border border-white/5 rounded-xs flex flex-col justify-end p-0.5">
-                      <span className="text-[6px] font-black text-[#c5a880] text-center">CASE</span>
+                      <span className="text-[6px] font-black text-violet-400 text-center">CASE</span>
                     </div>
-                    <div className="aspect-square bg-[#c5a880] rounded-xs flex flex-col justify-end p-0.5">
+                    <div className="aspect-square bg-[#a855f7] rounded-xs flex flex-col justify-end p-0.5">
                       <span className="text-[6px] font-black text-black text-center">MÉTODO</span>
                     </div>
                     <div className="aspect-square bg-black border border-white/5 rounded-xs flex flex-col justify-end p-0.5">
-                      <span className="text-[6px] font-black text-[#c5a880] text-center">DEPOIMENTOS</span>
+                      <span className="text-[6px] font-black text-violet-400 text-center">DEPOIMENTOS</span>
                     </div>
                   </div>
                 </motion.div>
@@ -1856,15 +1856,15 @@ export const FunilVisual: React.FC = () => {
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 15 }}
-            className="bg-black border-2 border-[#c5a880]/40 rounded-2xl p-6 space-y-6 shadow-2xl text-left"
+            className="bg-black border-2 border-violet-500/40 rounded-2xl p-6 space-y-6 shadow-2xl text-left"
           >
             <div className="flex justify-between items-start border-b border-white/5 pb-4">
               <div className="space-y-1">
-                <span className="bg-[#c5a880]/20 text-[#c5a880] text-[9px] font-black uppercase px-2.5 py-1 rounded-full border border-[#c5a880]/30">
+                <span className="bg-violet-500/20 text-violet-400 text-[9px] font-black uppercase px-2.5 py-1 rounded-full border border-violet-500/30">
                   {selectedNodeData.stage}
                 </span>
                 <h3 className="text-lg font-black text-white uppercase tracking-wider flex items-center gap-2">
-                  <Sparkles size={16} className="text-[#c5a880]" />
+                  <Sparkles size={16} className="text-violet-400" />
                   {selectedNodeData.title}
                 </h3>
               </div>
@@ -1892,7 +1892,7 @@ export const FunilVisual: React.FC = () => {
                   <div className="space-y-1.5">
                     {selectedNodeData.tips.map((tip, idx) => (
                       <div key={idx} className="text-xs text-zinc-400 flex items-start gap-2">
-                        <span className="text-[#c5a880] mt-0.5">•</span>
+                        <span className="text-violet-400 mt-0.5">•</span>
                         <span>{tip}</span>
                       </div>
                     ))}
@@ -1909,7 +1909,7 @@ export const FunilVisual: React.FC = () => {
                           setCopiedScript(true);
                           setTimeout(() => setCopiedScript(false), 2000);
                         }}
-                        className="text-2xs font-bold text-[#c5a880] hover:text-white transition cursor-pointer"
+                        className="text-2xs font-bold text-violet-400 hover:text-white transition cursor-pointer"
                       >
                         {copiedScript ? "Copiado!" : "Copiar Script"}
                       </button>
@@ -1925,7 +1925,7 @@ export const FunilVisual: React.FC = () => {
               <div className="space-y-4">
                 <div className="space-y-3 bg-black p-5 rounded-2xl border border-white/5">
                   <div className="flex items-center gap-2 pb-2 border-b border-white/5">
-                    <UserCheck size={16} className="text-[#c5a880]" />
+                    <UserCheck size={16} className="text-violet-400" />
                     <h4 className="text-xs font-black text-white uppercase tracking-wider">Checklist Prático do Copiloto</h4>
                   </div>
 
@@ -1935,7 +1935,7 @@ export const FunilVisual: React.FC = () => {
                         <input
                           type="checkbox"
                           id={`chk-${idx}`}
-                          className="mt-0.5 rounded border-zinc-700 bg-[#111] text-[#c5a880] focus:ring-[#c5a880]/30 animate-none"
+                          className="mt-0.5 rounded border-zinc-700 bg-[#111] text-violet-400 focus:ring-[#a855f7]/30 animate-none"
                         />
                         <label htmlFor={`chk-${idx}`} className="leading-relaxed cursor-pointer hover:text-white transition">
                           {item}
@@ -1946,9 +1946,9 @@ export const FunilVisual: React.FC = () => {
                 </div>
 
                 {selectedNodeData.howToExecute && selectedNodeData.howToExecute.length > 0 && (
-                  <div className="space-y-3 bg-black/80 p-5 rounded-2xl border border-[#c5a880]/15">
+                  <div className="space-y-3 bg-black/80 p-5 rounded-2xl border border-violet-500/15">
                     <div className="flex items-center gap-2 pb-2 border-b border-white/5">
-                      <Sparkles size={14} className="text-[#c5a880]" />
+                      <Sparkles size={14} className="text-violet-400" />
                       <h4 className="text-xs font-black text-white uppercase tracking-wider">Como Executar Passo a Passo</h4>
                     </div>
                     <div className="space-y-3 pt-2">

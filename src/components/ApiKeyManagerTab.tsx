@@ -3,6 +3,7 @@ import { Eye, EyeOff, Check, Trash2, Video, Key, Sparkles, ExternalLink, ShieldC
 
 export interface ApiKeysState {
   geminiApiKey?: string;
+  deepseekApiKey?: string;
   replicateApiKey?: string;
   heygenApiKey?: string;
   openaiApiKey?: string;
@@ -49,6 +50,21 @@ const PROVIDERS: ProviderConfig[] = [
     placeholder: 'Nova chave para substituir...',
     iconBg: 'bg-blue-500/10 border-blue-500/30',
     iconColor: 'text-blue-400'
+  },
+  {
+    id: 'deepseekApiKey',
+    storageKey: 'custom_deepseek_api_key',
+    name: 'API DeepSeek / B.AI',
+    subtitle: 'Para raciocínio veloz, OCR de alta precisão e agentes criativos (DeepSeek V4 Flash & Vision).',
+    docUrl: 'https://b.ai',
+    docLabel: 'b.ai / deepseek',
+    rates: [
+      { label: 'DeepSeek V4 Flash', cost: '~R$ 0,001 / 1k tokens' },
+      { label: 'DeepSeek V4 Vision', cost: '~R$ 0,003 / 1k tokens' },
+    ],
+    placeholder: 'Cole sua chave API DeepSeek ou B.AI (sk-...)',
+    iconBg: 'bg-violet-500/10 border-violet-500/30',
+    iconColor: 'text-violet-400'
   },
   {
     id: 'replicateApiKey',
@@ -106,8 +122,8 @@ const PROVIDERS: ProviderConfig[] = [
       { label: 'Claude 3.5 Haiku', cost: '~R$ 0,005 / 1k tokens' },
     ],
     placeholder: 'Cole sua chave API da Anthropic (sk-ant-...)',
-    iconBg: 'bg-amber-500/10 border-amber-500/30',
-    iconColor: 'text-amber-400'
+    iconBg: 'bg-violet-500/10 border-violet-500/30',
+    iconColor: 'text-violet-400'
   },
   {
     id: 'openrouterApiKey',
@@ -151,7 +167,7 @@ export const ApiKeyManagerTab: React.FC<ApiKeyManagerTabProps> = ({
     if (value) {
       localStorage.setItem(provider.storageKey, value);
       setMyProfile({ ...myProfile, [provider.id]: value });
-      showToast(`Chave da ${provider.name} salva com sucesso! ✅`, 'success');
+      showToast(`Chave da ${provider.name} salva com sucesso! `, 'success');
     } else {
       localStorage.removeItem(provider.storageKey);
       setMyProfile({ ...myProfile, [provider.id]: '' });
@@ -180,9 +196,9 @@ export const ApiKeyManagerTab: React.FC<ApiKeyManagerTabProps> = ({
     <div className="space-y-6 animate-fade-in">
       {/* Banner Informativo Superior Dourado */}
       <div className="bg-[#11141c] border border-white/5 rounded-2xl p-5 sm:p-6 space-y-3 relative overflow-hidden shadow-xl">
-        <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-[#c5a880] to-[#8c7350]" />
+        <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-[#a855f7] to-[#8c7350]" />
         <div className="flex items-start gap-3">
-          <div className="w-8 h-8 rounded-xl bg-[#c5a880]/10 border border-[#c5a880]/30 flex items-center justify-center text-[#c5a880] shrink-0 mt-0.5">
+          <div className="w-8 h-8 rounded-xl bg-violet-500/10 border border-violet-500/30 flex items-center justify-center text-violet-400 shrink-0 mt-0.5">
             <Sparkles size={16} />
           </div>
           <div className="space-y-1 text-xs">
@@ -201,7 +217,7 @@ export const ApiKeyManagerTab: React.FC<ApiKeyManagerTabProps> = ({
                 href="https://wa.me/5575988588888" 
                 target="_blank" 
                 rel="noreferrer" 
-                className="text-[#c5a880] font-semibold hover:underline"
+                className="text-violet-400 font-semibold hover:underline"
               >
                 Fale com a gente no suporte
               </a>
@@ -227,7 +243,7 @@ export const ApiKeyManagerTab: React.FC<ApiKeyManagerTabProps> = ({
               {/* Header do Card com Nome e Status */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/5 pb-3">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-6 h-6 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-[#c5a880]">
+                  <div className="w-6 h-6 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-violet-400">
                     <Key size={13} />
                   </div>
                   <div>
@@ -257,8 +273,8 @@ export const ApiKeyManagerTab: React.FC<ApiKeyManagerTabProps> = ({
 
               {/* Custos Médios por Geração */}
               <div className="bg-[#090d15] border border-white/5 rounded-xl p-3 space-y-2">
-                <span className="text-[11px] font-bold text-amber-400/90 flex items-center gap-1.5">
-                  🔥 Custos médios por geração:
+                <span className="text-[11px] font-bold text-violet-400/90 flex items-center gap-1.5">
+                  Custos médios por geração:
                 </span>
                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-zinc-300">
                   {provider.rates.map((rate, rIdx) => (
@@ -280,7 +296,7 @@ export const ApiKeyManagerTab: React.FC<ApiKeyManagerTabProps> = ({
                       value={currentInput}
                       onChange={e => setKeysInput(prev => ({ ...prev, [provider.id]: e.target.value }))}
                       placeholder={provider.placeholder}
-                      className="w-full bg-[#050810] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#c5a880]/60 font-mono pr-10"
+                      className="w-full bg-[#050810] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-violet-500/60 font-mono pr-10"
                     />
                     <button
                       type="button"
@@ -321,8 +337,8 @@ export const ApiKeyManagerTab: React.FC<ApiKeyManagerTabProps> = ({
 
                 {/* Banner de Aviso de Faturamento (Específico do Google) */}
                 {provider.id === 'geminiApiKey' && (
-                  <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-[11px] text-amber-300 flex items-center gap-2">
-                    <AlertCircle size={14} className="shrink-0 text-amber-400" />
+                  <div className="p-2.5 bg-violet-500/10 border border-violet-500/20 rounded-xl text-[11px] text-violet-400 flex items-center gap-2">
+                    <AlertCircle size={14} className="shrink-0 text-violet-400" />
                     <span>
                       Ative o faturamento no{' '}
                       <a
@@ -346,7 +362,7 @@ export const ApiKeyManagerTab: React.FC<ApiKeyManagerTabProps> = ({
                       href={provider.docUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-[#c5a880] hover:underline flex items-center gap-1 font-medium"
+                      className="text-violet-400 hover:underline flex items-center gap-1 font-medium"
                     >
                       {provider.docLabel}
                       <ExternalLink size={10} />

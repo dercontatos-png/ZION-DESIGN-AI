@@ -187,7 +187,7 @@ export const MaskPainter: React.FC<MaskPainterProps> = ({ imageUrl, onConfirm, o
       {/* Top Header Controls */}
       <div className="h-16 border-b border-white/5 bg-black/90 backdrop-blur-md flex items-center justify-between px-4 sm:px-6 shrink-0 z-20">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-[#c5a880]/20 border border-[#c5a880]/40 flex items-center justify-center text-[#c5a880]">
+          <div className="w-8 h-8 rounded-lg bg-violet-500/20 border border-violet-500/40 flex items-center justify-center text-violet-400">
             <PenTool size={16} />
           </div>
           <div>
@@ -200,7 +200,7 @@ export const MaskPainter: React.FC<MaskPainterProps> = ({ imageUrl, onConfirm, o
         <div className="flex items-center gap-3 bg-black/80 border border-white/5 rounded-xl px-3 py-1.5">
           <button
             onClick={() => setIsEraser(false)}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase transition-all ${!isEraser ? 'bg-[#c5a880] text-black shadow-md' : 'text-zinc-400 hover:text-white'}`}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase transition-all ${!isEraser ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-md' : 'text-zinc-400 hover:text-white'}`}
             title="Pincel"
           >
             <PenTool size={13} />
@@ -209,7 +209,7 @@ export const MaskPainter: React.FC<MaskPainterProps> = ({ imageUrl, onConfirm, o
           
           <button
             onClick={() => setIsEraser(true)}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase transition-all ${isEraser ? 'bg-[#c5a880] text-black shadow-md' : 'text-zinc-400 hover:text-white'}`}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase transition-all ${isEraser ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-md' : 'text-zinc-400 hover:text-white'}`}
             title="Borracha"
           >
             <Eraser size={13} />
@@ -226,9 +226,9 @@ export const MaskPainter: React.FC<MaskPainterProps> = ({ imageUrl, onConfirm, o
               max="150" 
               value={brushSize}
               onChange={(e) => setBrushSize(parseInt(e.target.value))}
-              className="w-20 sm:w-28 h-1.5 bg-[#111] rounded-lg appearance-none cursor-pointer accent-[#c5a880]"
+              className="w-20 sm:w-28 h-1.5 bg-[#111] rounded-lg appearance-none cursor-pointer accent-violet-500"
             />
-            <span className="text-[10px] font-mono text-amber-300 w-6">{brushSize}</span>
+            <span className="text-[10px] font-mono text-violet-400 w-6">{brushSize}</span>
           </div>
         </div>
 
@@ -253,7 +253,7 @@ export const MaskPainter: React.FC<MaskPainterProps> = ({ imageUrl, onConfirm, o
 
           <button 
             onClick={() => setShowMask(!showMask)}
-            className={`p-2 rounded-lg border transition-colors ${showMask ? 'bg-amber-500/20 border-amber-500/40 text-amber-300' : 'bg-black border-white/5 text-zinc-500'}`}
+            className={`p-2 rounded-lg border transition-colors ${showMask ? 'bg-violet-500/20 border-violet-500/40 text-violet-400' : 'bg-black border-white/5 text-zinc-500'}`}
             title="Visualizar Máscara"
           >
             <Eye size={15} />
@@ -275,8 +275,8 @@ export const MaskPainter: React.FC<MaskPainterProps> = ({ imageUrl, onConfirm, o
         {isProcessing && (
           <div className="absolute inset-0 z-30 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center gap-4 text-center p-6">
             <div className="relative">
-              <div className="w-16 h-16 rounded-full border-2 border-[#c5a880]/30 border-t-[#c5a880] animate-spin"></div>
-              <Wand2 size={24} className="text-[#c5a880] absolute inset-0 m-auto animate-pulse" />
+              <div className="w-16 h-16 rounded-full border-2 border-violet-500/30 border-t-[#a855f7] animate-spin"></div>
+              <Wand2 size={24} className="text-violet-400 absolute inset-0 m-auto animate-pulse" />
             </div>
             <div className="space-y-1">
               <h3 className="text-base font-extrabold text-white">Processando Edição na Área Pintada...</h3>
@@ -331,7 +331,7 @@ export const MaskPainter: React.FC<MaskPainterProps> = ({ imageUrl, onConfirm, o
 
           <button
             onClick={() => setPromptText("Alterar a cor e estilo do elemento selecionado para ")}
-            className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 font-medium shrink-0 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/30 text-violet-400 font-medium shrink-0 transition-colors"
           >
             <Palette size={12} />
             <span>Alterar Cor/Estilo</span>
@@ -362,7 +362,7 @@ export const MaskPainter: React.FC<MaskPainterProps> = ({ imageUrl, onConfirm, o
               value={promptText}
               onChange={(e) => setPromptText(e.target.value)}
               placeholder="Digite o comando do que fazer na área pintada (ex: remover pessoa, mudar cor para azul, adicionar relógio)..."
-              className="w-full bg-black border border-white/5 rounded-xl px-4 py-3 text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[#c5a880] focus:ring-1 focus:ring-[#c5a880]/30 pr-10"
+              className="w-full bg-black border border-white/5 rounded-xl px-4 py-3 text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-[#a855f7]/30 pr-10"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && promptText.trim() && !isProcessing) {
                   handleConfirm();
@@ -382,7 +382,7 @@ export const MaskPainter: React.FC<MaskPainterProps> = ({ imageUrl, onConfirm, o
           <button
             onClick={handleConfirm}
             disabled={isProcessing || !promptText.trim()}
-            className="w-full sm:w-auto px-6 py-3 bg-[#c5a880] hover:bg-[#b39873] disabled:opacity-50 text-black font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 shrink-0 cursor-pointer active:scale-95"
+            className="w-full sm:w-auto px-6 py-3 bg-[#a855f7] hover:bg-[#b39873] disabled:opacity-50 text-black font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 shrink-0 cursor-pointer active:scale-95"
           >
             {isProcessing ? (
               <>

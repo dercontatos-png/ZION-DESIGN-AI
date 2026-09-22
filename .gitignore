@@ -9,16 +9,9 @@ coverage/
 chave-vertex.json
 
 .vercel
-.env*
+.railway
 
 public/generated-images/
-*.png
-*.jpg
-*.jpeg
-*.webp
-*.mp3
-*.wav
-*.mp4
 
 test*
 patch*
@@ -28,7 +21,9 @@ count*
 get-*
 parse*
 revert*
-*.txt
 *.patch
-*.mjs
-*.html
+scratch/
+chave-vertex-b.json
+local_storage/
+whatsapp-sessions/
+realesrgan/

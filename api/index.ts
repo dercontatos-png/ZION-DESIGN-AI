@@ -1,5 +1,5 @@
 // @ts-ignore
-import { getApp } from "../dist/server.cjs";
+import { getApp } from "../dist/server.js";
 
 // Official Vercel way to set max function duration (60s on Hobby, up to 300s on Pro)
 export const maxDuration = 300;
