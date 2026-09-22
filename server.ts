@@ -2014,12 +2014,10 @@ async function startServer() {
         const colorsRepr = Object.entries(parsedColorPalette).map(([k, v]) => `${k}: ${v}`).join(", ") || "natural ambient lighting";
 
         // Spatial balance: if text is left-aligned, subject balances on the right
-        const isLeftTextLayout = (body.posicao_do_texto || "").includes("left") ||
-          (body.posicao_do_texto || "").includes("esq") ||
-          (validTextBlocks && validTextBlocks.some((b: any) => /left|esq/i.test(b.position || "")));
-        const isRightTextLayout = (body.posicao_do_texto || "").includes("right") ||
-          (body.posicao_do_texto || "").includes("dir") ||
-          (validTextBlocks && validTextBlocks.some((b: any) => /right|dir/i.test(b.position || "")));
+        const h1Block = validTextBlocks.find((b: any) => (b.type || "").toLowerCase() === "h1") || validTextBlocks[0];
+        const h1Pos = (h1Block?.position || body.posicao_do_texto || "").toLowerCase();
+        const isLeftTextLayout = h1Pos.includes("left") || h1Pos.includes("esq");
+        const isRightTextLayout = h1Pos.includes("right") || h1Pos.includes("dir");
 
         if (isLeftTextLayout) {
           body.subject_position = "right";
@@ -2142,11 +2140,45 @@ ${userCustomPrompt}
 MANDATORY: If the user explicitly requested white squares, cards, panels, or specific visual elements, you MUST render them exactly as requested! Generic rules against central containers apply only to unprompted default containers, NEVER to elements explicitly requested here.`;
             }
 
-            // Se o texto for alinhado à esquerda, reforça a divisão estrita em 2 colunas
-            if (isLeftTextLayout) {
+            // Restrição de modelo humano e slots de foto solicitados pelo usuário
+            const hasSubjectPhotos = !!(files.fotos_do_sujeito_produto && files.fotos_do_sujeito_produto.length > 0);
+            const allPromptDirectives = `${body.prompt_adicional || ""} ${body.subject_description || ""} ${body.poseDescription || ""}`.toLowerCase();
+            const userRequestedNoPerson = /sem (pessoa|modelo|mulher|homem|sujeito)|deixe.*quadrado|quadrados? branco|colocar foto depois|apenas (o )?layout|sem foto/i.test(allPromptDirectives);
+            const isLivreCategory = (body.categoria || "").toLowerCase() === "livre";
+            const hasHumanSubject = hasSubjectPhotos && !userRequestedNoPerson && !isLivreCategory;
+
+            if (userRequestedNoPerson || !hasHumanSubject) {
+              fullPrompt += `\n\nSUBJECT RESTRICTION & PHOTO PLACEHOLDER SLOTS:
+- ABSOLUTE PROHIBITION OF HUMAN MODELS: ZERO people, ZERO women, ZERO nurses, ZERO doctors! Do NOT paint any person or model into the artwork!`;
+              if (/quadrado|caixa|box|espa[çc]o|slot/i.test(allPromptDirectives)) {
+                fullPrompt += `\n- THREE (3) CENTRAL PHOTO PLACEHOLDER BOXES: Render exactly three (3) large white rectangular placeholder boxes arranged horizontally side-by-side across the middle of the canvas ("um do lado do outro no meio grande") with clean rounded corners and pure white fill.`;
+              }
+            }
+
+            if (isLeftTextLayout && hasHumanSubject) {
               fullPrompt += `\n\nSTRICT SPATIAL COMPOSITION LAW (LEFT ALIGNMENT & TWO COLUMNS):
-- LEFT COLUMN (0% to 45% canvas width): Dedicated EXCLUSIVELY to all typography (headline, subheadline, bullet points, CTA). All lines must be flush-left aligned with clean margin.
-- RIGHT COLUMN (45% to 100% canvas width): Dedicated to the main subject/person (e.g. nurse/professional). The subject MUST be positioned strictly on the RIGHT side facing inward, leaving the entire left column free for text. The subject MUST NOT be placed on the left side!`;
+- LEFT COLUMN (0% to 45% canvas width): Dedicated to the typography stack (headline, subheadline, bullet points). All lines must be flush-left aligned with clean margin.
+- RIGHT COLUMN (45% to 100% canvas width): Dedicated to the main subject/person. The subject MUST be positioned strictly on the RIGHT side facing inward, leaving the entire left column free for text. The subject MUST NOT be placed on the left side!`;
+            } else if (!isLeftTextLayout && !isRightTextLayout && validTextBlocks.length > 0) {
+              fullPrompt += `\n\nTYPOGRAPHY & MULTI-ZONE PLACEMENT LAW:
+- Render each text block at its specified position (e.g. TOP-CENTER, MIDDLE-CENTER, BOTTOM-CENTER).
+- If headline is TOP-CENTER, keep it centered horizontally at the top. DO NOT push it to the left or right borders!`;
+            }
+
+            // Diretiva para Contato e Redes Sociais no Rodapé (Bottom Center)
+            const hasBottomContact = parsedTextBlocks.some((b: any) => {
+              const pos = (b.position || "").toLowerCase();
+              const content = b.content || b.text || "";
+              return (pos.includes("down") || pos.includes("baixo") || pos.includes("↓") || pos.includes("bottom")) &&
+                     (content.includes("@") || /(\(\d{2}\)|\d{4,5})/.test(content));
+            }) || /em baixo|no rodap[ée]|em baixo meio/i.test(body.prompt_adicional || "");
+
+            if (hasBottomContact) {
+              fullPrompt += `\n\nMANDATORY FOOTER CONTACT & SOCIAL MEDIA BAR (BOTTOM CENTER):
+- The phone number and @ social media handle MUST be placed together at the BOTTOM CENTER of the canvas (in the footer zone with safe margin).
+- Precede the phone number with a clean WhatsApp circular icon.
+- Precede the social handle with Instagram and Facebook icons.
+- PROHIBITION: DO NOT place the social handle at the top! DO NOT place the phone number on the left margin under the bullet points! Both must be centered at the bottom.`;
             }
 
             console.log(`[bff/generate ASYNC] Job ${jobId}: Built prompt (${fullPrompt.length} chars)`);

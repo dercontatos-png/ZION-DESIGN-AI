@@ -441,27 +441,35 @@ export function buildEnhancedPrompt(params: PromptEngineParams): string {
   parts.push(`Visual Style: ${params.estilo_visual || "Ultra Realista"}. Creative Level: ${sobrietyText} (${sobriety}/100).`);
 
   // ── SUBJECT ──
-  const isGroupSubject = /todos|grupo|equipe|turma|pessoas|foto/i.test(params.subject_description || "") || (params.categoria === "livre");
-  if (isGroupSubject) {
-    parts.push(`Main subjects / Group: ${params.subject_description || "Replicate all people from the reference photo"}. Ensure all individuals from the photo appear naturally in the composition, positioned at ${effectiveSubjectPosition}.`);
+  const allSubText = `${params.subject_description || ""} ${params.prompt_adicional || ""}`.toLowerCase();
+  const userRequestedNoPerson = /sem (pessoa|modelo|mulher|homem|sujeito)|deixe.*quadrado|quadrados? branco|colocar foto depois|apenas (o )?layout|sem foto/i.test(allSubText);
+
+  if (userRequestedNoPerson || (!params.hasSubjectPhotos && params.categoria === "livre")) {
+    parts.push(`ABSOLUTE PROHIBITION OF HUMAN MODELS: ZERO people, ZERO women, ZERO nurses, ZERO doctors, ZERO human figures! The user explicitly did not attach a person photo and requested empty boxes for later insertion. Do NOT paint any human model into the artwork!
+Photo Slots: Render exactly THREE (3) clean, prominent, large white rectangular placeholder boxes arranged horizontally side-by-side across the middle of the canvas ("um do lado do outro no meio grande") with clean rounded corners and pure solid white fill.`);
   } else {
-    const subDesc = (params.subject_description || "").toLowerCase();
-    const hasFemaleClue = /mulher|feminina?|garota|menina|m[ée]dica|doutora|enfermeira|atriz|modelo\s*feminina|woman|female|girl/i.test(subDesc);
-    const hasMaleClue = /homem|masculino?|garoto|menino|m[ée]dico|doutor|enfermeiro|ator|modelo\s*masculino|man|male|boy/i.test(subDesc);
-    let resolvedGender = params.genero;
-    if (hasFemaleClue && !hasMaleClue) resolvedGender = "female";
-    else if (hasMaleClue && !hasFemaleClue) resolvedGender = "male";
+    const isGroupSubject = /todos|grupo|equipe|turma|pessoas|foto/i.test(params.subject_description || "");
+    if (isGroupSubject) {
+      parts.push(`Main subjects / Group: ${params.subject_description || "Replicate all people from the reference photo"}. Ensure all individuals from the photo appear naturally in the composition, positioned at ${effectiveSubjectPosition}.`);
+    } else {
+      const subDesc = (params.subject_description || "").toLowerCase();
+      const hasFemaleClue = /mulher|feminina?|garota|menina|m[ée]dica|doutora|enfermeira|atriz|modelo\s*feminina|woman|female|girl/i.test(subDesc);
+      const hasMaleClue = /homem|masculino?|garoto|menino|m[ée]dico|doutor|enfermeiro|ator|modelo\s*masculino|man|male|boy/i.test(subDesc);
+      let resolvedGender = params.genero;
+      if (hasFemaleClue && !hasMaleClue) resolvedGender = "female";
+      else if (hasMaleClue && !hasFemaleClue) resolvedGender = "male";
 
-    let subjectText = "";
-    if (resolvedGender && resolvedGender !== "Não aplicável" && resolvedGender !== "Livre" && params.categoria !== "livre") {
-      const genLabel = resolvedGender === "female" ? "female person/woman" : resolvedGender === "male" ? "male person/man" : resolvedGender;
-      subjectText = `${genLabel}${params.subject_description ? `, ${params.subject_description}` : ""}`;
-    } else if (params.subject_description) {
-      subjectText = params.subject_description;
-    }
+      let subjectText = "";
+      if (resolvedGender && resolvedGender !== "Não aplicável" && resolvedGender !== "Livre" && params.categoria !== "livre") {
+        const genLabel = resolvedGender === "female" ? "female person/woman" : resolvedGender === "male" ? "male person/man" : resolvedGender;
+        subjectText = `${genLabel}${params.subject_description ? `, ${params.subject_description}` : ""}`;
+      } else if (params.subject_description) {
+        subjectText = params.subject_description;
+      }
 
-    if (subjectText) {
-      parts.push(`MANDATORY PROMINENT SUBJECT: The composition MUST prominently feature the main subject: ${subjectText}, positioned ${effectiveSubjectPosition}, naturally and realistically integrated into the scene and dressed in attire appropriate for the context (e.g. professional uniform, work clothes, or context-appropriate apparel). DO NOT omit or hide the subject!`);
+      if (subjectText) {
+        parts.push(`MANDATORY PROMINENT SUBJECT: The composition MUST prominently feature the main subject: ${subjectText}, positioned ${effectiveSubjectPosition}, naturally and realistically integrated into the scene and dressed in attire appropriate for the context (e.g. professional uniform, work clothes, or context-appropriate apparel). DO NOT omit or hide the subject!`);
+      }
     }
   }
 
@@ -518,18 +526,24 @@ export function buildEnhancedPrompt(params: PromptEngineParams): string {
     const validTextBlocks = params.text_blocks.filter((b: any) => b && typeof b === "object" && String(b.content || b.text || "").trim());
     if (validTextBlocks.length > 0) {
       const rawTextPos = (params.posicao_do_texto || "").toLowerCase();
-      const hasLeftBlock = validTextBlocks.some((b: any) => /left|esq/i.test(b.position || ""));
-      const hasRightBlock = validTextBlocks.some((b: any) => /right|dir/i.test(b.position || ""));
-      const isLeft = rawTextPos.includes("left") || rawTextPos.includes("esq") || hasLeftBlock;
-      const isRight = rawTextPos.includes("right") || rawTextPos.includes("dir") || hasRightBlock;
+      const h1Block = validTextBlocks.find((b: any) => (b.type || "").toLowerCase() === "h1") || validTextBlocks[0];
+      const h1Pos = (h1Block?.position || rawTextPos).toLowerCase();
+      const isLeft = h1Pos.includes("left") || h1Pos.includes("esq");
+      const isRight = h1Pos.includes("right") || h1Pos.includes("dir");
       const alignmentMode = isLeft ? "left" : isRight ? "right" : "center";
 
-      const normalizePos = (raw: string) => {
-        const r = (raw || "").toLowerCase();
-        if (r.includes("left") || r.includes("esq")) return "left";
-        if (r.includes("right") || r.includes("dir")) return "right";
-        if (r.includes("center") || r.includes("cen")) return "center";
-        return alignmentMode;
+      const formatZone = (raw: string) => {
+        const r = (raw || "").toLowerCase().replace(/_/g, "-");
+        if (r.includes("bottom-left") || (r.includes("baixo") && r.includes("esq"))) return "BOTTOM-LEFT";
+        if (r.includes("bottom-right") || (r.includes("baixo") && r.includes("dir"))) return "BOTTOM-RIGHT";
+        if (r.includes("bottom") || r.includes("baixo") || r.includes("↓") || r.includes("footer") || r.includes("rodapé")) return "BOTTOM-CENTER";
+        if (r.includes("top-left") || (r.includes("cima") && r.includes("esq"))) return "TOP-LEFT";
+        if (r.includes("top-right") || (r.includes("cima") && r.includes("dir"))) return "TOP-RIGHT";
+        if (r.includes("top") || r.includes("cima") || r.includes("↑") || r.includes("header") || r.includes("cabeçalho")) return "TOP-CENTER";
+        if (r.includes("middle-left") || (r.includes("meio") && r.includes("esq")) || r === "left" || r.includes("esquerda")) return "MIDDLE-LEFT";
+        if (r.includes("middle-right") || (r.includes("meio") && r.includes("dir")) || r === "right" || r.includes("direita")) return "MIDDLE-RIGHT";
+        if (r.includes("middle-center") || (r.includes("meio") && r.includes("cen")) || r === "center" || r.includes("centro")) return "MIDDLE-CENTER";
+        return "MIDDLE-CENTER";
       };
 
       const textHierarchy = validTextBlocks.map((b: any) => {
@@ -537,33 +551,34 @@ export function buildEnhancedPrompt(params: PromptEngineParams): string {
         const role = (b.type || "text").toUpperCase();
         const weight = b.weight || 3;
         const color = b.color || "white";
-        const pos = normalizePos(b.position || params.posicao_do_texto || "");
-        if (role === "H1") return `  - PRIMARY HEADLINE (H1) [Position: ${pos}, Color: ${color}, Weight: ${weight}/5]: "${content}"`;
-        if (role === "H2") return `  - SUBHEADLINE (H2) [Position: ${pos}, Color: ${color}, Weight: ${weight}/5]: "${content}"`;
-        if (role === "BULLETS") return `  - BULLET LIST ITEM [Position: ${pos}, Color: ${color}, Weight: ${weight}/5]: "• ${content}"`;
-        if (role === "CTA") return `  - CALL TO ACTION [Position: ${pos}, Color: ${color}, Weight: ${weight}/5]: "${content}"`;
-        return `  - BODY TEXT [Position: ${pos}, Color: ${color}, Weight: ${weight}/5]: "${content}"`;
+        const zone = formatZone(b.position || params.posicao_do_texto || "");
+        if (role === "H1") return `  - PRIMARY HEADLINE (H1) [Canvas Zone: ${zone}, Color: ${color}, Weight: ${weight}/5]: "${content}"`;
+        if (role === "H2") return `  - SUBHEADLINE (H2) [Canvas Zone: ${zone}, Color: ${color}, Weight: ${weight}/5]: "${content}"`;
+        if (role === "BULLETS") return `  - BULLET LIST ITEM [Canvas Zone: ${zone}, Color: ${color}, Weight: ${weight}/5]: "• ${content}"`;
+        if (role === "CTA") return `  - CALL TO ACTION [Canvas Zone: ${zone}, Color: ${color}, Weight: ${weight}/5]: "${content}"`;
+        return `  - BODY TEXT [Canvas Zone: ${zone}, Color: ${color}, Weight: ${weight}/5]: "${content}"`;
       }).join("\n");
 
       let alignmentCommand = "";
       if (alignmentMode === "left") {
-        alignmentCommand = `MANDATORY TEXT ALIGNMENT & TWO-COLUMN CANVAS DIVISION (HIGHEST COMPOSITION PRIORITY):
-- ALIGNMENT: STRICTLY LEFT-ALIGNED (FLUSH LEFT).
-- TWO-COLUMN SPATIAL DIVISION (NON-NEGOTIABLE):
-  * LEFT 45% OF CANVAS: Reserved EXCLUSIVELY for all typography (Headlines, Subheadlines, Bullets, CTA button). Every line must start flush from the left margin (8% safe margin).
-  * RIGHT 55% OF CANVAS: Reserved for the human subject / model (e.g. nurse/doctor/person).
-- ABSOLUTE PROHIBITION:
-  * NEVER place the headline or text in the horizontal center! NEVER right-align!
-  * The subject is STRICTLY FORBIDDEN from being placed on the left side of the frame, because the subject would displace the left-aligned typography.
-  * DO NOT push bullet points or CTA to the right or center. The entire text column must remain anchored flush-left.`;
+        const rightZoneDesc = userRequestedNoPerson || !params.hasSubjectPhotos
+          ? `* CENTRAL & RIGHT CANVAS: Reserved for the background environment and the three (3) horizontal white photo placeholder boxes. ZERO human models!`
+          : `* RIGHT 55% OF CANVAS: Reserved for the human subject / model.`;
+        alignmentCommand = `MANDATORY TEXT ALIGNMENT & CANVAS DIVISION:
+- HEADLINE POSITION: Left-aligned on the left 45% of the canvas.
+- TWO-COLUMN SPATIAL DIVISION:
+  * LEFT 45% OF CANVAS: Primary text column for left-aligned headline and bullet points. Every line must start flush from the left margin (8% safe margin).
+  ${rightZoneDesc}
+- Footer contact info (WhatsApp phone and @ social handle) is exempt from the left column and MUST be anchored at the BOTTOM CENTER.`;
       } else if (alignmentMode === "right") {
-        alignmentCommand = `MANDATORY TEXT ALIGNMENT & TWO-COLUMN CANVAS DIVISION (HIGHEST COMPOSITION PRIORITY):
-- ALIGNMENT: STRICTLY RIGHT-ALIGNED (FLUSH RIGHT).
-- CANVAS POSITION: All headlines, subheadlines, bullet points, and CTAs MUST be anchored firmly on the RIGHT SIDE (occupying the right 40%-50% horizontal area) of the canvas!
-- PROHIBITION: NEVER center-align and NEVER left-align this text!
-- COMPOSITION: The main subject or graphic elements must balance on the opposite (left) side, leaving clean negative space on the right for this typography.`;
+        alignmentCommand = `MANDATORY TEXT ALIGNMENT & CANVAS DIVISION:
+- HEADLINE POSITION: Right-aligned on the right side of the canvas.
+- Footer contact info (WhatsApp phone and @ social handle) is exempt from the right column and MUST be anchored at the BOTTOM CENTER.`;
       } else {
-        alignmentCommand = `MANDATORY TEXT ALIGNMENT MANDATE: Horizontally centered along the vertical central axis with balanced symmetrical visual weight.`;
+        alignmentCommand = `MANDATORY TEXT ALIGNMENT MANDATE (MULTI-ZONE / BALANCED):
+- Each text layer MUST be rendered strictly at its designated Canvas Zone (e.g. TOP-CENTER, MIDDLE-CENTER, BOTTOM-CENTER).
+- If the primary headline is marked [Canvas Zone: TOP-CENTER], render it centered horizontally across the upper section of the canvas. DO NOT displace it to the left or right borders!
+- Bullet points marked [Canvas Zone: MIDDLE-CENTER] MUST be rendered neatly stacked in the center area.`;
       }
 
       parts.push(`\nTYPOGRAPHY & TEXT SPECIFICATION:
@@ -575,7 +590,21 @@ CRITICAL TEXT GOVERNING RULES:
 2. Render bullet items with clean bullet symbols (•) and crisp legible font.
 3. The Call-to-Action and social handle/phone must be rendered with high visual contrast.
 4. UNPROMPTED CONTAINERS: DO NOT place text inside an unprompted white card, box, or container in the middle of the screen UNLESS the user explicitly requested white squares, cards, or boxes in additional instructions. Any visual elements explicitly requested by the user take highest priority!
-5. ABSOLUTE BAN ON EMPTY PLACEHOLDER BOXES FROM TEMPLATES: DO NOT paint empty white boxes, placeholder rectangles, or sub-photo collage grids from layout references! Render one continuous full-bleed scene.`);
+5. ABSOLUTE BAN ON EMPTY PLACEHOLDER BOXES FROM TEMPLATES: DO NOT paint empty white boxes, placeholder rectangles, or sub-photo collage grids from layout references! Render one continuous full-bleed scene (except for white boxes explicitly requested by user).`);
+
+      const hasBottomSocialOrPhone = validTextBlocks.some((b: any) => {
+        const p = formatZone(b.position || "").toLowerCase();
+        const c = b.content || b.text || "";
+        return p.includes("bottom") || (/(\(\d{2}\)|\d{4,5})/.test(c) && !p.includes("top")) || (c.includes("@") && !p.includes("top"));
+      }) || /em baixo|no rodap[ée]|em baixo meio/i.test(params.prompt_adicional || "");
+
+      if (hasBottomSocialOrPhone) {
+        parts.push(`\nFOOTER CONTACT & SOCIAL MEDIA BAR (MANDATORY BOTTOM CENTER):
+- The phone number and @ social media handle MUST be placed together at the BOTTOM CENTER of the canvas (in the footer zone with safe margin).
+- Precede the phone number with a clean WhatsApp green circular icon glyph.
+- Precede the social handle with Instagram and Facebook circular icon glyphs.
+- STRICT PROHIBITION: DO NOT place the social handle at the top! DO NOT place the phone number on the left margin under the bullet points! Both belong centered at the bottom.`);
+      }
 
       if (String(params.degrade).toLowerCase() === "true") {
         parts.push(`Gradient behind text for optimal readability.`);

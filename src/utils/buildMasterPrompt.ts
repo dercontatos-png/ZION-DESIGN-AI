@@ -52,18 +52,50 @@ export const buildMasterPrompt = (config: ProjectConfig): string => {
   const resolution = config.resolucao || "4K";
   const hasLogo = config.useLogo || !!config.logoBase64 || (Array.isArray(config.logosList) && config.logosList.length > 0);
   const isLogoOverlay = config.logoInclusionType === "overlay" && hasLogo;
-  const hasSubject = !isLogo && !config.desativarSujeito && !config.noPeople;
+
+  // Determinação se há sujeito humano real ou se o usuário pediu para NÃO colocar pessoas / apenas caixas
+  const hasSubjectPhotos = !!(config.sujeitoBase64 || (config.sujeitosBase64List && config.sujeitosBase64List.length > 0));
+  const allSubjectAndPromptText = `${config.poseDescription || ""} ${config.subject_description || ""} ${config.additionalPrompt || ""}`.toLowerCase();
+  const userExplicitlyRequestedNoPerson = /sem (pessoa|modelo|mulher|homem|sujeito)|deixe.*quadrado|quadrados? branco|colocar foto depois|apenas (o )?layout|sem foto/i.test(allSubjectAndPromptText);
+  const isPersonCategory = config.categoria === "Pessoa";
+  const hasSubject = !isLogo && !config.desativarSujeito && !config.noPeople && !userExplicitlyRequestedNoPerson && (hasSubjectPhotos || (isPersonCategory && !userExplicitlyRequestedNoPerson));
 
   // Extração dinâmica de camadas de texto
   const rawLayers = (config.camadasTexto || [])
     .map(l => ({ ...l, conteudo: sanitizeText(l.conteudo) }))
     .filter(l => l.conteudo && l.conteudo.trim() && !/^(centro|esquerda|direita)$/i.test(l.conteudo.trim()));
 
-  // Extração dinâmica de @handle social
-  const providedHandleLayer = rawLayers.find(l => l.conteudo && l.conteudo.includes("@"))?.conteudo;
+  // Função auxiliar para identificar se uma camada é de contato/redes sociais
+  const isContactLayer = (l: any) => {
+    const c = l.conteudo || "";
+    return c.includes("@") || /(\(\d{2}\)|\d{4,5}[-\s]?\d{4})/.test(c) || /whatsapp|instagram|facebook/i.test(l.funcao || "") || (l.tipoBloco === "CTA" && !/saiba mais|inscreva|clique|matricule/i.test(c));
+  };
+
+  // Posição de cada camada de contato
+  const isBottomPosition = (posStr: string) => {
+    const p = (posStr || "").toLowerCase();
+    return p.includes("bottom") || p.includes("baixo") || p.includes("↓") || p.includes("↙") || p.includes("↘");
+  };
+
+  const isTopPosition = (posStr: string) => {
+    const p = (posStr || "").toLowerCase();
+    return p.includes("top") || p.includes("cima") || p.includes("↖") || p.includes("↑") || p.includes("↗");
+  };
+
+  const userRequestedBottomSocial = /em baixo|no rodap[ée]|em baixo meio/i.test(config.additionalPrompt || "");
+
+  // Camadas de contato no rodapé (bottom)
+  const bottomContactLayers = rawLayers.filter(l => isContactLayer(l) && (isBottomPosition(l.posicao) || userRequestedBottomSocial || (!isTopPosition(l.posicao) && (l.tipoBloco === "CTA" || l.funcao?.includes("CTA")))));
+
+  // Camadas de contato no topo (top)
+  const topContactLayers = rawLayers.filter(l => isContactLayer(l) && isTopPosition(l.posicao) && !userRequestedBottomSocial);
+
+  // Extração de @handle social e telefone
   const allTextFields = `${config.additionalPrompt || ""} ${config.promptCenario || ""}`;
-  const userHasProvidedHandle = !!providedHandleLayer || allTextFields.includes("@");
-  const cleanHandle = (providedHandleLayer || (allTextFields.match(/@[a-zA-Z0-9._-]+/)?.[0]) || "").toLowerCase();
+  const handleLayer = rawLayers.find(l => l.conteudo && l.conteudo.includes("@"));
+  const cleanHandle = (handleLayer?.conteudo || (allTextFields.match(/@[a-zA-Z0-9._-]+/)?.[0]) || "").toLowerCase();
+  const phoneLayer = rawLayers.find(l => l.conteudo && /(\(\d{2}\)|\d{4,5}[-\s]?\d{4})/.test(l.conteudo));
+  const cleanPhone = phoneLayer?.conteudo || (allTextFields.match(/(\(\d{2}\)\s*\d{4,5}[-\s]?\d{4})/)?.[0]) || "";
 
   // Cores dinâmicas do projeto
   const ambientBg = config.cores?.ambiente || (isLogo ? "#0A0A0A" : "#0d1e49");
@@ -71,26 +103,40 @@ export const buildMasterPrompt = (config: ProjectConfig): string => {
   const secondaryAccent = config.cores?.complementar || "#ffffff";
   const isDarkCanvas = /^#[0-3]|^#0[0-9a-fA-F]{5}/.test(ambientBg);
 
-  // Categorização dinâmica de títulos e corpo
-  const headlineLayers = rawLayers.filter(l => !l.conteudo.includes("@") && (l.funcao?.includes("Headline") || l.funcao?.includes("Título") || rawLayers.indexOf(l) === 0));
-  const bodyLayers = rawLayers.filter(l => !l.conteudo.includes("@") && (!l.funcao?.includes("Headline") && !l.funcao?.includes("Título") && rawLayers.indexOf(l) > 0));
+  // Categorização dinâmica de títulos e corpo (excluindo contatos para não forçar contato no topo ou no canto)
+  const nonContactLayers = rawLayers.filter(l => !isContactLayer(l));
+  const headlineLayers = nonContactLayers.filter(l => l.funcao?.includes("Headline") || l.funcao?.includes("Título") || l.tipoBloco === "H1" || nonContactLayers.indexOf(l) === 0);
+  const bodyLayers = nonContactLayers.filter(l => !headlineLayers.includes(l));
 
   // Fonte primária configurada no projeto
   const mainFont = headlineLayers[0]?.fonte || rawLayers[0]?.fonte || "Montserrat";
   const isSansSerif = !/serif|cinzel|playfair|bodoni|garamond/i.test(mainFont);
 
-  // Determinação antecipada do modo de alinhamento para balanceamento espacial estrito
-  const rawTypoPos = (config.typographyPosition || "").toLowerCase();
-  const anyBlockLeft = (config.camadasTexto || []).some((c: any) => /left|esq/i.test(c.posicao || ""));
-  const anyBlockRight = (config.camadasTexto || []).some((c: any) => /right|dir/i.test(c.posicao || ""));
+  // Determinação do modo de alinhamento principal baseado na headline
+  const primaryHeadlinePos = (headlineLayers[0]?.posicao || config.typographyPosition || "").toLowerCase();
   let alignmentMode: "left" | "right" | "center" = "center";
-  if (rawTypoPos.includes("esq") || rawTypoPos.includes("left") || anyBlockLeft) {
+  if (primaryHeadlinePos.includes("esq") || primaryHeadlinePos.includes("left")) {
     alignmentMode = "left";
-  } else if (rawTypoPos.includes("dir") || rawTypoPos.includes("right") || anyBlockRight) {
+  } else if (primaryHeadlinePos.includes("dir") || primaryHeadlinePos.includes("right")) {
     alignmentMode = "right";
   }
 
-  const userRequestedBoxesOrCards = /quadrad|box|card|caixa|ret[âa]ngul|painel|container/i.test(config.additionalPrompt || "");
+  // Função auxiliar para mapear a posição exata da camada (9 posições)
+  const getPositionDescription = (pos?: string): string => {
+    const p = (pos || "").toLowerCase();
+    if (p.includes("top-left") || p === "↖") return "TOP-LEFT (upper section, flush left with 8% margin)";
+    if (p.includes("top-center") || p === "↑") return "TOP-CENTER (upper section, horizontally centered)";
+    if (p.includes("top-right") || p === "↗") return "TOP-RIGHT (upper section, flush right with 8% margin)";
+    if (p.includes("middle-left") || p === "←" || p === "left" || p === "esquerda") return "MIDDLE-LEFT (middle section, left-aligned)";
+    if (p.includes("middle-center") || p === "●" || p === "center" || p === "centro") return "MIDDLE-CENTER (middle section, horizontally centered)";
+    if (p.includes("middle-right") || p === "→" || p === "right" || p === "direita") return "MIDDLE-RIGHT (middle section, right-aligned)";
+    if (p.includes("bottom-left") || p === "↙") return "BOTTOM-LEFT (lower section, left-aligned)";
+    if (p.includes("bottom-center") || p === "↓" || p === "bottom") return "BOTTOM-CENTER (lower section, horizontally centered)";
+    if (p.includes("bottom-right") || p === "↘") return "BOTTOM-RIGHT (lower section, right-aligned)";
+    return "HORIZONTALLY CENTERED";
+  };
+
+  const userRequestedBoxesOrCards = /quadrad|box|card|caixa|ret[âa]ngul|painel|container/i.test(config.additionalPrompt || "") || userExplicitlyRequestedNoPerson;
 
   const blocks: string[] = [];
 
@@ -203,22 +249,40 @@ Normal, symmetric, anatomically correct human proportions. Zero AI hallucination
 
   // ── BLOCO 6: HERO EFFECTS & MATERIAL PHYSICS ──
   if (!isLogo) {
-    blocks.push(`HERO EFFECT — MATERIAL PHYSICS AND TACTILE TEXTURE:
+    if (hasSubject) {
+      blocks.push(`HERO EFFECT — MATERIAL PHYSICS AND TACTILE TEXTURE:
 - Skin: Rendered as real camera captures living human skin. 3-layer Subsurface Scattering (epidermis, dermis, subcutaneous fat) allows light to penetrate and scatter naturally in lit areas (forehead, cheekbones, nose). Pores and fine surface micro-displacement resolved at plane of sharpness. Vellus hairs catch raking light as fine bright filaments. Zero plastic smoothing, zero beauty filters.
 - Fabrics: Authentic tactile materials. Matte cotton twills, crisp pressed shirt collars, textured knitwear with individual thread definition. Fabrics absorb and scatter light naturally without fake plastic sheen.
 - Lighting Interaction: Specular highlights remain small and controlled. Shadows stay open with readable detail in folds rather than collapsing into flat black voids.`);
+    } else {
+      blocks.push(`HERO EFFECT — MATERIAL PHYSICS AND TACTILE TEXTURE:
+- Surfaces & Materials: Tack-sharp architectural finishes, rich volumetric atmosphere, clean reflections on medical/technological equipment and glass.
+- Typography & Vectors: Crisp, flawless anti-aliased vector edges on all lettering, logo marks, and iconography.
+- Lighting Interaction: Balanced cinematic studio lighting with subtle ambient bounce and clean shadow falloff.`);
+    }
   }
 
-  // ── BLOCO 7: POSE & EXPRESSION ──
-  if (!isLogo && hasSubject) {
-    const pose = config.poseDescription || "Professional, engaging, composed posture naturally integrated into the composition.";
-    const subjectSpatialPlacement = alignmentMode === "left"
-      ? "strictly on the RIGHT SIDE of the frame (occupying the right 55% of canvas width, facing slightly inward, leaving the left 45% of the canvas completely free for the left-aligned typography column)"
-      : alignmentMode === "right"
-      ? "strictly on the LEFT SIDE of the frame (occupying the left 55% of canvas width, facing slightly inward, leaving the right 45% of the canvas completely free for the right-aligned typography column)"
-      : `at ${config.positioning?.toLowerCase() || "center"} of the frame`;
-    blocks.push(`POSE & SPATIAL PLACEMENT — Standing or seated composedly ${subjectSpatialPlacement}. ${pose} Weight settled, shoulders relaxed and dropped. Torso naturally oriented with subtle organic angle.`);
-    blocks.push(`EXPRESSION — Genuine, confident, approachable expression. The brows sit level and untensed. The eyes are warm, open and steady, holding the lens with clear catchlights. The mouth features an authentic, unforced expression engaging the cheeks with subtle natural creasing at the eye corners. The face reads as human, charismatic, and authentic.`);
+  // ── BLOCO 7: POSE & EXPRESSION OU CAIXAS DE FOTO VAZIAS ──
+  if (!isLogo) {
+    if (hasSubject) {
+      const pose = config.poseDescription || "Professional, engaging, composed posture naturally integrated into the composition.";
+      const subjectSpatialPlacement = alignmentMode === "left"
+        ? "strictly on the RIGHT SIDE of the frame (occupying the right 55% of canvas width, facing slightly inward, leaving the left 45% of the canvas completely free for the left-aligned typography column)"
+        : alignmentMode === "right"
+        ? "strictly on the LEFT SIDE of the frame (occupying the left 55% of canvas width, facing slightly inward, leaving the right 45% of the canvas completely free for the right-aligned typography column)"
+        : `at ${config.positioning?.toLowerCase() || "center"} of the frame`;
+      blocks.push(`POSE & SPATIAL PLACEMENT — Standing or seated composedly ${subjectSpatialPlacement}. ${pose} Weight settled, shoulders relaxed and dropped. Torso naturally oriented with subtle organic angle.`);
+      blocks.push(`EXPRESSION — Genuine, confident, approachable expression. The brows sit level and untensed. The eyes are warm, open and steady, holding the lens with clear catchlights. The mouth features an authentic, unforced expression engaging the cheeks with subtle natural creasing at the eye corners. The face reads as human, charismatic, and authentic.`);
+    } else if (userRequestedBoxesOrCards) {
+      blocks.push(`PHOTO PLACEHOLDER SLOTS (SOVEREIGN DIRECTIVE — IN PLACE OF HUMAN MODEL):
+- ABSOLUTE PROHIBITION OF HUMAN MODELS: ZERO people, ZERO women, ZERO nurses, ZERO doctors, ZERO human figures! The user explicitly did not attach a person photo and requested empty boxes for later insertion. Do NOT paint any human model into the artwork!
+- THREE (3) HORIZONTAL PHOTO SLOTS: Render exactly THREE (3) clean, large white rectangular placeholder boxes arranged horizontally side-by-side across the middle of the canvas ("um do lado do outro no meio grande").
+- Appearance: Pure solid white fill (#FFFFFF) with subtle elegant rounded corners and clean soft contact shadows separating them from the background.
+- Arrangement: Equidistant spacing between the 3 boxes, centered horizontally, reserved for manual post-generation photo placement.`);
+    } else {
+      blocks.push(`SCENE ENVIRONMENT (NO HUMAN MODEL):
+- Clean, refined commercial institutional atmosphere without human models. Full-bleed edge-to-edge depth, architectural lighting, and pristine commercial clarity.`);
+    }
   }
 
   // ── BLOCO 8: LIGHTING AND PHYSICS MAP ──
@@ -228,13 +292,14 @@ Normal, symmetric, anatomically correct human proportions. Zero AI hallucination
     blocks.push(`LIGHTING — Clean studio macro lighting highlighting the contours and finish of the logo emblem. Specular reflections and soft metallic sheen.${sobrietyNote}`);
   } else {
     blocks.push(`LIGHTING — Commercial studio lighting with a directional key light and soft ambient fill.
-Key light positioned to sculpt the subject's features with soft shadow transitions under the brow and nose.
-Subtle rim light separates the subject and foreground elements from the background.
+Key light positioned to sculpt the scene features with soft shadow transitions.
+Subtle rim light separates the foreground elements from the background.
 Shadows: Soft-edged contact shadows anchoring elements naturally. Deep crevices exhibit controlled black clipping for rich contrast without muddy tones.${sobrietyNote}`);
   }
 
-  // ── BLOCO 9: SOCIAL HEADER (SE INFORMADO) ──
-  if (!isLogo && userHasProvidedHandle && cleanHandle) {
+  // ── BLOCO 9: SOCIAL HEADER NO TOPO (SOMENTE SE CONFIGURADO PARA O TOPO) ──
+  const isSocialAtTop = topContactLayers.length > 0 && !userRequestedBottomSocial;
+  if (!isLogo && isSocialAtTop && cleanHandle) {
     blocks.push(`TOP SOCIAL MEDIA HEADER (CENTERED AT TOP):
 Horizontally centered at the upper section of the layout with at least 8% margin from the top edge:
 - Small, uniform, solid-color circular badges in accent color (${secondaryAccent}) placed side-by-side with clean white glyphs (Instagram camera and Facebook 'f' glyphs ONLY).
@@ -247,7 +312,8 @@ Horizontally centered at the upper section of the layout with at least 8% margin
     const headlineLines = headlineLayers.map((l, idx) => {
       const weightLabel = l.pesoVisual ? ` [Visual Weight: ${l.pesoVisual}/5]` : "";
       const colorDesc = l.cor ? `in ${l.cor}` : (isDarkCanvas ? "in pure solid white (#FFFFFF)" : "in dark contrasting color");
-      return `  - Headline Line ${idx + 1}: "${l.conteudo}" ${colorDesc}${weightLabel}`;
+      const posDesc = `[Canvas Zone: ${getPositionDescription(l.posicao)}]`;
+      return `  - Headline Line ${idx + 1}: "${l.conteudo}" ${colorDesc} ${posDesc}${weightLabel}`;
     }).join("\n");
 
     let fontStyleRule = isSansSerif 
@@ -256,25 +322,22 @@ Horizontally centered at the upper section of the layout with at least 8% margin
 
     let spatialDirectives = "";
     if (alignmentMode === "left") {
-      spatialDirectives = `STRICT SPATIAL ALIGNMENT & TWO-COLUMN CANVAS DIVISION (HIGHEST COMPOSITION LAW):
-- ALIGNMENT: STRICTLY LEFT-ALIGNED (FLUSH LEFT).
-- TWO-COLUMN SPATIAL DIVISION (NON-NEGOTIABLE):
-  * LEFT 45% OF CANVAS: Reserved EXCLUSIVELY for all typography (Headlines, Subheadlines, Bullets, CTA button). Every line must start flush from the left margin (8% safe margin).
-  * RIGHT 55% OF CANVAS: Reserved for the human subject / model (e.g. nurse/doctor/person).
-- ABSOLUTE PROHIBITIONS:
-  * NEVER place the headline in the horizontal center! NEVER right-align! DO NOT scatter headlines across the center or right!
-  * The human subject / model is STRICTLY FORBIDDEN from being placed on the left side of the frame, because the subject would displace the left-aligned typography.
-  * DO NOT push bullet points or CTA to the right or center. The entire text column must remain anchored flush-left.`;
+      const rightZoneDesc = hasSubject
+        ? `* RIGHT 55% OF CANVAS: Reserved for the human subject / model.`
+        : `* CENTRAL & RIGHT CANVAS: Reserved for the scene background and the three (3) horizontal white photo placeholder boxes. ZERO human models!`;
+      spatialDirectives = `STRICT SPATIAL ALIGNMENT (LEFT-ALIGNED HEADLINE):
+- HEADLINE POSITION: Anchored on the LEFT section (left 45% canvas width with 8% safe margin).
+${rightZoneDesc}
+- CRITICAL POSITIONING MANDATE: Each text layer MUST be rendered at its exact specified canvas zone (e.g. TOP-LEFT, MIDDLE-LEFT, or as explicitly indicated in each item tag).
+- Footer contact info (WhatsApp phone and @ social handle) is exempt from the left column and MUST be anchored at the BOTTOM CENTER.`;
     } else if (alignmentMode === "right") {
-      spatialDirectives = `STRICT SPATIAL ALIGNMENT & TWO-COLUMN CANVAS DIVISION (HIGHEST COMPOSITION LAW):
-- ALIGNMENT: STRICTLY RIGHT-ALIGNED (FLUSH RIGHT).
-- CANVAS POSITION: The entire typography headline stack MUST be anchored firmly on the RIGHT SIDE of the canvas, occupying the right 40% to 50% horizontal area.
-- PROHIBITION: NEVER place the headline in the center! NEVER left-align!
-- BALANCE & COMPOSITION: The main subject or graphic imagery must balance on the LEFT side to leave clean, open negative space on the RIGHT for this right-aligned typography stack.`;
+      spatialDirectives = `STRICT SPATIAL ALIGNMENT (RIGHT-ALIGNED HEADLINE):
+- HEADLINE POSITION: Anchored firmly on the RIGHT SIDE of the canvas (occupying right 40%-50% section).
+- Footer contact info (WhatsApp phone and @ social handle) is exempt from the right column and MUST be anchored at the BOTTOM CENTER.`;
     } else {
-      spatialDirectives = `STRICT SPATIAL ALIGNMENT:
-- ALIGNMENT: HORIZONTALLY CENTERED.
-- CANVAS POSITION: Centered along the vertical central axis of the canvas with balanced symmetrical visual weight.`;
+      spatialDirectives = `STRICT SPATIAL ALIGNMENT (CENTERED / MULTI-ZONE TYPOGRAPHY):
+- HEADLINE POSITION: Horizontally centered along the vertical central axis at its designated zone (e.g. TOP-CENTER).
+- CRITICAL POSITIONING MANDATE: Each text layer and bullet item MUST be rendered in its designated canvas zone (e.g. TOP-CENTER, MIDDLE-CENTER). DO NOT displace centered text to the left or right borders!`;
     }
 
     blocks.push(`HEADLINE AND DISPLAY TYPOGRAPHY:
@@ -290,11 +353,12 @@ ${fontStyleRule}`);
       const weightLabel = l.pesoVisual ? ` [Visual Weight: ${l.pesoVisual}/5]` : "";
       const isCta = (l.tipoBloco || "").toUpperCase() === "CTA" || (l.funcao || "").toLowerCase().includes("cta");
       const isBullet = (l.tipoBloco || "").toUpperCase() === "BULLETS" || (l.funcao || "").toLowerCase().includes("bullet");
-      const roleTag = isCta ? "Action Button / Contact" : isBullet ? "List Item" : "Content Text";
-      return `  - ${roleTag}: "${l.conteudo}"${weightLabel}`;
+      const roleTag = isCta ? "Action Badge" : isBullet ? "List Item" : "Content Text";
+      const posDesc = `[Canvas Zone: ${getPositionDescription(l.posicao)}]`;
+      return `  - ${roleTag}: "${l.conteudo}" ${posDesc}${weightLabel}`;
     }).join("\n");
 
-    const hasBullets = bodyLayers.some(l => /planejamento|diálogo|estudos|análise|mobilização|✓|•|-/i.test(l.conteudo));
+    const hasBullets = bodyLayers.some(l => /planejamento|diálogo|estudos|análise|mobilização|técnico|auxiliar|✓|•|-/i.test(l.conteudo));
     let bulletDetail = "";
     if (hasBullets) {
       bulletDetail = `\nBullet points must include individual distinct colorful bullet markers (•) or small clean geometric accents.`;
@@ -307,16 +371,39 @@ ${fontStyleRule}`);
     }
 
     const alignmentFollowRule = alignmentMode === "left"
-      ? `CRITICAL ALIGNMENT LAW: All body copy, bullet points, and call-to-action badges MUST be strictly LEFT-ALIGNED (flush-left) directly beneath the headline on the LEFT side of the canvas (left 45% margin), perfectly continuing the left-aligned vertical reading flow. DO NOT center or right-align body text!`
+      ? `CRITICAL ALIGNMENT LAW: Body copy and bullet points MUST follow their individual designated canvas zones (e.g. MIDDLE-LEFT or MIDDLE-CENTER) with natural vertical reading flow. (Note: Bottom contact info is anchored separately at the bottom center).`
       : alignmentMode === "right"
-      ? `CRITICAL ALIGNMENT LAW: All body copy, bullet points, and call-to-action badges MUST be strictly RIGHT-ALIGNED (flush-right) directly beneath the headline on the RIGHT side of the canvas (right 45% margin). DO NOT center or left-align body text!`
-      : `CRITICAL ALIGNMENT LAW: Horizontally centered directly beneath the headline stack with symmetrical breathing room.`;
+      ? `CRITICAL ALIGNMENT LAW: Body copy and bullet points MUST follow their individual designated canvas zones with clean spacing.`
+      : `CRITICAL ALIGNMENT LAW: Horizontally centered or positioned according to each item's designated canvas zone with symmetrical breathing room.`;
 
     blocks.push(`BODY CONTENT & SECONDARY TYPOGRAPHY (SEAMLESS INTEGRATION):
 Positioning: Integrated seamlessly directly into the open negative space of the artwork.
 ${alignmentFollowRule}
-CRITICAL MANDATE: All text, bullet items, and contact badges MUST float directly over the scene background with natural contrast and subtle ambient depth.
+CRITICAL MANDATE: All text and bullet items MUST float directly over the scene background with natural contrast and subtle ambient depth.
 ${textItems || "Clean structured content"}${bulletDetail}${floatingAccentDesc}`);
+  }
+
+  // ── BLOCO 11.5: BARRA DE CONTATO & REDES SOCIAIS NO RODAPÉ (MANDATORY BOTTOM CENTER) ──
+  const hasBottomContact = bottomContactLayers.length > 0 || userRequestedBottomSocial || (!isSocialAtTop && (cleanHandle || cleanPhone));
+  if (!isLogo && hasBottomContact && (cleanPhone || cleanHandle)) {
+    const contactColor = isDarkCanvas ? "pure solid white (#FFFFFF)" : primaryAccent;
+    const phoneDirective = cleanPhone
+      ? `- Phone / WhatsApp: Preceded by a clean, sharp WhatsApp green/white circular icon glyph, followed immediately by "${cleanPhone}" in bold high-contrast typography (${contactColor}).`
+      : "";
+    const handleDirective = cleanHandle
+      ? `- Social Media Handle: Preceded by small, clean Instagram camera and Facebook 'f' circular glyphs placed side-by-side, followed immediately by "${cleanHandle}" in clean modern typography (${contactColor}).`
+      : "";
+
+    blocks.push(`FOOTER CONTACT & SOCIAL MEDIA BAR (MANDATORY PLACEMENT: BOTTOM CENTER):
+Horizontally centered in the lower 8% to 12% margin from the bottom edge of the canvas:
+${phoneDirective}
+${handleDirective}
+- HORIZONTAL PLACEMENT: Positioned together horizontally centered at the bottom (or neatly stacked centered at bottom) with ample breathing room.
+- STRICT PROHIBITION:
+  * DO NOT place the phone number on the left margin under the bullet points!
+  * DO NOT place the social media handle at the top!
+  * Both MUST be anchored at the BOTTOM CENTER as explicitly configured!
+- STRICT BAN: ZERO TikTok icons, zero unrequested social glyphs.`);
   }
 
   // ── BLOCO 12: LEI SUPREMA DE COMPOSIÇÃO FULL-BLEED & BANIMENTO DE CARDS ──
@@ -367,6 +454,7 @@ DIGITAL OVERLAY MODE: Leave the designated logo area clean with ample negative s
   const antiLogoBox = isDarkCanvas ? "white circular badge behind logo, white container box behind logo, dark unreadable logo text on dark background, " : "";
   const antiMetadataLabels = "H1, H2, CTA, Bullets, Headline, Subheadline, [H1], [CTA], [BULLETS], [H2], bracketed tags, metadata labels, technical tags painted as text, ";
   const antiCardBox = userRequestedBoxesOrCards ? "" : "floating rectangular card in center, white card container, rounded rectangle box around text, popup dialog box, central card panel, ";
+  const antiHumanSubject = !hasSubject ? "human model, woman, nurse, doctor, person, man, human portrait, female model, photograph of person, " : "";
 
   blocks.push(`STRICT GOVERNING RULES:
 1. LANGUAGE: 100% Brazilian Portuguese (pt-BR). Never translate words to English.
@@ -375,11 +463,12 @@ DIGITAL OVERLAY MODE: Leave the designated logo area clean with ample negative s
 4. ANTI-HALLUCINATION: Zero duplicate words, zero system alignment keywords rendered as text, zero unrequested TikTok icons.
 5. NO UNPROMPTED RECTANGULAR CARDS: Typography and elements MUST float directly on the canvas without unprompted card boxes in the center (unless explicitly requested by user).
 6. SAFE MARGINS & BORDER PADDING: Maintain at least 8% to 12% safe padding from all 4 borders. ABSOLUTE BAN on gluing or slicing text, logos, or contact badges against canvas edges!
-7. TEXT ALIGNMENT ENFORCEMENT: If left alignment ('Esquerda') is selected, ALL text elements (headline, bullet items, CTA) MUST be anchored flush-left on the left 45% of the canvas. The subject MUST balance on the right 55%. Centering left-aligned text or moving it to the right is STRICTLY FORBIDDEN.`);
+7. TEXT ALIGNMENT & CONTACT BAR: If left alignment ('Esquerda') is selected, the headlines and bullet items MUST be anchored flush-left on the left side of the canvas. Contact elements (WhatsApp phone and @ social handle) marked for bottom MUST be anchored at the BOTTOM CENTER with their respective WhatsApp, Instagram, and Facebook icons.
+8. SUBJECT CONTROL: ${hasSubject ? "Preserve subject photographic fidelity." : "ZERO human models, ZERO women, ZERO nurses! Do NOT generate any people. Render the requested three (3) white photo placeholder boxes side-by-side in the middle."}`);
 
   const negPrompt = config.negativePrompt?.trim()
     ? config.negativePrompt
-    : `${antiCardBox}${antiMetadataLabels}${antiFontHallucination}${antiLogoBox}distorted logo, black text on dark background, unreadable text, TikTok icon, blurry text, displaced elements, extra limbs, extra fingers, three arms, floating hands, low resolution.`;
+    : `${antiHumanSubject}${antiCardBox}${antiMetadataLabels}${antiFontHallucination}${antiLogoBox}distorted logo, black text on dark background, unreadable text, TikTok icon, blurry text, displaced elements, extra limbs, extra fingers, three arms, floating hands, low resolution.`;
 
   blocks.push(`NEGATIVE PROMPT:\n${negPrompt}`);
 

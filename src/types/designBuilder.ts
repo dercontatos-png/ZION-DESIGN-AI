@@ -124,6 +124,9 @@ export interface ProjectConfig {
   espacoTexto?: string;
   corAuto?: boolean;
   corPrincipal?: string;
+  categoria?: string;
+  subject_description?: string;
+  prompt_adicional?: string;
 }
 
 export interface ImageResponse {

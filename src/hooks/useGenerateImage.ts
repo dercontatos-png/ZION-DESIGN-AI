@@ -263,13 +263,12 @@ export const useGenerateImage = (
           else if (tb === "bullets" || fn.includes("bullet")) type = "bullets";
           else type = "text";
 
-          let pos = c.posicao;
-          if (isLeft) pos = "left";
-          else if (isRight) pos = "right";
-          else if (!pos) pos = defaultBlockPos;
-          else if (/left|esq/i.test(pos)) pos = "left";
-          else if (/right|dir/i.test(pos)) pos = "right";
-          else if (/cen/i.test(pos)) pos = "center";
+          let rawPos = (c.posicao || (c as any).position || "").trim();
+          let pos = "middle-center";
+          if (rawPos === "Esquerda" || rawPos === "left") pos = "middle-left";
+          else if (rawPos === "Direita" || rawPos === "right") pos = "middle-right";
+          else if (rawPos === "Centro" || rawPos === "center") pos = "middle-center";
+          else if (rawPos) pos = rawPos;
 
           return {
             type,
