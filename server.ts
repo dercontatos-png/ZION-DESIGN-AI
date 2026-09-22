@@ -2129,7 +2129,10 @@ async function startServer() {
                 const f = files.brand_identity_images[i];
                 const origMime = f.mimetype || "image/png";
                 const norm = await normalizeImageForAi(f.buffer, origMime);
-                parts.push({ text: `BRAND LOGO REFERENCE #${i + 1} — Client official brand mark/emblem: Replicate this exact logo geometry, letterforms, and authentic colors natively onto the artwork canvas. MANDATORY PLACEMENT: Position this logo/emblem with generous breathing room and negative space (e.g. centered in the middle section under the headline or in the lower-center comfortably above the footer). STRICTLY PROHIBITED: NEVER place the logo flush against or touching the canvas borders or bottom edge! Maintain at least 10% margin from all borders.` });
+                parts.push({ text: `BRAND LOGO & EMBLEM REFERENCE #${i + 1} — Client official brand mark / coat of arms / insignia:
+- EXACT REPLICATION: Replicate the EXACT graphic mark geometry, shield/escudo contours, laurel wreath, book, symbols, and authentic colors from this reference image. Do NOT alter, distort, or simplify the emblem, and DO NOT hallucinate or invent new text around it.
+- PROFESSIONAL INSTITUTIONAL PLACEMENT: Position the logo mark in a professional institutional header position (e.g. top-left or top-center with clean margin) OR in the footer endorsement bar. NEVER position the logo floating in the middle of the body text or awkwardly centered between the headline and content!
+- TRANSPARENCY & INTEGRATION: Render the logo cleanly floating directly over the canvas environment with sharp, crisp contrast and subtle depth, without any artificial white card, pill box, or sticker background behind it. Maintain at least 8% safe margin from canvas borders.` });
                 parts.push({ inlineData: { data: norm.buffer.toString("base64"), mimeType: norm.mime } });
               }
             }
@@ -2162,7 +2165,10 @@ async function startServer() {
                 const f = files.design_reference[i];
                 const origMime = f.mimetype || "image/jpeg";
                 const norm = await normalizeImageForAi(f.buffer, origMime);
-                parts.push({ text: `PRIMARY DESIGN LAYOUT REFERENCE #${i + 1} — Replicate the visual layout, dynamic lighting, and typographic hierarchy from this reference, replacing placeholder texts with the requested text. STRICT RULE: DO NOT draw artificial floating cards or rectangular boxes around text. Keep typography floating cleanly over the scene with high contrast and natural depth:` });
+                parts.push({ text: `PRIMARY DESIGN LAYOUT REFERENCE #${i + 1} — Replicate the visual layout mood, professional hierarchy, and dynamic lighting from this reference, replacing placeholder texts with the requested custom text layers.
+CRITICAL RULES:
+1. FULL-BLEED SEAMLESS SCENE: Render ONE unified continuous full-bleed scene. DO NOT replicate sub-photo collage panels, grid tiles, or empty white/blank boxes! NEVER draw empty white rectangles or placeholder squares!
+2. NO FLOATING CARDS: DO NOT draw artificial floating cards, dialog boxes, or rectangular containers around text. Keep typography floating cleanly over the scene with natural contrast and subtle ambient depth:` });
                 parts.push({ inlineData: { data: norm.buffer.toString("base64"), mimeType: norm.mime } });
               }
             }
@@ -5574,7 +5580,7 @@ Here are the user's selected configurations:
   - Look Direction: ${imgConfig?.lookCamera ? "Looking directly at the camera" : "Looking away from camera"}
   - Identity Weight/Influence: ${imgConfig?.identityWeight || 0.8}
   - Framing: ${imgConfig?.framing || "Plano Médio"}
-  - Positioning: ${imgConfig?.positioning || "Centro"}
+  - Positioning: ${(/esq|left/i.test(imgConfig?.positioning || "") ? "Left (Subject anchored on Left side of frame)" : /dir|right/i.test(imgConfig?.positioning || "") ? "Right (Subject anchored on Right side of frame)" : "Center (Subject centered with balance)")}
   - Clothing & Pose: ${imgConfig?.clothingPose || "Not specified"}
   - Allowed people: ${imgConfig?.noPeople ? "STRICTLY NO humans/faces/bodies" : "Humans allowed"}
 - Theme/Niche: ${imgConfig?.niche || "Not specified"}
@@ -5604,7 +5610,7 @@ Here are the user's selected configurations:
   - Small Caption/Legenda: "${userSmall}"
   - Typography Effect: ${imgConfig?.textEffect || "Nenhum"}
   - Preferred Font Style: ${imgConfig?.fontFamily || "Inter"}
-  - Text Position: ${imgConfig?.textPosition || "Centro"}
+  - Text Position: ${(/esq|left/i.test(imgConfig?.textPosition || "") ? "Strictly LEFT-ALIGNED (Flush Left on Left 45% of Canvas, subject on Right)" : /dir|right/i.test(imgConfig?.textPosition || "") ? "Strictly RIGHT-ALIGNED (Flush Right on Right 45% of Canvas, subject on Left)" : "CENTER-ALIGNED (Horizontally Centered)")}
   - Gradient Text Background: ${imgConfig?.gradient ? "Yes, styled backdrop" : "No"}
 - Logo Layout (Include watermark if logo image is provided):
   - Position: ${imgConfig?.logoPosition || "Bottom Right"}
@@ -5928,7 +5934,8 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
           promptBuilder += `Framing: ${imgConfig.framing}. `;
         }
         if (imgConfig?.positioning && imgConfig.positioning !== "Livre") {
-          promptBuilder += `Positioning: Subject placed in the ${imgConfig.positioning} of the image. `;
+          const posEnglish = /esq|left/i.test(imgConfig.positioning) ? "LEFT side" : /dir|right/i.test(imgConfig.positioning) ? "RIGHT side" : "CENTER";
+          promptBuilder += `Positioning: Subject placed strictly on the ${posEnglish} of the image. `;
         }
       } else {
         promptBuilder += "No people in the image. Focus purely on the environment, product or typography. ";
@@ -6019,8 +6026,13 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
       // 6. TYPOGRAPHY & TEXT (Crucial for Flyer BR)
       if (imgConfig?.enableText) {
         promptBuilder += `\n\nTYPOGRAPHY & TEXT LAYOUT: Integrate bold, highly readable, premium typography directly into the design (Flyer BR style). `;
-        if (imgConfig.textPosition && imgConfig.textPosition !== "Centro") {
-          promptBuilder += `Place the main text blocks aligned to the ${imgConfig.textPosition}. `;
+        if (imgConfig.textPosition) {
+          const tpEnglish = /esq|left/i.test(imgConfig.textPosition)
+            ? "MANDATORY ALIGNMENT: All text blocks MUST be strictly LEFT-ALIGNED (flush-left) on the LEFT SIDE of the canvas, never centered! "
+            : /dir|right/i.test(imgConfig.textPosition)
+            ? "MANDATORY ALIGNMENT: All text blocks MUST be strictly RIGHT-ALIGNED (flush-right) on the RIGHT SIDE of the canvas, never centered! "
+            : "All text blocks must be horizontally CENTERED. ";
+          promptBuilder += tpEnglish;
         }
         promptBuilder += `Font family style: ${imgConfig?.fontFamily || "Modern Sans-Serif"}. `;
         

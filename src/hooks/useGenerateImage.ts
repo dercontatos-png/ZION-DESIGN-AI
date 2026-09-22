@@ -236,6 +236,14 @@ export const useGenerateImage = (
       }
 
       // Campo 11: text_blocks (JSON array com { type, weight, content } exato do HAR)
+      const rawTextPos = (store.typographyPosition || "").toLowerCase();
+      const hasLeftBlock = (store.camadasTexto || []).some((c: any) => /left|esq/i.test(c.posicao || ""));
+      const hasRightBlock = (store.camadasTexto || []).some((c: any) => /right|dir/i.test(c.posicao || ""));
+      const isLeft = rawTextPos.includes("esq") || rawTextPos.includes("left") || hasLeftBlock;
+      const isRight = rawTextPos.includes("dir") || rawTextPos.includes("right") || hasRightBlock;
+      const mappedTextPos = isLeft ? "align-left" : isRight ? "align-right" : "align-center";
+      const defaultBlockPos = isLeft ? "left" : isRight ? "right" : "center";
+
       const textBlocks = (store.camadasTexto || [])
         .filter((c: any) => c.conteudo && c.conteudo.trim())
         .map((c: any) => {
@@ -248,12 +256,18 @@ export const useGenerateImage = (
           else if (tb === "bullets" || fn.includes("bullet")) type = "bullets";
           else type = "text";
 
+          let pos = c.posicao;
+          if (!pos) pos = defaultBlockPos;
+          else if (/left|esq/i.test(pos)) pos = "left";
+          else if (/right|dir/i.test(pos)) pos = "right";
+          else if (/cen/i.test(pos)) pos = "center";
+
           return {
             type,
             weight: c.pesoVisual || (type === "h1" ? 5 : type === "h2" ? 3 : type === "cta" ? 4 : 2),
             content: c.conteudo.trim(),
             color: c.cor || "#FFFFFF",
-            position: c.posicao || "top-center"
+            position: pos
           };
         });
       formData.append("text_blocks", JSON.stringify(textBlocks));
@@ -262,8 +276,6 @@ export const useGenerateImage = (
       formData.append("degrade", String(store.degradeLeitura || false));
 
       // Campo 13: posicao_do_texto ("align-left" | "align-right" | "align-center")
-      const rawTextPos = (store.typographyPosition || "Centro").toLowerCase();
-      const mappedTextPos = rawTextPos.includes("esq") || rawTextPos.includes("left") ? "align-left" : rawTextPos.includes("dir") || rawTextPos.includes("right") ? "align-right" : "align-center";
       formData.append("posicao_do_texto", mappedTextPos);
 
       // Campo 14: color_palette (JSON)

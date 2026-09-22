@@ -357,7 +357,20 @@ export const HydraBuilder: React.FC<HydraBuilderProps> = ({
 
     try {
       const apiKey = localStorage.getItem("custom_gemini_api_key") || "";
-      const promptTxt = `PRODUCT PACKSHOT FIDELITY MANDATE — Image 1 is the physical product reference. Preserve 100% of the authentic product packaging, label typography, bottle/box geometry, brand logo, textures, and exact product dimensions from this image. Do not distort, redraw, or alter the product. Position and stage the real product in a world-class advertising studio setting: Estilos selecionados: ${
+      let spatialRule = "";
+      if (currentTab.textSpace === "left") {
+        spatialRule = "NEGATIVE SPACE & COMPOSITION MANDATE: Strictly leave the entire LEFT SIDE (left 45% of the frame) clean and clear as open negative space for headline copy. Stage the physical product anchored on the RIGHT SIDE.";
+      } else if (currentTab.textSpace === "right") {
+        spatialRule = "NEGATIVE SPACE & COMPOSITION MANDATE: Strictly leave the entire RIGHT SIDE (right 45% of the frame) clean and clear as open negative space for headline copy. Stage the physical product anchored on the LEFT SIDE.";
+      } else if (currentTab.subjectPosition === "left") {
+        spatialRule = "PRODUCT POSITIONING: Stage the physical product anchored firmly on the LEFT SIDE of the frame.";
+      } else if (currentTab.subjectPosition === "right") {
+        spatialRule = "PRODUCT POSITIONING: Stage the physical product anchored firmly on the RIGHT SIDE of the frame.";
+      } else if (currentTab.subjectPosition === "center") {
+        spatialRule = "PRODUCT POSITIONING: Stage the physical product prominently in the horizontal CENTER of the frame with symmetrical lighting.";
+      }
+
+      const promptTxt = `PRODUCT PACKSHOT FIDELITY MANDATE — Image 1 is the physical product reference. Preserve 100% of the authentic product packaging, label typography, bottle/box geometry, brand logo, textures, and exact product dimensions from this image. Do not distort, redraw, or alter the product. Position and stage the real product in a world-class advertising studio setting: ${spatialRule} Estilos selecionados: ${
         currentTab.selectedInspirations.map((i) => i.title).join(", ") || "Comercial de alta conversão"
       }. Posição: ${currentTab.subjectPosition}. Espaço texto: ${currentTab.textSpace}. Fundo desfocado: ${
         currentTab.blurBackground ? "Sim" : "Não"

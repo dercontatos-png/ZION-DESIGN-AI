@@ -102,9 +102,9 @@ export const buildMasterPrompt = (config: ProjectConfig): string => {
     }
   }
   if (hasLogo && !isLogoOverlay) {
-    imageBindingRules.push("- SWAP SLOT — THE BRANDING: Every logo and printed mark comes from the reference files supplied, reproduced as they appear there. Replicate the EXACT brand logo asset. Preserve 100% of the graphic mark geometry with the requested colors. NEVER invent lettering or logo artwork.");
+    imageBindingRules.push("- SWAP SLOT — THE BRANDING & LOGO FIDELITY: Every logo, coat of arms, insignia, and printed mark comes from the reference files supplied. Replicate the EXACT brand logo asset and graphic emblem (shield, laurel wreath, open book, graduation cap, pencil, insignia). Preserve 100% of the graphic mark geometry with the requested colors. NEVER invent lettering, hallucinated words, or unrequested logo artwork. Position the logo in the institutional header (top-left or top-center with safe margin) OR in the footer endorsement bar. NEVER place the logo in the middle under headlines.");
     if (isDarkCanvas) {
-      imageBindingRules.push("- LOGO CONTRAST & ADAPTATION LAW: On dark background canvas, render the brand logo in high-contrast vibrant colors or requested metallic/gold finish without background boxes or stickers.");
+      imageBindingRules.push("- LOGO CONTRAST & ADAPTATION LAW: On dark background canvas, render the brand logo in high-contrast vibrant colors or requested clean white/metallic finish without background boxes or stickers.");
     }
   }
   if (hasSubject && (config.sujeitoBase64 || (config.sujeitosBase64List && config.sujeitosBase64List.length > 0))) {
@@ -224,8 +224,17 @@ Horizontally centered at the upper section of the layout with at least 8% margin
   }
 
   // ── BLOCO 10: TIPOGRAFIA DE HEADLINE E TÍTULOS ──
+  const rawTypoPos = (config.typographyPosition || "").toLowerCase();
+  const anyBlockLeft = (config.camadasTexto || []).some((c: any) => /left|esq/i.test(c.posicao || ""));
+  const anyBlockRight = (config.camadasTexto || []).some((c: any) => /right|dir/i.test(c.posicao || ""));
+  let alignmentMode: "left" | "right" | "center" = "center";
+  if (rawTypoPos.includes("esq") || rawTypoPos.includes("left") || anyBlockLeft) {
+    alignmentMode = "left";
+  } else if (rawTypoPos.includes("dir") || rawTypoPos.includes("right") || anyBlockRight) {
+    alignmentMode = "right";
+  }
+
   if (!isLogo && headlineLayers.length > 0) {
-    const textAlignment = (config.typographyPosition || "Centro").toUpperCase();
     const headlineLines = headlineLayers.map((l, idx) => {
       const weightLabel = l.pesoVisual ? ` [Visual Weight: ${l.pesoVisual}/5]` : "";
       const colorDesc = l.cor ? `in ${l.cor}` : (isDarkCanvas ? "in pure solid white (#FFFFFF)" : "in dark contrasting color");
@@ -236,8 +245,28 @@ Horizontally centered at the upper section of the layout with at least 8% margin
       ? `Typography Rules: Render all headlines strictly in modern bold geometric sans-serif (${mainFont}). NO slab serifs, NO traditional serifs, NO slab brackets.`
       : `Typography Rules: Render headlines in refined serif (${mainFont}).`;
 
+    let spatialDirectives = "";
+    if (alignmentMode === "left") {
+      spatialDirectives = `STRICT SPATIAL ALIGNMENT (CRITICAL PRIORITY — ABSOLUTE COMPOSITION LAW):
+- ALIGNMENT: STRICTLY LEFT-ALIGNED (FLUSH LEFT).
+- CANVAS POSITION: The entire typography headline stack MUST be anchored firmly on the LEFT SIDE of the canvas, occupying the left 40% to 50% horizontal area.
+- PROHIBITION: NEVER place the headline in the horizontal center! NEVER right-align! DO NOT scatter headlines across the center or right!
+- BALANCE & COMPOSITION: The main subject or graphic imagery must balance on the RIGHT side or deep background to leave clean, open, high-contrast negative space on the LEFT specifically for this left-aligned typography stack.`;
+    } else if (alignmentMode === "right") {
+      spatialDirectives = `STRICT SPATIAL ALIGNMENT (CRITICAL PRIORITY — ABSOLUTE COMPOSITION LAW):
+- ALIGNMENT: STRICTLY RIGHT-ALIGNED (FLUSH RIGHT).
+- CANVAS POSITION: The entire typography headline stack MUST be anchored firmly on the RIGHT SIDE of the canvas, occupying the right 40% to 50% horizontal area.
+- PROHIBITION: NEVER place the headline in the center! NEVER left-align!
+- BALANCE & COMPOSITION: The main subject or graphic imagery must balance on the LEFT side to leave clean, open negative space on the RIGHT for this right-aligned typography stack.`;
+    } else {
+      spatialDirectives = `STRICT SPATIAL ALIGNMENT:
+- ALIGNMENT: HORIZONTALLY CENTERED.
+- CANVAS POSITION: Centered along the vertical central axis of the canvas with balanced symmetrical visual weight.`;
+    }
+
     blocks.push(`HEADLINE AND DISPLAY TYPOGRAPHY:
-Positioning: Aligned to the ${textAlignment} of the canvas, in a bold display typography stack:
+${spatialDirectives}
+Display Stack:
 ${headlineLines}
 ${fontStyleRule}`);
   }
@@ -264,8 +293,15 @@ ${fontStyleRule}`);
       floatingAccentDesc = `\nFloating 3D Elements:\n- Floating accents (${customElement}) rendered with realistic specular reflections, distinct contrasting colors from the palette, and subtle contact shadow.`;
     }
 
+    const alignmentFollowRule = alignmentMode === "left"
+      ? `CRITICAL ALIGNMENT LAW: All body copy, bullet points, and call-to-action badges MUST be strictly LEFT-ALIGNED (flush-left) directly beneath the headline on the LEFT side of the canvas (left 45% margin), perfectly continuing the left-aligned vertical reading flow. DO NOT center or right-align body text!`
+      : alignmentMode === "right"
+      ? `CRITICAL ALIGNMENT LAW: All body copy, bullet points, and call-to-action badges MUST be strictly RIGHT-ALIGNED (flush-right) directly beneath the headline on the RIGHT side of the canvas (right 45% margin). DO NOT center or left-align body text!`
+      : `CRITICAL ALIGNMENT LAW: Horizontally centered directly beneath the headline stack with symmetrical breathing room.`;
+
     blocks.push(`BODY CONTENT & SECONDARY TYPOGRAPHY (SEAMLESS INTEGRATION):
 Positioning: Integrated seamlessly directly into the open negative space of the artwork.
+${alignmentFollowRule}
 CRITICAL MANDATE: All text, bullet items, and contact badges MUST float directly over the scene background with natural contrast and subtle ambient depth.
 ${textItems || "Clean structured content"}${bulletDetail}${floatingAccentDesc}`);
   }
@@ -277,6 +313,7 @@ ${textItems || "Clean structured content"}${bulletDetail}${floatingAccentDesc}`)
   * NEVER draw a floating rounded rectangle card, white box, dialog popup container, or framed outline panel in the middle of the canvas!
   * NEVER enclose headlines, text blocks, bullet points, or logos inside a central card or container box!
   * Typography, logos, and icons MUST float seamlessly and cleanly directly over the scene/background with natural contrast and subtle depth, exactly like top-tier commercial advertising and modern high-end posters.
+- PROHIBITION OF COLLAGES & EMPTY BOXES: If the reference layout contains multiple photo panels or a grid of images, DO NOT draw multiple empty white boxes, empty rectangular frames, or blank squares! Render ONE unified, full-bleed, continuous photographic scene.
 - SAFE MARGINS: Maintain at least 8% to 12% safe padding from all 4 canvas borders. Elements must never touch or be clipped by the edges.`);
 
   // ── BLOCO 13: BRAND LOGO / EMBLEMA ──
@@ -289,12 +326,12 @@ ${textItems || "Clean structured content"}${bulletDetail}${floatingAccentDesc}`)
 - Target Color: Render the emblem in ${logoColorTarget} with a clean, luxurious, and sharp finish.`);
   } else if (hasLogo && !isLogoOverlay) {
     const logoTextColor = isDarkCanvas ? "pure solid white (#FFFFFF)" : "brand authentic color";
-    blocks.push(`BRAND LOGO INTEGRATION (NEGATIVE SPACE & SAFE MARGINS):
-Positioned cleanly with generous breathing room and safe margins (minimum 8% to 10% from all borders).
-- ABSOLUTE PROHIBITION against placing the logo touching or glued to the canvas borders or bottom edge!
-- Position: Position the brand logo/emblem with generous breathing room in the upper section or under the headline.
-- Graphic Symbol/Emblem: Replicate the EXACT graphic symbol/emblem from the attached logo reference image with 100% original vibrant colors and shapes.
-- Brand Typography/Text: Render the brand name and subtitle in ${logoTextColor} with crisp vector sharpness.`);
+    blocks.push(`BRAND LOGO & EMBLEM INTEGRATION (NEGATIVE SPACE & SAFE MARGINS):
+- INSTITUTIONAL PLACEMENT: Position the official brand logo/emblem in the top header (top-left or top-center with safe margin) OR in the footer endorsement bar. NEVER place the logo in the middle of the body text or floating awkwardly between headline lines!
+- ABSOLUTE PROHIBITION against placing the logo touching or glued to the canvas borders or bottom edge (minimum 8% to 10% safe margins).
+- EMBLEM & GRAPHIC MARK FIDELITY: Replicate the EXACT graphic mark geometry, shield/escudo contours, laurel wreath, book, graduation cap, and symbols from the attached logo reference image. Do NOT alter the shapes, do NOT distort the proportions, and DO NOT hallucinate or invent new text/words around it.
+- BRAND TYPOGRAPHY: Render the brand name and subtitle in ${logoTextColor} with crisp vector sharpness.
+- TRANSPARENCY: Render the logo cleanly floating directly over the canvas environment with sharp, crisp contrast and subtle depth, without any artificial white card, pill box, or sticker background behind it.`);
   } else if (isLogoOverlay) {
     blocks.push(`BRAND LOGO DIRECTIVE:
 DIGITAL OVERLAY MODE: Leave the designated logo area clean with ample negative space; the official high-resolution vector logo will be overlaid post-generation.`);

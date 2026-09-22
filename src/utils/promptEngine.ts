@@ -499,14 +499,29 @@ export function buildEnhancedPrompt(params: PromptEngineParams): string {
 
   // ── TYPOGRAPHY ──
   if (params.text_blocks && params.text_blocks.length > 0) {
-    const validTextBlocks = params.text_blocks.filter((b: any) => b && typeof b === "object" && String(b.content || "").trim());
+    const validTextBlocks = params.text_blocks.filter((b: any) => b && typeof b === "object" && String(b.content || b.text || "").trim());
     if (validTextBlocks.length > 0) {
+      const rawTextPos = (params.posicao_do_texto || "").toLowerCase();
+      const hasLeftBlock = validTextBlocks.some((b: any) => /left|esq/i.test(b.position || ""));
+      const hasRightBlock = validTextBlocks.some((b: any) => /right|dir/i.test(b.position || ""));
+      const isLeft = rawTextPos.includes("left") || rawTextPos.includes("esq") || hasLeftBlock;
+      const isRight = rawTextPos.includes("right") || rawTextPos.includes("dir") || hasRightBlock;
+      const alignmentMode = isLeft ? "left" : isRight ? "right" : "center";
+
+      const normalizePos = (raw: string) => {
+        const r = (raw || "").toLowerCase();
+        if (r.includes("left") || r.includes("esq")) return "left";
+        if (r.includes("right") || r.includes("dir")) return "right";
+        if (r.includes("center") || r.includes("cen")) return "center";
+        return alignmentMode;
+      };
+
       const textHierarchy = validTextBlocks.map((b: any) => {
         const content = b.content || b.text || "";
         const role = (b.type || "text").toUpperCase();
         const weight = b.weight || 3;
         const color = b.color || "white";
-        const pos = b.position || params.posicao_do_texto || "aligned to layout";
+        const pos = normalizePos(b.position || params.posicao_do_texto || "");
         if (role === "H1") return `  - PRIMARY HEADLINE (H1) [Position: ${pos}, Color: ${color}, Weight: ${weight}/5]: "${content}"`;
         if (role === "H2") return `  - SUBHEADLINE (H2) [Position: ${pos}, Color: ${color}, Weight: ${weight}/5]: "${content}"`;
         if (role === "BULLETS") return `  - BULLET LIST ITEM [Position: ${pos}, Color: ${color}, Weight: ${weight}/5]: "• ${content}"`;
@@ -514,14 +529,33 @@ export function buildEnhancedPrompt(params: PromptEngineParams): string {
         return `  - BODY TEXT [Position: ${pos}, Color: ${color}, Weight: ${weight}/5]: "${content}"`;
       }).join("\n");
 
+      let alignmentCommand = "";
+      if (alignmentMode === "left") {
+        alignmentCommand = `MANDATORY TEXT ALIGNMENT MANDATE (CRITICAL PRIORITY — STRICT COMPOSITION LAW):
+- ALIGNMENT: STRICTLY LEFT-ALIGNED (FLUSH LEFT).
+- CANVAS POSITION: All headlines, subheadlines, bullet points, and CTAs MUST be anchored firmly on the LEFT SIDE (occupying the left 40%-50% horizontal area) of the canvas!
+- PROHIBITION: NEVER center-align and NEVER right-align this text! DO NOT place text in the middle!
+- COMPOSITION: The main subject or graphic elements must balance on the opposite (right) side or background, leaving clean, uncluttered negative space on the left specifically for this left-aligned typography.`;
+      } else if (alignmentMode === "right") {
+        alignmentCommand = `MANDATORY TEXT ALIGNMENT MANDATE (CRITICAL PRIORITY — STRICT COMPOSITION LAW):
+- ALIGNMENT: STRICTLY RIGHT-ALIGNED (FLUSH RIGHT).
+- CANVAS POSITION: All headlines, subheadlines, bullet points, and CTAs MUST be anchored firmly on the RIGHT SIDE (occupying the right 40%-50% horizontal area) of the canvas!
+- PROHIBITION: NEVER center-align and NEVER left-align this text!
+- COMPOSITION: The main subject or graphic elements must balance on the opposite (left) side, leaving clean negative space on the right for this typography.`;
+      } else {
+        alignmentCommand = `MANDATORY TEXT ALIGNMENT MANDATE: Horizontally centered along the vertical central axis with balanced symmetrical visual weight.`;
+      }
+
       parts.push(`\nTYPOGRAPHY & TEXT SPECIFICATION:
-Layout & Positioning: Render each text line at its designated spatial position (${params.posicao_do_texto || "aligned"}):
+${alignmentCommand}
+Display Stack:
 ${textHierarchy}
 CRITICAL TEXT GOVERNING RULES:
 1. Render ONLY the exact text enclosed in quotation marks! ABSOLUTE BAN: NEVER paint technical metadata labels like 'H1', 'H2', 'CTA', 'Bullets' anywhere on the graphic!
 2. Render bullet items with clean bullet symbols (•) and crisp legible font.
 3. The Call-to-Action and social handle/phone must be rendered with high visual contrast.
-4. ABSOLUTE BAN ON ENCLOSING RECTANGLES / CARDS: DO NOT place this text inside a white card, box, container, or rounded rectangle in the middle of the screen! The text must be rendered seamlessly integrated directly into the image composition (over subtle vignette or clean negative space), never trapped inside a card!`);
+4. ABSOLUTE BAN ON ENCLOSING RECTANGLES / CARDS: DO NOT place this text inside a white card, box, container, or rounded rectangle in the middle of the screen! The text must be rendered seamlessly integrated directly into the image composition (over subtle vignette or clean negative space), never trapped inside a card!
+5. ABSOLUTE BAN ON EMPTY BOXES OR COLLAGE PANELS: DO NOT paint empty white boxes, placeholder rectangles, or sub-photo collage grids from layout references! Render one continuous full-bleed scene.`);
 
       if (String(params.degrade).toLowerCase() === "true") {
         parts.push(`Gradient behind text for optimal readability.`);

@@ -575,6 +575,15 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
         complementar: activeDestaque ? corDestaque : "",
         paleta: [activeAmbiente && corAmbiente, activeLuz && luzComplementar, activeDestaque && corDestaque].filter(Boolean) as string[]
       },
+      typographyPosition: (() => {
+        const headlineOrFirst = textBlocks.find(b => b.type === "H1") || textBlocks[0];
+        const primaryPos = headlineOrFirst?.position || "";
+        if (primaryPos.includes("left")) return "Esquerda";
+        if (primaryPos.includes("right")) return "Direita";
+        if (textBlocks.some(b => b.position?.includes("left"))) return "Esquerda";
+        if (textBlocks.some(b => b.position?.includes("right"))) return "Direita";
+        return "Centro";
+      })(),
       camadasTexto: textBlocks.map((b) => ({
         id: b.id,
         conteudo: b.text,

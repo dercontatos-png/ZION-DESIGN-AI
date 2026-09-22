@@ -135,6 +135,7 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
     sub: string;
     text: string;
     weight: number;
+    posicao?: "Esquerda" | "Centro" | "Direita";
   }>>(() => {
     if (store.camadasTexto && store.camadasTexto.length > 0) {
       return store.camadasTexto.map((c) => ({
@@ -143,7 +144,8 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
         label: c.funcao || "Texto",
         sub: "",
         text: c.conteudo,
-        weight: c.pesoVisual || (c.funcao?.includes("Headline") ? 5 : c.funcao?.includes("Sub") ? 3 : 2)
+        weight: c.pesoVisual || (c.funcao?.includes("Headline") ? 5 : c.funcao?.includes("Sub") ? 3 : 2),
+        posicao: (c.posicao as any) || (store.typographyPosition as any) || "Centro"
       }));
     }
     return [];
@@ -220,7 +222,8 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
         label: c.funcao || "Texto",
         sub: "",
         text: c.conteudo,
-        weight: c.pesoVisual || (c.funcao?.includes("Headline") ? 5 : c.funcao?.includes("Sub") ? 3 : 2)
+        weight: c.pesoVisual || (c.funcao?.includes("Headline") ? 5 : c.funcao?.includes("Sub") ? 3 : 2),
+        posicao: (c.posicao as any) || (store.typographyPosition as any) || "Centro"
       })));
     } else {
       setTextBlocks([]);
@@ -279,10 +282,13 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
         funcao: (b.type === "H1" ? "Headline Principal" : b.type === "H2" ? "Subheadline Secundário" : b.type === "CTA" ? "CTA Botão" : "Corpo Descrição") as any,
         tipoBloco: b.type,
         pesoVisual: b.weight,
-        posicao: posicaoTexto
+        posicao: b.posicao || posicaoTexto
       }));
     if (camadas.length > 0) {
-      store.updateConfig({ camadasTexto: camadas });
+      const anyLeft = camadas.some(c => c.posicao === "Esquerda");
+      const anyRight = camadas.some(c => c.posicao === "Direita");
+      const effectivePos = anyLeft ? "Esquerda" : anyRight ? "Direita" : posicaoTexto;
+      store.updateConfig({ camadasTexto: camadas, typographyPosition: effectivePos });
     }
   }, [textBlocks, posicaoTexto]);
 
@@ -467,7 +473,7 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
     setTextBlocks(prev => prev.filter(b => b.id !== id));
   };
 
-  const updateTextBlock = (id: string, updates: Partial<{ text: string; weight: number }>) => {
+  const updateTextBlock = (id: string, updates: Partial<{ text: string; weight: number; posicao: "Esquerda" | "Centro" | "Direita" }>) => {
     setTextBlocks(prev => prev.map(b => b.id === id ? { ...b, ...updates } : b));
   };
 
@@ -1524,7 +1530,29 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
                                 />
                               ))}
                             </div>
-                            <span className="ml-auto text-[9px] tabular-nums text-[#5c5278]">{blk.weight}/5</span>
+                            <span className="text-[9px] tabular-nums text-[#5c5278]">{blk.weight}/5</span>
+
+                            <div className="ml-auto flex items-center gap-1" role="group" aria-label="Alinhamento do bloco">
+                              {(["Esquerda", "Centro", "Direita"] as const).map((pos) => {
+                                const isSel = (blk.posicao || posicaoTexto) === pos;
+                                return (
+                                  <button
+                                    key={pos}
+                                    type="button"
+                                    title={`Alinhar bloco à ${pos}`}
+                                    onClick={() => updateTextBlock(blk.id, { posicao: pos })}
+                                    className={`px-1.5 py-0.5 text-[8px] rounded transition-all cursor-pointer ${
+                                      isSel
+                                        ? "bg-violet-500/30 text-violet-200 border border-violet-500/50 font-bold"
+                                        : "bg-white/5 text-[#5c5278] hover:bg-white/10 hover:text-zinc-300"
+                                    }`}
+                                  >
+                                    {pos === "Esquerda" ? "Esq" : pos === "Centro" ? "Cen" : "Dir"}
+                                  </button>
+                                );
+                              })}
+                            </div>
+
                             <span className="ml-1 text-[#5c5278]/50" title="Use as setas acima para reordenar" aria-hidden="true">
                               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-grip-vertical h-3.5 w-3.5" aria-hidden="true"><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="5" r="1"></circle><circle cx="9" cy="19" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="5" r="1"></circle><circle cx="15" cy="19" r="1"></circle></svg>
                             </span>
@@ -1612,7 +1640,10 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
                     <button
                       type="button"
                       aria-pressed={posicaoTexto === "Esquerda"}
-                      onClick={() => setPosicaoTexto("Esquerda")}
+                      onClick={() => {
+                        setPosicaoTexto("Esquerda");
+                        setTextBlocks(prev => prev.map(b => ({ ...b, posicao: "Esquerda" })));
+                      }}
                       className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${
                         posicaoTexto === "Esquerda" ? "pb-ctrl-active text-white" : "text-zinc-200"
                       }`}
@@ -1639,7 +1670,10 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
                     <button
                       type="button"
                       aria-pressed={posicaoTexto === "Centro"}
-                      onClick={() => setPosicaoTexto("Centro")}
+                      onClick={() => {
+                        setPosicaoTexto("Centro");
+                        setTextBlocks(prev => prev.map(b => ({ ...b, posicao: "Centro" })));
+                      }}
                       className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${
                         posicaoTexto === "Centro" ? "pb-ctrl-active text-white" : "text-zinc-200"
                       }`}
@@ -1666,7 +1700,10 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
                     <button
                       type="button"
                       aria-pressed={posicaoTexto === "Direita"}
-                      onClick={() => setPosicaoTexto("Direita")}
+                      onClick={() => {
+                        setPosicaoTexto("Direita");
+                        setTextBlocks(prev => prev.map(b => ({ ...b, posicao: "Direita" })));
+                      }}
                       className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${
                         posicaoTexto === "Direita" ? "pb-ctrl-active text-white" : "text-zinc-200"
                       }`}

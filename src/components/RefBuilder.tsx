@@ -1365,9 +1365,9 @@ export const RefBuilder: React.FC<RefBuilderProps> = ({
     setIsProcessing(true);
     try {
       const positionNames = {
-        left: "posicionado à esquerda da composição",
+        left: "posicionado estritamente à ESQUERDA da composição (ocupando os 45% esquerdos), deixando o lado direito livre para respiro visual e tipografia",
         center: "centralizado com simetria e equilíbrio de respiro",
-        right: "posicionado à direita da composição"
+        right: "posicionado estritamente à DIREITA da composição (ocupando os 45% direitos), deixando o lado esquerdo livre para respiro visual e tipografia"
       };
 
       const attachedFiles: any[] = [];
@@ -1775,7 +1775,11 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
           logosList: assetImages.length > 0 ? assetImages.map(i => i.url) : (assetsPhotoBase64 ? [assetsPhotoBase64] : []),
           useLogo: !!(assetImages.length > 0 || assetsPhotoBase64),
           promptTraduzido: [
-            `[REF BUILDER] Sujeito: ${subjectPosition}.`,
+            subjectPosition === "left"
+              ? "[COMPOSITION MANDATE]: Main subject positioned strictly on the LEFT SIDE of the frame, leaving the right side open."
+              : subjectPosition === "right"
+              ? "[COMPOSITION MANDATE]: Main subject positioned strictly on the RIGHT SIDE of the frame, leaving the left side open."
+              : "[COMPOSITION MANDATE]: Main subject centered with symmetrical balance.",
             subjectImages.filter(i => i.desc?.trim()).map((i, idx) => `Instrução Imagem ${idx + 1}: ${i.desc.trim()}`).join("; "),
             referenceImages.length > 0
               ? referenceImages.filter(i => i.desc?.trim()).map((i, idx) => `Referência ${idx + 1}: ${i.desc.trim()}`).join("; ")
