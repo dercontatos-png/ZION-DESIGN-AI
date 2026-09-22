@@ -62,7 +62,10 @@ import {
   Home,
   LayoutGrid,
   Globe,
-  RefreshCw
+  RefreshCw,
+  Paperclip,
+  Send,
+  Loader2
 } from "lucide-react";
 
 interface DesignBuilderProps {
@@ -366,46 +369,188 @@ export default function DesignBuilder({
     }
   };
 
-  // Reutilizar configuracoes instantaneamente a partir de qualquer imagem
-  const handleReuseGeneration = async (imageUrlOrItem: any) => {
+  // Magic Refine Bar State & Handlers
+  const [refinePrompt, setRefinePrompt] = useState("");
+  const [isRefining, setIsRefining] = useState(false);
+  const [refineAttachedFiles, setRefineAttachedFiles] = useState<{ name: string; url: string }[]>([]);
+  const refineFileInputRef = useRef<HTMLInputElement>(null);
+  const refineTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const handleRefineFileAttach = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      Array.from(files).forEach((file) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          setRefineAttachedFiles((prev) => [
+            ...prev,
+            { name: file.name, url: String(reader.result) }
+          ]);
+        };
+        reader.readAsDataURL(file);
+      });
+      showToast(`${files.length} imagem(ns) anexada(s) ao ajuste!`, "info");
+    }
+  };
+
+  const handleSendRefinement = async () => {
+    const prompt = refinePrompt.trim();
+    if (!prompt || isRefining) return;
+
+    setIsRefining(true);
+    store.setIsGenerating(true);
+    showToast("✨ Enviando instrução de ajuste para a IA...", "info");
+
     try {
-      const itemUrl = typeof imageUrlOrItem === "string" ? imageUrlOrItem : (imageUrlOrItem?.url || imageUrlOrItem?.result_url);
-      if (!itemUrl) {
-        showToast("Nenhuma imagem selecionada para reutilizar.", "info");
-        return;
+      const activeGenId = store.lastGeneratedId || store.activeProjectId;
+      const response = await fetch("/api/bff/api/refine", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt,
+          generation_id: activeGenId,
+          agent_slug: selectedAgent || "orion-pro",
+          image: activeImage
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error("Falha ao processar solicitação de ajuste.");
       }
 
-      let foundEntry: any = bffGenerations.find((g: any) =>
-        g.result_url === itemUrl ||
-        g.thumbnail_url === itemUrl ||
-        (g.id && itemUrl.includes(g.id))
-      );
+      const resData = await response.json();
+      const newGenId = resData.generation_id;
 
-      if (!foundEntry) {
-        const match = itemUrl.match(/(\d{13}_[a-z0-9]+)/i);
-        const jobId = match ? match[1] : null;
-        if (jobId) {
+      if (!newGenId) {
+        throw new Error("ID de refinamento não retornado.");
+      }
+
+      let completed = false;
+      const sse = new EventSource(`/api/bff/api/generations/${newGenId}/stream`);
+
+      const finishSuccess = (resultUrl: string) => {
+        if (completed) return;
+        completed = true;
+        sse.close();
+        setIsRefining(false);
+        store.setIsGenerating(false);
+        setRefinePrompt("");
+        setRefineAttachedFiles([]);
+        store.setLastGeneratedId(newGenId);
+        store.setGaleriaImages([resultUrl, ...(store.galeriaImages || [])]);
+        store.setActiveImageIndex(0);
+        if (store.activeProjectId) {
+          store.addImagesToProjectGallery(store.activeProjectId, [resultUrl]);
+        }
+        showToast("✨ Arte ajustada com sucesso!", "success");
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("zion-generation-done", { detail: { imageUrl: resultUrl } }));
+        }
+      };
+
+      sse.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.status === "done" && data.result_url) {
+            finishSuccess(data.result_url);
+          } else if (data.status === "error") {
+            sse.close();
+            setIsRefining(false);
+            store.setIsGenerating(false);
+            showToast(data.message || "Erro durante o ajuste.", "error");
+          }
+        } catch (_) {}
+      };
+
+      sse.onerror = () => {
+        sse.close();
+        let pollCount = 0;
+        const interval = setInterval(async () => {
+          if (completed || pollCount > 40) {
+            clearInterval(interval);
+            if (!completed) {
+              setIsRefining(false);
+              store.setIsGenerating(false);
+            }
+            return;
+          }
+          pollCount++;
           try {
-            const detailRes = await fetch(`/api/bff/api/generations/${jobId}/detail`);
-            if (detailRes.ok) {
-              const detailData = await detailRes.json();
-              if (detailData && detailData.inputs) {
-                foundEntry = {
-                  id: jobId,
-                  form_data: detailData.inputs.parameters || {},
-                  inputs: detailData.inputs
-                };
+            const pollRes = await fetch(`/api/bff/api/generations/${newGenId}/status`);
+            if (pollRes.ok) {
+              const pollData = await pollRes.json();
+              if (pollData.status === "done" && pollData.result_url) {
+                clearInterval(interval);
+                finishSuccess(pollData.result_url);
               }
             }
           } catch (_) {}
+        }, 3000);
+      };
+    } catch (err: any) {
+      console.error("Erro ao refinar:", err);
+      setIsRefining(false);
+      store.setIsGenerating(false);
+      showToast(err?.message || "Erro ao conectar com o servidor.", "error");
+    }
+  };
+
+  // Reutilizar configuracoes instantaneamente a partir de qualquer imagem
+  const handleReuseGeneration = async (imageUrlOrItem: any) => {
+    try {
+      let fd: any = null;
+      let inputUrls: any = null;
+
+      if (imageUrlOrItem && typeof imageUrlOrItem === "object" && imageUrlOrItem.form_data) {
+        fd = imageUrlOrItem.form_data;
+        inputUrls = imageUrlOrItem.input_image_urls || fd.saved_files || fd.input_image_urls || {};
+      } else {
+        const itemUrl = typeof imageUrlOrItem === "string" ? imageUrlOrItem : (imageUrlOrItem?.url || imageUrlOrItem?.result_url || imageUrlOrItem?.thumbnail_url);
+        if (!itemUrl) {
+          showToast("Nenhuma imagem selecionada para reutilizar.", "info");
+          return;
         }
+
+        let foundEntry: any = bffGenerations.find((g: any) =>
+          g.result_url === itemUrl ||
+          g.thumbnail_url === itemUrl ||
+          (g.id && itemUrl.includes(g.id))
+        );
+
+        if (!foundEntry) {
+          const match = itemUrl.match(/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}|\d{13}_[a-z0-9]+)/i);
+          const jobId = match ? match[1] : null;
+          if (jobId) {
+            try {
+              const detailRes = await fetch(`/api/bff/api/generations/${jobId}/detail`);
+              if (detailRes.ok) {
+                const detailData = await detailRes.json();
+                if (detailData) {
+                  foundEntry = {
+                    id: jobId,
+                    form_data: detailData.form_data || detailData.inputs?.parameters || {},
+                    inputs: detailData.inputs || {},
+                    input_image_urls: detailData.input_image_urls || {}
+                  };
+                }
+              }
+            } catch (_) {}
+          }
+        }
+
+        if (!foundEntry) {
+          showToast("Buscando configurações da arte...", "info");
+        }
+
+        fd = foundEntry?.form_data || foundEntry?.inputs?.parameters || {};
+        inputUrls = foundEntry?.input_image_urls || foundEntry?.inputs || fd.saved_files || {};
       }
 
-      if (!foundEntry) {
-        showToast("Buscando configurações da arte...", "info");
+      if (!fd || Object.keys(fd).length === 0) {
+        showToast("Não foi possível localizar as configurações salvas desta arte.", "info");
+        return;
       }
 
-      const fd = foundEntry?.form_data || {};
       const targetDim = fd.dimensions || fd.dimensao || "4:5";
       const targetQuality = fd.quality || fd.resolucao || "1K";
 
@@ -413,12 +558,13 @@ export default function DesignBuilder({
       if (Array.isArray(fd.text_blocks) && fd.text_blocks.length > 0) {
         newCamadas = fd.text_blocks.map((b: any, bIdx: number) => ({
           id: `blk_reuse_${Date.now()}_${bIdx}`,
-          conteudo: b.content || "",
+          conteudo: b.content || b.text || "",
           funcao: (b.type === "h1" ? "Headline Principal" : b.type === "h2" ? "Subheadline Secundário" : b.type === "cta" ? "CTA Botão" : b.type === "bullets" ? "Lista de Benefícios" : "Corpo Descrição") as any,
           tipoBloco: (b.type === "h1" ? "H1" : b.type === "h2" ? "H2" : b.type === "cta" ? "CTA" : b.type === "bullets" ? "Bullets" : "Texto") as any,
-          pesoVisual: b.weight || (b.type === "h1" ? 5 : b.type === "h2" ? 3 : b.type === "cta" ? 4 : 2),
+          pesoVisual: Number(b.weight) || (b.type === "h1" ? 5 : b.type === "h2" ? 3 : b.type === "cta" ? 4 : 2),
           fonte: "Montserrat",
-          cor: "#ffffff"
+          cor: b.color || "#ffffff",
+          posicao: b.position || "middle-center"
         }));
       }
 
@@ -436,6 +582,18 @@ export default function DesignBuilder({
 
       const gen = fd.genero === "female" || fd.gender === "Feminino" ? "Feminino" : "Masculino";
 
+      const extractUrls = (val: any): string[] => {
+        if (!val) return [];
+        if (typeof val === "string") return [val];
+        if (Array.isArray(val)) {
+          return val.map((item: any) => (typeof item === "string" ? item : item?.url)).filter(Boolean);
+        }
+        if (typeof val === "object" && Array.isArray(val.urls)) {
+          return val.urls.map((u: any) => (typeof u === "string" ? u : u?.url)).filter(Boolean);
+        }
+        return [];
+      };
+
       const updates: Partial<any> = {
         dimensao: targetDim,
         resolucao: targetQuality,
@@ -447,13 +605,16 @@ export default function DesignBuilder({
         promptCenario: fd.scene_description || "",
         additionalPrompt: fd.prompt_adicional || "",
         nicho: fd.nicho_projeto || "",
+        composicao: fd.plano || "medium",
         floatingElementsMode: fd.elementos_flutuantes ? "custom" : "off",
-        floatingElementsCustom: fd.elementos_flutuantes || "",
+        floatingElementsCustom: typeof fd.elementos_flutuantes === "string" && fd.elementos_flutuantes !== "__enabled__" ? fd.elementos_flutuantes : "",
+        elementosFlutuantes: !!fd.elementos_flutuantes,
         enableBlur: fd.usar_desfoque_blur === true || fd.usar_desfoque_blur === "true",
         degradeLeitura: fd.degrade === true || fd.degrade === "true",
         typographyPosition: typoPos,
         nivelCriativo: Number(fd.sobriedade_criatividade || 50),
-        camadasTexto: newCamadas
+        camadasTexto: newCamadas,
+        lastLoadedAt: Date.now()
       };
 
       if (fd.color_palette) {
@@ -469,16 +630,61 @@ export default function DesignBuilder({
         };
       }
 
-      const savedSubject = fd.saved_files?.fotos_do_sujeito_produto || foundEntry?.inputs?.fotos_do_sujeito_produto;
-      if (savedSubject && typeof savedSubject === "string") {
-        updates.sujeitoBase64 = savedSubject;
-        updates.sujeitosBase64List = [savedSubject];
+      // 1. Restaurar Logo / Identidade de Marca
+      const logoUrls = [
+        ...extractUrls(inputUrls?.brand_identity_images),
+        ...extractUrls(fd.brand_identity_images),
+        ...extractUrls(fd.saved_files?.brand_identity_images)
+      ];
+      if (logoUrls.length > 0) {
+        updates.logoBase64 = logoUrls[0];
+        updates.logosList = logoUrls;
+        updates.useLogo = true;
+      }
+
+      // 2. Restaurar Sujeito / Fotos do Produto
+      const subjectUrls = [
+        ...extractUrls(inputUrls?.fotos_do_sujeito_produto),
+        ...extractUrls(fd.fotos_do_sujeito_produto),
+        ...extractUrls(fd.saved_files?.fotos_do_sujeito_produto)
+      ];
+      if (subjectUrls.length > 0) {
+        updates.sujeitoBase64 = subjectUrls[0];
+        updates.sujeitosBase64List = subjectUrls;
+      }
+
+      // 3. Restaurar Cenário / Referências de Ambiente
+      const ambientUrls = [
+        ...extractUrls(inputUrls?.referencias_de_ambiente),
+        ...extractUrls(fd.referencias_de_ambiente),
+        ...extractUrls(fd.saved_files?.referencias_de_ambiente)
+      ];
+      if (ambientUrls.length > 0) {
+        updates.cenarioBase64 = ambientUrls[0];
+        updates.cenariosBase64List = ambientUrls;
+        updates.useEnvRef = true;
+      }
+
+      // 4. Restaurar Referências de Estilo
+      const styleUrls = [
+        ...extractUrls(inputUrls?.referencias_de_estilo),
+        ...extractUrls(fd.referencias_de_estilo),
+        ...extractUrls(fd.saved_files?.referencias_de_estilo)
+      ];
+      if (styleUrls.length > 0) {
+        updates.referenciasEstilo = styleUrls.map((url, i) => ({
+          id: `estilo_reuse_${i}`,
+          data: url,
+          url,
+          descricao: "estilo"
+        }));
       }
 
       store.updateConfig(updates);
       setActivePalcoMode("builder");
+      setStudioPalcoTab("builder");
       setIsVitrineOpen(false);
-      showToast("✨ Configurações da geração reutilizadas no formulário com sucesso!", "success");
+      showToast("✨ Configurações e imagens da geração reutilizadas no formulário!", "success");
     } catch (err) {
       console.error("Erro ao reutilizar configurações:", err);
       showToast("Não foi possível reutilizar as configurações desta arte.", "error");
@@ -1063,11 +1269,15 @@ export default function DesignBuilder({
           <div className="flex-1 flex flex-col h-full overflow-hidden bg-black">
             <GaleriaManager
               onOpenVitrine={handleOpenVitrine}
-              onOpenStudio={(agentSlug, prompt, formData) => {
+              onOpenStudio={(agentSlug, prompt, formData, inputImageUrls) => {
                 if (agentSlug) handleSwitchAgent(agentSlug);
                 setActivePalcoMode("builder");
-                if (prompt) store.updateConfig({ additionalPrompt: prompt });
-                if (formData) handleReuseGeneration({ form_data: formData });
+                setStudioPalcoTab("builder");
+                if (formData || inputImageUrls) {
+                  handleReuseGeneration({ form_data: formData, input_image_urls: inputImageUrls, prompt });
+                } else if (prompt) {
+                  store.updateConfig({ additionalPrompt: prompt, lastLoadedAt: Date.now() });
+                }
               }}
               onOpenCommunity={() => {
                 setActivePalcoMode("comunidade");
@@ -1143,6 +1353,7 @@ export default function DesignBuilder({
               }}
               onOpenChat={() => setIsAssistantOpen(true)}
               onOpenReport={() => setIsReportModalOpen(true)}
+              showToast={showToast}
             />
           </div>
         ) : (selectedAgent === "enhance-builder" || selectedAgent === "enhance") ? (
@@ -1691,6 +1902,82 @@ export default function DesignBuilder({
                     <Sparkles className="h-4 w-4 text-amber-400" />
                     <span>Usar como base</span>
                   </button>
+                </div>
+
+                {/* Magic Refine Bar (Idêntico ao site oficial app.designbuilder.co) */}
+                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex w-[min(92vw,540px)] flex-col items-center gap-2 pointer-events-auto">
+                  {/* Thumbnails de referências anexadas ao refino */}
+                  {refineAttachedFiles.length > 0 && (
+                    <div className="flex items-center gap-2 px-2 py-1 bg-black/80 rounded-xl border border-white/10 backdrop-blur-md">
+                      {refineAttachedFiles.map((file, idx) => (
+                        <div key={idx} className="relative group/att h-10 w-10 rounded-lg overflow-hidden border border-white/20">
+                          <img src={file.url} alt={file.name} className="h-full w-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => setRefineAttachedFiles(prev => prev.filter((_, i) => i !== idx))}
+                            className="absolute inset-0 bg-black/60 flex items-center justify-center text-white opacity-0 group-hover/att:opacity-100 transition-opacity"
+                          >
+                            <X className="h-3.5 w-3.5 text-red-400" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="magic-bar relative flex w-full items-center gap-2 rounded-2xl border border-white/10 bg-black/80 px-3 py-2 shadow-2xl backdrop-blur-2xl transition-all focus-within:border-violet-500/60 focus-within:ring-1 focus-within:ring-violet-500/30">
+                    <button
+                      type="button"
+                      onClick={() => refineFileInputRef.current?.click()}
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-zinc-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                      title="Anexar imagem de referência"
+                    >
+                      <Paperclip className="h-4 w-4" />
+                    </button>
+                    <input
+                      ref={refineFileInputRef}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={handleRefineFileAttach}
+                    />
+
+                    <div className="flex-1 min-w-0">
+                      <textarea
+                        ref={refineTextareaRef}
+                        rows={1}
+                        value={refinePrompt}
+                        onChange={(e) => setRefinePrompt(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey && !isRefining && refinePrompt.trim()) {
+                            e.preventDefault();
+                            handleSendRefinement();
+                          }
+                        }}
+                        disabled={isRefining}
+                        placeholder="Descreva o que gostaria de alterar ou ajustar nesta arte..."
+                        className="w-full resize-none bg-transparent px-2 py-1 text-xs sm:text-sm text-white placeholder-zinc-500 outline-none max-h-24 scrollbar-hide"
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={!refinePrompt.trim() || isRefining}
+                      onClick={handleSendRefinement}
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all cursor-pointer ${
+                        refinePrompt.trim() && !isRefining
+                          ? "bg-violet-600 hover:bg-violet-500 text-white shadow-lg shadow-violet-600/30 hover:scale-105"
+                          : "bg-white/[0.06] text-zinc-600 cursor-not-allowed"
+                      }`}
+                      title="Enviar ajuste"
+                    >
+                      {isRefining ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-white" />
+                      ) : (
+                        <Send className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : (

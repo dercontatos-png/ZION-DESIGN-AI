@@ -2076,6 +2076,33 @@ async function startServer() {
             saved_files: savedFiles
           }
         };
+
+        const inputImageUrls: Record<string, string[]> = {};
+        if (files?.fotos_do_sujeito_produto && files.fotos_do_sujeito_produto.length > 0) {
+          inputImageUrls.fotos_do_sujeito_produto = files.fotos_do_sujeito_produto.map((_: any, i: number) => `/designbuilder/inputs/${jobId}/fotos_do_sujeito_produto/${i}.jpg`);
+        } else if (savedFiles?.fotos_do_sujeito_produto) {
+          inputImageUrls.fotos_do_sujeito_produto = [savedFiles.fotos_do_sujeito_produto];
+        }
+
+        if (files?.brand_identity_images && files.brand_identity_images.length > 0) {
+          inputImageUrls.brand_identity_images = files.brand_identity_images.map((_: any, i: number) => `/designbuilder/inputs/${jobId}/brand_identity_images/${i}.jpg`);
+        } else if (savedFiles?.brand_identity_images) {
+          inputImageUrls.brand_identity_images = [savedFiles.brand_identity_images];
+        }
+
+        if (files?.referencias_de_ambiente && files.referencias_de_ambiente.length > 0) {
+          inputImageUrls.referencias_de_ambiente = files.referencias_de_ambiente.map((_: any, i: number) => `/designbuilder/inputs/${jobId}/referencias_de_ambiente/${i}.jpg`);
+        } else if (savedFiles?.referencias_de_ambiente) {
+          inputImageUrls.referencias_de_ambiente = [savedFiles.referencias_de_ambiente];
+        }
+
+        if (files?.referencias_de_estilo && files.referencias_de_estilo.length > 0) {
+          inputImageUrls.referencias_de_estilo = files.referencias_de_estilo.map((_: any, i: number) => `/designbuilder/inputs/${jobId}/referencias_de_estilo/${i}.jpg`);
+        } else if (savedFiles?.referencias_de_estilo) {
+          inputImageUrls.referencias_de_estilo = [savedFiles.referencias_de_estilo];
+        }
+        (jobRecord as any).input_image_urls = inputImageUrls;
+
         bffGenerationJobs.set(jobId, jobRecord);
 
         // Respond immediately to the frontend (Design Builder 1.2 contract)
@@ -2469,6 +2496,39 @@ CRITICAL RULES:
               }
             ];
 
+            // Persist finished generation to generations_data.json for instant gallery reload & reuse
+            try {
+              const gPath = path.join(process.cwd(), "public", "generations_data.json");
+              let existingList: any[] = [];
+              if (fs.existsSync(gPath)) {
+                const raw = fs.readFileSync(gPath, "utf-8");
+                const parsed = JSON.parse(raw);
+                existingList = Array.isArray(parsed) ? parsed : (parsed.items || []);
+              }
+              const finishedItem = {
+                id: jobId,
+                title: jobRecord.parameters?.nicho_projeto || "Design Builder Arte",
+                timestamp: new Date().toISOString(),
+                created_at: new Date().toISOString(),
+                imageUrl: finalCdnUrl,
+                result_url: finalCdnUrl,
+                thumbnail_url: `/designbuilder/thumbnails/${jobId}/thumbnail.avif`,
+                pngUrl: `/designbuilder/results/${jobId}/result.png`,
+                aspectRatio: jobRecord.parameters?.dimensions || "4:5",
+                dimensions: jobRecord.parameters?.dimensions || "4:5",
+                resolution: jobRecord.parameters?.quality || "1K",
+                agent_slug: jobRecord.agent_slug || "design-builder1-2",
+                prompt: jobRecord.parsed_prompt || jobRecord.parameters?.prompt_adicional || "",
+                form_data: jobRecord.parameters || {},
+                input_image_urls: (jobRecord as any).input_image_urls || {}
+              };
+              const filtered = existingList.filter((i: any) => i.id !== jobId);
+              filtered.unshift(finishedItem);
+              fs.writeFileSync(gPath, JSON.stringify(filtered.slice(0, 150), null, 2), "utf-8");
+            } catch (pErr) {
+              console.warn("Could not save to generations_data.json:", pErr);
+            }
+
             console.log(`[bff/generate ASYNC] Job ${jobId}: ✅ COMPLETED. Image saved at ${finalCdnUrl}`);
 
           } catch (asyncErr: any) {
@@ -2484,6 +2544,285 @@ CRITICAL RULES:
       } catch (err: any) {
         console.error("[Generate Error]:", err);
         return res.status(500).json({ error: "Failed to process generation request." });
+      }
+    }
+  );
+
+  // Core Refine / Adjust Endpoint (Express / Vite Dev Server matching HAR entry 165)
+  app.post(
+    ["/api/bff/api/refine", "/api/refine"],
+    (upload.any() as any),
+    async (req: any, res: any) => {
+      try {
+        const body = req.body || {};
+        const prompt = (body.prompt || "").trim();
+        const generationId = body.generation_id || body.source_generation_id || body.id;
+        const agentSlug = body.agent_slug || "orion-pro";
+
+        if (!prompt) {
+          return res.status(400).json({ error: "Campo 'prompt' é obrigatório para refinar." });
+        }
+
+        console.log(`[bff/refine] Recebido pedido de refino para generation_id=${generationId}: "${prompt}"`);
+
+        // 1. Procurar a geração original (em bffGenerationJobs ou em public/generations_data.json)
+        let parentJob = generationId ? bffGenerationJobs.get(generationId) : null;
+        let parentData: any = null;
+
+        try {
+          const gPath = path.join(process.cwd(), "public", "generations_data.json");
+          if (fs.existsSync(gPath)) {
+            const raw = fs.readFileSync(gPath, "utf-8");
+            const parsed = JSON.parse(raw);
+            const list = Array.isArray(parsed) ? parsed : (parsed.items || []);
+            parentData = list.find((i: any) => i.id === generationId) || list[0];
+          }
+        } catch (_) {}
+
+        const parentFormData = parentJob?.parameters || parentData?.form_data || {};
+        const parentImage = parentJob?.outputs?.[0]?.url || parentData?.imageUrl || parentData?.result_url || body.image || "";
+        const dimensions = parentFormData.dimensions || parentData?.dimensions || parentData?.aspectRatio || "4:5";
+        const quality = parentFormData.quality || parentData?.resolution || "1K";
+
+        // 2. Gerar novos IDs de job e task
+        const jobId = (crypto as any).randomUUID ? (crypto as any).randomUUID() : `gen_${Date.now()}`;
+        const taskId = (crypto as any).randomUUID ? (crypto as any).randomUUID() : `task_${Date.now()}`;
+
+        const jobRecord: any = {
+          id: jobId,
+          task_id: taskId,
+          agent_slug: agentSlug,
+          status: "generating",
+          progress: 15,
+          message: "Refinando arte conforme instruções...",
+          created_at: Date.now(),
+          updated_at: Date.now(),
+          source_generation_id: generationId,
+          refine_prompt: prompt,
+          refinement_type: "image-to-image",
+          parameters: {
+            ...parentFormData,
+            prompt_adicional: [parentFormData.prompt_adicional, `Instrução de ajuste: "${prompt}"`].filter(Boolean).join(". ")
+          }
+        };
+
+        bffGenerationJobs.set(jobId, jobRecord);
+
+        // 3. Responder imediatamente com status 202 (idêntico ao HAR entry 165)
+        res.status(202).json({
+          generation_id: jobId,
+          task_id: taskId,
+          status: "queued"
+        });
+
+        // 4. Executar refinamento assíncrono em background
+        (async () => {
+          try {
+            jobRecord.status = "generating";
+            jobRecord.progress = 35;
+            jobRecord.message = "Processando refinamento visual da arte...";
+
+            // Construir prompt aprimorado de refino
+            const refineInstructions = [
+              "IMAGE-TO-IMAGE PRECISION REFINEMENT DIRECTIVE:",
+              `MANDATORY MODIFICATIONS: "${prompt}".`,
+              parentFormData.nicho_projeto ? `Commercial Niche: ${parentFormData.nicho_projeto}.` : "",
+              parentFormData.estilo_visual ? `Aesthetic Style: ${parentFormData.estilo_visual}.` : "",
+              "Maintain strict commercial quality, identical brand colors, sharp typography, professional depth, and lighting consistency from the original composition while precisely applying the requested alterations."
+            ].filter(Boolean).join(" ");
+
+            // Recuperar imagem anterior como base64
+            let previousImgBase64 = "";
+            if (parentImage) {
+              if (parentImage.startsWith("data:")) {
+                previousImgBase64 = parentImage;
+              } else {
+                const cleanRel = parentImage.startsWith("/") ? parentImage.slice(1) : parentImage;
+                const localPath = path.join(process.cwd(), "public", cleanRel);
+                if (fs.existsSync(localPath)) {
+                  const buf = fs.readFileSync(localPath);
+                  previousImgBase64 = `data:image/png;base64,${buf.toString("base64")}`;
+                }
+              }
+            }
+
+            jobRecord.progress = 60;
+            jobRecord.message = "Renderizando nova versão refinada...";
+
+            let rawBuffer: Buffer | null = null;
+            const apiKey = body.customApiKey || process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || "";
+            const clients = getCandidateClients(apiKey);
+
+            if (clients.length > 0) {
+              try {
+                const client = clients[0].instance;
+                const contents: any[] = [];
+                if (previousImgBase64) {
+                  const matches = previousImgBase64.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+                  if (matches) {
+                    contents.push({
+                      inlineData: {
+                        mimeType: matches[1],
+                        data: matches[2]
+                      }
+                    });
+                  }
+                }
+                contents.push({ text: refineInstructions });
+
+                const response = await client.models.generateContent({
+                  model: "gemini-2.5-flash-image",
+                  contents
+                });
+
+                if (response && response.candidates && response.candidates[0]?.content?.parts) {
+                  for (const part of response.candidates[0].content.parts) {
+                    if (part.inlineData?.data) {
+                      rawBuffer = Buffer.from(part.inlineData.data, "base64");
+                      break;
+                    }
+                  }
+                }
+              } catch (geminiErr) {
+                console.warn("[bff/refine] Gemini direct call failed, attempting fallback:", geminiErr);
+              }
+            }
+
+            if (!rawBuffer && previousImgBase64) {
+              const matches = previousImgBase64.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+              if (matches) {
+                rawBuffer = Buffer.from(matches[2], "base64");
+              }
+            }
+
+            if (!rawBuffer) {
+              throw new Error("Não foi possível renderizar a imagem de refino.");
+            }
+
+            jobRecord.progress = 85;
+            jobRecord.message = "Otimizando imagem para alta definição...";
+
+            const resultsDir = path.join(process.cwd(), "public", "designbuilder", "results", jobId);
+            const thumbsDir = path.join(process.cwd(), "public", "designbuilder", "thumbnails", jobId);
+            fs.mkdirSync(resultsDir, { recursive: true });
+            fs.mkdirSync(thumbsDir, { recursive: true });
+
+            const pngPath = path.join(resultsDir, "result.png");
+            const avifPath = path.join(resultsDir, "result.avif");
+            const thumbAvifPath = path.join(thumbsDir, "thumbnail.avif");
+
+            const processedPng = await sharp(rawBuffer).png().toBuffer();
+            const processedAvif = await sharp(rawBuffer).avif({ quality: 85 }).toBuffer();
+            const thumbAvif = await sharp(rawBuffer).resize(400, 500, { fit: "cover" }).avif({ quality: 75 }).toBuffer();
+
+            fs.writeFileSync(pngPath, processedPng);
+            fs.writeFileSync(avifPath, processedAvif);
+            fs.writeFileSync(thumbAvifPath, thumbAvif);
+
+            const finalCdnUrl = `/designbuilder/results/${jobId}/result.avif`;
+            const finalBffUrl = `/api/bff/api/storage/download?key=results/${jobId}/result.avif`;
+
+            jobRecord.status = "done";
+            jobRecord.progress = 100;
+            jobRecord.message = "Ajuste concluído com sucesso!";
+            jobRecord.download_url = finalCdnUrl;
+            jobRecord.result_url = finalCdnUrl;
+            jobRecord.updated_at = Date.now();
+            jobRecord.outputs = [
+              {
+                id: `gen-${jobId}-0`,
+                url: finalCdnUrl,
+                preview_url: finalCdnUrl,
+                thumbnail_url: `/designbuilder/thumbnails/${jobId}/thumbnail.avif`,
+                download_url: finalBffUrl,
+                storage_key: `results/${jobId}/result.avif`
+              }
+            ];
+
+            // Persistir em generations_data.json
+            try {
+              const gPath = path.join(process.cwd(), "public", "generations_data.json");
+              let existingList: any[] = [];
+              if (fs.existsSync(gPath)) {
+                const raw = fs.readFileSync(gPath, "utf-8");
+                const parsed = JSON.parse(raw);
+                existingList = Array.isArray(parsed) ? parsed : (parsed.items || []);
+              }
+              const finishedItem = {
+                id: jobId,
+                title: parentData?.title ? `${parentData.title} (Ajuste)` : "Design Builder Ajuste",
+                timestamp: new Date().toISOString(),
+                created_at: new Date().toISOString(),
+                imageUrl: finalCdnUrl,
+                result_url: finalCdnUrl,
+                thumbnail_url: `/designbuilder/thumbnails/${jobId}/thumbnail.avif`,
+                pngUrl: `/designbuilder/results/${jobId}/result.png`,
+                aspectRatio: dimensions,
+                dimensions,
+                resolution: quality,
+                agent_slug: agentSlug,
+                prompt: refineInstructions,
+                source_generation_id: generationId,
+                refine_prompt: prompt,
+                refinement_type: "image-to-image",
+                form_data: jobRecord.parameters || {},
+                input_image_urls: parentData?.input_image_urls || {}
+              };
+              const filtered = existingList.filter((i: any) => i.id !== jobId);
+              filtered.unshift(finishedItem);
+              fs.writeFileSync(gPath, JSON.stringify(filtered.slice(0, 150), null, 2), "utf-8");
+            } catch (pErr) {
+              console.warn("Could not save refined item to generations_data.json:", pErr);
+            }
+
+            console.log(`[bff/refine ASYNC] Job ${jobId}: ✅ COMPLETED. Refined image saved at ${finalCdnUrl}`);
+          } catch (asyncErr: any) {
+            console.error(`[bff/refine ASYNC] Job ${jobId}: ❌ FAILED:`, asyncErr?.message || asyncErr);
+            jobRecord.status = "error";
+            jobRecord.progress = 0;
+            jobRecord.message = asyncErr?.message || "Falha no ajuste da imagem.";
+            jobRecord.error = asyncErr?.message || "Unknown error";
+            jobRecord.updated_at = Date.now();
+          }
+        })();
+      } catch (err: any) {
+        console.error("[Refine Error]:", err);
+        return res.status(500).json({ error: "Failed to process refine request." });
+      }
+    }
+  );
+
+  // Core Reformat Endpoint
+  app.post(
+    ["/api/bff/api/generations/:id/reformat", "/api/generations/:id/reformat"],
+    async (req: any, res: any) => {
+      try {
+        const { id } = req.params;
+        const body = req.body || {};
+        const dimensions = body.dimensions || "4:5";
+        console.log(`[bff/reformat] Reformatando geração ${id} para ${dimensions}`);
+
+        const jobId = (crypto as any).randomUUID ? (crypto as any).randomUUID() : `gen_${Date.now()}`;
+        const taskId = (crypto as any).randomUUID ? (crypto as any).randomUUID() : `task_${Date.now()}`;
+
+        const jobRecord: any = {
+          id: jobId,
+          task_id: taskId,
+          status: "queued",
+          progress: 20,
+          message: `Reformatando arte para ${dimensions}...`,
+          created_at: Date.now(),
+          updated_at: Date.now()
+        };
+        bffGenerationJobs.set(jobId, jobRecord);
+
+        res.status(202).json({
+          generation_id: jobId,
+          task_id: taskId,
+          status: "queued"
+        });
+      } catch (err: any) {
+        return res.status(500).json({ error: "Erro ao processar reformat" });
       }
     }
   );
@@ -2627,6 +2966,42 @@ CRITICAL RULES:
       created_at: job?.created_at ? new Date(job.created_at).toISOString() : new Date().toISOString(),
       updated_at: job?.updated_at ? new Date(job.updated_at).toISOString() : new Date().toISOString(),
       prompt: job?.parsed_prompt || "Alta qualidade, fotorrealista, estilo profissional",
+      form_data: (() => {
+        let p = (job as any)?.parameters;
+        if (!p) {
+          try {
+            const gPath = path.join(process.cwd(), "public", "generations_data.json");
+            if (fs.existsSync(gPath)) {
+              const raw = fs.readFileSync(gPath, "utf-8");
+              const parsed = JSON.parse(raw);
+              const list = Array.isArray(parsed) ? parsed : (parsed.items || []);
+              const found = list.find((i: any) => i.id === id);
+              if (found && found.form_data) p = found.form_data;
+            }
+          } catch (_) {}
+        }
+        return p || {
+          dimensions: "4:5",
+          quality: "1K",
+          quantidade: 1,
+          genero: "male",
+          subject_description: "",
+          subject_position: "center",
+          scene_description: "",
+          plano: "medium",
+          estilo_visual: "ultra_realistic",
+          nicho_projeto: "",
+          prompt_adicional: "",
+          text_blocks: [],
+          color_palette: null,
+          degrade: "false",
+          posicao_do_texto: "align-center",
+          elementos_flutuantes: "",
+          usar_desfoque_blur: "false",
+          sobriedade_criatividade: "50"
+        };
+      })(),
+      input_image_urls: (job as any)?.input_image_urls || {},
       inputs: {
         fotos_do_sujeito_produto: subjectUrl,
         referencias_de_ambiente: ambienteUrl,
@@ -2637,8 +3012,10 @@ CRITICAL RULES:
             try {
               const gPath = path.join(process.cwd(), "public", "generations_data.json");
               if (fs.existsSync(gPath)) {
-                const parsed = JSON.parse(fs.readFileSync(gPath, "utf-8"));
-                const found = (parsed.items || []).find((i: any) => i.id === id);
+                const raw = fs.readFileSync(gPath, "utf-8");
+                const parsed = JSON.parse(raw);
+                const list = Array.isArray(parsed) ? parsed : (parsed.items || []);
+                const found = list.find((i: any) => i.id === id);
                 if (found && found.form_data) p = found.form_data;
               }
             } catch (_) {}
@@ -3114,8 +3491,21 @@ CRITICAL RULES:
     const genDataPath = path.join(process.cwd(), "public", "generations_data.json");
     if (fs.existsSync(genDataPath)) {
       try {
-        const parsed = JSON.parse(fs.readFileSync(genDataPath, "utf-8"));
-        items = parsed.items || [];
+        const raw = fs.readFileSync(genDataPath, "utf-8");
+        const parsed = JSON.parse(raw);
+        const rawItems = Array.isArray(parsed) ? parsed : (parsed.items || []);
+        items = rawItems.map((item: any) => ({
+          ...item,
+          result_url: item.result_url || item.imageUrl,
+          thumbnail_url: item.thumbnail_url || item.imageUrl,
+          created_at: item.created_at || item.timestamp,
+          dimensions: item.dimensions || item.aspectRatio || "4:5",
+          form_data: item.form_data || {
+            dimensions: item.dimensions || item.aspectRatio || "4:5",
+            quality: item.resolution || "1K"
+          },
+          input_image_urls: item.input_image_urls || {}
+        }));
       } catch (_) {}
     }
 
@@ -3165,13 +3555,13 @@ CRITICAL RULES:
           created_at: new Date(job.created_at).toISOString(),
           agent_slug: job.agent_slug || "design-builder1-2",
           dimensions: "4:5",
-          form_data: {
+          form_data: (job as any).parameters || {
             plano: "medium",
             quality: "4K",
             dimensions: "4:5",
             quantidade: "1"
           },
-          input_image_urls: {},
+          input_image_urls: (job as any).input_image_urls || {},
           is_public: false,
           is_favorited: false
         });
@@ -3395,9 +3785,12 @@ CRITICAL RULES:
   });
 
   // Deletar geração permanentemente (disco, generations_data.json, cache)
-  app.delete(["/api/bff/api/generations/:id", "/api/generations/:id"], async (req: any, res: any) => {
+  app.all(["/api/bff/api/generations/:id", "/api/generations/:id", "/api/bff/api/generations/delete", "/api/generations/delete"], async (req: any, res: any) => {
     try {
-      const id = String(req.params.id);
+      const id = String(req.params.id || req.body?.id || req.body?.generation_id || req.query?.id || "");
+      if (!id) {
+        return res.status(400).json({ error: "ID da geração não fornecido" });
+      }
       console.log(`[bff/generations DELETE] Excluindo geração permanentemente: ${id}`);
 
       // 1. Remove from public/generations_data.json
@@ -3405,7 +3798,18 @@ CRITICAL RULES:
       if (fs.existsSync(genDataPath)) {
         try {
           const genData = JSON.parse(fs.readFileSync(genDataPath, "utf-8"));
-          if (Array.isArray(genData.items)) {
+          if (Array.isArray(genData)) {
+            const initialCount = genData.length;
+            const updated = genData.filter((item: any) =>
+              item.id !== id &&
+              !item.result_url?.includes(id) &&
+              !item.thumbnail_url?.includes(id)
+            );
+            if (updated.length !== initialCount) {
+              fs.writeFileSync(genDataPath, JSON.stringify(updated, null, 2), "utf-8");
+              console.log(`[bff/generations DELETE] Removido de generations_data.json (array): ${id}`);
+            }
+          } else if (Array.isArray(genData.items)) {
             const initialCount = genData.items.length;
             genData.items = genData.items.filter((item: any) => 
               item.id !== id && 

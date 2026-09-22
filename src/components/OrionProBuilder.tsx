@@ -194,16 +194,16 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
     if (store.dimensao) {
       setDimensao(store.dimensao);
     }
-    if (store.poseDescription || store.composicaoCustom) {
+    if (store.poseDescription !== undefined || store.composicaoCustom !== undefined) {
       setSubjectDescription(store.poseDescription || store.composicaoCustom || "");
     }
     if (store.promptCenario || store.cenario) {
       setSceneDescription(store.promptCenario || store.cenario || "");
     }
-    if (store.additionalPrompt) {
+    if (store.additionalPrompt !== undefined) {
       setPromptAdicional(store.additionalPrompt || "");
     }
-    if (store.nicho) {
+    if (store.nicho !== undefined) {
       setNichoProjeto(store.nicho || "");
     }
     if (store.estiloVisual) {
@@ -219,8 +219,8 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
     if (store.elementosFlutuantes !== undefined) {
       setElementosFlutuantes(!!store.elementosFlutuantes);
     }
-    if (store.floatingElementsCustom) {
-      setElementosFlutuantesText(store.floatingElementsCustom);
+    if (store.floatingElementsCustom !== undefined) {
+      setElementosFlutuantesText(store.floatingElementsCustom || "");
     }
     if (store.cores) {
       if (store.cores.ambiente) setCorAmbiente(store.cores.ambiente);
@@ -269,12 +269,12 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
         text: c.conteudo || "",
         weight: c.pesoVisual || 5,
         color: c.cor || "#FFFFFF",
-        position: c.posicao || (c as any).posicao || "top-center"
+        position: c.posicao || (c as any).position || "top-center"
       })));
     } else {
       setTextBlocks([]);
     }
-  }, [store.activeProjectId, store.lastLoadedAt]);
+  }, [store.activeProjectId, store.lastLoadedAt, store.camadasTexto, store.logoBase64, store.cenarioBase64, store.logosList, store.cenariosBase64List, store.referenciasEstilo]);
 
   // ── Client Content Context (from ClientHub)
   // ── Client Content Context (from ClientHub)

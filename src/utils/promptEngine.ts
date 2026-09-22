@@ -413,14 +413,14 @@ export function buildEnhancedPrompt(params: PromptEngineParams): string {
   const isInstitutional = /sa[uú]de|curso|ensino|escola|faculdade|educa|institucional|prefeitura|m[ée]dic|hospital/i.test(params.nicho_projeto || "") ||
     /sa[uú]de|curso|ensino|escola|faculdade|educa|institucional|prefeitura|m[ée]dic|hospital/i.test(params.prompt_adicional || "");
 
-  // Determinação prévia do alinhamento para balanceamento espacial
+  // Determinação prévia do alinhamento para balanceamento espacial baseado estritamente na posição do H1
   const validTextBlocksList = (params.text_blocks || []).filter((b: any) => b && typeof b === "object" && String(b.content || b.text || "").trim());
   const rawTextPosMode = (params.posicao_do_texto || "").toLowerCase();
-  const hasLeftBlockCheck = validTextBlocksList.some((b: any) => /left|esq/i.test(b.position || ""));
-  const hasRightBlockCheck = validTextBlocksList.some((b: any) => /right|dir/i.test(b.position || ""));
-  const isLeftAlign = rawTextPosMode.includes("left") || rawTextPosMode.includes("esq") || hasLeftBlockCheck;
-  const isRightAlign = rawTextPosMode.includes("right") || rawTextPosMode.includes("dir") || hasRightBlockCheck;
-  const alignmentModeGlobal = isLeftAlign ? "left" : isRightAlign ? "right" : "center";
+  const h1Candidate = validTextBlocksList.find((b: any) => (b.type || "").toLowerCase() === "h1") || validTextBlocksList[0];
+  const h1RawPos = (h1Candidate?.position || rawTextPosMode || "center").toLowerCase();
+  const isH1Left = h1RawPos.includes("left") || h1RawPos.includes("esq");
+  const isH1Right = h1RawPos.includes("right") || h1RawPos.includes("dir");
+  const alignmentModeGlobal = isH1Left ? "left" : isH1Right ? "right" : "center";
 
   let effectiveSubjectPosition = params.subject_position || "center";
   if (alignmentModeGlobal === "left") {
@@ -583,10 +583,10 @@ Photo Slots & Gap Elimination (Zero Dead Space):
 - HEADLINE POSITION: Right-aligned on the right side of the canvas.
 - Footer contact info (WhatsApp phone and @ social handle) is exempt from the right column and MUST be anchored at the BOTTOM CENTER.`;
       } else {
-        alignmentCommand = `MANDATORY TEXT ALIGNMENT MANDATE (MULTI-ZONE / BALANCED):
-- Each text layer MUST be rendered strictly at its designated Canvas Zone (e.g. TOP-CENTER, MIDDLE-CENTER, BOTTOM-CENTER).
-- If the primary headline is marked [Canvas Zone: TOP-CENTER], render it centered horizontally across the upper section of the canvas. DO NOT displace it to the left or right borders!
-- Bullet points marked [Canvas Zone: MIDDLE-CENTER] MUST be rendered neatly stacked in the center area.`;
+        const h1Zone = formatZone(h1Block?.position || params.posicao_do_texto || "top-center");
+        alignmentCommand = `MANDATORY TEXT ALIGNMENT MANDATE (EXACT ZONE PLACEMENT):
+- PRIMARY HEADLINE (H1) MANDATE: The headline "${h1Block?.content || h1Block?.text || ""}" MUST BE STRICTLY POSITIONED AT [Canvas Zone: ${h1Zone}]. ${h1Zone === "TOP-CENTER" ? "It MUST be horizontally centered across the upper section of the canvas, neatly sitting below the logo header with equal left and right margins. DO NOT displace it to the left or right borders!" : `Place it precisely in the ${h1Zone} area.`}
+- MULTI-ZONE MAPPING: Each text block below has a strict 9-grid Canvas Zone. Render each text layer strictly inside its designated zone without overlapping other layers!`;
       }
 
       parts.push(`\nTYPOGRAPHY & TEXT SPECIFICATION:

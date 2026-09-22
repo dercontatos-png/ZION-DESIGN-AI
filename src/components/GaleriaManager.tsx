@@ -22,7 +22,7 @@ import { useProjectStore, addDeletedImage, getDeletedImages } from "../store/use
 
 interface GaleriaManagerProps {
   onOpenVitrine?: () => void;
-  onOpenStudio: (agentSlug?: string, prompt?: string, formData?: any) => void;
+  onOpenStudio: (agentSlug?: string, prompt?: string, formData?: any, inputImageUrls?: any) => void;
   onOpenCommunity?: () => void;
   showToast?: (message: string, type: "success" | "error" | "info" | "warning") => void;
 }
@@ -99,7 +99,9 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
                 is_favorited: false,
                 is_upvoted: false,
                 upvote_count: 0,
-                prompt: item.form_data?.subject_description || item.form_data?.scene_description || "Design gerado no Studio Design Builder."
+                prompt: item.form_data?.subject_description || item.form_data?.scene_description || "Design gerado no Studio Design Builder.",
+                form_data: item.form_data || item.parameters || {},
+                input_image_urls: item.input_image_urls || {}
               });
             });
           }
@@ -151,7 +153,26 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
     };
 
     loadServerGenerations();
-    return () => { isMounted = false; };
+
+    // Event listener em tempo real para sincronização imediata da galeria
+    const handleGenDone = () => {
+      loadServerGenerations();
+    };
+    window.addEventListener("zion-generation-done", handleGenDone);
+    window.addEventListener("storage", handleGenDone);
+
+    const interval = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        loadServerGenerations();
+      }
+    }, 5000);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener("zion-generation-done", handleGenDone);
+      window.removeEventListener("storage", handleGenDone);
+      clearInterval(interval);
+    };
   }, []);
 
   const [selectedApp, setSelectedApp] = useState<string>("");
@@ -385,7 +406,7 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
   // Reutilizar no Studio
   const handleReuse = (item: GalleryItem, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    onOpenStudio(item.agent_slug, item.prompt, item.form_data);
+    onOpenStudio(item.agent_slug, item.prompt, item.form_data, item.input_image_urls);
     if (showToast) {
       showToast(`Parâmetros de "${item.agent_name}" carregados no Studio!`, "success");
     }

@@ -39,6 +39,8 @@ interface ProjectStoreState extends ProjectConfig {
   projectsList: { id: string; name: string; config: ProjectConfig; galeria: string[] }[];
   activeProjectId: string | null;
   lastGeneratedPrompt: string;
+  lastGeneratedId?: string;
+  setLastGeneratedId: (id: string) => void;
   lastSystemInstruction: string;
   setLastSystemInstruction: (s: string) => void;
   setLastGeneratedPrompt: (p: string) => void;
@@ -333,6 +335,8 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
   setChatDrawerOpen: (isOpen) => set({ chatDrawerOpen: isOpen }),
   setChatActiveAssistantId: (id) => set({ chatActiveAssistantId: id }),
   setLastGeneratedPrompt: (p) => set({ lastGeneratedPrompt: p }),
+  lastGeneratedId: "",
+  setLastGeneratedId: (id) => set({ lastGeneratedId: id }),
   selectedAiModel: typeof window !== "undefined" ? (localStorage.getItem("zion_selected_model") || "deepseek-v4-flash") : "deepseek-v4-flash",
   setSelectedAiModel: (model) => {
     if (typeof window !== "undefined") {

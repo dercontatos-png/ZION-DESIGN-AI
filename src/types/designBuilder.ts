@@ -127,6 +127,7 @@ export interface ProjectConfig {
   categoria?: string;
   subject_description?: string;
   prompt_adicional?: string;
+  lastLoadedAt?: number;
 }
 
 export interface ImageResponse {

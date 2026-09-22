@@ -46,6 +46,7 @@ interface RefBuilderProps {
   onOpenCommunity?: () => void;
   onOpenChat?: () => void;
   onOpenReport?: () => void;
+  showToast?: (message: string, type?: "error" | "info" | "success" | "warning") => void;
 }
 
 export interface SubjectImageItem {
@@ -678,6 +679,7 @@ export const RefBuilder: React.FC<RefBuilderProps> = ({
     type: "refino" | "geracao";
     timestamp: number;
     isFavorited?: boolean;
+    settings?: any;
   }>>(() => {
     try {
       const saved = localStorage.getItem("zion_ref_history");
@@ -691,9 +693,25 @@ export const RefBuilder: React.FC<RefBuilderProps> = ({
     ];
   });
 
-  const saveToRefHistory = (url: string, type: "refino" | "geracao" = "geracao") => {
+  const saveToRefHistory = (url: string, type: "refino" | "geracao" = "geracao", customSettings?: any) => {
+    const settingsToSave = customSettings || {
+      mainPhotoBase64,
+      subjectImages,
+      subjectPosition,
+      refPhotoBase64,
+      referenceImages,
+      refPhotoDesc,
+      dimension,
+      customWidth,
+      customHeight,
+      quality,
+      assetsPhotoBase64,
+      assetImages,
+      assetsPhotoDesc,
+      additionalDescription
+    };
     setRefGalleryItems((prev) => {
-      const item = { id: `ref-${Date.now()}`, url, type, timestamp: Date.now(), isFavorited: false };
+      const item = { id: `ref-${Date.now()}`, url, type, timestamp: Date.now(), isFavorited: false, settings: settingsToSave };
       const updated = [item, ...prev.filter((p) => p.url !== url)];
       try {
         localStorage.setItem("zion_ref_history", JSON.stringify(updated.slice(0, 60)));
@@ -1500,25 +1518,34 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
 
   // ── CONSTRUIR (AÇÃO PRINCIPAL DEPENDENTE DO TOGGLE) ──
   // ── REUTILIZAR CONFIGURAÇÕES (CLONE DESIGNBUILDER) ──
-  const handleReuseSettings = () => {
-    if (!lastUsedSettings) {
+  const handleReuseSettings = (specificSettings?: any) => {
+    const settings = specificSettings || lastUsedSettings;
+    if (!settings) {
       showToast("Nenhuma configuração anterior encontrada para reutilizar.", "info");
       return;
     }
+    const subImgs = settings.subjectImages || (settings.mainPhotoBase64 ? [{ id: "1", url: settings.mainPhotoBase64, desc: "" }] : []);
+    const refImgs = settings.referenceImages || (settings.refPhotoBase64 ? [{ id: "1", url: settings.refPhotoBase64, desc: settings.refPhotoDesc || "" }] : []);
+    const assetImgs = settings.assetImages || (settings.assetsPhotoBase64 ? [{ id: "1", url: settings.assetsPhotoBase64, desc: settings.assetsPhotoDesc || "" }] : []);
+
     updateActiveTab({
-      mainPhotoBase64: lastUsedSettings.mainPhotoBase64,
-      subjectPosition: lastUsedSettings.subjectPosition,
-      refPhotoBase64: lastUsedSettings.refPhotoBase64,
-      refPhotoDesc: lastUsedSettings.refPhotoDesc,
-      dimension: lastUsedSettings.dimension,
-      customWidth: lastUsedSettings.customWidth || 1200,
-      customHeight: lastUsedSettings.customHeight || 630,
-      quality: lastUsedSettings.quality,
-      assetsPhotoBase64: lastUsedSettings.assetsPhotoBase64,
-      assetsPhotoDesc: lastUsedSettings.assetsPhotoDesc,
-      additionalDescription: lastUsedSettings.additionalDescription
+      mainPhotoBase64: settings.mainPhotoBase64 || subImgs[0]?.url || null,
+      mainPhotos: subImgs,
+      subjectPosition: settings.subjectPosition || "center",
+      refPhotoBase64: settings.refPhotoBase64 || refImgs[0]?.url || null,
+      refPhotos: refImgs,
+      refPhotoDesc: settings.refPhotoDesc || "",
+      dimension: settings.dimension || "4:5",
+      customWidth: settings.customWidth || 1200,
+      customHeight: settings.customHeight || 630,
+      quality: settings.quality || "4K",
+      assetsPhotoBase64: settings.assetsPhotoBase64 || assetImgs[0]?.url || null,
+      assetsPhotos: assetImgs,
+      assetsPhotoDesc: settings.assetsPhotoDesc || "",
+      additionalDescription: settings.additionalDescription || ""
     });
-    showToast("Configurações anteriores restauradas no formulário!", "success");
+    setActiveViewMode("builder");
+    showToast("Configurações e imagens anteriores restauradas no formulário!", "success");
   };
 
   // ── EXPORTAÇÃO REAL MULTIFORMATO (AVIF, PNG, JPEG, WEBP) ──
@@ -1739,35 +1766,51 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
       return;
     }
 
+    const hasSubject = !!(mainPhotoBase64 || subjectImages.length > 0);
+    const hasRef = !!(refPhotoBase64 || referenceImages.length > 0);
+    const hasAssets = !!(assetsPhotoBase64 || assetImages.length > 0);
+    const hasDesc = !!(additionalDescription && additionalDescription.trim());
+
     // Se o modo "Gerar Prompt" estiver desativado, constrói a imagem no próprio site (1 crédito)
-    if (!mainPhotoBase64 && !refPhotoBase64 && !additionalDescription) {
+    if (!hasSubject && !hasRef && !hasAssets && !hasDesc) {
       showToast("Por favor, envie sua imagem principal, uma referência de estilo ou digite uma descrição.", "info");
       return;
     }
 
+    // Garante que o palco mude para o Builder imediatamente e feche workspaces de assets
+    setActiveViewMode("builder");
+    setIsManagingSujeitos(false);
+    setIsManagingReferencias(false);
+    setIsManagingAssets(false);
     setIsProcessing(true);
+    store.setIsGenerating(true);
+
+    const snapshot = {
+      mainPhotoBase64,
+      subjectImages,
+      subjectPosition,
+      refPhotoBase64,
+      referenceImages,
+      refPhotoDesc,
+      dimension,
+      customWidth,
+      customHeight,
+      quality,
+      assetsPhotoBase64,
+      assetImages,
+      assetsPhotoDesc,
+      additionalDescription
+    };
+
     try {
-      // Salva snapshot das configurações para poder reutilizar depois
-      setLastUsedSettings({
-        mainPhotoBase64,
-        subjectPosition,
-        refPhotoBase64,
-        refPhotoDesc,
-        dimension,
-        customWidth,
-        customHeight,
-        quality,
-        assetsPhotoBase64,
-        assetsPhotoDesc,
-        additionalDescription
-      });
+      setLastUsedSettings(snapshot);
 
       const apiKey = localStorage.getItem("custom_gemini_api_key") || "";
       const res = await fetch("/api/gerar", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getAuthHeaders(apiKey) },
         body: JSON.stringify({
-          base64DoSujeito: mainPhotoBase64 || "",
+          base64DoSujeito: mainPhotoBase64 || subjectImages[0]?.url || "",
           sujeitosBase64List: subjectImages.length > 0 ? subjectImages.map(i => i.url) : (mainPhotoBase64 ? [mainPhotoBase64] : []),
           designRefBase64: referenceImages[0]?.url || refPhotoBase64 || "",
           designRefsList: referenceImages.length > 0 ? referenceImages.map(i => i.url) : (refPhotoBase64 ? [refPhotoBase64] : []),
@@ -1804,12 +1847,16 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
       const finalImg = data.image || data.imageUrl;
       if (finalImg) {
         setGeneratedImage(finalImg);
-        saveToRefHistory(finalImg, "geracao");
+        saveToRefHistory(finalImg, "geracao", snapshot);
         deductCredit(1);
         store.setGaleriaImages(prev => [finalImg, ...prev]);
         if (store.activeProjectId) {
           store.addImagesToProjectGallery(store.activeProjectId, [finalImg]);
         }
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("zion-generation-done", { detail: { imageUrl: finalImg } }));
+        }
+        showToast("Imagem sintetizada com sucesso no REF!", "success");
       } else {
         showToast(data.error || "Erro ao sintetizar imagem no REF.", "error");
       }
@@ -1818,6 +1865,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
       showToast("Erro ao processar imagem no REF.", "error");
     } finally {
       setIsProcessing(false);
+      store.setIsGenerating(false);
     }
   };
 
@@ -3282,18 +3330,18 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                             className="relative flex h-full min-h-0 w-full min-w-0 items-center justify-center overflow-hidden"
                           >
                             {isProcessing ? (
-                              <div
-                                className="relative flex flex-col items-center justify-center rounded-2xl border border-violet-500/40 overflow-hidden shadow-2xl shadow-violet-950/60 animate-in fade-in zoom-in-95 duration-300"
-                                style={{
-                                  width: "min(88%, 460px)",
-                                  aspectRatio: dimension === "9:16" ? "9/16" : dimension === "1:1" ? "1/1" : dimension === "16:9" ? "16/9" : "4/5",
-                                  maxHeight: "75vh"
-                                }}
-                              >
-                                <GenerationLoadingCanvas
-                                  agentColor="#8b5cf6"
-                                  subMessage="REF Builder replicando estilo da referência com seu sujeito"
-                                />
+                              <div className="flex w-full max-w-[440px] max-lg:max-w-[88vw] flex-col items-center gap-4 mx-auto p-3 lg:p-4 animate-in fade-in zoom-in-95 duration-300">
+                                <div
+                                  className={`relative w-full ${
+                                    dimension === "9:16" ? "aspect-[9/16]" : dimension === "16:9" ? "aspect-[16/9]" : dimension === "1:1" ? "aspect-square" : "aspect-[4/5]"
+                                  } rounded-2xl overflow-hidden border border-violet-500/40 shadow-2xl shadow-violet-950/60 transition-all duration-300`}
+                                  style={{ minHeight: "360px" }}
+                                >
+                                  <GenerationLoadingCanvas
+                                    agentColor="#8b5cf6"
+                                    subMessage="REF Builder replicando estilo da referência com seu sujeito"
+                                  />
+                                </div>
                               </div>
                             ) : generatedImage ? (
                               <div
@@ -4770,7 +4818,8 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
               <button
                 type="button"
                 onClick={() => {
-                  handleReuseSettings();
+                  const cardItem = refGalleryItems.find(c => c.url === generatedImage);
+                  handleReuseSettings(cardItem?.settings);
                   setIsDetailsDrawerOpen(false);
                 }}
                 className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-[#7c3aed] hover:bg-[#6d28d9] text-white text-xs font-semibold shadow-lg shadow-purple-600/30 transition-all cursor-pointer"

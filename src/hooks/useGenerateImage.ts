@@ -392,6 +392,7 @@ export const useGenerateImage = (
       }
 
       console.log(`[FRONT] Generation criada: id=${generationId}, task=${taskId}, status=${createData.status}`);
+      store.setLastGeneratedId(generationId);
 
       // 3. Conectar no SSE stream para acompanhar progresso em tempo real
       const resultUrl = await new Promise<string>((resolve, reject) => {
@@ -520,6 +521,9 @@ export const useGenerateImage = (
         showToast(`Imagem ${is4K ? "4K Ultra HD" : "premium"} gerada com sucesso! ✅`, "success");
       } else {
         showToast(`Imagem do '${targetProjectName}' foi gerada no plano de fundo!`, "success");
+      }
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("zion-generation-done", { detail: { imageUrl: resultUrl, projectId: targetProjectId } }));
       }
       onSuccess?.(resultUrl, rawPreviousImage);
 
@@ -654,7 +658,9 @@ export const useGenerateImage = (
       if (newImages.length > 0) {
         recordImageGeneration(newImages.length);
         store.addImagesToProjectGallery(targetProjectId, newImages);
-        showToast(`Imagem gerada com sucesso (fallback)! ✅`, "success");
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("zion-generation-done", { detail: { imageUrl: newImages[0], projectId: targetProjectId } }));
+        }
         onSuccess?.(newImages[0], rawPreviousImage);
       } else {
         throw new Error("Nenhum dado de imagem retornado pela API.");

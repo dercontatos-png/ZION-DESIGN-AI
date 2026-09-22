@@ -21,6 +21,7 @@ export interface GalleryItem {
     complementary_light?: string;
   };
   form_data?: any;
+  input_image_urls?: any;
   prompt?: string;
   inputs?: Array<{ title: string; src: string; fallback?: string }>;
   fallback_url?: string;
