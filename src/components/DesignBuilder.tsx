@@ -1379,7 +1379,9 @@ export default function DesignBuilder({
           /* STUDIO MODE: DESIGN BUILDER 1.2 & ÓRION PRO */
           <main
             data-builder-workspace-shell=""
-            className="relative flex h-full min-h-0 overflow-hidden bg-black lg:flex-row max-lg:grid max-lg:overflow-hidden max-lg:transition-[grid-template-rows] max-lg:duration-300 max-lg:ease-in-out max-lg:grid-rows-[1fr_0fr] flex-1"
+            className={`relative flex h-full min-h-0 overflow-hidden bg-black lg:flex-row max-lg:grid max-lg:overflow-hidden max-lg:transition-[grid-template-rows] max-lg:duration-300 max-lg:ease-in-out flex-1 ${
+              mobileActiveCategory ? "max-lg:grid-rows-[0fr_1fr]" : "max-lg:grid-rows-[1fr_0fr]"
+            }`}
           >
             {/* ── COLUNA ESQUERDA: FORMULÁRIO DO AGENTE (420px) ── */}
             {isOrion ? (
@@ -2139,6 +2141,161 @@ export default function DesignBuilder({
         </div>
 
             </section>
+
+            {/* ── BARRA INFERIOR MOBILE OFICIAL (1:1 COM DESIGN BUILDER ORIGINAL) ── */}
+            <nav
+              aria-label="Categorias e ações de construção"
+              className="fixed inset-x-0 bottom-0 z-40 overflow-x-hidden border-t border-white/[0.08] backdrop-blur-xl pb-safe shadow-[0_-8px_24px_rgba(0,0,0,0.45)] lg:hidden"
+              style={{ background: "rgba(10, 7, 25, 0.96)" }}
+            >
+              <div className="flex items-stretch gap-0.5 overflow-x-auto scrollbar-hide px-2 py-1.5 justify-center">
+                {/* Início */}
+                <button
+                  type="button"
+                  aria-label="Sair para o início"
+                  onClick={handleOpenVitrine}
+                  className="group flex min-h-[50px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 text-zinc-300 cursor-pointer"
+                >
+                  <span className="flex h-7 w-11 items-center justify-center rounded-full transition-colors bg-white/[0.05] ring-1 ring-white/15 group-hover:bg-white/[0.10]">
+                    <Home className="h-[18px] w-[18px]" />
+                  </span>
+                  <span className="whitespace-nowrap text-[10px] leading-none font-semibold">Início</span>
+                </button>
+
+                <span aria-hidden="true" className="mx-0.5 my-2 w-px shrink-0 self-stretch bg-white/10" />
+
+                {/* Sujeito / Produto */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileActiveCategory(mobileActiveCategory === "sujeito" ? null : "sujeito");
+                  }}
+                  className={`group flex min-h-[50px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
+                    mobileActiveCategory === "sujeito" ? "text-violet-400" : "text-zinc-500 hover:text-zinc-300"
+                  }`}
+                >
+                  <span className={`flex h-7 w-11 items-center justify-center rounded-full transition-colors ${
+                    mobileActiveCategory === "sujeito" ? "bg-violet-500/20 ring-1 ring-violet-500/40" : "group-hover:bg-white/[0.06]"
+                  }`}>
+                    <ImageIcon className="h-[18px] w-[18px]" />
+                  </span>
+                  <span className="whitespace-nowrap text-[10px] font-medium leading-none">Sujeito</span>
+                </button>
+
+                {/* Contexto */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileActiveCategory(mobileActiveCategory === "contexto" ? null : "contexto");
+                  }}
+                  className={`group flex min-h-[50px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
+                    mobileActiveCategory === "contexto" ? "text-violet-400" : "text-zinc-500 hover:text-zinc-300"
+                  }`}
+                >
+                  <span className={`flex h-7 w-11 items-center justify-center rounded-full transition-colors ${
+                    mobileActiveCategory === "contexto" ? "bg-violet-500/20 ring-1 ring-violet-500/40" : "group-hover:bg-white/[0.06]"
+                  }`}>
+                    <FileText className="h-[18px] w-[18px]" />
+                  </span>
+                  <span className="whitespace-nowrap text-[10px] font-medium leading-none">Contexto</span>
+                </button>
+
+                {/* Texto */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileActiveCategory(mobileActiveCategory === "texto" ? null : "texto");
+                  }}
+                  className={`group flex min-h-[50px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
+                    mobileActiveCategory === "texto" ? "text-violet-400" : "text-zinc-500 hover:text-zinc-300"
+                  }`}
+                >
+                  <span className={`flex h-7 w-11 items-center justify-center rounded-full transition-colors ${
+                    mobileActiveCategory === "texto" ? "bg-violet-500/20 ring-1 ring-violet-500/40" : "group-hover:bg-white/[0.06]"
+                  }`}>
+                    <Type className="h-[18px] w-[18px]" />
+                  </span>
+                  <span className="whitespace-nowrap text-[10px] font-medium leading-none">Texto</span>
+                </button>
+
+                {/* Cores */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileActiveCategory(mobileActiveCategory === "cores" ? null : "cores");
+                  }}
+                  className={`group flex min-h-[50px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
+                    mobileActiveCategory === "cores" ? "text-violet-400" : "text-zinc-500 hover:text-zinc-300"
+                  }`}
+                >
+                  <span className={`flex h-7 w-11 items-center justify-center rounded-full transition-colors ${
+                    mobileActiveCategory === "cores" ? "bg-violet-500/20 ring-1 ring-violet-500/40" : "group-hover:bg-white/[0.06]"
+                  }`}>
+                    <Palette className="h-[18px] w-[18px]" />
+                  </span>
+                  <span className="whitespace-nowrap text-[10px] font-medium leading-none">Cores</span>
+                </button>
+
+                {/* Composição */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileActiveCategory(mobileActiveCategory === "composicao" ? null : "composicao");
+                  }}
+                  className={`group flex min-h-[50px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
+                    mobileActiveCategory === "composicao" ? "text-violet-400" : "text-zinc-500 hover:text-zinc-300"
+                  }`}
+                >
+                  <span className={`flex h-7 w-11 items-center justify-center rounded-full transition-colors ${
+                    mobileActiveCategory === "composicao" ? "bg-violet-500/20 ring-1 ring-violet-500/40" : "group-hover:bg-white/[0.06]"
+                  }`}>
+                    <Layers className="h-[18px] w-[18px]" />
+                  </span>
+                  <span className="whitespace-nowrap text-[10px] font-medium leading-none">Composição</span>
+                </button>
+
+                {/* Prompt */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileActiveCategory(mobileActiveCategory === "prompt" ? null : "prompt");
+                  }}
+                  className={`group flex min-h-[50px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
+                    mobileActiveCategory === "prompt" ? "text-violet-400" : "text-zinc-500 hover:text-zinc-300"
+                  }`}
+                >
+                  <span className={`flex h-7 w-11 items-center justify-center rounded-full transition-colors ${
+                    mobileActiveCategory === "prompt" ? "bg-violet-500/20 ring-1 ring-violet-500/40" : "group-hover:bg-white/[0.06]"
+                  }`}>
+                    <Sparkles className="h-[18px] w-[18px]" />
+                  </span>
+                  <span className="whitespace-nowrap text-[10px] font-medium leading-none">Prompt</span>
+                </button>
+
+                <span aria-hidden="true" className="mx-0.5 my-2 w-px shrink-0 self-stretch bg-white/10" />
+
+                {/* Botão Construir */}
+                <button
+                  type="button"
+                  disabled={isGenerating}
+                  onClick={() => {
+                    setMobileActiveCategory(null);
+                    generatePremiumImage();
+                  }}
+                  className="group ml-0.5 flex min-h-[46px] min-w-[70px] shrink-0 snap-start flex-col items-center justify-center gap-1 rounded-xl px-2.5 text-white transition-transform duration-100 ease-out active:scale-95 disabled:opacity-60 cursor-pointer shadow-lg shadow-violet-600/30"
+                  style={{
+                    background: isOrion
+                      ? "linear-gradient(135deg, rgb(255, 213, 0), rgba(255, 213, 0, 0.8))"
+                      : "linear-gradient(135deg, rgb(124, 58, 237), rgba(124, 58, 237, 0.8))",
+                    color: isOrion ? "#000000" : "#ffffff"
+                  }}
+                >
+                  <span className="whitespace-nowrap text-xs font-extrabold leading-tight">
+                    {isGenerating ? "Criando..." : "Construir"}
+                  </span>
+                </button>
+              </div>
+            </nav>
           </main>
         )}
       </div>

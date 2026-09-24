@@ -147,7 +147,7 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
             decoding="async"
             data-nimg="1"
             className="h-7 w-auto"
-            src="/logo-db.webp"
+            src="/logo-zion.svg" onError={(e) => { (e.target as HTMLElement).setAttribute("src", "/logo-zion.webp"); }}
             style={{ color: "transparent" }}
           />
         </a>

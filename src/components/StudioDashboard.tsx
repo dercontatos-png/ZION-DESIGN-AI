@@ -46,10 +46,10 @@ export const StudioDashboard: React.FC<StudioDashboardProps> = ({
                 height={163}
                 title="Voltar à Vitrine (Home)"
                 className="h-7 w-auto opacity-80 hover:opacity-100 transition-opacity cursor-pointer"
-                src="/logo-db.webp"
+                src="/logo-zion.svg"
                 onClick={() => onOpenVitrine?.()}
                 onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).src = "/vitrine/logo-db.webp";
+                  (e.currentTarget as HTMLImageElement).src = "/logo-zion.webp";
                 }}
               />
               {onOpenVitrine && (

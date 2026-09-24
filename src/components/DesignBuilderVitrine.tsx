@@ -338,7 +338,7 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
       {/* ── Header Mobile Oficial (Fixo no topo em telas menores) ─ */}
       <header className="fixed inset-x-3 top-3 z-50 flex h-14 items-center justify-between rounded-2xl bg-black/80 px-4 ring-1 ring-white/10 backdrop-blur-xl lg:hidden">
         <a aria-label="Zion Design" href="/" onClick={(e) => { e.preventDefault(); if (typeof window !== "undefined") window.history.pushState({ path: "/" }, "", "/"); }}>
-          <img alt="Zion Design" width={399} height={85} decoding="async" className="h-6 w-auto" src="/Home_files/logo-db.jpeg" onError={(e) => { (e.target as HTMLElement).setAttribute("src", "/logo-db.webp"); }} style={{ color: "transparent" }} />
+          <img alt="Zion Design" width={399} height={85} decoding="async" className="h-6 w-auto" src="/logo-zion.svg" onError={(e) => { (e.target as HTMLElement).setAttribute("src", "/logo-zion.webp"); }} style={{ color: "transparent" }} />
         </a>
         <button
           type="button"
@@ -839,8 +839,7 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
                     decoding="async"
                     data-nimg="1"
                     className="h-8 w-auto"
-                    src="/Home_files/logo-db.jpeg"
-                    onError={(e) => { (e.target as HTMLElement).setAttribute("src", "/logo-db.webp"); }}
+                    src="/logo-zion.svg" onError={(e) => { (e.target as HTMLElement).setAttribute("src", "/logo-zion.webp"); }}
                     style={{ color: "transparent" }}
                   />
                   <p className="font-display text-2xl leading-tight text-white sm:text-4xl">
@@ -951,8 +950,7 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
                     decoding="async"
                     data-nimg="1"
                     className="h-8 w-auto"
-                    src="/Home_files/logo-db.jpeg"
-                    onError={(e) => { (e.target as HTMLElement).setAttribute("src", "/logo-db.webp"); }}
+                    src="/logo-zion.svg" onError={(e) => { (e.target as HTMLElement).setAttribute("src", "/logo-zion.webp"); }}
                     style={{ color: "transparent" }}
                   />
                   <p className="font-display text-2xl leading-tight text-white sm:text-4xl">

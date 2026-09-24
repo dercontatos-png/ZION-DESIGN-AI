@@ -178,7 +178,7 @@ async function sleepWithExponentialBackoff(
 /** Limitador de cota de geração de imagens (janela deslizante de 60s).
  *  A cota típica do Vertex AI é ~5 imagens/minuto por projeto — cada despacho
  *  real ao Google é contabilizado para nunca estourar o limite e queimar 429s. */
-const MAX_IMAGE_DISPATCHES_PER_MIN = Number(process.env.ZION_IMAGE_RATE_LIMIT || 30);
+const MAX_IMAGE_DISPATCHES_PER_MIN = Number(process.env.ZION_IMAGE_RATE_LIMIT || 12);
 const imageDispatchTimestamps: number[] = [];
 
 /** Retorna quantos ms faltam até liberar um espaço na janela de 60s (0 = pode despachar). */
@@ -308,11 +308,11 @@ function getCandidateClients(customApiKey?: string): { name: string; instance: G
     });
   }
 
-  // 3.5. Secondary Cloud API Key (GOOGLE_CLOUD_API_KEY) — cota/quota independente da GEMINI_API_KEY
-  const secondaryCloudKey = process.env.GOOGLE_CLOUD_API_KEY;
+  // 3.5. Secondary Cloud API Key (GOOGLE_CLOUD_API_KEY / SECONDARY_GEMINI_API_KEY) — cota/quota independente
+  const secondaryCloudKey = process.env.SECONDARY_GEMINI_API_KEY || process.env.GOOGLE_CLOUD_API_KEY;
   if (secondaryCloudKey && secondaryCloudKey.trim() !== envKey?.trim() && !secondaryCloudKey.trim().startsWith("{")) {
     candidateClients.push({
-      name: "Cloud API Key Client (GOOGLE_CLOUD_API_KEY)",
+      name: "Secondary Gemini API Key Client",
       instance: new GoogleGenAI({ apiKey: secondaryCloudKey.trim() })
     });
   }
@@ -1017,10 +1017,7 @@ async function executeImageGenerationWithFallbacks(
     const baseStrategies = [
       { name: "gemini-3-pro-image", type: "generateContent" },
       { name: "gemini-3.1-flash-image", type: "generateContent" },
-      { name: "gemini-2.5-flash-image", type: "generateContent" },
-      { name: "imagen-3.0-generate-002", type: "generateImages" },
-      { name: "imagen-3.0-generate-001", type: "generateImages" },
-      { name: "imagen-3.0-fast-generate-001", type: "generateImages" }
+      { name: "gemini-2.5-flash-image", type: "generateContent" }
     ];
     const useGenerateContent = (mappedModelId || "").includes("nano-banana") || (mappedModelId || "").includes("gemini-3-pro-image") || (mappedModelId || "").includes("gemini-3.1-flash-image") || (mappedModelId || "").includes("gemini-3.6-flash-image") || (mappedModelId || "").includes("gemini-2.5-flash-image");
     const strategies = mappedModelId ? [{ name: mappedModelId, type: useGenerateContent ? "generateContent" : "generateImages" }, ...baseStrategies.filter(s => s.name !== mappedModelId)] : baseStrategies;
@@ -1103,8 +1100,7 @@ async function executeImageGenerationWithFallbacks(
         // Ao distribuir entre múltiplas regiões, cada uma tem cota separada,
         // então se todas as tentativas falharem aqui, o próximo client/região é tentado.
         let res: any;
-        const isPrimaryNano4K = (sizeSelected === "4K" || sizeSelected === "2K");
-        const maxAttempts = isPrimaryNano4K && strategy.name === mappedModelId ? 4 : 2;
+        const maxAttempts = 5;
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
           try {
             res = await Promise.race([runStrategy(), timeoutPromise]);
@@ -1113,13 +1109,13 @@ async function executeImageGenerationWithFallbacks(
             const attemptMsg = attemptErr?.message || String(attemptErr);
             const isZeroQuota = attemptMsg.includes("limit: 0") || attemptMsg.includes("FreeTier") || attemptMsg.includes("limit reached");
             if (isZeroQuota) {
-              console.warn(`[generate] ${strategy.name} no cliente '${cItem.name}' tem limite 0 (Free Tier). Failover instantâneo para o próximo cliente...`);
+              console.warn(`[generate] ${strategy.name} no cliente '${cItem.name}' tem limite 0 (Free Tier). Failover instantâneo para o próximo modelo/cliente...`);
               break;
             }
-            const isRateLimit = attemptMsg.includes("429") || attemptMsg.includes("RESOURCE_EXHAUSTED") || attemptMsg.includes("Resource exhausted") || attemptMsg.includes("depleted");
+            const isRateLimit = attemptMsg.includes("429") || attemptMsg.includes("RESOURCE_EXHAUSTED") || attemptMsg.includes("Resource exhausted") || attemptMsg.includes("depleted") || attemptMsg.includes("quota");
             if (attempt < maxAttempts && isRateLimit) {
-              const sleptMs = await sleepWithExponentialBackoff(attempt, 800, 8000);
-              console.warn(`[generate] ${strategy.name} 429/limit on ${cItem.name} (attempt ${attempt}/${maxAttempts}). Retried after ${(sleptMs / 1000).toFixed(1)}s backoff.`);
+              const sleptMs = await sleepWithExponentialBackoff(attempt, 1500, 10000);
+              console.warn(`[generate] ${strategy.name} 429/cota no cliente '${cItem.name}' (tentativa ${attempt}/${maxAttempts}). Retentando após ${(sleptMs / 1000).toFixed(1)}s de backoff...`);
               continue;
             }
             throw attemptErr;
