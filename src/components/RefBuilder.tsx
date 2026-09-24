@@ -694,6 +694,9 @@ export const RefBuilder: React.FC<RefBuilderProps> = ({
   });
 
   const saveToRefHistory = (url: string, type: "refino" | "geracao" = "geracao", customSettings?: any) => {
+    try {
+      useProjectStore.getState().addGaleriaImage(url, { app: "ref" });
+    } catch (_) {}
     const settingsToSave = customSettings || {
       mainPhotoBase64,
       subjectImages,
@@ -1645,7 +1648,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
           previousImageBase64: currentImg,
           maskBase64: maskDataUrl,
           referenceImagesBase64: attachmentBase64s,
-          promptTraduzido: textToUse.includes("EXPLICIT INSTRUCTION") ? textToUse : `EXPLICIT INSTRUCTION FOR THIS REFINEMENT: ${textToUse}`,
+          promptTraduzido: `${textToUse.includes("EXPLICIT INSTRUCTION") ? textToUse : `EXPLICIT INSTRUCTION FOR THIS REFINEMENT: ${textToUse}`}\n\n[SAFE MARGINS AND HEADROOM MANDATE]: Top logo and headers MUST sit at least 16% to 20% down from the top canvas border (never glued to top edge). Footer contact info (phone and @ handle) MUST end at least 16% to 20% above the bottom canvas border (never glued to bottom border). Maintain generous breathing room across all canvas boundaries.`,
           resolutionInput: quality,
           dimensao: dimension,
           formato: "PNG",
@@ -1810,14 +1813,20 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
         method: "POST",
         headers: { "Content-Type": "application/json", ...getAuthHeaders(apiKey) },
         body: JSON.stringify({
-          base64DoSujeito: mainPhotoBase64 || subjectImages[0]?.url || "",
-          sujeitosBase64List: subjectImages.length > 0 ? subjectImages.map(i => i.url) : (mainPhotoBase64 ? [mainPhotoBase64] : []),
+          base64DoSujeito: /n[aã]o\s*quero\s*pessoa|sem\s*pessoa|no\s*people/i.test(additionalDescription || "") ? "" : (mainPhotoBase64 || subjectImages[0]?.url || ""),
+          sujeitosBase64List: /n[aã]o\s*quero\s*pessoa|sem\s*pessoa|no\s*people/i.test(additionalDescription || "") ? [] : (subjectImages.length > 0 ? subjectImages.map(i => i.url) : (mainPhotoBase64 ? [mainPhotoBase64] : [])),
           designRefBase64: referenceImages[0]?.url || refPhotoBase64 || "",
           designRefsList: referenceImages.length > 0 ? referenceImages.map(i => i.url) : (refPhotoBase64 ? [refPhotoBase64] : []),
           logoBase64: assetImages[0]?.url || assetsPhotoBase64 || "",
-          logosList: assetImages.length > 0 ? assetImages.map(i => i.url) : (assetsPhotoBase64 ? [assetsPhotoBase64] : []),
+          logosList: assetImages.length > 1 ? assetImages.slice(1).map(i => i.url) : [],
           useLogo: !!(assetImages.length > 0 || assetsPhotoBase64),
+          desativarSujeito: /n[aã]o\s*quero\s*pessoa|sem\s*pessoa|no\s*people/i.test(additionalDescription || ""),
+          additionalPrompt: additionalDescription?.trim() || "",
           promptTraduzido: [
+            additionalDescription?.trim()
+              ? `[USER DIRECT MANDATE - HIGHEST OVERRIDING PRIORITY]: ${additionalDescription.trim()}`
+              : "",
+            "[CRITICAL SAFE MARGINS AND RESPIRO VISUAL MANDATE]: All typography, brand logos, headers, and contact information MUST maintain generous safe breathing room (at least 16% to 20% safe padding, minimum 550 to 700 pixels in 4K — NEVER touching or glued to top or bottom borders). The top brand logo MUST sit comfortably below the top edge with at least 16% to 20% headroom, and the footer contact bar MUST sit comfortably above the bottom edge with at least 16% to 20% footroom. ZERO elements touching borders.",
             subjectPosition === "left"
               ? "[COMPOSITION MANDATE]: Main subject positioned strictly on the LEFT SIDE of the frame, leaving the right side open."
               : subjectPosition === "right"
@@ -1829,9 +1838,8 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
               : (refPhotoDesc?.trim() ? `Referência: ${refPhotoDesc.trim()}` : ""),
             assetImages.length > 0
               ? assetImages.filter(i => i.desc?.trim()).map((i, idx) => `Asset ${idx + 1}: ${i.desc.trim()}`).join("; ")
-              : (assetsPhotoDesc?.trim() ? `Asset: ${assetsPhotoDesc.trim()}` : ""),
-            additionalDescription
-          ].filter(Boolean).join(" "),
+              : (assetsPhotoDesc?.trim() ? `Asset: ${assetsPhotoDesc.trim()}` : "")
+          ].filter(Boolean).join("\n\n"),
           resolutionInput: quality,
           dimensao: dimension,
           customWidth: dimension === "custom" ? customWidth : undefined,

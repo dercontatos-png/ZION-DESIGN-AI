@@ -1,0 +1,17 @@
+node_modules
+.git
+.tempmediaStorage
+whatsapp-sessions
+public/generated-images
+*.log
+dev.err
+dev.log
+test*
+patch*
+fix*
+update*
+count*
+get-*
+parse*
+revert*
+*.patch

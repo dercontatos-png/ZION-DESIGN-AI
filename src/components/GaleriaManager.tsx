@@ -18,7 +18,8 @@ import {
 } from "lucide-react";
 import { REAL_USER_GENERATIONS, GalleryItem } from "../data/galleryData";
 import { GaleriaDetailModal, GaleriaCardItem } from "./GaleriaDetailModal";
-import { useProjectStore, addDeletedImage, getDeletedImages } from "../store/useProjectStore";
+import { useProjectStore, addDeletedImage, getDeletedImages, GENERIC_DELETED_NAMES } from "../store/useProjectStore";
+import { downloadImage } from "../utils/downloadImage";
 
 interface GaleriaManagerProps {
   onOpenVitrine?: () => void;
@@ -37,12 +38,16 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
 
   // Itens da Galeria: combina itens reais do HAR com gerações recentes do store
   const [generations, setGenerations] = useState<GalleryItem[]>(() => {
-    const list = [...REAL_USER_GENERATIONS];
+    const list = REAL_USER_GENERATIONS.filter(
+      (g) => !g.result_url?.includes("9b5acaa4fb5a7649b098778a4320abc3") && !g.result_url?.includes("X-Amz-Signature")
+    );
 
     // Se o store tiver imagens geradas pelo usuário que não estão no mock, adiciona no topo
     if (store.galeriaImages && store.galeriaImages.length > 0) {
       store.galeriaImages.forEach((imgUrl, idx) => {
         if (!list.some((g) => g.result_url === imgUrl || g.thumbnail_url === imgUrl)) {
+          const storeDim = (store.dimensao as string) || "1:1";
+          const storeAspect = storeDim.includes(":") ? storeDim.replace(":", "/") : "1/1";
           list.unshift({
             id: `local-gen-${idx}-${Date.now()}`,
             status: "done",
@@ -52,14 +57,14 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
             created_at: new Date().toISOString(),
             date_formatted: "Hoje",
             agent_slug: "design-builder1-2",
-            agent_name: "Design Builder 1.2",
-            dimensions: "4:5",
-            aspect_ratio: "4/5",
+            agent_name: "Zion Design",
+            dimensions: storeDim,
+            aspect_ratio: storeAspect,
             ai_model: "gemini-3.1-flash-image",
             is_favorited: false,
             is_upvoted: false,
             upvote_count: 0,
-            prompt: "Imagem gerada no Studio Design Builder."
+            prompt: "Imagem gerada no Studio Zion Design."
           });
         }
       });
@@ -67,13 +72,13 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
     return list;
   });
 
-  // Buscar gerações atualizadas do servidor (BFF + Histórico)
+  // Buscar geracoes atualizadas do servidor (BFF + Historico) com sincronizacao em tempo real
   useEffect(() => {
     let isMounted = true;
     const loadServerGenerations = async () => {
       try {
         const [bffRes, histRes] = await Promise.all([
-          fetch("/api/bff/api/generations").catch(() => null),
+          fetch("/api/bff/api/generations?limit=150").catch(() => null),
           fetch("/api/historico-imagens").catch(() => null)
         ]);
 
@@ -83,23 +88,48 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
           const bffData = await bffRes.json();
           if (Array.isArray(bffData.items)) {
             bffData.items.forEach((item: any, idx: number) => {
+              const rawDim = item.dimensions || item.form_data?.dimensions || item.parameters?.dimensions || "";
+              let resolvedDim = rawDim || "1:1";
+              let resolvedAspect = "1/1";
+              if (rawDim === "9:16" || rawDim === "9/16") { resolvedDim = "9:16"; resolvedAspect = "9/16"; }
+              else if (rawDim === "16:9" || rawDim === "16/9") { resolvedDim = "16:9"; resolvedAspect = "16/9"; }
+              else if (rawDim === "4:5" || rawDim === "4/5") { resolvedDim = "4:5"; resolvedAspect = "4/5"; }
+              else if (rawDim === "1:1" || rawDim === "1/1") { resolvedDim = "1:1"; resolvedAspect = "1/1"; }
+              else if (rawDim.includes(":")) {
+                const parts = rawDim.split(":");
+                resolvedDim = parts[0] + ":" + parts[1];
+                resolvedAspect = parts[0] + "/" + parts[1];
+              } else if (rawDim.includes("/")) {
+                resolvedAspect = rawDim;
+                resolvedDim = rawDim.replace("/", ":");
+              }
+
+              const resUrl = item.result_url || item.thumbnail_url || "";
+              const fLower = (resUrl.split("/").pop() || "").toLowerCase();
+              let detectedSlug = item.agent_slug || "design-builder1-2";
+              if (fLower.includes("ref")) detectedSlug = "ref";
+              else if (fLower.includes("hydra")) detectedSlug = "hydra";
+              else if (fLower.includes("enhance") || fLower.includes("enh")) detectedSlug = "enhance";
+              else if (fLower.includes("altera")) detectedSlug = "altera-facil";
+              else if (fLower.includes("orion")) detectedSlug = "orion-pro";
+
               newItems.push({
-                id: item.id || `bff-gen-${idx}`,
+                id: item.id || ("bff-gen-" + idx),
                 status: item.status || "done",
-                result_url: item.result_url,
-                thumbnail_url: item.thumbnail_url || item.result_url,
+                result_url: resUrl,
+                thumbnail_url: item.thumbnail_url || resUrl,
                 fallback_url: "/Design%20Builder1%202_files/result.avif",
                 created_at: item.created_at || new Date().toISOString(),
                 date_formatted: "Hoje",
-                agent_slug: item.agent_slug || "design-builder1-2",
-                agent_name: "Design Builder 1.2",
-                dimensions: item.dimensions || item.form_data?.dimensions || "4:5",
-                aspect_ratio: item.dimensions === "1:1" ? "1/1" : item.dimensions === "9:16" ? "9/16" : item.dimensions === "16:9" ? "16/9" : "4/5",
+                agent_slug: detectedSlug,
+                agent_name: detectedSlug === "ref" ? "REF" : detectedSlug === "hydra" ? "Hydra" : detectedSlug === "enhance" ? "Enhance" : detectedSlug === "altera-facil" ? "Altera Fácil" : "Zion Design",
+                dimensions: resolvedDim,
+                aspect_ratio: resolvedAspect,
                 ai_model: "gemini-3.1-flash-image",
                 is_favorited: false,
                 is_upvoted: false,
                 upvote_count: 0,
-                prompt: item.form_data?.subject_description || item.form_data?.scene_description || "Design gerado no Studio Design Builder.",
+                prompt: item.form_data?.subject_description || item.form_data?.scene_description || "Design gerado no Studio Zion Design.",
                 form_data: item.form_data || item.parameters || {},
                 input_image_urls: item.input_image_urls || {}
               });
@@ -112,65 +142,177 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
           if (Array.isArray(histData.images)) {
             histData.images.forEach((img: any, idx: number) => {
               const url = img.url;
-              if (!newItems.some(item => item.result_url === url || item.thumbnail_url === url)) {
+              if (!newItems.some((item) => item.result_url === url || item.thumbnail_url === url)) {
+                const fLower = (img.filename || "").toLowerCase();
+                let detectedSlug = "design-builder1-2";
+                if (fLower.includes("ref")) detectedSlug = "ref";
+                else if (fLower.includes("hydra")) detectedSlug = "hydra";
+                else if (fLower.includes("enhance") || fLower.includes("enh")) detectedSlug = "enhance";
+                else if (fLower.includes("altera")) detectedSlug = "altera-facil";
+                else if (fLower.includes("orion")) detectedSlug = "orion-pro";
+
                 newItems.push({
-                  id: `hist-gen-${idx}-${img.filename}`,
+                  id: "hist-gen-" + idx + "-" + img.filename,
                   status: "done",
                   result_url: url,
                   thumbnail_url: url,
                   fallback_url: "/Design%20Builder1%202_files/result.avif",
                   created_at: img.createdAt || new Date().toISOString(),
                   date_formatted: "Hoje",
-                  agent_slug: "design-builder1-2",
-                  agent_name: "Design Builder 1.2",
+                  agent_slug: detectedSlug,
+                  agent_name: detectedSlug === "ref" ? "REF" : detectedSlug === "hydra" ? "Hydra" : detectedSlug === "enhance" ? "Enhance" : detectedSlug === "altera-facil" ? "Altera Fácil" : "Zion Design",
                   dimensions: img.aspect || "4:5",
                   aspect_ratio: img.aspect || "4/5",
                   ai_model: "gemini-3.1-flash-image",
                   is_favorited: false,
                   is_upvoted: false,
                   upvote_count: 0,
-                  prompt: `Arte gerada: ${img.filename}`
+                  prompt: "Arte gerada: " + img.filename
                 });
               }
             });
           }
         }
 
-        if (isMounted && newItems.length > 0) {
+        // Incorpora imagens ativas do useProjectStore que ainda nao estejam na lista
+        const storeImages = useProjectStore.getState().galeriaImages || [];
+        storeImages.forEach((imgUrl: string, idx: number) => {
+          if (imgUrl && !newItems.some((item) => item.result_url === imgUrl || item.thumbnail_url === imgUrl)) {
+            const fLower = (imgUrl.split("/").pop() || "").toLowerCase();
+            let detectedSlug = "design-builder1-2";
+            if (fLower.includes("ref")) detectedSlug = "ref";
+            else if (fLower.includes("hydra")) detectedSlug = "hydra";
+            else if (fLower.includes("enhance") || fLower.includes("enh")) detectedSlug = "enhance";
+            else if (fLower.includes("altera")) detectedSlug = "altera-facil";
+            else if (fLower.includes("orion")) detectedSlug = "orion-pro";
+
+            newItems.push({
+              id: "store-gen-" + idx + "-" + Date.now(),
+              status: "done",
+              result_url: imgUrl,
+              thumbnail_url: imgUrl,
+              fallback_url: "/Design%20Builder1%202_files/result.avif",
+              created_at: new Date().toISOString(),
+              date_formatted: "Hoje",
+              agent_slug: detectedSlug,
+              agent_name: detectedSlug === "ref" ? "REF" : detectedSlug === "hydra" ? "Hydra" : detectedSlug === "enhance" ? "Enhance" : detectedSlug === "altera-facil" ? "Altera Fácil" : "Zion Design",
+              dimensions: "4:5",
+              aspect_ratio: "4/5",
+              ai_model: "gemini-3.1-flash-image",
+              is_favorited: false,
+              is_upvoted: false,
+              upvote_count: 0,
+              prompt: "Arte gerada no Studio Zion"
+            });
+          }
+        });
+
+        // Filtrar imagens deletadas com protecao contra nomes genericos
+        const deletedSet = getDeletedImages();
+        const isItemDeleted = (item: GalleryItem) => {
+          const url = item.result_url || "";
+          const thumb = item.thumbnail_url || "";
+          const id = item.id || "";
+          if (deletedSet.has(id)) return true;
+          if (url && deletedSet.has(url)) return true;
+          if (thumb && deletedSet.has(thumb)) return true;
+
+          const bname = (url.split("/").pop() || "").split("?")[0].toLowerCase();
+          if (bname && !GENERIC_DELETED_NAMES.has(bname) && deletedSet.has(bname)) return true;
+
+          const matchJob = (url + " " + thumb + " " + id).match(/(\d{13}_[a-z0-9]+)/i);
+          if (matchJob && deletedSet.has(matchJob[1])) return true;
+
+          const matchUuid = (url + " " + thumb + " " + id).match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+          if (matchUuid && deletedSet.has(matchUuid[1])) return true;
+
+          return false;
+        };
+
+                // Deduplicar itens por jobId entre BFF e Historico
+        const dedupedMap = new Map<string, GalleryItem>();
+        newItems.forEach((item) => {
+          const matchJob = (item.id + " " + (item.result_url || "") + " " + (item.thumbnail_url || "")).match(/(\d{13}_[a-z0-9]+)/i);
+          const key = matchJob ? matchJob[1] : (item.id || item.result_url);
+          if (!dedupedMap.has(key)) {
+            dedupedMap.set(key, item);
+          } else {
+            const current = dedupedMap.get(key)!;
+            // Preferir o item com thumbnail otimizado se disponível
+            if ((item.thumbnail_url && item.thumbnail_url.includes("thumbnail")) || (item.thumbnail_url && item.thumbnail_url.endsWith(".avif"))) {
+              dedupedMap.set(key, { ...current, ...item });
+            }
+          }
+        });
+        const dedupedNewItems = Array.from(dedupedMap.values());
+
+        const validNewItems = dedupedNewItems.filter((item) => !isItemDeleted(item));
+
+        if (isMounted) {
           setGenerations((prev) => {
-            const combined = [...newItems];
+            const map = new Map<string, GalleryItem>();
+            
+            // 1. Inserir geracoes novas vindas do servidor (ficam no topo)
+            validNewItems.forEach((item) => {
+              const key = item.id || item.result_url || item.thumbnail_url;
+              if (key) map.set(key, item);
+            });
+
+            // 2. Preservar o catalogo inicial de geracoes do usuario sem descartar
             prev.forEach((existing) => {
-              if (!combined.some(c => c.result_url === existing.result_url || c.id === existing.id)) {
-                combined.push(existing);
+              if (!isItemDeleted(existing)) {
+                const key = existing.id || existing.result_url || existing.thumbnail_url;
+                const isDuplicate = Array.from(map.values()).some((v) => {
+                  if (v.id && existing.id && v.id === existing.id) return true;
+                  if (v.result_url && existing.result_url && v.result_url === existing.result_url) return true;
+                  return false;
+                });
+                if (!isDuplicate && key && !map.has(key)) {
+                  map.set(key, existing);
+                }
               }
             });
-            return combined;
+
+            const all = Array.from(map.values());
+            all.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+            return all;
           });
         }
       } catch (err) {
-        console.warn("[GaleriaManager] Erro ao carregar gerações:", err);
+        console.warn("[GaleriaManager] Erro ao carregar geracoes:", err);
       }
     };
 
     loadServerGenerations();
 
-    // Event listener em tempo real para sincronização imediata da galeria
+    // Sincronizacao instantanea em tempo real
     const handleGenDone = () => {
       loadServerGenerations();
     };
     window.addEventListener("zion-generation-done", handleGenDone);
     window.addEventListener("storage", handleGenDone);
+    window.addEventListener("focus", handleGenDone);
+
+    let bc: BroadcastChannel | null = null;
+    if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+      bc = new BroadcastChannel("zion-gallery-sync");
+      bc.onmessage = () => {
+        loadServerGenerations();
+      };
+    }
 
     const interval = setInterval(() => {
       if (typeof document !== "undefined" && document.visibilityState === "visible") {
         loadServerGenerations();
       }
-    }, 5000);
+    }, 2500);
 
     return () => {
       isMounted = false;
       window.removeEventListener("zion-generation-done", handleGenDone);
       window.removeEventListener("storage", handleGenDone);
+      window.removeEventListener("focus", handleGenDone);
+      if (bc) bc.close();
       clearInterval(interval);
     };
   }, []);
@@ -182,9 +324,35 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
   const [isAppDropdownOpen, setIsAppDropdownOpen] = useState<boolean>(false);
   const [activeCardMenuId, setActiveCardMenuId] = useState<string | null>(null);
   const [activeCardDownloadId, setActiveCardDownloadId] = useState<string | null>(null);
+  const [loadedAspects, setLoadedAspects] = useState<Record<string, string>>({});
   const appFilterButtonRef = useRef<HTMLButtonElement | null>(null);
   const appDropdownMenuRef = useRef<HTMLDivElement | null>(null);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number }>({ top: 56, left: 228 });
+
+  const getAspectStyle = (item: GalleryItem) => {
+    const dynamicRatio = loadedAspects[item.id];
+    if (dynamicRatio) {
+      return { aspectRatio: dynamicRatio };
+    }
+    const dim = item.dimensions || item.aspect_ratio || item.form_data?.dimensions;
+    if (dim === "9:16" || dim === "9/16") return { aspectRatio: "9/16" };
+    if (dim === "16:9" || dim === "16/9") return { aspectRatio: "16/9" };
+    if (dim === "1:1" || dim === "1/1") return { aspectRatio: "1/1" };
+    if (dim === "4:5" || dim === "4/5") return { aspectRatio: "4/5" };
+    if (dim === "4:3" || dim === "4/3") return { aspectRatio: "4/3" };
+    if (dim === "3:4" || dim === "3/4") return { aspectRatio: "3/4" };
+    if (dim === "2:3" || dim === "2/3") return { aspectRatio: "2/3" };
+    if (dim === "3:2" || dim === "3/2") return { aspectRatio: "3/2" };
+    if (dim === "21:9" || dim === "21/9") return { aspectRatio: "21/9" };
+    if (dim && dim.includes(":")) {
+      const parts = dim.split(":");
+      return { aspectRatio: `${parts[0]}/${parts[1]}` };
+    }
+    if (dim && dim.includes("/")) {
+      return { aspectRatio: dim };
+    }
+    return { aspectRatio: "1/1" };
+  };
 
   // Fecha menus ao clicar fora
   useEffect(() => {
@@ -212,7 +380,7 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
     { value: "ref", label: "REF" },
     { value: "hydra", label: "Hydra" },
     { value: "enhance", label: "Enhance" },
-    { value: "design-builder", label: "Design Builder 1.2" },
+    { value: "design-builder", label: "Zion Design" },
     { value: "orion-pro", label: "Órion Pro" },
     { value: "altera-facil", label: "Altera Fácil" }
   ];
@@ -221,12 +389,14 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
     if (!selectedApp) return generations;
     return generations.filter((g) => {
       const slug = (g.agent_slug || "").toLowerCase();
-      if (selectedApp === "ref") return slug.includes("ref");
-      if (selectedApp === "hydra") return slug.includes("hydra");
-      if (selectedApp === "enhance") return slug.includes("enhance");
-      if (selectedApp === "design-builder") return slug.includes("design-builder") || slug.includes("design_builder") || slug === "" || !g.agent_slug;
-      if (selectedApp === "orion-pro") return slug.includes("orion");
-      if (selectedApp === "altera-facil") return slug.includes("altera");
+      const prompt = (g.prompt || "").toLowerCase();
+      const url = (g.result_url || "").toLowerCase();
+      if (selectedApp === "ref") return slug.includes("ref") || prompt.includes("ref") || url.includes("ref");
+      if (selectedApp === "hydra") return slug.includes("hydra") || prompt.includes("hydra") || url.includes("hydra");
+      if (selectedApp === "enhance") return slug.includes("enhance") || slug.includes("enh") || prompt.includes("enhance") || url.includes("enh");
+      if (selectedApp === "design-builder") return slug.includes("design") || slug === "" || !g.agent_slug;
+      if (selectedApp === "orion-pro") return slug.includes("orion") || prompt.includes("orion") || url.includes("orion");
+      if (selectedApp === "altera-facil") return slug.includes("altera") || prompt.includes("altera") || url.includes("altera");
       return slug === selectedApp.toLowerCase();
     });
   }, [generations, selectedApp]);
@@ -299,7 +469,7 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
     // 1. Grava na lista negra permanente de excluídos
     addDeletedImage(id);
     if (targetUrl) addDeletedImage(targetUrl);
-    if (filename) addDeletedImage(filename);
+    if (filename && !GENERIC_DELETED_NAMES.has(filename.toLowerCase())) addDeletedImage(filename);
 
     // 2. Remove do Zustand useProjectStore e IDB
     useProjectStore.getState().deleteGaleriaImage(targetUrl || id);
@@ -341,7 +511,7 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
       const filename = targetUrl.split("/").pop() || "";
       addDeletedImage(item.id);
       if (targetUrl) addDeletedImage(targetUrl);
-      if (filename) addDeletedImage(filename);
+      if (filename && !GENERIC_DELETED_NAMES.has(filename.toLowerCase())) addDeletedImage(filename);
 
       useProjectStore.getState().deleteGaleriaImage(targetUrl || item.id);
       fetch(`/api/bff/api/generations/${item.id}`, { method: "DELETE" }).catch(() => {});
@@ -372,13 +542,9 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
     const url = item.result_url || item.thumbnail_url;
     if (!url) return;
 
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `zion_${item.agent_slug || "design"}_${Date.now()}.${format.toLowerCase()}`;
-    a.target = "_blank";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    downloadImage(url, format, undefined, undefined, undefined, "4K", {
+      customFileName: `zion_${item.agent_slug || "design"}_${Date.now()}`
+    });
     if (showToast) {
       showToast(`Download em ${format.toUpperCase()} iniciado!`, "success");
     }
@@ -663,24 +829,40 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
                           : "border-white/[0.06] hover:border-violet-500/40 hover:shadow-xl hover:shadow-violet-600/10"
                       }`}
                     >
-                      {/* Container com Aspect Ratio */}
+                      {/* Container com Aspect Ratio Dinâmico */}
                       <div
-                        className={`relative w-full bg-zinc-950 overflow-hidden ${
-                          item.dimensions === "9:16"
-                            ? "aspect-[9/16]"
-                            : item.dimensions === "1:1"
-                            ? "aspect-square"
-                            : "aspect-[4/5]"
-                        }`}
+                        className="relative w-full bg-zinc-950 overflow-hidden"
+                        style={getAspectStyle(item)}
                       >
                         <img
                           alt={`Geração ${item.agent_name}`}
-                          loading="lazy"
+                          loading={idx < 12 ? "eager" : "lazy"} decoding="async"
                           className="absolute inset-0 block h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
                           src={item.thumbnail_url || item.result_url}
-                          onError={(e) => {
-                            if (item.fallback_url && e.currentTarget.src !== item.fallback_url) {
-                              e.currentTarget.src = item.fallback_url;
+                          ref={(img) => {
+                            if (img && img.naturalWidth && img.naturalHeight) {
+                              const ratioStr = `${img.naturalWidth} / ${img.naturalHeight}`;
+                              if (loadedAspects[item.id] !== ratioStr) {
+                                setLoadedAspects((prev) => ({ ...prev, [item.id]: ratioStr }));
+                              }
+                            }
+                          }}
+                          onLoad={(e) => {
+                            const img = e.currentTarget;
+                            if (img.naturalWidth && img.naturalHeight) {
+                              const ratioStr = `${img.naturalWidth} / ${img.naturalHeight}`;
+                              setLoadedAspects((prev) =>
+                                prev[item.id] === ratioStr ? prev : { ...prev, [item.id]: ratioStr }
+                              );
+                            }
+                          }}
+                                                    onError={(e) => {
+                            const target = e.currentTarget;
+                            if (target.dataset.hasFailed) return;
+                            target.dataset.hasFailed = "true";
+                            const fallback = item.fallback_url || "/galeria/thumbnail(1).avif";
+                            if (!target.src.endsWith(fallback)) {
+                              target.src = fallback;
                             }
                           }}
                         />

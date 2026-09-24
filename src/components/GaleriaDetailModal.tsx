@@ -18,6 +18,7 @@ import {
   Check,
   Loader2
 } from "lucide-react";
+import { downloadImage } from "../utils/downloadImage";
 
 export interface GaleriaCardItem {
   id: string;
@@ -137,66 +138,33 @@ export const GaleriaDetailModal: React.FC<GaleriaDetailModalProps> = ({
   const handleDownload = async (format: string) => {
     try {
       setDownloadingFormat(format);
-      if (showToast) showToast(`Baixando imagem em formato ${format.toUpperCase()}...`, "info");
-      const filename = `design_${(currentCard.app || "arte").toLowerCase().replace(/\s+/g, "_")}_${Date.now()}.${format.toLowerCase()}`;
+      if (showToast) showToast(`Baixando imagem em formato ${format.toUpperCase()} com qualidade máxima...`, "info");
 
-      const response = await fetch(currentCard.src);
-      const blob = await response.blob();
-
-      if (format.toLowerCase() === "png" || format.toLowerCase() === "jpeg" || format.toLowerCase() === "webp") {
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        const objectUrl = URL.createObjectURL(blob);
-        img.src = objectUrl;
-        await new Promise((resolve, reject) => {
-          img.onload = resolve;
-          img.onerror = reject;
-        });
-
-        const canvas = document.createElement("canvas");
-        canvas.width = img.naturalWidth || img.width;
-        canvas.height = img.naturalHeight || img.height;
-        const ctx = canvas.getContext("2d");
-        if (ctx) {
-          if (format.toLowerCase() === "jpeg") {
-            ctx.fillStyle = "#ffffff";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-          }
-          ctx.drawImage(img, 0, 0);
-          const mimeType = format.toLowerCase() === "jpeg" ? "image/jpeg" : format.toLowerCase() === "webp" ? "image/webp" : "image/png";
-          canvas.toBlob((convertedBlob) => {
-            if (convertedBlob) {
-              const downloadUrl = URL.createObjectURL(convertedBlob);
-              const a = document.createElement("a");
-              a.href = downloadUrl;
-              a.download = filename;
-              document.body.appendChild(a);
-              a.click();
-              URL.revokeObjectURL(downloadUrl);
-              document.body.removeChild(a);
-            }
-          }, mimeType, 0.95);
-        }
-        URL.revokeObjectURL(objectUrl);
-      } else {
-        const downloadUrl = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = downloadUrl;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        URL.revokeObjectURL(downloadUrl);
-        document.body.removeChild(a);
+      let masterSrc = currentCard.src;
+      if (typeof masterSrc === "string" && masterSrc.includes("/results/") && masterSrc.includes(".avif")) {
+        masterSrc = masterSrc.replace(/\.avif(\?.*)?$/, ".png$1");
       }
+
+      await downloadImage(
+        masterSrc,
+        format.toUpperCase(),
+        undefined,
+        undefined,
+        undefined,
+        "4K",
+        {
+          customFileName: `zion_${(currentCard.app || "arte").toLowerCase().replace(/\s+/g, "_")}_${Date.now()}`
+        }
+      );
 
       setDownloadSuccessFormat(format);
       setTimeout(() => setDownloadSuccessFormat(null), 2000);
-      if (showToast) showToast(`Download ${format.toUpperCase()} concluído!`, "success");
+      if (showToast) showToast(`Download ${format.toUpperCase()} concluído com máxima qualidade!`, "success");
     } catch (err) {
       console.warn("Erro ao converter/baixar:", err);
       const a = document.createElement("a");
       a.href = currentCard.src;
-      a.download = `design_${(currentCard.app || "arte").toLowerCase()}.${format}`;
+      a.download = `zion_${(currentCard.app || "arte").toLowerCase()}.${format}`;
       a.target = "_blank";
       document.body.appendChild(a);
       a.click();

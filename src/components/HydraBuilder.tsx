@@ -1,4 +1,4 @@
-import { useProjectStore, addDeletedImage } from "../store/useProjectStore";
+import { useProjectStore, addDeletedImage, getDeletedImages } from "../store/useProjectStore";
 import React, { useState, useRef, useEffect } from "react";
 import {
   Upload,
@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { HYDRA_CATEGORIES, HYDRA_STYLE_CARDS, HydraStyleCard } from "../data/hydraData";
 import { GenerationLoadingCanvas } from "./GenerationLoadingCanvas";
+import { MagicRefineBar } from "./MagicRefineBar";
 import { set as idbSet, get as idbGet } from "idb-keyval";
 
 interface HydraTabState {
@@ -180,6 +181,108 @@ export const HydraBuilder: React.FC<HydraBuilderProps> = ({
   ]);
 
   // UI state
+    // Sincronizar galeria do Hydra em tempo real com o servidor e outros apps
+  const recarregarGaleriaHydra = async () => {
+    try {
+      const [histRes, bffRes] = await Promise.all([
+        fetch("/api/historico-imagens").catch(() => null),
+        fetch("/api/bff/api/generations?limit=60").catch(() => null)
+      ]);
+
+      const foundList: Array<{ id: string; url: string; createdAt: number }> = [];
+
+      if (histRes && histRes.ok) {
+        const hData = await histRes.json();
+        if (Array.isArray(hData.images)) {
+          hData.images.forEach((img: any, idx: number) => {
+            foundList.push({
+              id: "hydra-srv-" + (img.filename || idx),
+              url: img.url,
+              createdAt: img.mtimeMs || Date.now()
+            });
+          });
+        }
+      }
+
+      if (bffRes && bffRes.ok) {
+        const bffData = await bffRes.json();
+        if (Array.isArray(bffData.items)) {
+          bffData.items.forEach((item: any, idx: number) => {
+            const url = item.result_url || item.thumbnail_url;
+            if (url && !foundList.some((f) => f.url === url)) {
+              foundList.push({
+                id: item.id || ("hydra-bff-" + idx),
+                url,
+                createdAt: item.created_at ? new Date(item.created_at).getTime() : Date.now()
+              });
+            }
+          });
+        }
+      }
+
+      const storeImages = useProjectStore.getState().galeriaImages || [];
+      storeImages.forEach((url, idx) => {
+        if (url && !foundList.some((f) => f.url === url)) {
+          foundList.push({
+            id: "hydra-store-" + idx,
+            url,
+            createdAt: Date.now()
+          });
+        }
+      });
+
+      const deleted = getDeletedImages();
+      const validFound = foundList.filter((f) => {
+        const bname = f.url.split("/").pop() || "";
+        return !deleted.has(f.url) && !deleted.has(bname) && !deleted.has(f.id);
+      });
+
+      if (validFound.length > 0) {
+        setGenerationsList((prev) => {
+          const map = new Map<string, { id: string; url: string; createdAt: number; isFav?: boolean }>();
+          validFound.forEach((it) => map.set(it.url, it));
+          prev.forEach((it) => {
+            const bname = it.url.split("/").pop() || "";
+            if (!deleted.has(it.url) && !deleted.has(bname) && !deleted.has(it.id)) {
+              if (!map.has(it.url)) map.set(it.url, it);
+            }
+          });
+          const list = Array.from(map.values());
+          list.sort((a, b) => b.createdAt - a.createdAt);
+          return list;
+        });
+      }
+    } catch (err) {
+      console.warn("Erro ao recarregar galeria Hydra:", err);
+    }
+  };
+
+  useEffect(() => {
+    recarregarGaleriaHydra();
+    const handleSync = () => recarregarGaleriaHydra();
+    window.addEventListener("zion-generation-done", handleSync);
+    window.addEventListener("focus", handleSync);
+
+    let bc: BroadcastChannel | null = null;
+    if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+      bc = new BroadcastChannel("zion-gallery-sync");
+      bc.onmessage = () => handleSync();
+    }
+
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        handleSync();
+      }
+    }, 2500);
+
+    return () => {
+      window.removeEventListener("zion-generation-done", handleSync);
+      window.removeEventListener("focus", handleSync);
+      if (bc) bc.close();
+      clearInterval(interval);
+    };
+  }, []);
+
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [previewImageModal, setPreviewImageModal] = useState<string | null>(null);
@@ -410,6 +513,9 @@ export const HydraBuilder: React.FC<HydraBuilderProps> = ({
       if (finalImg) {
         showToast?.("Produto renderizado com sucesso!", "success");
         updateCurrentTab({ activeResultImage: finalImg });
+        try {
+          useProjectStore.getState().addGaleriaImage(finalImg, { app: "hydra" });
+        } catch (_) {}
         setGenerationsList((prev) => [
           { id: Date.now().toString(), url: finalImg, createdAt: Date.now() },
           ...prev,
@@ -1311,6 +1417,25 @@ export const HydraBuilder: React.FC<HydraBuilderProps> = ({
                   </div>
                 )}
               </div>
+
+              {/* Magic Refine Bar */}
+              {currentTab.activeResultImage && !isGenerating && (
+                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex w-[min(92vw,480px)] flex-col items-center gap-2 pointer-events-auto">
+                  <MagicRefineBar
+                    activeImage={currentTab.activeResultImage}
+                    isProcessing={isGenerating}
+                    agentColor="#8b5cf6"
+                    placeholder="Descreva o que deseja alterar nesta composição..."
+                    onPublishCommunity={() => {
+                      onOpenCommunity?.();
+                      showToast?.("Publicação na comunidade iniciada!", "info");
+                    }}
+                    onSendRefine={(text, _attachments, _isBrush) => {
+                      showToast?.("Refinamento via Hydra em desenvolvimento.", "info");
+                    }}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Coluna Lateral de Histórico (72px) Oficial */}

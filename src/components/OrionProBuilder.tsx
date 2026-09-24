@@ -104,12 +104,26 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
     setOpenSections((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
+    // Guard refs against initial mount overwriting persisted store and tab switching cross-pollution
+  const isMountedRef = useRef(false);
+  const isSyncingFromStoreRef = useRef(false);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   // ── Section 1: Principal
-  const [categoria, setCategoria] = useState<"Pessoa" | "Produto" | "Livre" | null>("Pessoa");
-  const [quantidade, setQuantidade] = useState<string>("1");
-  const [subjectDescription, setSubjectDescription] = useState<string>("");
-  const [subjectPosition, setSubjectPosition] = useState<"left" | "center" | "right" | "">("center");
-  const [plano, setPlano] = useState<string>("Plano Médio (Busto)");
+  const [categoria, setCategoria] = useState<"Pessoa" | "Produto" | "Livre" | null>(() => (store as any).categoria || "Pessoa");
+  const [quantidade, setQuantidade] = useState<string>(() => String(store.quantidade || "1"));
+  const [subjectDescription, setSubjectDescription] = useState<string>(() => store.poseDescription || store.composicaoCustom || "");
+  const [subjectPosition, setSubjectPosition] = useState<"left" | "center" | "right" | "">(() => {
+    const p = (store.positioning || "").toLowerCase();
+    return p.includes("esq") || p.includes("left") ? "left" : p.includes("dir") || p.includes("right") ? "right" : "center";
+  });
+  const [plano, setPlano] = useState<string>(() => store.composicao || "Plano Médio (Busto)");
 
   // ── Section 2: Marca e estilo
   const [brandImages, setBrandImages] = useState<ImageWithDesc[]>(() => {
@@ -178,15 +192,18 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
   const [promptAdicional, setPromptAdicional] = useState<string>(() => store.additionalPrompt || "");
 
   // ── Section 6: Configurações
-  const [dimensao, setDimensao] = useState<string>("4:5");
+  const [dimensao, setDimensao] = useState<string>(() => store.dimensao || "4:5");
   const [quality, setQuality] = useState<"1K" | "2K" | "4K">(() => {
     const q = (store.qualidade || store.resolucao || "1K") as "1K" | "2K" | "4K";
     return q === "2K" || q === "4K" ? q : "1K";
   });
-  const [modoCriativo, setModoCriativo] = useState<"Rígido" | "Criativo" | "Builder">("Criativo");
+  const [modoCriativo, setModoCriativo] = useState<"Rígido" | "Criativo" | "Builder">(() => ((store as any).modoCriativo || store.modoCriacao || "Criativo") as any);
 
-  // Rehydrate state when switching projects/tabs or on initial mount
+  // Rehydrate state when switching projects/tabs or when project data finishes loading
   useEffect(() => {
+    if (!store.activeProjectId) return;
+    isSyncingFromStoreRef.current = true;
+
     if (store.qualidade || store.resolucao) {
       const q = (store.qualidade || store.resolucao || "1K") as "1K" | "2K" | "4K";
       setQuality(q === "2K" || q === "4K" ? q : "1K");
@@ -194,10 +211,16 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
     if (store.dimensao) {
       setDimensao(store.dimensao);
     }
+    if ((store as any).categoria) {
+      setCategoria((store as any).categoria);
+    }
+    if (store.quantidade) {
+      setQuantidade(String(store.quantidade));
+    }
     if (store.poseDescription !== undefined || store.composicaoCustom !== undefined) {
       setSubjectDescription(store.poseDescription || store.composicaoCustom || "");
     }
-    if (store.promptCenario || store.cenario) {
+    if (store.promptCenario !== undefined || store.cenario !== undefined) {
       setSceneDescription(store.promptCenario || store.cenario || "");
     }
     if (store.additionalPrompt !== undefined) {
@@ -208,6 +231,9 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
     }
     if (store.estiloVisual) {
       setEstiloVisual(store.estiloVisual || "Ultra Realista");
+    }
+    if ((store as any).modoCriativo || store.modoCriacao) {
+      setModoCriativo(((store as any).modoCriativo || store.modoCriacao || "Criativo") as any);
     }
     if (store.positioning) {
       const p = store.positioning.toLowerCase();
@@ -269,12 +295,17 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
         text: c.conteudo || "",
         weight: c.pesoVisual || 5,
         color: c.cor || "#FFFFFF",
-        position: c.posicao || (c as any).position || "top-center"
+        position: c.posicao || (c as any).posicao || "top-center"
       })));
     } else {
       setTextBlocks([]);
     }
-  }, [store.activeProjectId, store.lastLoadedAt, store.camadasTexto, store.logoBase64, store.cenarioBase64, store.logosList, store.cenariosBase64List, store.referenciasEstilo]);
+
+    const timer = setTimeout(() => {
+      isSyncingFromStoreRef.current = false;
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [store.activeProjectId, store.lastLoadedAt]);
 
   // ── Client Content Context (from ClientHub)
   // ── Client Content Context (from ClientHub)
@@ -524,8 +555,9 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
     { label: "Brand Premium", desc: "Visual de marca de alto luxo internacional, elegância contida, tipografia sofisticada e acabamentos impecáveis." }
   ];
 
-  // ── Sync to Global Store in Realtime
+  // ── Sync to Global Store in Realtime (Guarded against mount overwrite and tab sync)
   useEffect(() => {
+    if (!isMountedRef.current || isSyncingFromStoreRef.current) return;
     const brandDescText = brandImages.filter(b => b.desc && b.desc.trim()).map((b, i) => `Identidade da Marca #${i + 1}: ${b.desc.trim()}`).join(". ");
     const estiloDescText = estiloImages.filter(e => e.desc && e.desc.trim()).map((e, i) => `Referência de Estilo #${i + 1}: ${e.desc.trim()}`).join(". ");
     const ambienteDescText = ambienteImages.filter(a => a.desc && a.desc.trim()).map((a, i) => `Cenário/Ambiente #${i + 1}: ${a.desc.trim()}`).join(". ");
@@ -549,16 +581,27 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
     store.updateConfig({
       dimensao: dimensao,
       resolucao: quality,
+      qualidade: quality,
       gender: categoria === "Pessoa" ? "Masculino" : "Livre",
+      categoria: categoria,
+      quantidade: Number(quantidade) || 1,
       positioning: effectiveSubjectPos,
       poseDescription: subjectDescription,
+      composicaoCustom: subjectDescription,
+      nicho: nichoProjeto,
+      cenario: sceneDescription,
       promptCenario: [
         nichoProjeto ? `Nicho/Projeto: ${nichoProjeto}` : "",
         sceneDescription ? `Cenário: ${sceneDescription}` : "",
         ambienteDescText
       ].filter(Boolean).join(". "),
       composicao: plano,
+      estiloVisual: estiloVisual,
       estilosVisuais: [estiloVisual],
+      elementosFlutuantes: elementosFlutuantes,
+      floatingElementsCustom: elementosFlutuantesText,
+      modoCriativo: modoCriativo,
+      modoCriacao: modoCriativo,
       additionalPrompt: [
         categoria ? `Categoria: ${categoria}` : "",
         quantidade ? `Quantidade: ${quantidade}` : "",

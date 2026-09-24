@@ -33,9 +33,9 @@ const CATEGORIES = [
 const APPS = [
   { id: "all", label: "Todos os apps", slug: "" },
   { id: "altera-facil", label: "Altera Fácil", slug: "altera-facil" },
-  { id: "design-builder", label: "Design Builder", slug: "design-builder1-2" },
-  { id: "design-builder-1-2", label: "Design Builder1 2", slug: "design-builder1-2" },
-  { id: "design-builder-v2", label: "Design Builder V2", slug: "design-builder1-2" },
+  { id: "design-builder", label: "Zion Design", slug: "design-builder1-2" },
+  { id: "design-builder-1-2", label: "Zion Design 1.2", slug: "design-builder1-2" },
+  { id: "design-builder-v2", label: "Zion Design V2", slug: "design-builder1-2" },
   { id: "enhance", label: "Enhance", slug: "enhance-builder" },
   { id: "orion-pro", label: "Órion Pro", slug: "orion-pro" },
   { id: "product-builder", label: "Product Builder", slug: "design-builder1-2" },
@@ -136,7 +136,7 @@ export const ComunidadeManager: React.FC<ComunidadeManagerProps> = ({
               avatar: it.autor?.avatar_url || it.avatar || "",
               letter: (it.autor?.nome || it.author || "V")[0],
               baseVotes: it.upvote_count || it.baseVotes || 1,
-              app: it.app || (it.agent_slug === "orion-pro" ? "Órion Pro" : "Design Builder 1.2"),
+              app: it.app || (it.agent_slug === "orion-pro" ? "Órion Pro" : "Zion Design"),
               src: it.src || it.image_url || it.thumbnail_url || it.result_url || "",
               prompt: it.prompt || ""
             }));

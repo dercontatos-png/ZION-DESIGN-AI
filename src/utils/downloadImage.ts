@@ -203,32 +203,36 @@ export const downloadImage = (
         }
       }
 
-      // Direct download of native API bytes if no canvas operations are needed
-      if (isOriginalMode && !hasBgColor) {
-        const isUrl = base64Data.startsWith("http") || base64Data.startsWith("/");
-        const isBase64 = base64Data.startsWith("data:");
+      let resolvedSource = base64Data;
+      if (typeof resolvedSource === "string" && resolvedSource.includes("/results/") && resolvedSource.includes(".avif")) {
+        resolvedSource = resolvedSource.replace(/\.avif(\?.*)?$/, ".png$1");
+      }
+
+      // Direct download of native API bytes if format is PNG/ORIGINAL/NATIVO and no canvas operations are needed
+      const isPngDirect = (formatoSelecionado.toUpperCase() === "PNG" || isOriginalMode) && !hasBgColor;
+      if (isPngDirect) {
+        const isUrl = resolvedSource.startsWith("http") || resolvedSource.startsWith("/");
+        const isBase64 = resolvedSource.startsWith("data:");
 
         if (isUrl || isBase64) {
           try {
-            const res = await fetch(base64Data);
+            const res = await fetch(resolvedSource);
             const blob = await res.blob();
 
-            if (!blob.type.startsWith("image/") && !isBase64) {
-              throw new Error("Resposta não é uma imagem.");
+            if (blob.type.startsWith("image/") || isBase64) {
+              // Pure native fast path (zero re-encode = zero loss)
+              const extFromMime = blob.type.split("/")[1] || "png";
+              const blobUrl = URL.createObjectURL(blob);
+              const link = document.createElement("a");
+              link.href = blobUrl;
+              link.download = originalName || generateSmartFileName({ ...metaInfo, targetResolution: metaInfo?.targetResolution || targetResolution || "4K" }, extFromMime);
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+              resolve();
+              return;
             }
-
-            // Pure native fast path (zero re-encode = zero loss)
-            const extFromMime = blob.type.split("/")[1] || "png";
-            const blobUrl = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = blobUrl;
-            link.download = originalName || generateSmartFileName({ ...metaInfo, targetResolution: "NATIVO" }, extFromMime);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
-            resolve();
-            return;
           } catch (fetchErr) {
             console.warn("Fetch de bytes originais falhou, caindo para canvas nativo:", fetchErr);
           }
@@ -274,8 +278,8 @@ export const downloadImage = (
               targetW = Math.round(2048 * aspectRatio);
             }
           } else if (targetResolution === "1K") {
-            // Se a imagem ja veio na resolucao nativa 1K (<= 1536), preserva os pixels reais sem re-escalar
-            if (origW<= 1536 && origH <= 1536) {
+            // Se a imagem ja veio na resolucao nativa 1K ou maior, preserva os pixels reais sem nunca diminuir
+            if (origW >= 1024 || origH >= 1024) {
               targetW = origW;
               targetH = origH;
             } else if (aspectRatio >= 1) {
@@ -287,6 +291,12 @@ export const downloadImage = (
             }
           } else {
             // "ORIGINAL" or default: maintain exact natural API dimensions
+            targetW = origW;
+            targetH = origH;
+          }
+
+          // REGRA DE OURO DE QUALIDADE: NUNCA reduza a resolução de uma imagem gerada em 2K ou 4K!
+          if (origW > targetW || origH > targetH) {
             targetW = origW;
             targetH = origH;
           }
@@ -315,7 +325,7 @@ export const downloadImage = (
 
           // 3. Determine MIME type and extension
           // Native (ORIGINAL), WhatsApp HD (16MB), and Instagram (30MB) default to lossless PNG
-          const forceLosslessPng = isOriginalMode || isWhatsAppHD || isInstagram30MB;
+          const forceLosslessPng = Boolean(isOriginalMode || isWhatsAppHD || isInstagram30MB || targetResolution === "4K" || targetResolution === "2K" || targetResolution === "1K");
           let extension = forceLosslessPng ? "png" : (formatoSelecionado ? formatoSelecionado.toLowerCase() : "png");
           let mimeType = "image/png";
 
@@ -409,7 +419,7 @@ export const downloadImage = (
         reject(new Error("Error loading image for high-res download: " + e));
       };
 
-      img.src = base64Data;
+      img.src = resolvedSource || base64Data;
     } catch (err) {
       reject(err);
     }

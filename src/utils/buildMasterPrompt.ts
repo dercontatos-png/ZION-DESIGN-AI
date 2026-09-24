@@ -160,8 +160,11 @@ export const buildMasterPrompt = (config: ProjectConfig): string => {
       }
     }
   }
+  // Non-negotiable aspect ratio & geometric fidelity law
+  imageBindingRules.push("- PROPORTION INTEGRITY & ZERO DISTORTION LAW (MANDATORY - NON-NEGOTIABLE): NEVER stretch, squash, widen, or horizontally/vertically distort any logo, typography, human face/body, or reference graphic element. Circular emblems, seals, stamps, and icons MUST remain mathematically perfect 1:1 round circles - NEVER squashed into horizontal ovals or widened shapes! All subjects and logos MUST retain their authentic 1:1 native geometric proportions without any anamorphic stretching.");
+
   if (hasLogo && !isLogoOverlay) {
-    imageBindingRules.push("- SWAP SLOT — THE BRANDING & LOGO FIDELITY: Every logo, coat of arms, and insignia comes from the reference files supplied. The reference logo contains the COMPLETE brand lockup: BOTH the brand name 'CEPAR' in clean capital serif typography at the top AND the coat of arms emblem (shield, laurel wreath, open book, graduation cap, pencil) below it. You MUST replicate the ENTIRE lockup together. NEVER crop out, cut off, or drop the name 'CEPAR'! NEVER alter or hallucinate the name (do not change 'CEPAR' to 'Centro CE-PAR'). Replicate 100% of the graphic mark geometry with the requested colors. Position the complete logo in the institutional header (top-left or top-center with safe margin) OR in the footer endorsement bar. NEVER place the logo in the middle under headlines.");
+    imageBindingRules.push("- SWAP SLOT — THE BRANDING & LOGO FIDELITY: Every logo, coat of arms, and insignia comes from the reference files supplied. The reference logo contains the COMPLETE brand lockup: BOTH the brand name 'CEPAR' in clean capital serif typography at the top AND the coat of arms emblem (shield, laurel wreath, open book, graduation cap, pencil) below it. You MUST replicate the ENTIRE lockup together. NEVER crop out, cut off, or drop the name 'CEPAR'! NEVER alter or hallucinate the name (do not change 'CEPAR' to 'Centro CE-PAR'). Replicate 100% of the graphic mark geometry with the requested colors. Position the complete logo in the institutional header (top-left or top-center) with a MANDATORY generous safe margin of at least 16% to 20% down from the absolute top edge of the canvas (minimum 550 to 700 pixels in 4K resolution). NEVER touch, crop, or glue the logo to the top edge! OR in the footer endorsement bar. NEVER place the logo in the middle under headlines.");
     if (isDarkCanvas) {
       imageBindingRules.push("- LOGO CONTRAST & ADAPTATION LAW: On dark background canvas, render the brand logo in high-contrast vibrant colors or requested clean white/metallic finish without background boxes or stickers.");
     }
@@ -198,7 +201,7 @@ export const buildMasterPrompt = (config: ProjectConfig): string => {
     blocks.push(`THE READING — This is an abundance and precision packshot. The physical materials behave realistically: matte surfaces scatter light softly while glossy surfaces return bright, sharp specular reflections. The product is heroically staged as the absolute focal center.`);
   } else {
     blocks.push(`THE PICTURE — A vertical high-impact commercial visual in ${ratio} aspect ratio: edge-to-edge full canvas design, top-tier advertising agency grade, ultra-detailed, ${resolution} resolution, with authentic studio lighting, sharp focus, and compelling depth.`);
-    blocks.push(`THE READING — This image is built on visual clarity, dynamism, and photographic conviction. The subject is naturally integrated with the environment and lighting, while all typography and graphic elements float seamlessly across the canvas with generous breathing room and zero artificial borders.`);
+    blocks.push(`THE READING — This image is built on visual clarity, dynamism, and photographic conviction. The subject is naturally integrated with the environment and lighting, while all typography and graphic elements float seamlessly across the canvas with generous breathing room (10%+ padding from all canvas edges) and zero artificial borders. Full-bleed means the BACKGROUND extends edge-to-edge, but all content elements (text, logos, icons) MUST stay within the safe margin zone.`);
   }
 
   // ── BLOCO 3: DIRETRIZES LIVRES DO USUÁRIO & NICHO ──
@@ -273,15 +276,39 @@ Normal, symmetric, anatomically correct human proportions. Zero AI hallucination
         : `at ${config.positioning?.toLowerCase() || "center"} of the frame`;
       blocks.push(`POSE & SPATIAL PLACEMENT — Standing or seated composedly ${subjectSpatialPlacement}. ${pose} Weight settled, shoulders relaxed and dropped. Torso naturally oriented with subtle organic angle.`);
       blocks.push(`EXPRESSION — Genuine, confident, approachable expression. The brows sit level and untensed. The eyes are warm, open and steady, holding the lens with clear catchlights. The mouth features an authentic, unforced expression engaging the cheeks with subtle natural creasing at the eye corners. The face reads as human, charismatic, and authentic.`);
-      blocks.push(`PHOTO PLACEHOLDER SLOTS & VERTICAL HARMONY (ZERO DEAD SPACE):
-- ABSOLUTE PROHIBITION OF HUMAN MODELS: ZERO people, ZERO women, ZERO nurses, ZERO doctors, ZERO human figures! The user explicitly did not attach a person photo and requested empty boxes for later insertion. Do NOT paint any human model into the artwork!
-- THREE (3) HORIZONTAL PHOTO SLOTS: Render exactly THREE (3) clean, prominent, large white rectangular placeholder boxes arranged horizontally side-by-side across the middle of the canvas ("um do lado do outro no meio grande").
-- Appearance: Pure solid white fill (#FFFFFF) with subtle elegant rounded corners and clean soft contact shadows separating them from the background.
-- Arrangement: Equidistant spacing between the 3 boxes, centered horizontally, reserved for manual post-generation photo placement.
-- VERTICAL BALANCE & GAP ELIMINATION (CRITICAL):
-  * PROPORTIONAL VERTICAL DISTRIBUTION: The canvas must NOT have any awkward vacant gaps or empty voids!
-  * If the technical course bullet points are positioned below the three boxes, they must neatly occupy and balance the lower-middle zone, bridging smoothly into the bottom footer contact bar.
-  * If the technical course bullet points are positioned above the three boxes, the three white boxes MUST extend with generous vertical height downwards to sit comfortably right above the footer contact bar (maintaining only 6% to 8% safe breathing room above the contact phone/@), eliminating any empty void beneath them!`);
+      // Dynamic card detection from user prompt
+      const promptToScan = (config.additionalPrompt || "").toLowerCase();
+      const detectedCountMatch = promptToScan.match(/(\d+)\s*(quadrados?|cards?|caixas?|boxes?|espa[çc]os?|slots?)/i) ||
+                                 promptToScan.match(/(quatro|4)\s*(quadrados?|cards?|caixas?|boxes?)/i) ||
+                                 promptToScan.match(/(tr[êe]s|3)\s*(quadrados?|cards?|caixas?|boxes?)/i) ||
+                                 promptToScan.match(/(dois|duas|2)\s*(quadrados?|cards?|caixas?|boxes?)/i);
+      let detectedCards = 3;
+      if (detectedCountMatch) {
+        const w = detectedCountMatch[1].toLowerCase();
+        if (w === "4" || w === "quatro") detectedCards = 4;
+        else if (w === "3" || w === "três" || w === "tres") detectedCards = 3;
+        else if (w === "2" || w === "dois" || w === "duas") detectedCards = 2;
+        else if (w === "5" || w === "cinco") detectedCards = 5;
+        else { const n = parseInt(w); if (!isNaN(n) && n >= 1 && n <= 6) detectedCards = n; }
+      } else if (/mais um quadrado|adicione mais um quadrado/i.test(promptToScan)) {
+        detectedCards = 4;
+      }
+
+      blocks.push(`PHOTO PLACEHOLDER SLOTS & HARMONIC VERTICAL PROPORTIONS:
+- ABSOLUTE PROHIBITION OF HUMAN MODELS: ZERO people, ZERO women, ZERO nurses, ZERO doctors, ZERO human figures! Do NOT paint any human model into the artwork!
+- EXACTLY ${detectedCards} HORIZONTAL PHOTO CARDS: Render exactly ${detectedCards} clean, prominent, white rectangular placeholder boxes arranged horizontally side-by-side across the middle of the canvas ("${detectedCards} quadrados um do lado do outro").
+- Appearance: Pure solid white fill (#FFFFFF) with subtle elegant rounded corners and soft drop shadows separating them from the background.
+- ELEGANT CARD PROPORTIONS & AVOID TALL VERTICAL STRETCHING (CRITICAL):
+  * Because there are ${detectedCards} cards side-by-side, each card is narrower horizontally (~20% to 22% canvas width each for 4 cards).
+  * Therefore, each card's vertical height MUST ALSO be scaled down proportionately (~32% to 38% canvas height max). They MUST NOT be stretched into overly tall vertical pillars!
+  * Card vertical placement: The cards must start at ~38% of canvas height and END by ~60% of canvas height.
+  * This guarantees generous vertical space (at least 38% to 42% canvas height) below them for:
+    1) Course bullet points (e.g. 2 columns x 2 rows)
+    2) Foreground floating elements (e.g. stethoscopes)
+    3) WhatsApp contact phone numbers (stacked with matching font sizes)
+    4) Instagram & Facebook icons + @handle
+    5) PLUS the MANDATORY SAFE MARGIN (respiro de segurança) of at least 8% to 12% below the lowest text!
+- ZERO CLIPPING & ZERO OVERCROWDING: All elements must have ample breathing room with zero text or icons touching or glued to borders.`);
     } else {
       blocks.push(`SCENE ENVIRONMENT (NO HUMAN MODEL):
 - Clean, refined commercial institutional atmosphere without human models. Full-bleed edge-to-edge depth, architectural lighting, and pristine commercial clarity.`);
@@ -304,7 +331,7 @@ Shadows: Soft-edged contact shadows anchoring elements naturally. Deep crevices 
   const isSocialAtTop = topContactLayers.length > 0 && !userRequestedBottomSocial;
   if (!isLogo && isSocialAtTop && cleanHandle) {
     blocks.push(`TOP SOCIAL MEDIA HEADER (CENTERED AT TOP):
-Horizontally centered at the upper section of the layout with at least 8% margin from the top edge:
+Horizontally centered at the upper section of the layout with at least 16% to 20% margin (breathing room) from the top edge (minimum 550 to 700 pixels down in 4K) — STRICTLY FORBIDDEN from touching or appearing glued to the top border:
 - Small, uniform, solid-color circular badges in accent color (${secondaryAccent}) placed side-by-side with clean white glyphs (Instagram camera and Facebook 'f' glyphs ONLY).
 - Followed immediately by '${cleanHandle}' in clean, lowercase typography (${isDarkCanvas ? "#FFFFFF" : primaryAccent}).
 - STRICT BAN: ZERO TikTok icons, zero unrequested social glyphs.`);
@@ -398,7 +425,7 @@ ${textItems || "Clean structured content"}${bulletDetail}${floatingAccentDesc}`)
       : "";
 
     blocks.push(`FOOTER CONTACT & SOCIAL MEDIA BAR (MANDATORY PLACEMENT: BOTTOM CENTER):
-Horizontally centered in the lower 8% to 12% margin from the bottom edge of the canvas:
+Horizontally centered with generous breathing room, ending at least 16% to 20% ABOVE the absolute bottom edge of the canvas (minimum 550 to 700 pixels above the bottom edge in 4K resolution — NEVER touching, hugging, or glued to the bottom border):
 ${phoneDirective}
 ${handleDirective}
 - HORIZONTAL PLACEMENT: Positioned together horizontally centered at the bottom (or neatly stacked centered at bottom) with ample breathing room.
@@ -416,7 +443,13 @@ ${handleDirective}
   * NEVER draw an unprompted floating rounded rectangle card, white box, or container in the middle of the canvas UNLESS explicitly requested by the user in their custom directives. If the user explicitly requested white squares, panels, or boxes, you MUST render them faithfully with highest priority!
   * Typography and logos must float seamlessly and cleanly directly over the scene/background with natural contrast and subtle depth.
 - PROHIBITION OF COLLAGES & EMPTY PLACEHOLDER BOXES: Do NOT draw empty placeholder frames or unrequested collage grids from reference templates.
-- SAFE MARGINS: Maintain at least 8% to 12% safe padding from all 4 canvas borders. Elements must never touch or be clipped by the edges.`);
+- SAFE MARGINS (MANDATORY — NON-NEGOTIABLE):
+  * ALL text, logos, icons, contact info, and graphic elements MUST maintain a minimum 16% to 20% safe padding (generous breathing room) from top and bottom canvas borders, and at least 10% from side borders (top, bottom, left, right).
+  * NO element may ever touch, be clipped by, or appear glued to the canvas edges.
+  * TOP MARGIN: Logo and top header elements MUST start at least 16% to 20% down from the absolute top edge (minimum 550 to 700 pixels in 4K). ZERO elements may touch or hug the top border!
+  * BOTTOM MARGIN: Footer contact info (phone, social handle) MUST end at least 16% to 20% above the absolute bottom edge (minimum 550 to 700 pixels in 4K). ZERO elements may touch or hug the bottom border!
+  * LEFT/RIGHT MARGINS: Headlines and body text must start/end at least 8% from the side edges.
+  * This rule applies to EVERY single element without exception — even decorative accents, icons, and small type.`);
 
   // ── BLOCO 13: BRAND LOGO / EMBLEMA ──
   if (isLogo) {
@@ -437,8 +470,8 @@ ${handleDirective}
   2) BOTTOM: The coat of arms shield with laurel wreath, book, graduation cap, and pencil.
   * You MUST replicate the COMPLETE lockup together: BOTH the name "CEPAR" at the top AND the emblem shield at the bottom.
   * DO NOT cut off, crop out, or drop the name "CEPAR"! DO NOT mutate or hallucinate the name to "Centro CE-PAR" or anything other than "CEPAR".
-- INSTITUTIONAL PLACEMENT: Position the ONE official brand logo centered horizontally in the top header (with 8% to 10% safe top margin). NEVER place the logo in the middle of the body text or floating awkwardly between headline lines!
-- ABSOLUTE PROHIBITION against placing the logo touching or glued to the canvas borders or bottom edge (minimum 8% to 10% safe margins).
+- INSTITUTIONAL PLACEMENT: Position the ONE official brand logo centered horizontally in the top header (with 10% to 14% safe top margin). NEVER place the logo in the middle of the body text or floating awkwardly between headline lines!
+- ABSOLUTE PROHIBITION against placing the logo touching or glued to the canvas borders or bottom edge (minimum 10% to 14% safe margins).
 - EMBLEM & GRAPHIC MARK FIDELITY: Replicate the EXACT graphic mark geometry, shield/escudo contours, laurel wreath, book, graduation cap, and symbols from the attached logo reference image.
 - BRAND TYPOGRAPHY: Render the brand name "CEPAR" in ${logoTextColor} with crisp vector sharpness.
 - TRANSPARENCY: Render the single logo cleanly floating directly over the canvas environment with sharp, crisp contrast and subtle depth, without any artificial white card, pill box, or sticker background behind it.`);
@@ -468,13 +501,13 @@ DIGITAL OVERLAY MODE: Leave the designated logo area clean with ample negative s
 3. FONT ENFORCEMENT: Strictly use the specified font family (${mainFont}). Do NOT copy unrequested font styles or serif/slab serifs from the reference layout.
 4. ANTI-HALLUCINATION: Zero duplicate words, zero system alignment keywords rendered as text, zero unrequested TikTok icons.
 5. NO UNPROMPTED RECTANGULAR CARDS: Typography and elements MUST float directly on the canvas without unprompted card boxes in the center (unless explicitly requested by user).
-6. SAFE MARGINS & BORDER PADDING: Maintain at least 8% to 12% safe padding from all 4 borders. ABSOLUTE BAN on gluing or slicing text, logos, or contact badges against canvas edges!
+6. SAFE MARGINS & BORDER PADDING (CRITICAL): Maintain a minimum 10% to 14% safe breathing room from ALL 4 canvas borders. ABSOLUTE BAN on gluing, cramming, or slicing text, logos, icons, or contact badges against the top, bottom, left, or right canvas edges! Every element must have generous visual breathing space around it — nothing should ever feel crammed or pushed against the border.
 7. TEXT ALIGNMENT & CONTACT BAR: If left alignment ('Esquerda') is selected, the headlines and bullet items MUST be anchored flush-left on the left side of the canvas. Contact elements (WhatsApp phone and @ social handle) marked for bottom MUST be anchored at the BOTTOM CENTER with their respective WhatsApp, Instagram, and Facebook icons.
 8. SUBJECT CONTROL: ${hasSubject ? "Preserve subject photographic fidelity." : "ZERO human models, ZERO women, ZERO nurses! Do NOT generate any people. Render the requested three (3) white photo placeholder boxes side-by-side in the middle."}`);
 
   const negPrompt = config.negativePrompt?.trim()
     ? config.negativePrompt
-    : `duplicate logo, two logos, multiple logos, twin logos, double logo, repeated brand emblem, two crests, floating duplicate logo, ${antiHumanSubject}${antiCardBox}${antiMetadataLabels}${antiFontHallucination}${antiLogoBox}distorted logo, black text on dark background, unreadable text, TikTok icon, blurry text, displaced elements, extra limbs, extra fingers, three arms, floating hands, low resolution.`;
+    : `duplicate logo, two logos, multiple logos, twin logos, double logo, repeated brand emblem, two crests, floating duplicate logo, ${antiHumanSubject}${antiCardBox}${antiMetadataLabels}${antiFontHallucination}${antiLogoBox}distorted logo, stretched logo, squashed logo, squished logo, flattened logo, widened logo, aspect ratio distortion, anamorphic distortion, stretched face, squashed face, black text on dark background, unreadable text, TikTok icon, blurry text, displaced elements, extra limbs, extra fingers, three arms, floating hands, low resolution.`;
 
   blocks.push(`NEGATIVE PROMPT:\n${negPrompt}`);
 
@@ -486,6 +519,7 @@ DIGITAL OVERLAY MODE: Leave the designated logo area clean with ample negative s
   }
   finalCheckList.push("Composition is full-bleed edge-to-edge with NO central card or rectangular container box around text.");
   finalCheckList.push(`Aspect ratio ${ratio}. Lossless quality ${resolution}.`);
+  finalCheckList.push("SAFE MARGINS VERIFIED: All text, logos, icons, and contact elements have at least 10% breathing room from all 4 canvas edges — nothing touches or is glued to any border.");
   blocks.push(`FINAL CHECK — ${finalCheckList.join(" ")}`);
 
   return blocks.join("\n\n");

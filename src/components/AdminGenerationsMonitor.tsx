@@ -259,7 +259,7 @@ const INITIAL_AUDIT_GENERATIONS: GenerationAuditItem[] = [
     userEmail: "gabriel.social@marketing.com",
     userName: "Gabriel Social",
     agent: "design-builder1-2",
-    agentName: "Design Builder 1.2",
+    agentName: "Zion Design",
     format: "4:5",
     quality: "2K",
     durationSec: 27.8,
@@ -1179,7 +1179,7 @@ export const AdminGenerationsMonitor: React.FC<AdminGenerationsMonitorProps> = (
               <option value="hydra" className="bg-zinc-950 text-white">Hydra</option>
               <option value="enhance-builder" className="bg-zinc-950 text-white">Enhance</option>
               <option value="altera-facil" className="bg-zinc-950 text-white">Altera Fácil</option>
-              <option value="design-builder1-2" className="bg-zinc-950 text-white">Design Builder 1.2</option>
+              <option value="design-builder1-2" className="bg-zinc-950 text-white">Zion Design</option>
             </select>
             <ChevronDown size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
           </div>

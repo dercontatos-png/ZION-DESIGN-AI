@@ -26,6 +26,7 @@ import {
 import { useProjectStore, addDeletedImage } from "../store/useProjectStore";
 import { GenerationLoadingCanvas } from "./GenerationLoadingCanvas";
 import { set as idbSet, get as idbGet } from "idb-keyval";
+import { MagicRefineBar } from "./MagicRefineBar";
 
 interface AlteraFacilTabState {
   id: string;
@@ -619,6 +620,7 @@ const AlteraFacilBuilder: React.FC<AlteraFacilBuilderProps> = ({
         setGeneratedImage(finalImg);
         showToast?.("Imagem alterada com sucesso!", "success");
         store.addImagesToProjectGallery(store.activeProjectId, [finalImg]);
+        store.addGaleriaImage(finalImg, { app: "altera-facil" });
       } else {
         showToast?.(data.error || "Erro ao alterar imagem.", "error");
       }
@@ -1305,7 +1307,7 @@ const AlteraFacilBuilder: React.FC<AlteraFacilBuilderProps> = ({
               </div>
             ) : (
               <>
-                <div className="flex h-full min-h-0 min-w-0 flex-1 items-center justify-center gap-3 p-4">
+                <div className="flex h-full min-h-0 min-w-0 flex-1 items-center justify-center gap-3 p-4 pb-32 sm:pb-36">
               <div className="group/viewer relative flex h-full min-h-0 min-w-0 flex-1 overflow-hidden items-center justify-center">
                 {isProcessing ? (
                   <div
@@ -1452,50 +1454,23 @@ const AlteraFacilBuilder: React.FC<AlteraFacilBuilderProps> = ({
                 </div>
               </div>
 
-              {/* Bloco Central: Magic Bar */}
-              <div className="absolute bottom-8 left-1/2 z-20 flex w-[min(92vw,480px)] -translate-x-1/2 flex-col items-center gap-2.5 lg:w-[calc(100%-120px)] transition-[max-width] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] lg:max-w-[480px]">
-                <div className="magic-bar relative flex w-full flex-col overflow-hidden rounded-[22px] backdrop-blur-2xl animate-in fade-in slide-in-from-bottom-3 duration-500">
-                  <div className="flex items-end gap-2 px-3.5 max-lg:gap-1.5 max-lg:py-1.5 transition-[padding] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] py-2.5">
-                    <div className="area-do-campo flex min-w-0 flex-1 flex-col justify-end">
-                      <textarea
-                        rows={1}
-                        value={magicRefineText}
-                        onChange={(e) => setMagicRefineText(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && !e.shiftKey) {
-                            e.preventDefault();
-                            if (magicRefineText.trim()) {
-                              showToast?.("Refinando com instrução mágica...", "info");
-                              handleExecute();
-                            }
-                          }
-                        }}
-                        placeholder="Descreva a alteração mágica..."
-                        className="campo-de-refino w-full min-w-0 resize-none bg-transparent px-1 py-[6px] text-[15px] leading-6 text-[#f0ecff] outline-none scrollbar-hide disabled:opacity-50"
-                        style={{ height: "36px" }}
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      disabled={!magicRefineText.trim()}
-                      onClick={() => {
-                        if (magicRefineText.trim()) {
-                          showToast?.("Refinando com instrução mágica...", "info");
-                          handleExecute();
-                        }
-                      }}
-                      className={`flex h-9 w-9 max-lg:h-8 max-lg:w-8 shrink-0 items-center justify-center rounded-full transition-all duration-200 cursor-pointer ${
-                        magicRefineText.trim()
-                          ? "bg-violet-600 text-white shadow-lg shadow-violet-600/30 hover:bg-violet-500"
-                          : "bg-white/[0.06] text-zinc-600 cursor-not-allowed"
-                      }`}
-                      title="Enviar refinamento"
-                      aria-label="Enviar refinamento"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-send h-[18px] w-[18px]" aria-hidden="true"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"></path><path d="m21.854 2.147-10.94 10.939"></path></svg>
-                    </button>
-                  </div>
-                </div>
+              {/* Bloco Central: Magic Bar & Publish Alert */}
+              <div className="absolute bottom-8 left-1/2 z-20 flex w-[min(92vw,480px)] -translate-x-1/2 flex-col items-center gap-2.5 lg:w-[calc(100%-120px)] transition-[max-width] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] lg:max-w-[480px] pointer-events-auto">
+                <MagicRefineBar
+                  activeImage={generatedImage || photoBase64 || undefined}
+                  isProcessing={isProcessing}
+                  agentColor="#a855f7"
+                  placeholder="Descreva a alteração mágica..."
+                  onPublishCommunity={() => {
+                    onOpenCommunity?.();
+                    showToast?.("Publicação na comunidade iniciada!", "info");
+                  }}
+                  onSendRefine={(text) => {
+                    setMagicRefineText(text);
+                    showToast?.("Refinando com instrução mágica...", "info");
+                    setTimeout(() => handleExecute(), 50);
+                  }}
+                />
               </div>
             </div>
               </>

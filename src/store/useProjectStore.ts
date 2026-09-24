@@ -4,11 +4,32 @@ import { useClientStore } from "./useClientStore";
 import { set as idbSet, get as idbGet } from "idb-keyval";
 
 // ─── GERENCIAMENTO PERMANENTE DE IMAGENS EXCLUÍDAS ─────────────────────
+export const GENERIC_DELETED_NAMES = new Set([
+  "result.avif", "result.png", "result.webp", "result.jpg", "result.jpeg",
+  "thumbnail.avif", "thumbnail.png", "thumbnail.webp", "thumbnail.jpg", "thumbnail.jpeg",
+  "0.jpg", "1.jpg", "image.png", "image.jpg"
+]);
+
 export const getDeletedImages = (): Set<string> => {
   if (typeof window === "undefined") return new Set();
   try {
     const saved = localStorage.getItem("zion_deleted_images");
-    return new Set(saved ? JSON.parse(saved) : []);
+    const rawList = saved ? JSON.parse(saved) : [];
+    // Sanitizar: nunca permitir nomes genericos que limpam a galeria inteira
+    const filtered = rawList.filter((item) => {
+      if (!item || typeof item !== "string") return false;
+      const clean = item.trim().toLowerCase();
+      if (GENERIC_DELETED_NAMES.has(clean)) return false;
+      const bname = clean.split("/").pop()?.split("?")[0] || "";
+      if (GENERIC_DELETED_NAMES.has(bname) && !clean.includes("results/") && !clean.includes("thumbnails/")) {
+        return false;
+      }
+      return true;
+    });
+    if (filtered.length !== rawList.length) {
+      localStorage.setItem("zion_deleted_images", JSON.stringify(filtered));
+    }
+    return new Set(filtered);
   } catch {
     return new Set();
   }
@@ -18,15 +39,24 @@ export const addDeletedImage = (idOrUrl: string) => {
   if (typeof window === "undefined" || !idOrUrl) return;
   try {
     const deleted = getDeletedImages();
-    deleted.add(idOrUrl);
-    const basename = idOrUrl.split("/").pop();
-    if (basename) deleted.add(basename);
-    const matchId = idOrUrl.match(/(\d{13}_[a-z0-9]+)/i);
+    const clean = idOrUrl.trim();
+    const bname = clean.split("/").pop()?.split("?")[0] || "";
+    
+    // NUNCA adicionar nomes de arquivo genericos soltos (ex: result.avif)
+    if (!GENERIC_DELETED_NAMES.has(bname.toLowerCase())) {
+      deleted.add(clean);
+    } else if (clean.includes("/") && clean.length > bname.length) {
+      deleted.add(clean);
+    }
+    
+    const matchId = clean.match(/(\d{13}_[a-z0-9]+)/i);
     if (matchId) deleted.add(matchId[1]);
+    const matchUuid = clean.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+    if (matchUuid) deleted.add(matchUuid[1]);
+    
     localStorage.setItem("zion_deleted_images", JSON.stringify(Array.from(deleted)));
   } catch (_) {}
 };
-
 
 interface ProjectStoreState extends ProjectConfig {
   galeriaImages: string[];
@@ -97,6 +127,8 @@ interface ProjectStoreState extends ProjectConfig {
   renameProject: (id: string, newName: string) => void;
   resetConfig: () => void;
   deleteGaleriaImage: (idOrUrl: string) => void;
+  addGaleriaImage: (imgUrl: string, meta?: { app?: string; prompt?: string }) => void;
+  syncGaleriaWithServer: () => Promise<void>;
 }
 
 const defaultConfig: ProjectConfig = {
@@ -169,7 +201,9 @@ const defaultConfig: ProjectConfig = {
   elementosFlutuantes: false,
   elementosFlutuantesTexto: "",
   estiloVisual: "Ultra Realista",
-  modelId: "nanobanana-pro"
+  modelId: "nanobanana-pro",
+  categoria: "Pessoa",
+  modoCriativo: "Criativo"
 };
 
 const getFreshDefaultConfig = (): ProjectConfig => JSON.parse(JSON.stringify(defaultConfig));
@@ -231,25 +265,51 @@ const createDefaultProjects = (serverImages: string[] = ["/Design Builder1 2_fil
   ];
 };
 
+export const uploadBase64IfPossible = async (base64: string, prefix = "upload"): Promise<string> => {
+  if (typeof window === "undefined" || !base64 || typeof base64 !== "string" || !base64.startsWith("data:")) {
+    return base64;
+  }
+  try {
+    const res = await fetch("/api/upload", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ base64, filename: `${prefix}_${Date.now()}.png` })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.url) return data.url;
+    }
+  } catch (e) {
+    console.warn("Upload helper failed:", e);
+  }
+  return base64;
+};
+
+const sanitizeConfigValue = (val: any): any => {
+  if (typeof val === "string") {
+    if (val.startsWith("data:") && val.length > 500) {
+      return "";
+    }
+    return val;
+  }
+  if (Array.isArray(val)) {
+    return val.map(sanitizeConfigValue);
+  }
+  if (val && typeof val === "object") {
+    const copy: any = {};
+    for (const k of Object.keys(val)) {
+      copy[k] = sanitizeConfigValue(val[k]);
+    }
+    return copy;
+  }
+  return val;
+};
+
 const sanitizeListForLocalStorage = (list: any[]) => {
   if (!Array.isArray(list)) return [];
   return list.map(proj => {
     if (!proj || !proj.config) return proj;
-    const configCopy = { ...proj.config };
-    // Preserva todos os metadados, textos e cores; omite apenas base64 gigantes (>500 chars) para nunca estourar a cota de 5MB
-    Object.keys(configCopy).forEach(key => {
-      const val = configCopy[key];
-      if (typeof val === "string" && val.startsWith("data:") && val.length > 500) {
-        configCopy[key] = "";
-      } else if (Array.isArray(val)) {
-        configCopy[key] = val.map(item => {
-          if (typeof item === "string" && item.startsWith("data:") && item.length > 500) {
-            return "";
-          }
-          return item;
-        });
-      }
-    });
+    const configCopy = sanitizeConfigValue(proj.config);
     const cleanGaleria = Array.isArray(proj.galeria)
       ? proj.galeria.filter((img: string) => typeof img === "string" && (!img.startsWith("data:") || img.length < 500))
       : [];
@@ -356,6 +416,12 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
     const nextState = { ...state, ...updates };
     const currentId = state.activeProjectId || (state.projectsList[0] ? state.projectsList[0].id : "proj_aba_1");
     
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("zion_last_active_project_id", currentId);
+      }
+    } catch (_) {}
+
     const updatedProjects = state.projectsList.map((proj) => {
       if (proj.id === currentId) {
         const nextConfig = { ...(proj.config || {}), ...updates } as ProjectConfig;
@@ -694,18 +760,43 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
       galeria: []
     };
 
-    set((state) => {
-      const newList = [...state.projectsList, newProj];
-      saveProjectsToLocalStorage(newList);
-      return {
-        projectsList: newList,
-        activeProjectId: id,
-        ...freshConfig,
-        galeriaImages: [],
-        activeImageIndex: 0,
-        lastGeneratedPrompt: "",
-        lastSystemInstruction: ""
-      };
+    // Snapshot current active project before creating new tab
+    const activeId = state.activeProjectId;
+    const configKeys = Object.keys(defaultConfig) as (keyof ProjectConfig)[];
+    const activeSnapshot: any = {};
+    configKeys.forEach((k) => {
+      if (state[k] !== undefined) {
+        activeSnapshot[k] = state[k];
+      }
+    });
+    activeSnapshot.categoria = (state as any).categoria;
+    activeSnapshot.modoCriativo = (state as any).modoCriativo;
+    activeSnapshot.modoCriacao = (state as any).modoCriacao;
+
+    const updatedProjects = state.projectsList.map((p) => {
+      if (p.id === activeId) {
+        return {
+          ...p,
+          config: { ...(p.config || {}), ...activeSnapshot },
+          galeria: state.galeriaImages || p.galeria || []
+        };
+      }
+      return p;
+    });
+
+    const newList = [...updatedProjects, newProj];
+    saveProjectsToLocalStorage(newList);
+    try { localStorage.setItem("zion_last_active_project_id", id); } catch {}
+
+    set({
+      projectsList: newList,
+      activeProjectId: id,
+      ...freshConfig,
+      galeriaImages: [],
+      activeImageIndex: 0,
+      lastLoadedAt: Date.now(),
+      lastGeneratedPrompt: "",
+      lastSystemInstruction: ""
     });
   },
 
@@ -842,6 +933,10 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
           activeSnapshot[k] = currentState[k];
         }
       });
+      activeSnapshot.categoria = (currentState as any).categoria;
+      activeSnapshot.modoCriativo = (currentState as any).modoCriativo;
+      activeSnapshot.modoCriacao = (currentState as any).modoCriacao;
+
       updatedProjectsList = projectsList.map((p) => {
         if (p.id === activeProjectId) {
           return {
@@ -855,12 +950,12 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
       saveProjectsToLocalStorage(updatedProjectsList);
     }
 
-    useClientStore.getState().setActiveClient(proj.config.clientId || null);
-    const projQualidade = proj.config.qualidade || proj.config.resolucao || "1K";
+    useClientStore.getState().setActiveClient(proj.config?.clientId || null);
+    const projQualidade = proj.config?.qualidade || proj.config?.resolucao || "1K";
     set({
       projectsList: updatedProjectsList,
       activeProjectId: id,
-      ...proj.config,
+      ...(proj.config || {}),
       qualidade: projQualidade,
       resolucao: projQualidade,
       galeriaImages: proj.galeria || [],
@@ -890,6 +985,30 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
           ...p,
           name: p.name && p.name.startsWith("Aba ") ? p.name : `Aba ${idx + 1}`
         }));
+      }
+
+      // Inicia sincronizacao continua em tempo real (BroadcastChannel + polling + events)
+      if (typeof window !== "undefined" && !(window as any).__zionGallerySyncStarted) {
+        (window as any).__zionGallerySyncStarted = true;
+        try {
+          if ("BroadcastChannel" in window) {
+            const bc = new BroadcastChannel("zion-gallery-sync");
+            bc.onmessage = () => {
+              get().syncGaleriaWithServer();
+            };
+          }
+          window.addEventListener("zion-generation-done", () => {
+            get().syncGaleriaWithServer();
+          });
+          window.addEventListener("focus", () => {
+            get().syncGaleriaWithServer();
+          });
+          setInterval(() => {
+            if (document.visibilityState === "visible") {
+              get().syncGaleriaWithServer();
+            }
+          }, 2500);
+        } catch (_) {}
       }
 
       // Busca histórico de imagens no disco do servidor para que nenhuma geração se perca
@@ -1016,6 +1135,107 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
       camadasTexto: [],
       referenciasEstilo: []
     });
+  },
+
+  addGaleriaImage: (imgUrl: string, meta?: { app?: string; prompt?: string }) => {
+    if (!imgUrl || typeof imgUrl !== "string") return;
+    const deleted = getDeletedImages();
+    const bname = imgUrl.split("/").pop() || "";
+    if (deleted.has(imgUrl) || deleted.has(bname)) return;
+
+    set((state) => {
+      const existing = state.galeriaImages || [];
+      if (existing.includes(imgUrl)) {
+        return { activeImageIndex: 0 };
+      }
+      const nextImages = [imgUrl, ...existing];
+      const activeProjId = state.activeProjectId;
+      let nextProjects = state.projectsList;
+      if (activeProjId) {
+        nextProjects = state.projectsList.map((p) => {
+          if (p.id === activeProjId) {
+            const gal = [imgUrl, ...(p.galeria || []).filter((x) => x !== imgUrl)];
+            return { ...p, galeria: gal };
+          }
+          return p;
+        });
+        saveProjectsToLocalStorage(nextProjects);
+      }
+      return {
+        galeriaImages: nextImages,
+        activeImageIndex: 0,
+        projectsList: nextProjects
+      };
+    });
+
+    if (typeof window !== "undefined") {
+      try {
+        window.dispatchEvent(new CustomEvent("zion-generation-done", { detail: { imageUrl: imgUrl, ...meta } }));
+        if ("BroadcastChannel" in window) {
+          const bc = new BroadcastChannel("zion-gallery-sync");
+          bc.postMessage({ type: "NEW_IMAGE", imageUrl: imgUrl, ...meta });
+          bc.close();
+        }
+      } catch (_) {}
+    }
+  },
+
+  syncGaleriaWithServer: async () => {
+    try {
+      const [hRes, bffRes] = await Promise.all([
+        fetch("/api/historico-imagens").catch(() => null),
+        fetch("/api/bff/api/generations?limit=150").catch(() => null)
+      ]);
+
+      const foundImages: string[] = [];
+      if (hRes && hRes.ok) {
+        const hData = await hRes.json();
+        if (Array.isArray(hData.images)) {
+          foundImages.push(...hData.images.map((img: any) => img.url).filter(Boolean));
+        }
+      }
+      if (bffRes && bffRes.ok) {
+        const bffData = await bffRes.json();
+        if (Array.isArray(bffData.items)) {
+          foundImages.push(
+            ...bffData.items
+              .filter((it: any) => it.status === "done" || it.status === "COMPLETED" || !it.status)
+              .map((it: any) => it.result_url)
+              .filter(Boolean)
+          );
+        }
+      }
+
+      if (foundImages.length === 0) return;
+
+      const deleted = getDeletedImages();
+      const validFound = foundImages.filter((url) => {
+        const bname = url.split("/").pop() || "";
+        return !deleted.has(url) && !deleted.has(bname);
+      });
+
+      const current = get().galeriaImages || [];
+      const newItems = validFound.filter((url) => !current.includes(url));
+      if (newItems.length === 0) return;
+
+      const combined = Array.from(new Set([...newItems, ...current]));
+      const activeProjId = get().activeProjectId;
+      let nextProjects = get().projectsList;
+      if (activeProjId) {
+        nextProjects = nextProjects.map((p) => {
+          if (p.id === activeProjId) {
+            return { ...p, galeria: Array.from(new Set([...newItems, ...(p.galeria || [])])) };
+          }
+          return p;
+        });
+        saveProjectsToLocalStorage(nextProjects);
+      }
+
+      set({
+        galeriaImages: combined,
+        projectsList: nextProjects
+      });
+    } catch (_) {}
   },
 
   deleteGaleriaImage: (idOrUrl: string) => {

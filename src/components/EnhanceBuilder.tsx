@@ -28,6 +28,7 @@ import { CompareSlider } from "./CompareSlider";
 import { downloadImage } from "../utils/downloadImage";
 import { GenerationLoadingCanvas } from "./GenerationLoadingCanvas";
 import { set as idbSet, get as idbGet } from "idb-keyval";
+import { MagicRefineBar } from "./MagicRefineBar";
 
 export interface EnhanceHistoryItem {
   id: string;
@@ -69,6 +70,7 @@ interface EnhanceBuilderProps {
   onOpenCommunity?: () => void;
   onOpenChat?: () => void;
   onOpenReport?: () => void;
+  showToast?: (message: string, type: "success" | "error" | "info" | "warning") => void;
 }
 
 export const EnhanceBuilder: React.FC<EnhanceBuilderProps> = ({
@@ -78,6 +80,7 @@ export const EnhanceBuilder: React.FC<EnhanceBuilderProps> = ({
   onOpenCommunity,
   onOpenChat,
   onOpenReport,
+  showToast,
 }) => {
   // Initial state aligned with official Design Builder Enhance
   const [photoBase64, setPhotoBase64] = useState<string>("");
@@ -438,6 +441,9 @@ export const EnhanceBuilder: React.FC<EnhanceBuilderProps> = ({
           timestamp: Date.now(),
         };
         setHistoryItems((prev) => [newItem, ...prev.filter((it) => it.id !== newItem.id)]);
+        try {
+          useProjectStore.getState().addGaleriaImage(resultImg, { app: "enhance" });
+        } catch (_) {}
       } else {
         if (data?.errorCode === "BILLING_DISABLED" || res.status === 403 || String(data?.error).includes("BILLING_DISABLED")) {
           setBillingModalOpen(true);
@@ -448,6 +454,56 @@ export const EnhanceBuilder: React.FC<EnhanceBuilderProps> = ({
     } catch (err: any) {
       console.error("Erro no Enhance:", err);
       setErrorMessage("Erro de conexão ao processar melhoria: " + (err.message || "Tente novamente."));
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleRefine = async (refinePrompt: string) => {
+    if ((!enhancedImage && !photoBase64) || isProcessing) return;
+    setIsProcessing(true);
+    setIsComparing(false);
+    try {
+      const apiKey = localStorage.getItem("custom_gemini_api_key") || localStorage.getItem("custom_api_key") || "";
+      const sourceImage = enhancedImage || photoBase64;
+
+      const res = await fetch("/api/enhancer-supir-magnific", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          imageBase64: sourceImage,
+          mode: selectedStyle,
+          dimension,
+          quality,
+          instructions: refinePrompt,
+          customApiKey: apiKey,
+          somentePrompt: false,
+          generatePromptOnly: false,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Falha ao refinar imagem.");
+      }
+
+      if (data.enhancedImage) {
+        setEnhancedImage(data.enhancedImage);
+        const newItem: EnhanceHistoryItem = {
+          id: `enh-${Date.now()}`,
+          originalUrl: photoBase64,
+          enhancedUrl: data.enhancedImage,
+          style: selectedStyle,
+          dimension,
+          quality,
+          timestamp: Date.now(),
+        };
+        setHistoryItems((prev) => [newItem, ...prev.filter((it) => it.id !== newItem.id)]);
+        if (showToast) showToast("Aprimoramento concluído com sucesso!", "success");
+      }
+    } catch (err: any) {
+      console.error("[EnhanceBuilder] Erro ao refinar:", err);
+      if (showToast) showToast(err.message || "Erro ao refinar imagem", "error");
     } finally {
       setIsProcessing(false);
     }
@@ -1245,7 +1301,7 @@ export const EnhanceBuilder: React.FC<EnhanceBuilderProps> = ({
           <div className="flex flex-1 min-h-0 flex-col overflow-hidden max-lg:hidden">
             <div className="relative flex flex-1 min-h-0 flex-row overflow-hidden">
               <div className="relative flex flex-1 min-h-0 flex-col overflow-hidden">
-                <div className="flex h-full min-h-0 min-w-0 flex-1 items-center justify-center overflow-hidden p-4">
+                <div className="flex h-full min-h-0 min-w-0 flex-1 items-center justify-center overflow-hidden p-4 pb-32 sm:pb-36">
                   {isProcessing ? (
                     <div
                       className="relative flex flex-col items-center justify-center rounded-2xl border border-violet-500/40 overflow-hidden shadow-2xl shadow-violet-950/60 animate-in fade-in zoom-in-95 duration-300"
@@ -1373,85 +1429,101 @@ export const EnhanceBuilder: React.FC<EnhanceBuilderProps> = ({
                     </div>
                   )}
                 </div>
+
+                {/* Magic Refine Bar & Publish Alert Card */}
+                {enhancedImage && (
+                  <MagicRefineBar
+                    onSendRefine={(text, _attachments, _isBrush) => {
+                      handleRefine(text);
+                    }}
+                    isProcessing={isProcessing}
+                    agentColor="#8b5cf6"
+                    placeholder="Descreva o que deseja aprimorar nesta imagem..."
+                    activeImage={enhancedImage}
+                    onPublishCommunity={() => {
+                      onOpenCommunity?.();
+                      showToast?.("Publicação na comunidade iniciada!", "info");
+                    }}
+                  />
+                )}
               </div>
               <div id="ancora-gestor-de-imagens" className="pointer-events-none absolute inset-0 z-40" />
             </div>
-            
-            {/* Coluna Lateral de Histórico Oficial (72px) à Direita */}
+
+            {/* Coluna Lateral de Histórico Oficial (72px) à Direita do Palco */}
             <div
               data-tour="history"
-              className="coluna-de-historico relative z-10 hidden h-full shrink-0 flex-col lg:flex"
+              className="coluna-de-historico relative z-10 hidden h-full shrink-0 flex-col lg:flex border-l border-white/[0.04] bg-black"
               style={{ width: "72px", "--largura-do-historico": "72px" } as any}
             >
-              <div
-                className="historico-lateral absolute right-0 top-0 flex h-full flex-col border-l border-white/[0.04] bg-black"
-                style={{ width: "72px" }}
-              >
                 <div
-                  className="absolute left-0 top-0 z-20 h-full w-1.5 -translate-x-1/2 cursor-col-resize transition-colors hover:bg-violet-500/30"
-                  title="Arraste para redimensionar"
-                />
-                <div className="flex-1 space-y-1.5 overflow-y-auto px-1.5 py-2 scrollbar-hide">
-                  {historyItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className="group relative w-full overflow-hidden rounded-lg border transition-all duration-200 border-white/[0.06] hover:border-white/[0.15] hover:shadow-[0_0_6px_rgba(139,92,246,0.08)] cursor-pointer"
-                    >
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEnhancedImage(item.enhancedUrl);
-                        }}
-                        className="block w-full cursor-pointer"
-                        title="Geração — clique para visualizar"
+                  className="historico-lateral relative flex h-full flex-col bg-black"
+                  style={{ width: "72px" }}
+                >
+                  <div
+                    className="absolute left-0 top-0 z-20 h-full w-1.5 -translate-x-1/2 cursor-col-resize transition-colors hover:bg-violet-500/30"
+                    title="Arraste para redimensionar"
+                  />
+                  <div className="flex-1 space-y-1.5 overflow-y-auto px-1.5 py-2 scrollbar-hide">
+                    {historyItems.map((item) => (
+                      <div
+                        key={item.id}
+                        className="group relative w-full overflow-hidden rounded-lg border transition-all duration-200 border-white/[0.06] hover:border-white/[0.15] hover:shadow-[0_0_6px_rgba(139,92,246,0.08)] cursor-pointer"
                       >
-                        <img
-                          alt="Geração"
-                          src={item.enhancedUrl}
-                          className="block w-full bg-black object-cover cursor-grab active:cursor-grabbing"
-                          loading="lazy"
-                          decoding="async"
-                          style={{
-                            aspectRatio: dimension ? dimension.replace(":", " / ") : "4 / 5"
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEnhancedImage(item.enhancedUrl);
                           }}
-                          onLoad={(e) => {
-                            const { naturalWidth, naturalHeight } = e.currentTarget;
-                            if (naturalWidth && naturalHeight) {
-                              e.currentTarget.style.aspectRatio = `${naturalWidth} / ${naturalHeight}`;
+                          className="block w-full cursor-pointer"
+                          title="Geração — clique para visualizar"
+                        >
+                          <img
+                            alt="Geração"
+                            src={item.enhancedUrl}
+                            className="block w-full bg-black object-cover cursor-grab active:cursor-grabbing"
+                            loading="lazy"
+                            decoding="async"
+                            style={{
+                              aspectRatio: dimension ? dimension.replace(":", " / ") : "4 / 5"
+                            }}
+                            onLoad={(e) => {
+                              const { naturalWidth, naturalHeight } = e.currentTarget;
+                              if (naturalWidth && naturalHeight) {
+                                e.currentTarget.style.aspectRatio = `${naturalWidth} / ${naturalHeight}`;
+                              }
+                            }}
+                          />
+                        </button>
+                        <div className="pointer-events-none absolute left-1 top-1 z-10 flex items-center rounded border px-1 py-0.5 text-[8px] font-semibold leading-none shadow-sm backdrop-blur-sm opacity-0 transition-opacity duration-150 group-hover:opacity-100 border-violet-400/30 bg-violet-950/85 text-violet-200">
+                          <span>Geração</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const filename = item.enhancedUrl.split("/").pop() || "";
+                            addDeletedImage(item.id);
+                            addDeletedImage(item.enhancedUrl);
+                            addDeletedImage(filename);
+                            useProjectStore.getState().deleteGaleriaImage(item.enhancedUrl);
+                            fetch(`/api/bff/api/generations/${item.id}`, { method: "DELETE" }).catch(() => {});
+                            if (filename.endsWith(".png") || filename.endsWith(".avif") || filename.endsWith(".webp") || filename.endsWith(".jpg")) {
+                              fetch(`/api/historico-imagens/${filename}`, { method: "DELETE" }).catch(() => {});
                             }
+                            setHistoryItems((prev) => prev.filter((h) => h.id !== item.id));
                           }}
-                        />
-                      </button>
-                      <div className="pointer-events-none absolute left-1 top-1 z-10 flex items-center rounded border px-1 py-0.5 text-[8px] font-semibold leading-none shadow-sm backdrop-blur-sm opacity-0 transition-opacity duration-150 group-hover:opacity-100 border-violet-400/30 bg-violet-950/85 text-violet-200">
-                        <span>Geração</span>
+                          className="absolute right-1 top-1 z-10 flex h-6 w-6 items-center justify-center rounded-md bg-black/70 text-zinc-300 ring-1 ring-white/10 backdrop-blur-sm opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-500/30 hover:text-red-300"
+                          title="Remover geração permanentemente"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const filename = item.enhancedUrl.split("/").pop() || "";
-                          addDeletedImage(item.id);
-                          addDeletedImage(item.enhancedUrl);
-                          addDeletedImage(filename);
-                          useProjectStore.getState().deleteGaleriaImage(item.enhancedUrl);
-                          fetch(`/api/bff/api/generations/${item.id}`, { method: "DELETE" }).catch(() => {});
-                          if (filename.endsWith(".png") || filename.endsWith(".avif") || filename.endsWith(".webp") || filename.endsWith(".jpg")) {
-                            fetch(`/api/historico-imagens/${filename}`, { method: "DELETE" }).catch(() => {});
-                          }
-                          setHistoryItems((prev) => prev.filter((h) => h.id !== item.id));
-                          // Geração excluída
-                        }}
-                        className="absolute right-1 top-1 z-10 flex h-6 w-6 items-center justify-center rounded-md bg-black/70 text-zinc-300 ring-1 ring-white/10 backdrop-blur-sm opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-500/30 hover:text-red-300"
-                        title="Remover geração permanentemente"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
         ) : (
           /* Modo Galeria Oficial com Histórico Persistido */
           <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden scrollbar-hide">

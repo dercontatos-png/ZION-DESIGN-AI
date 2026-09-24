@@ -1141,6 +1141,7 @@ const DEFAULT_DEMO_TRANSACTIONS: Transaction[] = [
 
 import { AuthModal } from "./components/AuthModal";
 import { ProfileCompletePopup } from "./components/ProfileCompletePopup";
+import { EmDesenvolvimentoScreen } from "./components/EmDesenvolvimentoScreen";
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<{ email: string; role: "admin" | "client" } | null>(() => {
@@ -1188,6 +1189,11 @@ export default function App() {
   const [activeTab, setActiveTab] = useState("ai-tools");
   const [profileSubTab, setProfileSubTab] = useState<string>("chave");
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  // Inicializa lista de projetos e restaura estado completo do disco e IDB na montagem do app
+  React.useEffect(() => {
+    useProjectStore.getState().initProjectsList();
+  }, []);
 
   React.useEffect(() => {
     if (
@@ -4249,6 +4255,33 @@ ${textContent}`
       </div>
     );
   };
+
+  // ── TRAVA EXCLUSIVA DE ACESSO: APENAS der.contatos@gmail.com PODE ACESSAR ──
+  const isExclusiveAdmin = currentUser && currentUser.email?.toLowerCase() === "der.contatos@gmail.com";
+
+  if (!isAuthLoading && !isExclusiveAdmin) {
+    return (
+      <>
+        <EmDesenvolvimentoScreen
+          currentUser={currentUser}
+          onOpenAuth={() => setIsAuthModalOpen(true)}
+          onSignOut={handleSignOut}
+        />
+        <AuthModal
+          isOpen={!isAuthChecking && (!currentUser || isAuthModalOpen)}
+          onClose={() => {
+            setIsAuthModalOpen(false);
+            setIsPasswordResetMode(false);
+          }}
+          initialViewMode={isPasswordResetMode ? "reset" : "login"}
+          onLoginSuccess={(u) => {
+            setCurrentUser(u);
+            if (u.role === "client") setActiveTab("ai-tools");
+          }}
+        />
+      </>
+    );
+  }
 
   if (isAuthLoading) {
     return (

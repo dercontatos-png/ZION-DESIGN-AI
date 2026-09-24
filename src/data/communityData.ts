@@ -39,7 +39,7 @@ export const COMMUNITY_CARDS: CommunityCardItem[] = [
     author: "IGOR OLIVEIRA",
     avatar: "/comunidade_files/f205c77e149854d68507fb93daedf1fb.jpg",
     baseVotes: 1,
-    app: "Design Builder 1.2",
+    app: "Zion Design",
     src: "/comunidade_files/thumbnail(2).avif",
     prompt: "Futuristic neon cyberpunk character, holographic accents, octane render 3D, glowing purple and cyan volumetric lights, ray tracing."
   },
@@ -109,7 +109,7 @@ export const COMMUNITY_CARDS: CommunityCardItem[] = [
     author: "LUCAS RAMOS",
     avatar: "/comunidade_files/062aba743f9ed86b874689f9d672bcd3.png",
     baseVotes: 0,
-    app: "Design Builder 1.2",
+    app: "Zion Design",
     src: "/comunidade_files/thumbnail(3).avif",
     prompt: "Commercial luxury product photography, pedestal stand, subtle reflections, soft studio lighting, sharp details, commercial advertising."
   },
@@ -165,7 +165,7 @@ export const COMMUNITY_CARDS: CommunityCardItem[] = [
     author: "LUCAS RAMOS",
     avatar: "/comunidade_files/062aba743f9ed86b874689f9d672bcd3.png",
     baseVotes: 1,
-    app: "Design Builder 1.2",
+    app: "Zion Design",
     src: "/comunidade_files/thumbnail(4).avif",
     prompt: "Brutalist architecture study, stark dramatic shadows, concrete texture, minimalist geometric lines, clear blue sky contrast."
   },

@@ -517,6 +517,7 @@ export const useGenerateImage = (
       console.log(`[FRONT] ✅ Imagem recebida: ${resultUrl}`);
       recordImageGeneration(1);
       const isActive = store.addImagesToProjectGallery(targetProjectId, [resultUrl]);
+      store.addGaleriaImage(resultUrl, { app: "design-builder" });
       if (isActive) {
         showToast(`Imagem ${is4K ? "4K Ultra HD" : "premium"} gerada com sucesso! ✅`, "success");
       } else {
@@ -658,6 +659,9 @@ export const useGenerateImage = (
       if (newImages.length > 0) {
         recordImageGeneration(newImages.length);
         store.addImagesToProjectGallery(targetProjectId, newImages);
+        if (newImages[0]) {
+          store.addGaleriaImage(newImages[0], { app: "design-builder" });
+        }
         if (typeof window !== "undefined") {
           window.dispatchEvent(new CustomEvent("zion-generation-done", { detail: { imageUrl: newImages[0], projectId: targetProjectId } }));
         }

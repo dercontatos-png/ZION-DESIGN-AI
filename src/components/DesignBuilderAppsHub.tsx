@@ -34,46 +34,46 @@ export interface AppDefinition {
 export const APPS_CATALOG: AppDefinition[] = [
   {
     id: "design-builder",
-    name: "Design Builder 1.2",
+    name: "Zion Design",
     category: "Campanhas & Flyers",
     categoryTag: "Principal",
-    tagline: "Criativos, flyers e campanhas completas de alta conversão",
-    desc: "Criação de artes comerciais com controle total de camadas de tipografia, pesos visuais e integração direta com prompt mestre.",
+    tagline: "Criativos, flyers e campanhas completas de alta conversao",
+    desc: "Criacao de artes comerciais com controle total de camadas de tipografia, pesos visuais e integracao direta com prompt mestre.",
     color: "#8B5CF6",
     accentBg: "rgba(139, 92, 246, 0.12)",
     accentBorder: "rgba(139, 92, 246, 0.3)",
     route: "/agent/design-builder1-2",
-    bullets: ["Textos monumentais com pesos 1 a 5", "Estilos autorais para social media", "Fidelidade facial fotográfica", "Multi-camadas inteligentes"],
+    bullets: ["Textos monumentais com pesos 1 a 5", "Estilos autorais para social media", "Fidelidade facial fotografica", "Multi-camadas inteligentes"],
     status: "active",
     popular: true
   },
   {
     id: "orion-pro",
-    name: "Órion Pro",
-    category: "Direção de Arte",
+    name: "Orion Pro",
+    category: "Direcao de Arte",
     categoryTag: "Editorial & 3D",
-    tagline: "Direção de arte cinematográfica com liberdade criativa total",
-    desc: "Render hiper-realista com controle de iluminação dramática, estúdios virtuais e referências estéticas de nível cinema.",
+    tagline: "Direcao de arte cinematografica com liberdade criativa total",
+    desc: "Render hiper-realista com controle de iluminacao dramatica, estudios virtuais e referencias esteticas de nivel cinema.",
     color: "#F59E0B",
     accentBg: "rgba(245, 158, 11, 0.12)",
     accentBorder: "rgba(245, 158, 11, 0.3)",
     route: "/orion-pro",
-    bullets: ["Fotografia cinematográfica & editorial", "Qualidade 4K Ultra com texturas reais", "Qualquer estilo visual sem limitações", "Render dinâmico de iluminação"],
+    bullets: ["Fotografia cinematografica & editorial", "Qualidade 4K Ultra com texturas reais", "Qualquer estilo visual sem limitacoes", "Render dinamico de iluminacao"],
     status: "active",
     popular: true
   },
   {
     id: "ref",
     name: "Ref Builder",
-    category: "Referências",
+    category: "Referencias",
     categoryTag: "Pinterest Sync",
-    tagline: "Clonagem e recombinação de referências com Pinterest nativo",
-    desc: "Clone estruturas visuais, composições e paletas de cores de qualquer imagem do Pinterest ou upload com um único clique.",
+    tagline: "Clonagem e recombinacao de referencias com Pinterest nativo",
+    desc: "Clone estruturas visuais, composicoes e paletas de cores de qualquer imagem do Pinterest ou upload com um unico clique.",
     color: "#EC4899",
     accentBg: "rgba(236, 72, 153, 0.12)",
     accentBorder: "rgba(236, 72, 153, 0.3)",
     route: "/agent/ref",
-    bullets: ["Busca no Pinterest integrada", "Extração de paleta e iluminação", "Transferência fiel de pose e composição", "Presets 1:1, 4:5 e 9:16"],
+    bullets: ["Busca no Pinterest integrada", "Extracao de paleta e iluminacao", "Transferencia fiel de pose e composicao", "Presets 1:1, 4:5 e 9:16"],
     status: "active",
     popular: true
   },
@@ -82,41 +82,41 @@ export const APPS_CATALOG: AppDefinition[] = [
     name: "Hydra",
     category: "Fotografia & E-commerce",
     categoryTag: "Packshots",
-    tagline: "Fotos de produtos e ambientações de alta conversão",
-    desc: "Transforme fotos amadoras de produtos em ensaios comerciais dignos de grandes marcas em estúdios hiper-realistas.",
+    tagline: "Fotos de produtos e ambientacoes de alta conversao",
+    desc: "Transforme fotos amadoras de produtos em ensaios comerciais dignos de grandes marcas em estudios hiper-realistas.",
     color: "#A78BFA",
     accentBg: "rgba(167, 139, 250, 0.12)",
     accentBorder: "rgba(167, 139, 250, 0.3)",
     route: "/hydra",
-    bullets: ["Ensaios de produtos profissionais", "Ambientações de luxo e lifestyle", "Sombras e reflexos contextuais 100% físicos", "Curadoria por designers seniores"],
+    bullets: ["Ensaios de produtos profissionais", "Ambientacoes de luxo e lifestyle", "Sombras e reflexos contextuais 100% fisicos", "Curadoria por designers seniores"],
     status: "active"
   },
   {
     id: "enhance-builder",
     name: "Enhance",
-    category: "Upscale & Restauração",
+    category: "Upscale & Restauracao",
     categoryTag: "Upscale 4K",
-    tagline: "Restauração de imagens e ampliação ultra-nítida",
-    desc: "Remova ruídos, reconstrua detalhes faciais borrados e aumente a resolução das suas fotos para até 4K com fidelidade absoluta.",
+    tagline: "Restauracao de imagens e ampliacao ultra-nitida",
+    desc: "Remova ruidos, reconstrua detalhes faciais borrados e aumente a resolucao das suas fotos para ate 4K com fidelidade absoluta.",
     color: "#10B981",
     accentBg: "rgba(16, 185, 129, 0.12)",
     accentBorder: "rgba(16, 185, 129, 0.3)",
     route: "/enhance-builder",
-    bullets: ["Upscale 2x e 4K preservando traços", "Restauração de fotos antigas ou compactadas", "Nitidez facial com textura de pele real", "Recuperação de iluminação"],
+    bullets: ["Upscale 2x e 4K preservando tracos", "Restauracao de fotos antigas ou compactadas", "Nitidez facial com textura de pele real", "Recuperacao de iluminacao"],
     status: "active"
   },
   {
     id: "altera-facil",
-    name: "Altera Fácil",
+    name: "Altera Facil",
     category: "Identidade & Poses",
-    categoryTag: "Consistência",
-    tagline: "Variações de roupas, poses e cenários mantendo o mesmo rosto",
-    desc: "Mude o look, a pose e a ambientação da modelo sem perder a identidade facial ou características corporais originais.",
+    categoryTag: "Consistencia",
+    tagline: "Variacoes de roupas, poses e cenarios mantendo o mesmo rosto",
+    desc: "Mude o look, a pose e a ambientacao da modelo sem perder a identidade facial ou caracteristicas corporais originais.",
     color: "#F97316",
     accentBg: "rgba(249, 115, 22, 0.12)",
     accentBorder: "rgba(249, 115, 22, 0.3)",
     route: "/altera-facil",
-    bullets: ["Consistência facial garantida", "Troca completa de roupas e vestuário", "Novas poses dinâmicas para ensaios", "Consistência de marca e influencer"],
+    bullets: ["Consistencia facial garantida", "Troca completa de roupas e vestuario", "Novas poses dinamicas para ensaios", "Consistencia de marca e influencer"],
     status: "active"
   }
 ];
@@ -135,7 +135,7 @@ export const DesignBuilderAppsHub: React.FC<DesignBuilderAppsHubProps> = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Todos");
 
-  const categories = ["Todos", "Campanhas & Flyers", "Direção de Arte", "Referências", "Fotografia & E-commerce", "Upscale & Restauração", "Identidade & Poses"];
+  const categories = ["Todos", "Campanhas & Flyers", "Direcao de Arte", "Referencias", "Fotografia & E-commerce", "Upscale & Restauracao", "Identidade & Poses"];
 
   const filteredApps = APPS_CATALOG.filter((app) => {
     const matchesSearch =
@@ -189,7 +189,7 @@ export const DesignBuilderAppsHub: React.FC<DesignBuilderAppsHubProps> = ({
               className="flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer"
             >
               <Home size={14} />
-              <span>Início</span>
+              <span>Inicio</span>
             </button>
             <ChevronRight size={12} className="text-zinc-600" />
             <span className="text-violet-400 font-semibold">Todos os apps</span>
@@ -213,8 +213,8 @@ export const DesignBuilderAppsHub: React.FC<DesignBuilderAppsHubProps> = ({
           <div className="relative z-10 max-w-3xl space-y-4">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-violet-500/15 border border-violet-500/30 text-violet-300">
               <Sparkles size={13} />
-              <span>Suíte Criativa Completa</span>
-              <span className="text-violet-500/50">•</span>
+              <span>Suite Criativa Completa</span>
+              <span className="text-violet-500/50"></span>
               <span className="text-white font-bold">{APPS_CATALOG.length} Aplicativos Oficiais</span>
             </div>
 
@@ -226,7 +226,7 @@ export const DesignBuilderAppsHub: React.FC<DesignBuilderAppsHubProps> = ({
             </h1>
 
             <p className="text-sm sm:text-base text-zinc-400 leading-relaxed max-w-2xl">
-              Alterne entre ferramentas especializadas criadas para cada etapa da sua produção: de flyers monumentais a estúdios fotográficos e restauração 4K.
+              Alterne entre ferramentas especializadas criadas para cada etapa da sua producao: de flyers monumentais a estudios fotograficos e restauracao 4K.
             </p>
           </div>
 
@@ -345,13 +345,13 @@ export const DesignBuilderAppsHub: React.FC<DesignBuilderAppsHubProps> = ({
                 </div>
               </div>
 
-              {/* Botão de Rodapé */}
+              {/* Footer button */}
               <div className="pt-2">
                 <button
                   type="button"
                   className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 bg-white/[0.06] group-hover:bg-violet-600 text-zinc-200 group-hover:text-white border border-white/10 group-hover:border-violet-500/50 shadow-md cursor-pointer"
                 >
-                  <span>Abrir no Estúdio</span>
+                  <span>Abrir no Studio</span>
                   <div className="flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
                     <span className="text-[10px] text-zinc-400 group-hover:text-violet-200 font-mono">
                       {app.route}
@@ -372,13 +372,13 @@ export const DesignBuilderAppsHub: React.FC<DesignBuilderAppsHubProps> = ({
               <div className="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-white/[0.05] text-zinc-400 mb-2">
                 Em Desenvolvimento
               </div>
-              <h3 className="text-base font-bold text-zinc-300 mb-1">Novos Agentes & Integrações</h3>
+              <h3 className="text-base font-bold text-zinc-300 mb-1">Novos Agentes & Integracoes</h3>
               <p className="text-xs text-zinc-500 leading-relaxed mb-4">
-                Gerador de animações para criativos, assistente de redação e integrações com WhatsApp e Telegram estão a caminho.
+                Gerador de animacoes para criativos, assistente de redacao e integracoes com WhatsApp e Telegram estao a caminho.
               </p>
             </div>
             <div className="pt-4 border-t border-white/5 text-[11px] text-zinc-500 font-mono">
-              Atualizações automáticas da suíte
+              Atualizacoes automaticas da suite
             </div>
           </div>
         </div>

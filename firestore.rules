@@ -1,0 +1,58 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net
+    match /{document=**} { 
+      allow read, write: if false; 
+    }
+
+    // Phase 3: Primitive Definition
+    function isValidId(id) { 
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
+    }
+    
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isSignedIn() { return request.auth != null; }
+
+    // Blueprint Validation for UserAppState
+    function isValidUserAppState(data, userId) {
+      return data.keys().hasAll(['userId', 'updatedAt'])
+        && data.keys().size() >= 2
+        && data.keys().size() <= 20
+        && data.userId == userId
+        && data.userId == request.auth.uid
+        && data.updatedAt is string
+        && data.updatedAt.size() <= 100
+        // Optional fields
+        && (!('clients' in data) || data.clients is list && data.clients.size() <= 1000)
+        && (!('tasks' in data) || data.tasks is list && data.tasks.size() <= 2000)
+        && (!('transactions' in data) || data.transactions is list && data.transactions.size() <= 2000)
+        && (!('calendarEvents' in data) || data.calendarEvents is list && data.calendarEvents.size() <= 1000)
+        && (!('notifications' in data) || data.notifications is list && data.notifications.size() <= 500)
+        && (!('myProfile' in data) || data.myProfile is map)
+        && (!('transactionCategories' in data) || data.transactionCategories is list && data.transactionCategories.size() <= 200)
+        && (!('logoRefs' in data) || data.logoRefs is list && data.logoRefs.size() <= 50)
+        && (!('savedCards' in data) || data.savedCards is list && data.savedCards.size() <= 500)
+        && (!('savedNotes' in data) || data.savedNotes is list && data.savedNotes.size() <= 500)
+        && (!('messages' in data) || data.messages is list && data.messages.size() <= 1000);
+    }
+
+    match /users/{userId} {
+      allow read: if isSignedIn() && request.auth.uid == userId;
+      
+      allow create: if isSignedIn() 
+        && isValidId(userId)
+        && request.auth.uid == userId
+        && isValidUserAppState(incoming(), userId);
+
+      allow update: if isSignedIn()
+        && request.auth.uid == userId
+        && isValidUserAppState(incoming(), userId)
+        && incoming().userId == existing().userId; // Immutable field
+        
+      allow delete: if isSignedIn() && request.auth.uid == userId;
+    }
+  }
+}

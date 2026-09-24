@@ -164,6 +164,14 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
   const [accentColorActive, setAccentColorActive] = useState(() => Boolean(store.cores?.recorte));
   const [accentColor, setAccentColor] = useState(() => store.cores?.recorte || "#7C3AED");
 
+  // Popover modal do seletor de cores
+  const [activeColorPicker, setActiveColorPicker] = useState<{
+    id: string;
+    title: string;
+    color: string;
+    onSelect: (c: string) => void;
+  } | null>(null);
+
   // Style composition state
   const [plano, setPlano] = useState<"close-up" | "medium" | "american">(
     () => ((store.composicao?.toLowerCase().includes("close") ? "close-up" : store.composicao?.toLowerCase().includes("american") ? "american" : "medium") as any)
@@ -199,21 +207,21 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
     isMountedRef.current = true;
   }, []);
 
-  // Sincronizar estados locais caso o projeto ativo mude ou seja carregado
+  // Sincronizar estados locais caso o projeto ativo mude ou seja carregado (SEM loop infinito)
   useEffect(() => {
     if (!store.activeProjectId) return;
     isSyncingFromStoreRef.current = true;
-    setSubjectPos((store.positioning as any) || "Centro");
-    setNicho(store.nicho || "");
-    setQuantidade(store.quantidade || 1);
-    setGenero((store.gender === "Feminino" ? "Feminino" : "Masculino") as any);
-    setDegradeTexto(Boolean(store.degradeLeitura));
-    setPosicaoTexto((store.typographyPosition as any) || "Centro");
-    setUsarBlur(Boolean(store.enableBlur));
-    setSobriedade(store.nivelCriativo ?? 50);
+    if (store.positioning) setSubjectPos(store.positioning as any);
+    if (store.nicho !== undefined) setNicho(store.nicho || "");
+    if (store.quantidade) setQuantidade(store.quantidade || 1);
+    if (store.gender) setGenero((store.gender === "Feminino" ? "Feminino" : "Masculino") as any);
+    if (store.degradeLeitura !== undefined) setDegradeTexto(Boolean(store.degradeLeitura));
+    if (store.typographyPosition) setPosicaoTexto(store.typographyPosition as any);
+    if (store.enableBlur !== undefined) setUsarBlur(Boolean(store.enableBlur));
+    if (store.nivelCriativo !== undefined) setSobriedade(store.nivelCriativo ?? 50);
     setElementosFlutuantesActive(Boolean(store.elementosFlutuantes || store.floatingElementsCustom));
     setElementosFlutuantesText(store.floatingElementsCustom || store.elementosFlutuantesTexto || "");
-    setEstiloVisual(store.estiloVisual || store.estilosVisuais?.[0] || "Ultra Realista");
+    if (store.estiloVisual) setEstiloVisual(store.estiloVisual);
 
     if (store.camadasTexto && store.camadasTexto.length > 0) {
       setTextBlocks(store.camadasTexto.map((c) => ({
@@ -225,41 +233,40 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
         weight: c.pesoVisual || (c.funcao?.includes("Headline") ? 5 : c.funcao?.includes("Sub") ? 3 : 2),
         posicao: (c.posicao as any) || (store.typographyPosition as any) || "Centro"
       })));
-    } else {
-      setTextBlocks([]);
     }
     if (store.cenariosBase64List || store.cenarioBase64) {
       const list = store.cenariosBase64List || (store.cenarioBase64 ? [store.cenarioBase64] : []);
       setAmbienteRefs(list.map((url, i) => ({ id: `env_${i}`, url, desc: "" })));
-    } else {
-      setAmbienteRefs([]);
     }
     if (store.referenciasEstilo) {
       setEstiloRefs(store.referenciasEstilo.map((r) => ({ id: r.id, url: r.url || r.data, desc: r.descricao || "" })));
-    } else {
-      setEstiloRefs([]);
     }
     if (store.cores) {
-      setAmbientColorActive(Boolean(store.cores.ambiente));
-      if (store.cores.ambiente) setAmbientColor(store.cores.ambiente);
-      setCompLightActive(Boolean(store.cores.complementar));
-      if (store.cores.complementar) setCompLight(store.cores.complementar);
-      setAccentColorActive(Boolean(store.cores.recorte));
-      if (store.cores.recorte) setAccentColor(store.cores.recorte);
+      const amb = store.cores.ambiente;
+      const comp = store.cores.complementar;
+      const rec = store.cores.recorte;
+      if (amb && amb !== ambientColor) {
+        setAmbientColor(amb);
+        setAmbientColorActive(true);
+      }
+      if (comp && comp !== compLight) {
+        setCompLight(comp);
+        setCompLightActive(true);
+      }
+      if (rec && rec !== accentColor) {
+        setAccentColor(rec);
+        setAccentColorActive(true);
+      }
     }
-    store.updateConfig({ activeAgentSlug: "design-builder1-2" } as any);
     const timer = setTimeout(() => {
       isSyncingFromStoreRef.current = false;
-    }, 100);
+    }, 50);
     return () => clearTimeout(timer);
   }, [
     store.activeProjectId,
     store.nicho,
-    store.camadasTexto,
-    store.cores,
     store.positioning,
     store.gender,
-    store.composicao,
     store.degradeLeitura,
     store.typographyPosition,
     store.elementosFlutuantes,
@@ -267,8 +274,9 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
     store.estiloVisual,
     store.nivelCriativo,
     store.enableBlur,
-    store.cenariosBase64List,
-    store.referenciasEstilo
+    store.cores?.ambiente,
+    store.cores?.complementar,
+    store.cores?.recorte
   ]);
 
   // Sincronização contínua com useProjectStore para garantir que todos os campos vão para a IA (Apenas após montagem e sem loop)
@@ -329,15 +337,24 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
 
   useEffect(() => {
     if (!isMountedRef.current || isSyncingFromStoreRef.current) return;
-    store.updateConfig({
-      cores: {
-        ambiente: ambientColorActive ? ambientColor : "",
-        complementar: compLightActive ? compLight : "",
-        recorte: accentColorActive ? accentColor : "",
-        paleta: [ambientColor, compLight, accentColor].filter(Boolean)
-      }
-    });
-  }, [ambientColorActive, ambientColor, compLightActive, compLight, accentColorActive, accentColor]);
+    const curAmb = ambientColorActive ? ambientColor : "";
+    const curComp = compLightActive ? compLight : "";
+    const curAcc = accentColorActive ? accentColor : "";
+    if (
+      store.cores?.ambiente !== curAmb ||
+      store.cores?.complementar !== curComp ||
+      store.cores?.recorte !== curAcc
+    ) {
+      store.updateConfig({
+        cores: {
+          ambiente: curAmb,
+          complementar: curComp,
+          recorte: curAcc,
+          paleta: [curAmb, curComp, curAcc].filter(Boolean)
+        }
+      });
+    }
+  }, [ambientColorActive, ambientColor, compLightActive, compLight, accentColorActive, accentColor, store.cores?.ambiente, store.cores?.complementar, store.cores?.recorte]);
 
   useEffect(() => {
     if (!isMountedRef.current || isSyncingFromStoreRef.current) return;
@@ -398,14 +415,35 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
       const reader = new FileReader();
       reader.onload = () => {
         const b64 = reader.result as string;
-        const current = store.sujeitosBase64List || [];
+        const currentStore = useProjectStore.getState();
+        const current = currentStore.sujeitosBase64List || [];
         const next = [...current, b64];
-        store.setSujeitoBase64(b64);
-        store.setSujeitoBase64List(next);
+        currentStore.setSujeitoBase64(b64);
+        currentStore.setSujeitoBase64List(next);
         showToast("Foto do sujeito adicionada!", "success");
+
+        // Persist to server disk so it never vanishes on F5
+        fetch("/api/upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ base64: b64, filename: file.name || "sujeito_" + Date.now() + ".png" })
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data?.url) {
+              const latestStore = useProjectStore.getState();
+              const diskList = (latestStore.sujeitosBase64List || []).map((u) => (u === b64 ? data.url : u));
+              latestStore.setSujeitoBase64List(diskList);
+              if (latestStore.sujeitoBase64 === b64) {
+                latestStore.setSujeitoBase64(data.url);
+              }
+            }
+          })
+          .catch((err) => console.warn("Upload sujeito error:", err));
       };
       reader.readAsDataURL(file);
     });
+    if (e.target) e.target.value = "";
   };
 
   const handleRemoveSubject = (idx: number) => {
@@ -426,11 +464,26 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
       const reader = new FileReader();
       reader.onload = () => {
         const b64 = reader.result as string;
-        setAmbienteRefs(prev => [...prev, { id: `amb-${Date.now()}-${Math.random()}`, url: b64, desc: "" }]);
+        const tempId = `amb-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+        setAmbienteRefs(prev => [...prev, { id: tempId, url: b64, desc: "" }]);
         showToast("Inspiração de ambiente adicionada!", "success");
+
+        fetch("/api/upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ base64: b64, filename: file.name || "ambiente_" + Date.now() + ".png" })
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data?.url) {
+              setAmbienteRefs(prev => prev.map(item => item.id === tempId ? { ...item, url: data.url } : item));
+            }
+          })
+          .catch((err) => console.warn("Upload ambiente error:", err));
       };
       reader.readAsDataURL(file);
     });
+    if (e.target) e.target.value = "";
   };
 
   const handleEstiloUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -440,11 +493,26 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
       const reader = new FileReader();
       reader.onload = () => {
         const b64 = reader.result as string;
-        setEstiloRefs(prev => [...prev, { id: `est-${Date.now()}-${Math.random()}`, url: b64, desc: "" }]);
+        const tempId = `est-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+        setEstiloRefs(prev => [...prev, { id: tempId, url: b64, desc: "" }]);
         showToast("Inspiração de estilo adicionada!", "success");
+
+        fetch("/api/upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ base64: b64, filename: file.name || "estilo_" + Date.now() + ".png" })
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data?.url) {
+              setEstiloRefs(prev => prev.map(item => item.id === tempId ? { ...item, url: data.url } : item));
+            }
+          })
+          .catch((err) => console.warn("Upload estilo error:", err));
       };
       reader.readAsDataURL(file);
     });
+    if (e.target) e.target.value = "";
   };
 
   // Text block helpers
@@ -1775,38 +1843,61 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
                 <div className="flex gap-2">
                   {/* Cor do Ambiente */}
                   <div className="relative flex-1 min-w-0">
-                    <div className="group relative flex flex-col rounded-2xl overflow-hidden border transition-all duration-200 select-none cursor-pointer border-white/25 shadow-lg ring-1 ring-white/10">
+                    <div
+                      onClick={() => setActiveColorPicker({
+                        id: "ambiente",
+                        title: "Cor do Ambiente",
+                        color: ambientColor,
+                        onSelect: (c) => { setAmbientColor(c); if (!ambientColorActive) setAmbientColorActive(true); }
+                      })}
+                      className={`group relative flex flex-col rounded-2xl overflow-hidden border transition-all duration-200 select-none cursor-pointer ${
+                        ambientColorActive
+                          ? "border-white/25 shadow-lg ring-1 ring-white/10"
+                          : "border-white/10 opacity-50"
+                      }`}
+                    >
                       <div
                         className="relative h-16 w-full flex items-center justify-center transition-all duration-300"
                         style={{ backgroundColor: ambientColorActive ? ambientColor : "rgb(39, 39, 42)" }}
                       >
                         {ambientColorActive && (
                           <div className="absolute top-2 right-2 h-5 w-5 rounded-full flex items-center justify-center" style={{ backgroundColor: "rgba(255, 255, 255, 0.133)", border: "1px solid rgba(255, 255, 255, 0.267)" }}>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check h-3 w-3" aria-hidden="true" style={{ color: "rgb(255, 255, 255)" }}><path d="M20 6 9 17l-5-5"></path></svg>
+                            <Check className="h-3 w-3 text-white" />
                           </div>
                         )}
-                        <input
-                          type="color"
-                          value={ambientColor}
-                          onChange={(e) => setAmbientColor(e.target.value)}
-                          className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
-                        />
                       </div>
                       <div className="flex items-center justify-between px-3 py-2 transition-colors duration-300" style={{ backgroundColor: ambientColorActive ? `${ambientColor}dd` : "#18181b" }}>
                         <div className="flex flex-col gap-0.5 min-w-0">
                           <span className="text-[10px] font-semibold uppercase tracking-wider truncate transition-colors duration-300" style={{ color: "rgba(255, 255, 255, 0.733)" }}>
                             Cor do Ambiente
                           </span>
-                          <span className="text-xs font-mono transition-colors duration-300" style={{ color: "rgb(255, 255, 255)" }}>{ambientColor}</span>
+                          <div
+                            className="flex items-center gap-0.5 rounded bg-black/40 px-1.5 py-0.5 border border-white/10 focus-within:border-violet-400"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <span className="text-[10px] text-zinc-400 font-mono select-none">#</span>
+                            <input
+                              type="text"
+                              maxLength={6}
+                              value={ambientColor.replace("#", "")}
+                              onChange={(e) => {
+                                const clean = e.target.value.replace(/[^0-9a-fA-F]/g, "").slice(0, 6);
+                                setAmbientColor(`#${clean}`);
+                                if (!ambientColorActive && clean) setAmbientColorActive(true);
+                              }}
+                              className="w-14 bg-transparent text-xs font-mono uppercase text-white outline-none"
+                              placeholder="000000"
+                            />
+                          </div>
                         </div>
                         <button
                           type="button"
                           onClick={(e) => { e.stopPropagation(); setAmbientColorActive(!ambientColorActive); }}
                           className="ml-2 flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition-all hover:scale-110 cursor-pointer"
+                          title={ambientColorActive ? "Desativar cor" : "Ativar cor"}
                           style={{ backgroundColor: "rgba(255, 255, 255, 0.133)", border: "1px solid rgba(255, 255, 255, 0.2)" }}
-                          title="Desativar cor"
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x h-2.5 w-2.5" aria-hidden="true" style={{ color: "rgb(255, 255, 255)" }}><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+                          <X className="h-2.5 w-2.5 text-white" />
                         </button>
                       </div>
                     </div>
@@ -1814,38 +1905,61 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
 
                   {/* Luz Complementar */}
                   <div className="relative flex-1 min-w-0">
-                    <div className="group relative flex flex-col rounded-2xl overflow-hidden border transition-all duration-200 select-none cursor-pointer border-white/25 shadow-lg ring-1 ring-white/10">
+                    <div
+                      onClick={() => setActiveColorPicker({
+                        id: "luz",
+                        title: "Luz Complementar",
+                        color: compLight,
+                        onSelect: (c) => { setCompLight(c); if (!compLightActive) setCompLightActive(true); }
+                      })}
+                      className={`group relative flex flex-col rounded-2xl overflow-hidden border transition-all duration-200 select-none cursor-pointer ${
+                        compLightActive
+                          ? "border-white/25 shadow-lg ring-1 ring-white/10"
+                          : "border-white/10 opacity-50"
+                      }`}
+                    >
                       <div
                         className="relative h-16 w-full flex items-center justify-center transition-all duration-300"
                         style={{ backgroundColor: compLightActive ? compLight : "rgb(39, 39, 42)" }}
                       >
                         {compLightActive && (
                           <div className="absolute top-2 right-2 h-5 w-5 rounded-full flex items-center justify-center" style={{ backgroundColor: "rgba(255, 255, 255, 0.133)", border: "1px solid rgba(255, 255, 255, 0.267)" }}>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check h-3 w-3" aria-hidden="true" style={{ color: "rgb(255, 255, 255)" }}><path d="M20 6 9 17l-5-5"></path></svg>
+                            <Check className="h-3 w-3 text-white" />
                           </div>
                         )}
-                        <input
-                          type="color"
-                          value={compLight}
-                          onChange={(e) => setCompLight(e.target.value)}
-                          className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
-                        />
                       </div>
                       <div className="flex items-center justify-between px-3 py-2 transition-colors duration-300" style={{ backgroundColor: compLightActive ? `${compLight}dd` : "#18181b" }}>
                         <div className="flex flex-col gap-0.5 min-w-0">
                           <span className="text-[10px] font-semibold uppercase tracking-wider truncate transition-colors duration-300" style={{ color: "rgba(255, 255, 255, 0.733)" }}>
                             Luz Complementar
                           </span>
-                          <span className="text-xs font-mono transition-colors duration-300" style={{ color: "rgb(255, 255, 255)" }}>{compLight}</span>
+                          <div
+                            className="flex items-center gap-0.5 rounded bg-black/40 px-1.5 py-0.5 border border-white/10 focus-within:border-violet-400"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <span className="text-[10px] text-zinc-400 font-mono select-none">#</span>
+                            <input
+                              type="text"
+                              maxLength={6}
+                              value={compLight.replace("#", "")}
+                              onChange={(e) => {
+                                const clean = e.target.value.replace(/[^0-9a-fA-F]/g, "").slice(0, 6);
+                                setCompLight(`#${clean}`);
+                                if (!compLightActive && clean) setCompLightActive(true);
+                              }}
+                              className="w-14 bg-transparent text-xs font-mono uppercase text-white outline-none"
+                              placeholder="e2e2e2"
+                            />
+                          </div>
                         </div>
                         <button
                           type="button"
                           onClick={(e) => { e.stopPropagation(); setCompLightActive(!compLightActive); }}
                           className="ml-2 flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition-all hover:scale-110 cursor-pointer"
+                          title={compLightActive ? "Desativar cor" : "Ativar cor"}
                           style={{ backgroundColor: "rgba(255, 255, 255, 0.133)", border: "1px solid rgba(255, 255, 255, 0.2)" }}
-                          title="Desativar cor"
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x h-2.5 w-2.5" aria-hidden="true" style={{ color: "rgb(255, 255, 255)" }}><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+                          <X className="h-2.5 w-2.5 text-white" />
                         </button>
                       </div>
                     </div>
@@ -1853,38 +1967,61 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
 
                   {/* Cor de Destaque */}
                   <div className="relative flex-1 min-w-0">
-                    <div className="group relative flex flex-col rounded-2xl overflow-hidden border transition-all duration-200 select-none cursor-pointer border-white/25 shadow-lg ring-1 ring-white/10">
+                    <div
+                      onClick={() => setActiveColorPicker({
+                        id: "destaque",
+                        title: "Cor de Destaque",
+                        color: accentColor,
+                        onSelect: (c) => { setAccentColor(c); if (!accentColorActive) setAccentColorActive(true); }
+                      })}
+                      className={`group relative flex flex-col rounded-2xl overflow-hidden border transition-all duration-200 select-none cursor-pointer ${
+                        accentColorActive
+                          ? "border-white/25 shadow-lg ring-1 ring-white/10"
+                          : "border-white/10 opacity-50"
+                      }`}
+                    >
                       <div
                         className="relative h-16 w-full flex items-center justify-center transition-all duration-300"
                         style={{ backgroundColor: accentColorActive ? accentColor : "rgb(39, 39, 42)" }}
                       >
                         {accentColorActive && (
                           <div className="absolute top-2 right-2 h-5 w-5 rounded-full flex items-center justify-center" style={{ backgroundColor: "rgba(17, 17, 17, 0.133)", border: "1px solid rgba(17, 17, 17, 0.267)" }}>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check h-3 w-3" aria-hidden="true" style={{ color: "rgb(17, 17, 17)" }}><path d="M20 6 9 17l-5-5"></path></svg>
+                            <Check className="h-3 w-3" style={{ color: "rgb(17, 17, 17)" }} />
                           </div>
                         )}
-                        <input
-                          type="color"
-                          value={accentColor}
-                          onChange={(e) => setAccentColor(e.target.value)}
-                          className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
-                        />
                       </div>
                       <div className="flex items-center justify-between px-3 py-2 transition-colors duration-300" style={{ backgroundColor: accentColorActive ? `${accentColor}dd` : "#18181b" }}>
                         <div className="flex flex-col gap-0.5 min-w-0">
-                          <span className="text-[10px] font-semibold uppercase tracking-wider truncate transition-colors duration-300" style={{ color: "rgba(17, 17, 17, 0.733)" }}>
+                          <span className="text-[10px] font-semibold uppercase tracking-wider truncate transition-colors duration-300" style={{ color: accentColorActive ? "rgba(17, 17, 17, 0.733)" : "rgba(255, 255, 255, 0.733)" }}>
                             Cor de Destaque
                           </span>
-                          <span className="text-xs font-mono transition-colors duration-300" style={{ color: "rgb(17, 17, 17)" }}>{accentColor}</span>
+                          <div
+                            className="flex items-center gap-0.5 rounded bg-black/40 px-1.5 py-0.5 border border-white/10 focus-within:border-violet-400"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <span className="text-[10px] text-zinc-400 font-mono select-none">#</span>
+                            <input
+                              type="text"
+                              maxLength={6}
+                              value={accentColor.replace("#", "")}
+                              onChange={(e) => {
+                                const clean = e.target.value.replace(/[^0-9a-fA-F]/g, "").slice(0, 6);
+                                setAccentColor(`#${clean}`);
+                                if (!accentColorActive && clean) setAccentColorActive(true);
+                              }}
+                              className="w-14 bg-transparent text-xs font-mono uppercase text-white outline-none"
+                              placeholder="7C3AED"
+                            />
+                          </div>
                         </div>
                         <button
                           type="button"
                           onClick={(e) => { e.stopPropagation(); setAccentColorActive(!accentColorActive); }}
                           className="ml-2 flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition-all hover:scale-110 cursor-pointer"
+                          title={accentColorActive ? "Desativar cor" : "Ativar cor"}
                           style={{ backgroundColor: "rgba(17, 17, 17, 0.133)", border: "1px solid rgba(17, 17, 17, 0.2)" }}
-                          title="Desativar cor"
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x h-2.5 w-2.5" aria-hidden="true" style={{ color: "rgb(17, 17, 17)" }}><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+                          <X className="h-2.5 w-2.5" style={{ color: accentColorActive ? "rgb(17, 17, 17)" : "rgb(255, 255, 255)" }} />
                         </button>
                       </div>
                     </div>
@@ -2499,6 +2636,89 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
               className="absolute -top-3 -right-3 h-8 w-8 rounded-full bg-zinc-800 border border-white/20 text-white flex items-center justify-center hover:bg-red-500 transition-colors cursor-pointer"
             >
               <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── COLOR PICKER POPOVER ── */}
+      {activeColorPicker && (
+        <div className="fixed inset-0 z-[10050]" onClick={() => setActiveColorPicker(null)}>
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="fixed z-[10060] flex flex-col gap-3 rounded-2xl border border-white/10 bg-zinc-900 p-3 shadow-2xl shadow-black/60 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 min-w-[240px]"
+          >
+            <div className="flex items-center justify-between pb-1 border-b border-white/10">
+              <span className="text-xs font-semibold text-white">{activeColorPicker.title}</span>
+              <button
+                type="button"
+                onClick={() => setActiveColorPicker(null)}
+                className="text-zinc-400 hover:text-white p-0.5 rounded cursor-pointer"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-zinc-800 px-3 py-2">
+              <span className="text-xs text-zinc-500 font-mono select-none">#</span>
+              <input
+                maxLength={6}
+                spellCheck="false"
+                placeholder="FFFFFF"
+                className="flex-1 bg-transparent text-sm font-mono text-white outline-none uppercase"
+                type="text"
+                value={activeColorPicker.color.replace("#", "")}
+                onChange={(e) => {
+                  const clean = e.target.value.replace(/[^0-9a-fA-F]/g, "").slice(0, 6);
+                  const fullHex = `#${clean}`;
+                  setActiveColorPicker((prev) => (prev ? { ...prev, color: fullHex } : null));
+                  if (clean.length === 3 || clean.length === 6) {
+                    activeColorPicker.onSelect(fullHex);
+                  }
+                }}
+              />
+              <label
+                className="relative h-6 w-6 rounded-md border border-white/20 shrink-0 cursor-pointer overflow-hidden hover:scale-105 transition-transform"
+                title="Abrir seletor de cores"
+              >
+                <input
+                  type="color"
+                  className="absolute inset-0 h-full w-full opacity-0 cursor-pointer"
+                  value={activeColorPicker.color.length === 7 ? activeColorPicker.color : "#ffffff"}
+                  onChange={(e) => {
+                    setActiveColorPicker((prev) => (prev ? { ...prev, color: e.target.value } : null));
+                    activeColorPicker.onSelect(e.target.value);
+                  }}
+                />
+                <div
+                  className="h-full w-full"
+                  style={{ backgroundColor: activeColorPicker.color }}
+                />
+              </label>
+            </div>
+            <div className="grid grid-cols-6 gap-1.5 pt-1">
+              {[
+                "#7C3AED", "#A855F7", "#EF4444", "#EAB308", "#22C55E", "#3B82F6",
+                "#EC4899", "#F97316", "#14B8A6", "#FFFFFF", "#94A3B8", "#000000"
+              ].map((sw) => (
+                <button
+                  key={sw}
+                  type="button"
+                  onClick={() => {
+                    setActiveColorPicker((prev) => (prev ? { ...prev, color: sw } : null));
+                    activeColorPicker.onSelect(sw);
+                  }}
+                  className="h-6 w-full rounded-md border border-white/20 hover:scale-105 transition-transform cursor-pointer"
+                  style={{ backgroundColor: sw }}
+                  title={sw}
+                />
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => setActiveColorPicker(null)}
+              className="mt-1 w-full py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-xs font-semibold text-white transition-colors cursor-pointer"
+            >
+              Aplicar Cor
             </button>
           </div>
         </div>

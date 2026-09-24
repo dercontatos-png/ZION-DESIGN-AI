@@ -337,8 +337,8 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
 
       {/* ── Header Mobile Oficial (Fixo no topo em telas menores) ─ */}
       <header className="fixed inset-x-3 top-3 z-50 flex h-14 items-center justify-between rounded-2xl bg-black/80 px-4 ring-1 ring-white/10 backdrop-blur-xl lg:hidden">
-        <a aria-label="Design Builder" href="/" onClick={(e) => { e.preventDefault(); if (typeof window !== "undefined") window.history.pushState({ path: "/" }, "", "/"); }}>
-          <img alt="Design Builder" width={399} height={85} decoding="async" className="h-6 w-auto" src="/Home_files/logo-db.jpeg" onError={(e) => { (e.target as HTMLElement).setAttribute("src", "/logo-db.webp"); }} style={{ color: "transparent" }} />
+        <a aria-label="Zion Design" href="/" onClick={(e) => { e.preventDefault(); if (typeof window !== "undefined") window.history.pushState({ path: "/" }, "", "/"); }}>
+          <img alt="Zion Design" width={399} height={85} decoding="async" className="h-6 w-auto" src="/Home_files/logo-db.jpeg" onError={(e) => { (e.target as HTMLElement).setAttribute("src", "/logo-db.webp"); }} style={{ color: "transparent" }} />
         </a>
         <button
           type="button"
@@ -832,7 +832,7 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
 
                 <div className="relative flex flex-col items-center gap-5 px-6 pt-16 pb-10 text-center sm:pt-20 md:pb-16 xl:pb-24">
                   <img
-                    alt="Design Builder"
+                    alt="Zion Design"
                     loading="lazy"
                     width={399}
                     height={85}
@@ -944,7 +944,7 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
 
                 <div className="relative flex flex-col items-center gap-5 px-6 py-16 text-center sm:py-20">
                   <img
-                    alt="Design Builder"
+                    alt="Zion Design"
                     loading="lazy"
                     width={399}
                     height={85}
@@ -1108,7 +1108,7 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
                   )}
                   <div>
                     <h4 className="text-sm font-semibold text-white">{previewArt.author}</h4>
-                    <p className="text-xs text-zinc-500">Criado com Design Builder</p>
+                    <p className="text-xs text-zinc-500">Criado com Zion Design</p>
                   </div>
                 </div>
                 <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3 text-xs text-zinc-400">

@@ -144,18 +144,18 @@ const CAPTURE_RULE = `A real exposure made on a full-frame camera. Light falls o
 
 const COMPOSITION_RULES = `
 CRITICAL COMPOSITION & SAFE MARGIN LAW (HIGHEST PRIORITY):
-- FULL-BLEED EDGE-TO-EDGE ARTWORK: The entire composition, background, and environment MUST fill the full canvas edge-to-edge. Never render the artwork as a miniature card sitting inside a border or framed background.
+- FULL-BLEED EDGE-TO-EDGE ARTWORK: The BACKGROUND and environment MUST fill the full canvas edge-to-edge. Never render the artwork as a miniature card sitting inside a border or framed background. Note: Full-bleed applies to the BACKGROUND only — all CONTENT elements (text, logos, icons, contact info) MUST stay within the 10%+ safe margin zone.
 - ABSOLUTE BAN ON RECTANGULAR CARDS, BOXES, OR ENCLOSING CONTAINERS (CRITICAL — NON-NEGOTIABLE):
   * NEVER draw a floating rounded rectangle card, white box, dialog popup container, or framed outline panel in the middle of the canvas!
   * NEVER enclose headlines, text blocks, bullet points, or logos inside a central card or container box!
   * Typography, logos, and icons MUST float seamlessly and cleanly directly over the scene/background with natural contrast and subtle depth, exactly like top-tier commercial advertising and modern high-end posters.
 - COLLAGE / MULTI-IMAGE REFERENCES: If any attached reference image contains a grid, split-screen, or multiple images, treat it as a collection of style inspirations. Render ONE (1) cohesive single full-canvas artwork — NEVER replicate a split-screen or multi-box grid!
-- ABSOLUTE BAN ON GLUING TO BORDERS: Maintain a generous minimum padding/margin of 8% to 12% inward from ALL 4 outer canvas borders. Elements must never touch or be clipped by the borders.
+- ABSOLUTE BAN ON GLUING TO BORDERS (MANDATORY — NON-NEGOTIABLE): Maintain a generous minimum padding/margin of 16% to 20% inward from top and bottom canvas borders (at least 550px in 4K), and at least 10% from side borders. ALL text, logos, icons, and contact elements must have clear breathing room — nothing may ever touch, be clipped by, or appear glued to any edge.
 - BRAND LOGO PLACEMENT (EXACTLY ONE SINGLE LOGO):
-  * Render EXACTLY ONE (1) single brand logo on the entire canvas, centered horizontally in the top header with at least 8% to 10% margin from borders.
+  * Render EXACTLY ONE (1) single brand logo on the entire canvas, centered horizontally in the top header with at least 16% to 20% safe margin down from the top edge (minimum 550 to 700 pixels in 4K).
   * ABSOLUTE PROHIBITION AGAINST DUPLICATE LOGOS: ZERO duplicate logos, ZERO twin logos side by side, ZERO repeated crests! NEVER render more than one logo on the entire artwork!
-- TOP & BOTTOM HEADROOM: Top handle/header must float with at least 6% to 8% margin from the top edge. Bottom contact info must float with at least 7% to 10% margin from the bottom edge.
-- NEGATIVE RESTRICTIONS: ZERO duplicate logos, ZERO twin logos, ZERO multiple crests, ZERO empty canvas voids, ZERO awkward gaps between cards and footer.`;
+- TOP & BOTTOM HEADROOM (CRITICAL): TOP & BOTTOM HEADROOM (CRITICAL — NON-NEGOTIABLE): Brand logo and top header elements MUST float with at least 16% to 20% margin down from the top edge (minimum 550 to 700 pixels in 4K) — NEVER touching or glued to the top border. Bottom contact info (WhatsApp phone and @ social handle) MUST float with at least 16% to 20% margin up from the bottom edge (minimum 550 to 700 pixels in 4K) — NEVER touching, hugging, or glued to the bottom border.
+- NEGATIVE RESTRICTIONS: ZERO stretched logos, ZERO squashed marks, ZERO distorted proportions, ZERO flattened shapes, ZERO anamorphic distortion, ZERO duplicate logos, ZERO twin logos, ZERO multiple crests, ZERO empty canvas voids, ZERO awkward gaps between cards and footer.`;
 
 // ─── ANATOMY SAFETY ───────────────────────────────────────────────────
 
@@ -449,12 +449,19 @@ export function buildEnhancedPrompt(params: PromptEngineParams): string {
 
   if (userRequestedNoPerson || (!params.hasSubjectPhotos && params.categoria === "livre")) {
     parts.push(`ABSOLUTE PROHIBITION OF HUMAN MODELS: ZERO people, ZERO women, ZERO nurses, ZERO doctors, ZERO human figures! The user explicitly did not attach a person photo and requested empty boxes for later insertion. Do NOT paint any human model into the artwork!
-Photo Slots & Gap Elimination (Zero Dead Space):
-- Render exactly THREE (3) clean, prominent, large white rectangular placeholder boxes arranged horizontally side-by-side ("um do lado do outro no meio grande") with clean rounded corners and pure solid white fill (#FFFFFF).
-- VERTICAL HARMONY & GAP ELIMINATION: The composition MUST NOT have any vacant dead space or empty gap between the photo boxes and the bottom footer contact bar!
-- If the technical course bullet points are positioned above the three boxes, the three white boxes MUST be tall portrait cards (aspect ratio 3:4) that extend with generous vertical height downwards to sit comfortably right above the footer contact bar (maintaining only 6% to 8% safe breathing room above the WhatsApp phone and social handle), completely eliminating any empty void beneath them!
-- If the technical course bullet points are positioned below the three boxes, they must neatly occupy and balance the lower-middle zone, bridging smoothly into the bottom footer contact bar.
-- ZERO EMPTY VOIDS: Every vertical section of the canvas must have balanced purpose and presence!`);
+Photo Placeholder Slots & Harmonious Vertical Proportions:
+- Dynamically detect card count from prompt (e.g., if user asked for 4 cards, render exactly FOUR (4) white rectangular boxes side by side).
+- ELEGANT PROPORTIONATE CARD SCALING (CRITICAL):
+  * When multiple cards are arranged side by side horizontally, each card is narrower horizontally (~20% to 22% canvas width each for 4 cards).
+  * Therefore, each card's vertical height MUST ALSO be scaled down proportionately (~32% to 38% canvas height max). They MUST NOT be stretched into overly tall vertical pillars!
+  * Card vertical placement: The cards must start at ~38% of canvas height and END by ~60% of canvas height.
+  * This guarantees generous vertical space (at least 38% to 42% canvas height) below them for:
+    1) Course bullet points (e.g. 2 columns x 2 rows)
+    2) Foreground floating elements (e.g. stethoscopes)
+    3) WhatsApp contact phone numbers (stacked with matching font sizes)
+    4) Instagram & Facebook icons + @handle
+    5) PLUS the MANDATORY SAFE MARGIN (respiro de segurança) of at least 8% to 12% below the lowest text!
+- ZERO CLIPPING & ZERO OVERCROWDING: All elements must have ample breathing room with zero text or icons touching or glued to borders!`);
   } else {
     const isGroupSubject = /todos|grupo|equipe|turma|pessoas|foto/i.test(params.subject_description || "");
     if (isGroupSubject) {
@@ -608,7 +615,7 @@ CRITICAL TEXT GOVERNING RULES:
 
       if (hasBottomSocialOrPhone) {
         parts.push(`\nFOOTER CONTACT & SOCIAL MEDIA BAR (MANDATORY BOTTOM CENTER):
-- The phone number and @ social media handle MUST be placed together at the BOTTOM CENTER of the canvas (in the footer zone with safe margin).
+- The phone number and @ social media handle MUST be placed together at the BOTTOM CENTER of the canvas (in the footer zone with generous safe margin of at least 16% to 20% above the bottom edge — NEVER touching or glued to the bottom border).
 - Precede the phone number with a clean WhatsApp green circular icon glyph.
 - Precede the social handle with Instagram and Facebook circular icon glyphs.
 - STRICT PROHIBITION: DO NOT place the social handle at the top! DO NOT place the phone number on the left margin under the bullet points! Both belong centered at the bottom.`);
@@ -666,6 +673,7 @@ CRITICAL TEXT GOVERNING RULES:
     finalCheck.push(`Scene: ${params.scene_description}.`);
   }
   finalCheck.push(`Aspect ratio ${aspectRatio}. Quality: ${targetQuality}.`);
+  finalCheck.push("SAFE MARGINS VERIFIED: All text, logos, icons, and contact elements have at least 10% breathing room from all 4 canvas edges — nothing touches or is glued to any border.");
 
   if (finalCheck.length > 0) {
     parts.push(`\nFINAL CHECK — ${finalCheck.join(" ")}`);

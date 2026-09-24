@@ -340,7 +340,7 @@ export const StudioDashboard: React.FC<StudioDashboardProps> = ({
               </div>
             </div>
 
-            {/* 4. Design Builder 1.2 */}
+            {/* 4. Zion Design */}
             <div
               onClick={() => onSelectAgent("design-builder1-2")}
               className="group relative block lg:aspect-[4/5] lg:[perspective:1200px] transition-[z-index] duration-0 active:scale-[0.98] cursor-pointer"
@@ -363,7 +363,7 @@ export const StudioDashboard: React.FC<StudioDashboardProps> = ({
                   </div>
                   <div className="mt-4">
                     <h3 className="text-[22px] font-bold tracking-tight text-white leading-none transition-colors duration-200 group-hover:text-white/90 font-display">
-                      Design Builder 1.2
+                      Zion Design
                     </h3>
                     <p className="mt-3 text-sm leading-relaxed text-zinc-400 line-clamp-3 lg:text-[15px] lg:line-clamp-5">
                       A primeira versão do DB, dinâmico para diversos nichos e desafios.

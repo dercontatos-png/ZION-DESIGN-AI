@@ -32,6 +32,7 @@ import { CreditsModal } from "./CreditsModal";
 import ComunidadeDetailModal from "./ComunidadeDetailModal";
 import GaleriaManager from "./GaleriaManager";
 import ComunidadeManager from "./ComunidadeManager";
+import { MagicRefineBar } from "./MagicRefineBar";
 
 import {
   Search,
@@ -438,6 +439,7 @@ export default function DesignBuilder({
         setRefineAttachedFiles([]);
         store.setLastGeneratedId(newGenId);
         store.setGaleriaImages([resultUrl, ...(store.galeriaImages || [])]);
+        store.addGaleriaImage(resultUrl, { app: "design-builder" });
         store.setActiveImageIndex(0);
         if (store.activeProjectId) {
           store.addImagesToProjectGallery(store.activeProjectId, [resultUrl]);
@@ -707,7 +709,7 @@ export default function DesignBuilder({
       const targetUrl = clean === "design-builder1-2" ? "/agent/design-builder1-2" : clean === "ref" ? "/agent/ref" : `/${clean}`;
       window.history.pushState({ path: targetUrl }, "", targetUrl);
     }
-    showToast(`Iniciando ${clean === "orion-pro" ? "Órion Pro" : clean === "design-builder1-2" ? "Design Builder 1.2" : clean}...`, "success");
+    showToast(`Iniciando ${clean === "orion-pro" ? "Órion Pro" : clean === "design-builder1-2" ? "Zion Design" : clean}...`, "success");
   };
 
   // Open Vitrine
@@ -984,7 +986,7 @@ export default function DesignBuilder({
                   <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md" style={{ backgroundColor: "rgba(124, 58, 237, 0.133)" }}>
                     <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "rgb(124, 58, 237)" }}></span>
                   </span>
-                  <span className="truncate">Design Builder 1.2</span>
+                  <span className="truncate">Zion Design</span>
                 </a>
                 <a
                   className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition-colors cursor-pointer ${
@@ -1686,8 +1688,21 @@ export default function DesignBuilder({
                         }}
                         className="group relative rounded-xl overflow-hidden bg-zinc-950 border border-white/10 hover:border-violet-500/50 transition-all shadow-md cursor-pointer"
                       >
-                        <div className="relative aspect-[4/5] w-full overflow-hidden bg-zinc-900">
-                          <img src={imgUrl} alt={`Geração ${i + 1}`} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                        <div className="relative w-full overflow-hidden bg-zinc-900">
+                          <img
+                            src={imgUrl}
+                            alt={`Geração ${i + 1}`}
+                            className="block w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105"
+                            loading="lazy"
+                            decoding="async"
+                            style={{ aspectRatio: "4 / 5" }}
+                            onLoad={(e) => {
+                              const { naturalWidth, naturalHeight } = e.currentTarget;
+                              if (naturalWidth && naturalHeight) {
+                                e.currentTarget.style.aspectRatio = `${naturalWidth} / ${naturalHeight}`;
+                              }
+                            }}
+                          />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-2">
                             <span className="text-[10px] text-white font-medium">Ver no Palco</span>
                             <button
@@ -1717,16 +1732,16 @@ export default function DesignBuilder({
                     agentColor={isOrion ? "#ffd500" : "#a78bfa"}
                     elapsedSeconds={elapsedSeconds}
                     message={statusMessage}
-                    subMessage={isOrion ? "Órion Pro construindo anúncio de alta conversão" : "Design Builder sintetizando arte fidedigna"}
+                    subMessage={isOrion ? "Órion Pro construindo anúncio de alta conversão" : "Zion Design sintetizando arte fidedigna"}
                   />
                 </div>
               </div>
             ) : activeImage ? (
               /* ESTADO 2: IMAGEM GERADA ATIVA */
-              <div className="group/viewer relative flex h-full min-h-0 min-w-0 flex-1 overflow-hidden items-center justify-center">
+              <div className="group/viewer relative flex h-full min-h-0 min-w-0 flex-1 overflow-hidden items-center justify-center p-2 pb-32 sm:pb-36">
                 <div className="relative flex h-full min-h-0 w-full min-w-0 items-center justify-center overflow-hidden">
                   <img
-                    alt="Arte gerada pelo Design Builder"
+                    alt="Arte gerada pelo Zion Design"
                     src={activeImage}
                     className="block h-auto w-auto max-h-full max-w-full shrink rounded-2xl object-contain shadow-2xl shadow-black/80"
                   />
@@ -1867,7 +1882,8 @@ export default function DesignBuilder({
                               key={item.ext}
                               type="button"
                               onClick={() => {
-                                const q = store.qualidade || store.resolucao || "1K";
+                                const q = store.resolucao || store.qualidade || "4K";
+                                const isOriginal = item.ext === "AVIF" || item.ext === "PNG";
                                 downloadImage(activeImage, item.ext as any, undefined, undefined, undefined, q as any, {
                                   title: store.projectsList.find((p) => p.id === store.activeProjectId)?.name || "arte"
                                 });
@@ -1904,94 +1920,44 @@ export default function DesignBuilder({
                   </button>
                 </div>
 
-                {/* Magic Refine Bar (Idêntico ao site oficial app.designbuilder.co) */}
-                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex w-[min(92vw,540px)] flex-col items-center gap-2 pointer-events-auto">
-                  {/* Thumbnails de referências anexadas ao refino */}
-                  {refineAttachedFiles.length > 0 && (
-                    <div className="flex items-center gap-2 px-2 py-1 bg-black/80 rounded-xl border border-white/10 backdrop-blur-md">
-                      {refineAttachedFiles.map((file, idx) => (
-                        <div key={idx} className="relative group/att h-10 w-10 rounded-lg overflow-hidden border border-white/20">
-                          <img src={file.url} alt={file.name} className="h-full w-full object-cover" />
-                          <button
-                            type="button"
-                            onClick={() => setRefineAttachedFiles(prev => prev.filter((_, i) => i !== idx))}
-                            className="absolute inset-0 bg-black/60 flex items-center justify-center text-white opacity-0 group-hover/att:opacity-100 transition-opacity"
-                          >
-                            <X className="h-3.5 w-3.5 text-red-400" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="magic-bar relative flex w-full items-center gap-2 rounded-2xl border border-white/10 bg-black/80 px-3 py-2 shadow-2xl backdrop-blur-2xl transition-all focus-within:border-violet-500/60 focus-within:ring-1 focus-within:ring-violet-500/30">
-                    <button
-                      type="button"
-                      onClick={() => refineFileInputRef.current?.click()}
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-zinc-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-                      title="Anexar imagem de referência"
-                    >
-                      <Paperclip className="h-4 w-4" />
-                    </button>
-                    <input
-                      ref={refineFileInputRef}
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      className="hidden"
-                      onChange={handleRefineFileAttach}
-                    />
-
-                    <div className="flex-1 min-w-0">
-                      <textarea
-                        ref={refineTextareaRef}
-                        rows={1}
-                        value={refinePrompt}
-                        onChange={(e) => setRefinePrompt(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && !e.shiftKey && !isRefining && refinePrompt.trim()) {
-                            e.preventDefault();
-                            handleSendRefinement();
-                          }
-                        }}
-                        disabled={isRefining}
-                        placeholder="Descreva o que gostaria de alterar ou ajustar nesta arte..."
-                        className="w-full resize-none bg-transparent px-2 py-1 text-xs sm:text-sm text-white placeholder-zinc-500 outline-none max-h-24 scrollbar-hide"
-                      />
-                    </div>
-
-                    <button
-                      type="button"
-                      disabled={!refinePrompt.trim() || isRefining}
-                      onClick={handleSendRefinement}
-                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all cursor-pointer ${
-                        refinePrompt.trim() && !isRefining
-                          ? "bg-violet-600 hover:bg-violet-500 text-white shadow-lg shadow-violet-600/30 hover:scale-105"
-                          : "bg-white/[0.06] text-zinc-600 cursor-not-allowed"
-                      }`}
-                      title="Enviar ajuste"
-                    >
-                      {isRefining ? (
-                        <Loader2 className="h-4 w-4 animate-spin text-white" />
-                      ) : (
-                        <Send className="h-4 w-4" />
-                      )}
-                    </button>
-                  </div>
+                {/* Magic Refine Bar & Community Publish Card Oficial */}
+                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex w-[min(92vw,560px)] flex-col items-center gap-2 pointer-events-auto">
+                  <MagicRefineBar
+                    activeImage={activeImage}
+                    isProcessing={isRefining}
+                    agentColor={isOrion ? "#ffd500" : "#a855f7"}
+                    onPublishCommunity={() => {
+                      setActivePalcoMode("comunidade");
+                      showToast("Publicar na Comunidade aberto!", "info");
+                    }}
+                    onSendRefine={(text, atts) => {
+                      setRefinePrompt(text);
+                      if (atts.length > 0) {
+                        setRefineAttachedFiles(atts.map((a, i) => ({ name: a.file?.name || `anexo_${i}`, url: a.preview })));
+                      }
+                      setTimeout(() => handleSendRefinement(), 50);
+                    }}
+                  />
                 </div>
               </div>
             ) : (
               /* ESTADO 3: PALCO EM ESPERA / PREVIEW DO SUJEITO E PALETA */
-              <div className="flex w-full max-w-[400px] max-lg:max-w-[88vw] flex-col items-center gap-4 mx-auto p-3 lg:p-4">
+              <div className={`jsx-60dea475f91d3ae3 flex w-full ${
+                store.dimensao === "9:16" ? "max-w-[320px]" : store.dimensao === "16:9" ? "max-w-[560px]" : store.dimensao === "4:5" ? "max-w-[360px]" : "max-w-[400px]"
+              } max-lg:max-w-[88vw] flex-col items-center gap-4 mx-auto p-3 lg:p-4`}>
+                {store.dimensao && (
+                  <span className="jsx-60dea475f91d3ae3 text-xs font-medium tracking-widest uppercase text-zinc-600">{store.dimensao}</span>
+                )}
                 <div
-                  className={`relative w-full ${
+                  data-testid="preview-canvas"
+                  className={`jsx-60dea475f91d3ae3 relative w-full ${
                     store.dimensao === "9:16" ? "aspect-[9/16]" : store.dimensao === "16:9" ? "aspect-[16/9]" : store.dimensao === "1:1" ? "aspect-square" : "aspect-[4/5]"
-                  } rounded-2xl overflow-hidden border border-white/[0.06] shadow-2xl shadow-black/50 transition-all duration-300`}
+                  } rounded-lg lg:rounded-2xl overflow-hidden border border-white/[0.06] shadow-lg lg:shadow-2xl shadow-black/50 transition-all duration-300`}
                   style={{ backgroundColor: "#0c0a15" }}
                 >
                   {/* Grid de fundo */}
                   <div
-                    className="absolute inset-0 opacity-[0.03]"
+                    className="jsx-60dea475f91d3ae3 absolute inset-0 opacity-[0.03]"
                     style={{
                       backgroundImage: "linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px)",
                       backgroundSize: "40px 40px"
@@ -1999,7 +1965,7 @@ export default function DesignBuilder({
                   />
 
                   {store.sujeitoBase64 ? (
-                    <div className={`flex items-center justify-center transition-all duration-300 ${
+                    <div data-testid="subject-placeholder" className={`jsx-60dea475f91d3ae3 flex items-center justify-center transition-all duration-300 ${
                       store.positioning === "left" || store.positioning === "Esquerda"
                         ? "absolute left-3 top-1/2 -translate-y-1/2 w-[35%] h-[60%]"
                         : store.positioning === "right" || store.positioning === "Direita"
@@ -2013,17 +1979,27 @@ export default function DesignBuilder({
                       />
                     </div>
                   ) : (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-zinc-600">
+                    <div data-testid="subject-placeholder" className="jsx-60dea475f91d3ae3 absolute inset-0 flex flex-col items-center justify-center gap-3 text-zinc-600">
                       <ImageIcon className="h-10 w-10 text-zinc-700" />
                       <span className="text-xs font-medium">Seu design será gerado aqui</span>
+                    </div>
+                  )}
+
+                  {/* Preset badge */}
+                  {store.estiloVisual && store.estiloVisual !== "Nenhum" && (
+                    <div className="jsx-60dea475f91d3ae3 absolute bottom-3 left-3 right-3">
+                      <span data-testid="preset-badge" className="jsx-60dea475f91d3ae3 inline-block bg-black/50 text-white/70 text-[10px] font-medium px-2.5 py-1 rounded-lg backdrop-blur-md ring-1 ring-white/5">
+                        {store.estiloVisual}
+                      </span>
                     </div>
                   )}
                 </div>
 
                 {/* Color Swatches */}
-                <div className="flex items-center gap-3">
+                <div data-testid="color-swatches" className="jsx-60dea475f91d3ae3 flex items-center gap-3">
                   <div className="flex flex-col items-center gap-1">
                     <div
+                      data-testid="swatch-luz"
                       className="h-6 w-6 rounded-full ring-1 ring-white/10 shadow-sm transition-transform hover:scale-110"
                       title={`Luz: ${store.cores?.complementar || "#e2e2e2"}`}
                       style={{ backgroundColor: store.cores?.complementar || "#e2e2e2" }}
@@ -2032,6 +2008,7 @@ export default function DesignBuilder({
                   </div>
                   <div className="flex flex-col items-center gap-1">
                     <div
+                      data-testid="swatch-ambiente"
                       className="h-6 w-6 rounded-full ring-1 ring-white/10 shadow-sm transition-transform hover:scale-110"
                       title={`Ambiente: ${store.cores?.ambiente || "#0c0a15"}`}
                       style={{ backgroundColor: store.cores?.ambiente || "#0c0a15" }}
@@ -2040,9 +2017,10 @@ export default function DesignBuilder({
                   </div>
                   <div className="flex flex-col items-center gap-1">
                     <div
+                      data-testid="swatch-destaque"
                       className="h-6 w-6 rounded-full ring-1 ring-white/10 shadow-sm transition-transform hover:scale-110"
-                      title={`Destaque: ${store.cores?.recorte || "#ffd500"}`}
-                      style={{ backgroundColor: store.cores?.recorte || "#ffd500" }}
+                      title={`Destaque: ${store.cores?.recorte || (isOrion ? "#ffd500" : "#7c3aed")}`}
+                      style={{ backgroundColor: store.cores?.recorte || (isOrion ? "#ffd500" : "#7c3aed") }}
                     />
                     <span className="text-[10px] text-zinc-600">Destaque</span>
                   </div>

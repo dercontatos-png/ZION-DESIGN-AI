@@ -867,6 +867,35 @@ export async function saveImageToDisk(rawData: string, rawMime: string): Promise
     await fs.promises.writeFile(filepath, buffer);
     console.log(`[saveImageToDisk] Original native image saved to ${filepath} (${buffer.length} bytes / ${(buffer.length / 1024 / 1024).toFixed(2)} MB).`);
 
+    // Persistir imediatamente em public/generations_data.json para sincronizacao em tempo real da galeria
+    try {
+      const gPath = path.join(process.cwd(), "public", "generations_data.json");
+      let existingList = [];
+      if (fs.existsSync(gPath)) {
+        try {
+          const raw = fs.readFileSync(gPath, "utf-8");
+          const parsed = JSON.parse(raw);
+          existingList = Array.isArray(parsed) ? parsed : (parsed.items || []);
+        } catch (_) {}
+      }
+      const fnameLower = filename.toLowerCase();
+      const detectedSlug = fnameLower.includes("ref") ? "ref" : fnameLower.includes("hydra") ? "hydra" : (fnameLower.includes("enhance") || fnameLower.includes("enh")) ? "enhance" : fnameLower.includes("altera") ? "altera-facil" : fnameLower.includes("orion") ? "orion-pro" : "design-builder1-2";
+      const newItem = {
+        id: filename.replace(/\.[^/.]+$/, ""),
+        status: "done",
+        result_url: "/generated-images/" + filename,
+        thumbnail_url: "/generated-images/" + filename,
+        created_at: new Date().toISOString(),
+        agent_slug: detectedSlug,
+        dimensions: "4:5",
+        form_data: { quality: "4K", dimensions: "4:5" }
+      };
+      existingList = [newItem, ...existingList.filter((it) => it.result_url !== newItem.result_url && it.id !== newItem.id)];
+      fs.writeFileSync(gPath, JSON.stringify(existingList.slice(0, 300), null, 2), "utf-8");
+    } catch (gErr) {
+      console.warn("[saveImageToDisk] Nao foi possivel salvar em generations_data.json:", gErr);
+    }
+
     // Mirror generated image to Cloudflare R2
     if (isR2Active()) {
       uploadToR2(`generated-images/${filename}`, buffer, rawMime).catch((r2Err) => {
@@ -1472,6 +1501,40 @@ async function startServer() {
   app.use(express.json({ limit: "500mb" }));
   app.use(express.urlencoded({ limit: "500mb", extended: true, parameterLimit: 1000000 }));
 
+  // ── TRAVA DE SEGURANÇA E ACESSO EXCLUSIVO NO BACKEND ──
+  // Apenas a conta der.contatos@gmail.com pode gerar imagens ou acionar APIs de IA.
+  const ALLOWED_ADMIN_EMAIL = "der.contatos@gmail.com";
+  app.use([
+    "/api/generate",
+    "/api/generate-image",
+    "/api/generate-design",
+    "/api/zion-ai-generate",
+    "/api/enhancer-supir-magnific",
+    "/api/enhance",
+    "/api/generate-enhance",
+    "/api/gerar",
+    "/api/omni-flash-generate",
+    "/api/video-generate-frames",
+    "/api/generate-audio"
+  ], (req: any, res: any, next: any) => {
+    const userEmail = (
+      req.headers["x-user-email"] ||
+      req.body?.userEmail ||
+      req.body?.email ||
+      req.query?.userEmail ||
+      ""
+    ).toString().toLowerCase().trim();
+
+    if (userEmail !== ALLOWED_ADMIN_EMAIL) {
+      console.warn(`[ACESSO BLOQUEADO] Tentativa de geração por usuário não autorizado: '${userEmail || "anônimo"}'`);
+      return res.status(403).json({
+        error: "Acesso restrito. Plataforma em desenvolvimento fechado. Apenas der.contatos@gmail.com possui autorização para gerar imagens.",
+        code: "ACCESS_RESTRICTED_DEV_ONLY"
+      });
+    }
+    next();
+  });
+
   const publicGenDir = path.join(process.cwd(), "public", "generated-images");
   try {
     if (!fs.existsSync(publicGenDir)) {
@@ -1806,7 +1869,7 @@ async function startServer() {
     try {
       if (origMime && (origMime.includes("png") || origMime.includes("webp"))) {
         // Preserva transparência para PNG e WebP para que logos não fiquem com fundo preto artificial
-        const converted = await sharp(buf).png({ compressionLevel: 6 }).toBuffer();
+        const converted = await sharp(buf).png({ compressionLevel: 0, quality: 100 }).toBuffer();
         return { buffer: converted, mime: "image/png" };
       }
       const converted = await sharp(buf).jpeg({ quality: 95 }).toBuffer();
@@ -1829,11 +1892,11 @@ async function startServer() {
       if (meta.hasAlpha) {
         const flattened = await sharp(buf)
           .flatten({ background: { r: 18, g: 24, b: 38 } })
-          .png({ compressionLevel: 6 })
+          .png({ compressionLevel: 0, quality: 100 })
           .toBuffer();
         return { buffer: flattened, mime: "image/png" };
       }
-      const converted = await sharp(buf).png({ compressionLevel: 6 }).toBuffer();
+      const converted = await sharp(buf).png({ compressionLevel: 0, quality: 100 }).toBuffer();
       return { buffer: converted, mime: "image/png" };
     } catch (err) {
       console.warn("[prepareLogoForGeminiVision] Warning, falling back to original buffer:", err);
@@ -2178,12 +2241,35 @@ MANDATORY: If the user explicitly requested white squares, cards, panels, or spe
               fullPrompt += `\n\nSUBJECT RESTRICTION, PHOTO PLACEHOLDER SLOTS & VERTICAL HARMONY:
 - ABSOLUTE PROHIBITION OF HUMAN MODELS: ZERO people, ZERO women, ZERO nurses, ZERO doctors! Do NOT paint any person or model into the artwork!`;
               if (/quadrado|caixa|box|espa[çc]o|slot/i.test(allPromptDirectives)) {
-                fullPrompt += `\n- THREE (3) PHOTO PLACEHOLDER SLOTS & GAP ELIMINATION (CRITICAL — ZERO DEAD SPACE):
-  * Render exactly THREE (3) clean, prominent, large white rectangular placeholder boxes arranged horizontally side-by-side ("um do lado do outro no meio grande") with clean rounded corners and pure solid white fill (#FFFFFF).
-  * VERTICAL HARMONY & GAP ELIMINATION (MANDATORY): The composition MUST NOT have any vacant dead space or empty gap between the photo boxes and the bottom footer contact bar!
-  * If the technical course bullet points are positioned above the three boxes, the three white boxes MUST be tall portrait cards (aspect ratio 3:4) that extend with generous vertical height downwards to sit comfortably right above the footer contact bar (maintaining only 6% to 8% safe breathing room above the WhatsApp phone and social handle), completely eliminating any empty void beneath them!
-  * If the technical course bullet points are positioned below the three boxes, they must neatly occupy and balance the lower-middle zone, bridging smoothly into the bottom footer contact bar.
-  * ZERO EMPTY VOIDS: Every vertical section of the canvas must have balanced purpose and presence!`;
+                const numCardsMatch = allPromptDirectives.match(/(\d+)\s*(quadrados?|cards?|caixas?|boxes?|espa[çc]os?|slots?)/i) ||
+                                      allPromptDirectives.match(/(quatro|4)\s*(quadrados?|cards?|caixas?|boxes?)/i) ||
+                                      allPromptDirectives.match(/(tr[êe]s|3)\s*(quadrados?|cards?|caixas?|boxes?)/i) ||
+                                      allPromptDirectives.match(/(dois|duas|2)\s*(quadrados?|cards?|caixas?|boxes?)/i);
+                let detectedCardCount = 3;
+                if (numCardsMatch) {
+                  const w = numCardsMatch[1].toLowerCase();
+                  if (w === "4" || w === "quatro") detectedCardCount = 4;
+                  else if (w === "3" || w === "três" || w === "tres") detectedCardCount = 3;
+                  else if (w === "2" || w === "dois" || w === "duas") detectedCardCount = 2;
+                  else if (w === "5" || w === "cinco") detectedCardCount = 5;
+                  else { const n = parseInt(w); if (!isNaN(n) && n >= 1 && n <= 6) detectedCardCount = n; }
+                } else if (/mais um quadrado|adicione mais um quadrado/i.test(allPromptDirectives)) {
+                  detectedCardCount = 4;
+                }
+
+                fullPrompt += `\n- ${detectedCardCount.toString().toUpperCase()} PHOTO PLACEHOLDER CARDS & HARMONIC VERTICAL PROPORTIONS:
+  * Render exactly ${detectedCardCount} clean, prominent, white rectangular placeholder boxes arranged horizontally side-by-side ("${detectedCardCount} quadrados um do lado do outro") with clean rounded corners and pure solid white fill (#FFFFFF).
+  * ELEGANT CARD PROPORTIONS & AVOID TALL VERTICAL STRETCHING (CRITICAL):
+    - Because there are ${detectedCardCount} cards side-by-side, each card is narrower horizontally (~20% to 22% canvas width each for 4 cards).
+    - Therefore, each card's vertical height MUST ALSO be scaled down proportionately (~32% to 38% canvas height max). They MUST NOT be stretched into overly tall vertical pillars!
+    - Card vertical placement: The cards must start at ~38% of canvas height and END by ~60% of canvas height.
+    - This guarantees generous vertical space (at least 38% to 42% canvas height) below them for:
+      1) Course bullet points (e.g. 2 columns x 2 rows)
+      2) Foreground floating elements (e.g. stethoscopes)
+      3) WhatsApp contact phone numbers (stacked with matching font sizes)
+      4) Instagram & Facebook icons + @handle
+      5) PLUS the MANDATORY SAFE MARGIN (respiro de segurança) of at least 8% to 12% below the lowest text!
+  * ZERO CLIPPING & ZERO OVERCROWDING: All elements must have ample breathing room with zero text or icons touching or glued to borders!`;
               }
             }
 
@@ -2207,7 +2293,7 @@ MANDATORY: If the user explicitly requested white squares, cards, panels, or spe
 
             if (hasBottomContact) {
               fullPrompt += `\n\nMANDATORY FOOTER CONTACT & SOCIAL MEDIA BAR (BOTTOM CENTER):
-- The phone number and @ social media handle MUST be placed together at the BOTTOM CENTER of the canvas (in the footer zone with safe margin).
+- The phone number and @ social media handle MUST be placed together at the BOTTOM CENTER of the canvas (in the footer zone ending at least 16% to 20% ABOVE the absolute bottom edge of the canvas — minimum 550 to 700 pixels in 4K — NEVER touching, hugging, or glued to the bottom border).
 - Precede the phone number with a clean WhatsApp circular icon.
 - Precede the social handle with Instagram and Facebook icons.
 - PROHIBITION: DO NOT place the social handle at the top! DO NOT place the phone number on the left margin under the bullet points! Both must be centered at the bottom.`;
@@ -2265,7 +2351,7 @@ MANDATORY: If the user explicitly requested white squares, cards, panels, or spe
   * NEVER alter or hallucinate the name (do NOT write "Centro CE-PAR" or anything other than "CEPAR").
   * Replicate both the name "CEPAR" at the top AND the coat of arms shield at the bottom as one cohesive institutional brand mark.
 - CONTRAST & INTEGRATION: Render ONLY the complete logo itself floating cleanly and seamlessly over the canvas environment without any artificial container box, sticker border, or card behind it!
-- PROFESSIONAL INSTITUTIONAL PLACEMENT: Position the ONE official brand logo centered horizontally in the top header (with 8% to 10% safe top margin). NEVER render duplicate or twin logos! Maintain at least 8% safe margin from canvas borders.` });
+- PROFESSIONAL INSTITUTIONAL PLACEMENT: Position the ONE official brand logo centered horizontally in the top header with a MANDATORY generous safe margin of at least 16% to 20% down from the absolute top edge of the canvas (minimum 550 to 700 pixels in 4K resolution). NEVER touch, crop, or glue the logo to the top edge! ZERO elements may touch canvas borders.` });
                 parts.push({ inlineData: { data: norm.buffer.toString("base64"), mimeType: norm.mime } });
               }
             }
@@ -2357,14 +2443,18 @@ CRITICAL RULES:
 
             console.log(`[bff/generate ASYNC] Job ${jobId}: Enforcing exact target resolution ${targetQuality} (${targetDims.width}x${targetDims.height}) with Lanczos3 resampling...`);
 
-            // Apply high-quality Lanczos3 cover resize to enforce exact pixel dimensions
+            // Apply high-quality Lanczos3 resize preserving 100% of image contents (no edge cropping)
+            const inMeta = await sharp(rawImgBuffer).metadata();
+            const inRatio = (inMeta.width && inMeta.height) ? (inMeta.width / inMeta.height) : 1;
+            const targetRatioVal = targetDims.width / targetDims.height;
+            // ALWAYS preserve aspect ratio with uniform scaling (zero stretching/squashing of logos, faces, and graphics)
             const processedPngBuffer = await sharp(rawImgBuffer)
               .resize(targetDims.width, targetDims.height, {
-                fit: "cover",
+                fit: (Math.abs(inRatio - targetRatioVal) <= 0.08) ? "fill" : "cover",
                 position: "center",
                 kernel: sharp.kernel.lanczos3
               })
-              .png({ compressionLevel: 6 })
+              .png({ compressionLevel: 0, quality: 100 })
               .toBuffer();
 
             // Also encode exact AVIF buffer for fastest modern browser loading
@@ -2380,7 +2470,7 @@ CRITICAL RULES:
             const thumbH = Math.max(256, Math.round(targetDims.height * 0.3));
             const thumbPngBuffer = await sharp(processedPngBuffer)
               .resize(thumbW, thumbH, { fit: "cover", position: "center", kernel: sharp.kernel.lanczos3 })
-              .png({ compressionLevel: 6 })
+              .png({ compressionLevel: 0, quality: 100 })
               .toBuffer();
             const thumbAvifBuffer = await sharp(thumbPngBuffer)
               .avif({ quality: 75, effort: 1 })
@@ -2628,7 +2718,7 @@ CRITICAL RULES:
               `MANDATORY MODIFICATIONS: "${prompt}".`,
               parentFormData.nicho_projeto ? `Commercial Niche: ${parentFormData.nicho_projeto}.` : "",
               parentFormData.estilo_visual ? `Aesthetic Style: ${parentFormData.estilo_visual}.` : "",
-              "Maintain strict commercial quality, identical brand colors, sharp typography, professional depth, and lighting consistency from the original composition while precisely applying the requested alterations."
+              "Maintain strict commercial quality, identical brand colors, sharp typography, professional depth, and lighting consistency from the original composition while precisely applying the requested alterations. MANDATORY SAFE MARGINS & RESPIRO VISUAL: The brand logo and top header MUST sit at least 16% to 20% down from the top canvas edge (never glued to top border). The footer contact info (WhatsApp phone and @ social handle) MUST end at least 16% to 20% above the bottom canvas edge (never glued to bottom border). Maintain generous, elegant breathing room across all canvas boundaries with ZERO elements touching any borders."
             ].filter(Boolean).join(" ");
 
             // Recuperar imagem anterior como base64
@@ -2711,7 +2801,7 @@ CRITICAL RULES:
             const avifPath = path.join(resultsDir, "result.avif");
             const thumbAvifPath = path.join(thumbsDir, "thumbnail.avif");
 
-            const processedPng = await sharp(rawBuffer).png().toBuffer();
+            const processedPng = await sharp(rawBuffer).png({ compressionLevel: 0, quality: 100 }).toBuffer();
             const processedAvif = await sharp(rawBuffer).avif({ quality: 85 }).toBuffer();
             const thumbAvif = await sharp(rawBuffer).resize(400, 500, { fit: "cover" }).avif({ quality: 75 }).toBuffer();
 
@@ -3096,10 +3186,46 @@ CRITICAL RULES:
 
     return res.json({
       id: userId,
+      email: userEmail,
+      credits: 7451,
+      unlimited: false,
+      plan: {
+        id: "operacao-design-builder",
+        slug: "operacao-design-builder",
+        name: "Operação Design Builder",
+        description: "",
+        plan_type: "credits",
+        price: 0,
+        credits: 0,
+        features: [
+          "20 créditos",
+          "Acesso a todos os apps",
+          "1 crédito por geração"
+        ],
+        allowed_agents: [
+          "*"
+        ],
+        allowed_screens: [
+          "*"
+        ],
+        contract_url: "",
+        highlighted: false,
+        display_order: 0,
+        plan_duration_days: null,
+        installments: null,
+        installment_price: null,
+        expires_at: null
+      },
+      blocked: false,
+      blocked_by: null,
+      has_vertex_credentials: false,
+      vertex_credentials_count: 0,
+      has_api_key: false,
+      plan_expires_at: null,
+      required_actions: [],
       sub: userId,
       name: userName,
       given_name: userName,
-      email: userEmail,
       preferred_username: userEmail,
       email_verified: true,
       kind: "customer",
@@ -3139,13 +3265,6 @@ CRITICAL RULES:
             super_resolution: true
           }
         }
-      },
-      credits: {
-        total: 7500,
-        used: 49,
-        remaining: 7451,
-        plan: "pro",
-        mode: "unlimited"
       },
       subscription: {
         status: "active",
@@ -3316,43 +3435,22 @@ CRITICAL RULES:
   // Get User Plan Access & Feature Entitlements
   app.get(["/api/bff/api/user/plan-access", "/api/user/plan-access"], (_req: any, res: any) => {
     return res.json({
+      allowed_agents: ["*"],
+      allowed_screens: ["*"],
+      credits: 7451,
+      unlimited: false,
+      plan_type: "credits",
+      blocked: false,
+      plan_expired: false,
       has_access: true,
       access: true,
       status: "active",
       plan: {
-        id: "plan_unlimited_pro",
-        name: "Design Builder Pro",
+        id: "operacao-design-builder",
+        name: "Operação Design Builder",
         tier: "pro",
         status: "active",
-        is_trial: false,
-        features: {
-          design_builder: true,
-          export_4k: true,
-          unlimited_generations: true,
-          remove_background: true,
-          custom_branding: true,
-          priority_queue: true,
-          super_resolution: true,
-          advanced_styles: true
-        }
-      },
-      permissions: [
-        "design_builder:create",
-        "design_builder:generate",
-        "design_builder:export_4k",
-        "design_builder:history",
-        "design_builder:all"
-      ],
-      limits: {
-        max_monthly_generations: 10000,
-        max_concurrent_jobs: 5,
-        max_resolution: "4K"
-      },
-      credits: {
-        total: 7500,
-        used: 49,
-        remaining: 7451,
-        can_generate: true
+        is_trial: false
       }
     });
   });
@@ -3417,9 +3515,142 @@ CRITICAL RULES:
   // Sidebar Links Endpoints
   app.get(["/api/bff/api/sidebar-links", "/api/sidebar-links"], (_req: any, res: any) => {
     return res.json([
-      { label: "documentation", description: "guides", icon: "book", color: "#a78bfa", url: "https://docs.designbuilder.co/docs/onboarding" },
-      { label: "roadmap", description: "whats-next", icon: "map", color: "#34d399", url: "https://roadmap.designbuilder.co/" },
-      { label: "discord", description: "local-community", icon: "discord", color: "#5865F2", url: "https://link.easybuilder.com.br/convitediscord-fundadores" }
+      {
+        id: "a274776e-c634-45b6-a082-f46e536a22bd",
+        slug: "discord",
+        category: "community",
+        label: "Discord",
+        description: "Comunidade local",
+        icon: "discord",
+        color: "#5865F2",
+        url: "https://link.easybuilder.com.br/convitediscord-fundadores",
+        display_order: 3,
+        active: true,
+        created_at: "2026-05-20T12:58:57.053608+00:00",
+        updated_at: "2026-05-20T12:58:57.053608+00:00"
+      },
+      {
+        id: "022eb7d3-031c-47b8-9061-8dd9d0c484e2",
+        slug: "comunidade",
+        category: "community",
+        label: "Comunidade",
+        description: "Junte-se ao grupo.",
+        icon: "users",
+        color: "#d3f529",
+        url: "https://chat.whatsapp.com/Hl6hLlAETob4t1Nc2oGZn0",
+        display_order: 4,
+        active: true,
+        created_at: "2026-05-20T20:22:19.808875+00:00",
+        updated_at: "2026-05-20T20:22:27.720409+00:00"
+      },
+      {
+        id: "385a67fa-d6cd-4e37-95ba-5d1ab3110c8b",
+        slug: "docs",
+        category: "docs",
+        label: "Documentação",
+        description: "Guias e tutoriais",
+        icon: "book",
+        color: "#a78bfa",
+        url: "https://docs.designbuilder.co/docs/onboarding",
+        display_order: 1,
+        active: true,
+        created_at: "2026-05-20T12:58:57.053608+00:00",
+        updated_at: "2026-05-20T12:58:57.053608+00:00"
+      },
+      {
+        id: "974c43d2-9192-4fa4-be60-f2824a324d39",
+        slug: "whatsapp",
+        category: "support",
+        label: "Suporte",
+        description: "Fale com nossa equipe.",
+        icon: "message-circle",
+        color: "#5df65a",
+        url: "https://link.easybuilder.com.br/fale-com-o-suporte",
+        display_order: 0,
+        active: true,
+        created_at: "2026-05-20T20:20:41.010970+00:00",
+        updated_at: "2026-05-20T20:20:41.010970+00:00"
+      },
+      {
+        id: "cb531c37-bdf0-4bce-b0e3-7aa4e7ca824d",
+        slug: "comercial",
+        category: "support",
+        label: "Comercial",
+        description: "Fale com nosso comercial.",
+        icon: "message-circle",
+        color: "#28e23d",
+        url: "https://link.easybuilder.com.br/fale-com-luiz",
+        display_order: 1,
+        active: true,
+        created_at: "2026-05-20T20:23:25.608806+00:00",
+        updated_at: "2026-05-20T20:23:25.608806+00:00"
+      }
+    ]);
+  });
+
+  // Agents Endpoint (/api/bff/api/agents and /api/agents)
+  app.get(["/api/bff/api/agents", "/api/agents"], (_req: any, res: any) => {
+    return res.json([
+      {
+        slug: "prompt-extractor",
+        name: "Prompt Extractor",
+        display_name: null,
+        description: "",
+        icon: "bot",
+        color: "#7C3AED",
+        status: "active",
+        agent_type: "chat"
+      },
+      {
+        slug: "creative-assistant",
+        name: "Creative Assistant",
+        display_name: null,
+        description: "Ajuda a ter ideias para cenários e composições.",
+        icon: "wand-sparkles",
+        color: "#7C3AED",
+        status: "active",
+        agent_type: "chat"
+      },
+      {
+        slug: "diretor-criativo",
+        name: "Diretor Criativo",
+        display_name: null,
+        description: "Mentor visual que guia você na criação de peças impactantes com direções criativas estratégicas.",
+        icon: "book-open-check",
+        color: "#7C3AED",
+        status: "active",
+        agent_type: "chat"
+      },
+      {
+        slug: "copy-builder-carrosseis",
+        name: "Copy Builder [Carrosséis]",
+        display_name: null,
+        description: "Especialista em copywriting para carroséis para o instagram",
+        icon: "images",
+        color: "#7C3AED",
+        status: "active",
+        agent_type: "chat"
+      },
+      {
+        slug: "copy-builder-sites-e-lps",
+        name: "Copy Builder [Sites e LPs]",
+        display_name: null,
+        description: "Especialista em copywriting para Sites e LPs",
+        icon: "file-text",
+        color: "#7C3AED",
+        status: "active",
+        agent_type: "chat"
+      },
+      {
+        slug: "analisador-critico-de-design",
+        name: "Analisador Crítico de Design",
+        display_name: null,
+        description: "Analista crítico que avalia layouts com olhar profissional, identificando o que funciona e o que sabota a peça.",
+        icon: "search",
+        color: "#7C3AED",
+        status: "active",
+        agent_type: "chat"
+      }
     ]);
   });
 
@@ -3520,6 +3751,23 @@ CRITICAL RULES:
             const hasResult = fs.existsSync(path.join(folderPath, "result.avif")) || fs.existsSync(path.join(folderPath, "result.png"));
             if (hasResult && !items.find((i: any) => i.id === folder)) {
               const stat = fs.statSync(folderPath);
+              let detectedDim = "4:5";
+              try {
+                const pngP = path.join(folderPath, "result.png");
+                if (fs.existsSync(pngP)) {
+                  const buf = fs.readFileSync(pngP);
+                  const dims = getImageDimensions(buf, "image/png");
+                  if (dims.width && dims.height) {
+                    const r = dims.width / dims.height;
+                    if (Math.abs(r - 1) < 0.05) detectedDim = "1:1";
+                    else if (Math.abs(r - 9/16) < 0.05) detectedDim = "9:16";
+                    else if (Math.abs(r - 16/9) < 0.05) detectedDim = "16:9";
+                    else if (Math.abs(r - 4/5) < 0.05) detectedDim = "4:5";
+                    else detectedDim = `${dims.width}:${dims.height}`;
+                  }
+                }
+              } catch (_) {}
+
               items.push({
                 id: folder,
                 status: "done",
@@ -3527,11 +3775,11 @@ CRITICAL RULES:
                 thumbnail_url: `/designbuilder/thumbnails/${folder}/thumbnail.avif`,
                 created_at: stat.mtime.toISOString(),
                 agent_slug: "design-builder1-2",
-                dimensions: "4:5",
+                dimensions: detectedDim,
                 form_data: {
                   plano: "medium",
                   quality: "4K",
-                  dimensions: "4:5",
+                  dimensions: detectedDim,
                   quantidade: "1"
                 },
                 input_image_urls: {},
@@ -3544,9 +3792,44 @@ CRITICAL RULES:
       }
     } catch (_) {}
 
-    // Prepend any dynamic jobs created during this session
+    // Also scan public/generated-images for any generated images on disk
+    try {
+      const publicGenDir = path.join(process.cwd(), "public", "generated-images");
+      if (fs.existsSync(publicGenDir)) {
+        const files = fs.readdirSync(publicGenDir);
+        for (const file of files) {
+          if (/\.(png|jpg|jpeg|webp|avif)$/i.test(file)) {
+            const filePath = path.join(publicGenDir, file);
+            const fileUrl = "/generated-images/" + file;
+            if (!items.find((i) => i.result_url === fileUrl || i.thumbnail_url === fileUrl || i.id === file)) {
+              const stat = fs.statSync(filePath);
+              const fLower = file.toLowerCase();
+              const detectedSlug = fLower.includes("ref") ? "ref" : fLower.includes("hydra") ? "hydra" : (fLower.includes("enhance") || fLower.includes("enh")) ? "enhance" : fLower.includes("altera") ? "altera-facil" : fLower.includes("orion") ? "orion-pro" : "design-builder1-2";
+              items.push({
+                id: file,
+                status: "done",
+                result_url: fileUrl,
+                thumbnail_url: fileUrl,
+                created_at: stat.mtime.toISOString(),
+                agent_slug: detectedSlug,
+                dimensions: "4:5",
+                form_data: { quality: "4K", dimensions: "4:5" },
+                input_image_urls: {},
+                is_public: false,
+                is_favorited: false
+              });
+            }
+          }
+        }
+      }
+    } catch (_) {}
+
+    // Prepend any dynamic jobs created during this session ONLY IF COMPLETED/DONE
     for (const [id, job] of bffGenerationJobs.entries()) {
-      if (!items.find((i: any) => i.id === id)) {
+      const isJobDone = job.status === "COMPLETED" || job.status === "done";
+      if (isJobDone && !items.find((i: any) => i.id === id)) {
+        const jobParams = (job as any).parameters || {};
+        const jobDim = jobParams.dimensions || (job as any).dimensions || "1:1";
         items.unshift({
           id,
           status: job.status === "COMPLETED" ? "done" : job.status.toLowerCase(),
@@ -3554,12 +3837,13 @@ CRITICAL RULES:
           thumbnail_url: `/designbuilder/thumbnails/${id}/thumbnail.avif`,
           created_at: new Date(job.created_at).toISOString(),
           agent_slug: job.agent_slug || "design-builder1-2",
-          dimensions: "4:5",
-          form_data: (job as any).parameters || {
+          dimensions: jobDim,
+          form_data: {
             plano: "medium",
-            quality: "4K",
-            dimensions: "4:5",
-            quantidade: "1"
+            quality: jobParams.quality || "4K",
+            dimensions: jobDim,
+            quantidade: "1",
+            ...jobParams
           },
           input_image_urls: (job as any).input_image_urls || {},
           is_public: false,
@@ -3568,10 +3852,70 @@ CRITICAL RULES:
       }
     }
 
+    // Filter by agent_slug if requested
+    const agentSlugFilter = req.query.agent_slug as string | undefined;
+    if (agentSlugFilter) {
+      items = items.filter((i: any) => i.agent_slug === agentSlugFilter);
+    }
+
     // Sort newest first
     items.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-    const paginated = items.slice(offset, offset + limit);
+    const formatGenItem = (item: any) => {
+      const createdAt = item.created_at || item.timestamp || new Date().toISOString();
+      const resUrl = item.result_url || item.imageUrl || "";
+      const thumbUrl = item.thumbnail_url || resUrl;
+      const dim = item.dimensions || item.aspectRatio || "4:5";
+      return {
+        id: item.id,
+        status: item.status || "done",
+        result_url: resUrl,
+        thumbnail_url: thumbUrl,
+        created_at: createdAt,
+        agent_slug: item.agent_slug || "design-builder1-2",
+        dimensions: dim,
+        form_data: item.form_data || {
+          dimensions: dim,
+          quality: item.resolution || "4K"
+        },
+        input_image_urls: item.input_image_urls || {},
+        is_public: item.is_public ?? false,
+        community_hash: item.community_hash ?? null,
+        generation_duration_ms: item.generation_duration_ms ?? 45000,
+        ai_model: item.ai_model || "gemini-3.1-flash-image",
+        ai_provider: item.ai_provider || "openrouter",
+        sobriety_level: item.sobriety_level ?? 50,
+        started_at: item.started_at || createdAt,
+        completed_at: item.completed_at || createdAt,
+        community_title: item.community_title ?? null,
+        community_category: item.community_category ?? null,
+        published_at: item.published_at ?? null,
+        upvote_count: item.upvote_count ?? 0,
+        approved: item.approved ?? null,
+        source_generation_id: item.source_generation_id ?? null,
+        refinement_type: item.refinement_type ?? null,
+        refine_prompt: item.refine_prompt ?? null,
+        error_message: item.error_message ?? null,
+        error_code: item.error_code ?? null,
+        error_root_cause_code: item.error_root_cause_code ?? null,
+        error_origin: item.error_origin ?? null,
+        error_funding_source: item.error_funding_source ?? null,
+        error_retryable: item.error_retryable ?? null,
+        error_retry_after_seconds: item.error_retry_after_seconds ?? null,
+        error_action: item.error_action ?? null,
+        error_contract_version: item.error_contract_version ?? null,
+        is_favorited: item.is_favorited ?? false,
+        title: item.title || "Geração",
+        timestamp: createdAt,
+        imageUrl: resUrl,
+        pngUrl: item.pngUrl || resUrl,
+        aspectRatio: dim,
+        resolution: item.resolution || "4K",
+        prompt: item.prompt || ""
+      };
+    };
+
+    const paginated = items.slice(offset, offset + limit).map(formatGenItem);
     return res.json({
       items: paginated,
       limit,
@@ -3770,7 +4114,8 @@ CRITICAL RULES:
           buffer = Buffer.from(base64, "base64");
         }
 
-        const filename = (reqFileName ? path.basename(reqFileName) : ("upload_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8))) + ext;
+        const baseNameWithoutExt = reqFileName ? path.parse(reqFileName).name.replace(/[^a-zA-Z0-9_-]/g, "_") : ("upload_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8));
+        const filename = `${baseNameWithoutExt}_${Date.now().toString().slice(-4)}${ext}`;
         const targetPath = path.join(publicUploadsDir, filename);
         fs.writeFileSync(targetPath, buffer);
         console.log("[api/upload] Arquivo salvo via base64:", filename);
@@ -6810,8 +7155,12 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
       const mainH = mainMeta.height;
 
       // Calculate target logo width based on sizePercent (default 20% of canvas width)
-      const targetLogoW = Math.max(40, Math.round(mainW * (Math.min(Math.max(sizePercent, 5), 80) / 100)));
-      const targetLogoH = Math.round(targetLogoW * (logoMeta.height / logoMeta.width));
+      // Calculate target logo width and height maintaining 100% exact aspect ratio (no stretching or squashing)
+      const maxLogoW = Math.round(mainW * (Math.min(Math.max(sizePercent, 5), 80) / 100));
+      const maxLogoH = Math.round(mainH * 0.25);
+      const logoScale = Math.min(maxLogoW / logoMeta.width, maxLogoH / logoMeta.height);
+      const targetLogoW = Math.max(40, Math.round(logoMeta.width * logoScale));
+      const targetLogoH = Math.max(20, Math.round(logoMeta.height * logoScale));
 
       const resizedLogoBuffer = await sharp(logoBuffer)
         .resize(targetLogoW, targetLogoH, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
@@ -6926,6 +7275,13 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
 
       const hasSujeito = sujeitoLimpo || (Array.isArray(sujeitosBase64List) && sujeitosBase64List.some((s: any) => s && (typeof s === 'string' ? s.trim() !== "" : (s.data || s.url))));
       const hasCenario = cenarioLimpo || (Array.isArray(cenariosBase64List) && cenariosBase64List.some((c: any) => c && (typeof c === 'string' ? c.trim() !== "" : (c.data || c.url))));
+
+      const textToScan = `${promptTraduzido || ""} ${req.body.additionalPrompt || ""} ${req.body.editInstruction || ""}`;
+      const userWantsNoPeople = /(n[aã]o\s*quero\s*pessoa|sem\s*pessoa|no\s*people|sem\s*modelo|sem\s*humano|sem\s*foto\s*de\s*pessoa|zero\s*pessoas)/i.test(textToScan);
+      if (userWantsNoPeople) {
+        console.log("[BACK] User explicitly demanded NO PEOPLE. Auto-setting desativarSujeito = true.");
+        desativarSujeito = true;
+      }
 
       if (!somentePrompt && !desativarSujeito && !hasSujeito) {
         console.log("[BACK] desativarSujeito era false mas não há imagem de sujeito enviada. Auto-ajustando desativarSujeito = true.");
@@ -7068,7 +7424,13 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
           }
         }
 
-        expandedSystemInstruction += `\n\n=== DEFAULT MANDATORY RULE: ABSOLUTE ZERO DUPLICATE IMAGES ===
+        expandedSystemInstruction += `\n\n=== SUPREME SAFE MARGINS & RESPIRO VISUAL LAW (CRITICAL MANDATORY RULE) ===
+1. TOP SAFE MARGIN (HEADROOM): The brand logo, top headers, and headline elements MUST maintain at least 16% to 20% safe breathing room down from the top canvas border (minimum 550 to 700 pixels in 4K resolution). Under NO circumstances should any part of the logo, shield, or text touch or be glued to the top edge!
+2. BOTTOM SAFE MARGIN (FOOTROOM): The footer contact bar (WhatsApp phone number and @ social handle) MUST maintain at least 16% to 20% safe breathing room up from the bottom canvas border (minimum 550 to 700 pixels in 4K resolution). Under NO circumstances should any icon, phone number, or handle touch or be glued to the bottom edge!
+3. SIDE MARGINS: Maintain at least 10% to 12% safe padding from left and right canvas edges.
+4. ZERO BORDER GLUING: No text, icon, badge, phone, handle, or logo may ever touch, hug, or sit directly against any border. Everything must float with generous, elegant breathing room (respiro visual).
+
+=== DEFAULT MANDATORY RULE: ABSOLUTE ZERO DUPLICATE IMAGES ===
 1. NO REPEATED PHOTOS: You MUST NOT repeat or duplicate the same photo or image across multiple panels, cards, or background. Each panel/card MUST show a different, unique photo.
 2. DISTINCT BACKGROUND: The background image MUST BE COMPLETELY DISTINCT and DIFFERENT from any image inside a card panel, subject box, or frame. Never use the same photo for both background and a card panel.
 3. UNIQUE PHOTO PER BOX: Every card panel or image box on the layout MUST contain a DIFFERENT, unique reference photo with ZERO repetition.`;
@@ -7125,17 +7487,24 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
           });
         }
 
-        // Attach logo references
-        if (logoBase64) {
-          addImagePartToExpansion(logoBase64, "Brand Logo Reference");
+        // Attach logo references (Strict deduplication)
+        const uniqueExpansionLogos: string[] = [];
+        if (logoBase64 && typeof logoBase64 === "string" && logoBase64.trim()) {
+          uniqueExpansionLogos.push(logoBase64.trim());
         }
         if (Array.isArray(logosList)) {
-          logosList.forEach((ref: any, idx: number) => {
-            if (ref) addImagePartToExpansion(ref, `Brand Logo Reference #${idx + 1}`);
-          });
+          for (const item of logosList) {
+            const l = typeof item === "string" ? item.trim() : (item?.url || item?.data || "");
+            if (l && !uniqueExpansionLogos.includes(l)) {
+              uniqueExpansionLogos.push(l);
+            }
+          }
         }
+        uniqueExpansionLogos.forEach((ref, idx) => {
+          addImagePartToExpansion(ref, idx === 0 ? "Brand Logo Reference" : `Brand Logo Reference #${idx + 1}`);
+        });
 
-        const hasLogo = !!logoBase64 || (logosList && logosList.length > 0);
+        const hasLogo = uniqueExpansionLogos.length > 0;
         const hasSujeito = !isLogoOnlyRequest && !desativarSujeito && (
           !!base64DoSujeito || 
           (Array.isArray(sujeitosBase64List) && sujeitosBase64List.some((s: any) => s && (typeof s === 'string' ? s.trim() !== "" : (s.data || s.url)))) ||
@@ -7157,7 +7526,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
 - If the reference flyer has the logo in the BOTTOM-LEFT or BOTTOM-RIGHT FOOTER, render the client's brand logo ("Referência de Logotipo") AT THE EXACT SAME FOOTER POSITION!
 - If the reference flyer has the logo in the TOP-LEFT, TOP-RIGHT, or TOP-CENTER HEADER, render the brand logo in that corresponding header position.
 - MANDATORY RULE: NEVER move a footer logo to the top header unless explicitly requested by the user. Completely erase any old logo from the reference and embed the client's provided brand logo NATIVELY on the canvas with 100% shape and color fidelity, without artificial black container boxes.` : "";
-        const logoCompositionRule = hasLogo ? `\n10. FULL COMPOSITION WITH HIGH-FIDELITY EMBEDDED LOGO: Generate the complete graphic composition WITH the client's original brand logo ("Referência de Logotipo") placed natively at the EXACT SAME SPATIAL LOCATION where the logo appears in the Design Layout Reference (e.g. bottom-left footer if the original was in the bottom-left, or top header if original was in the top). Render cleanly without artificial container boxes or color alterations.` : "";
+        const logoCompositionRule = hasLogo ? `\n10. FULL COMPOSITION WITH HIGH-FIDELITY EMBEDDED LOGO: Generate the complete graphic composition WITH the client's original brand logo ("Referência de Logotipo") placed natively in the upper institutional header zone with a MANDATORY generous safe margin of at least 16% to 20% down from the absolute top edge of the canvas (minimum 550 to 700 pixels down in 4K — NEVER touching, hugging, or glued to the top border). Render cleanly without artificial container boxes or color alterations.` : "";
         const logoPromptRule = hasLogo ? `\n5. Text & Logo Integration: Explicitly instruct the generator to analyze and replicate the provided brand logo ("Referência de Logotipo") with ABSOLUTE 100% EXACT image-to-image fidelity at the EXACT SAME SPATIAL LOCATION where the original logo appeared in the Design Reference. Direct the generator to bake this logo natively onto the canvas, replacing old logos cleanly.` : "";
         const logoPrintRule = hasLogo ? `\n9. EXACT TEXT & LOGO REPLACEMENT: Explicitly instruct the generator to render the brand logo reference directly on the flyer at the exact corresponding location of the original logo (e.g. bottom-left footer), ensuring old logos are completely erased.` : "";
         const logoSysInstructionRule = hasLogo ? `\n5. Logo & Text Replacement: Instruct the generator to completely erase old brand logos and render ONLY the client's provided "Referência de Logotipo" NATIVELY at the exact spatial position of the original logo, without modifying shapes or colors.` : "";
@@ -7205,6 +7574,11 @@ ${cardDesignPreservationRule}
 20. LIGHTING PHYSICS & 3-LAYER SUBSURFACE SCATTERING (SSS): Apply authentic 3-layer Subsurface Scattering (epidermis, dermis, subcutaneous fat) to skin under directional key light for biological realism. Micro-displacement pores and fine skin grain. Strategic chiaroscuro with controlled black clipping in deepest shadow crevices (zero fill light, 100% shadow opacity for deep contrast). Realistic tactile fabric friction and light absorption (wool knits, cotton twill, linen textures).
 21. KINESIOLOGY, ANATOMY & GAZE VECTOR: Every human subject MUST have EXACTLY 2 arms, 2 hands with 5 fingers each, natural joint articulation. Replicate body-to-head torque with natural neck muscle tension (sternocleidomastoid) aligning gaze vector directly with optical lens axis. Tactile dermal deformation where fingers touch fabric, objects, or skin.
 22. CAMERA & OPTICAL SIMULATION: Simulate full-frame Sony A1 / Canon EOS R5 with 85mm f/1.4 GM lens at f/2.0-f/2.8. Tack-sharp focal plane on subject's eyes, organic circular bokeh with natural cat-eye edge falloff, zero chromatic distortion, zero synthetic AI plastic smoothing.
+23. SUPREME SAFE MARGINS & ZERO BORDER GLUING (CRITICAL MANDATORY LAW): Command the generator that ALL text, logos, icons, contact info, and graphics MUST maintain generous safe margins (respiro visual) from canvas borders:
+- TOP MARGIN: Brand logo and top header elements MUST sit at least 16% to 20% down from the absolute top edge of the canvas (minimum 550 to 700 pixels in 4K resolution). NEVER touch, crop, or glue the logo or brand name to the top border!
+- BOTTOM MARGIN: Footer contact info (WhatsApp phone number and @ social handle) MUST sit at least 16% to 20% above the absolute bottom edge of the canvas (minimum 550 to 700 pixels in 4K resolution). NEVER touch, crop, or glue contact elements to the bottom border!
+- SIDE MARGINS: Maintain at least 10% to 12% safe padding from left and right canvas edges.
+- ZERO BORDER GLUING: No text, icon, badge, phone, handle, or logo may ever touch or hug any border.
 
 The output must be returned as a JSON object with exactly two string fields:
 {
@@ -7439,13 +7813,26 @@ ${layoutCardRule}
 ${corDominante && corDominante !== "transparent" ? "- SOLID BACKGROUND REQUIREMENT FOR CUTOUT: Because the client requested a solid background color, YOU MUST GENERATE ALL TEXTS AND ELEMENTS OVER A PURE WHITE OR HIGHLY CONTRASTING FLAT SOLID BACKGROUND. Do not generate ANY background textures, scenes, or gradients. Just the subjects and text floating over a blank, flat solid color canvas. This is critical so we can cleanly cut them out." : ""}
 ${logoMandatoryRule}`;
 
-      const antiDuplicateLogosAndIcons = "duplicate logos, double logos, twin logos, multiple logos, repeated brand logos, extra logo placements, unrequested social media icons, tiktok icon, tiktok logo, musical.ly logo, invented @ handles, unrequested instagram handles, @perfil, @seu.perfil, unrequested profile usernames, duplicate photos, repeated background image, repeating same image in multiple panels, same subject repeated in background and card, duplicate image boxes";
+      let antiDuplicateLogosAndIcons = "duplicate logos, double logos, twin logos, multiple logos, repeated brand logos, extra logo placements, unrequested social media icons, tiktok icon, tiktok logo, musical.ly logo, invented @ handles, unrequested instagram handles, @perfil, @seu.perfil, unrequested profile usernames, duplicate photos, repeated background image, repeating same image in multiple panels, same subject repeated in background and card, duplicate image boxes";
+      if (userWantsNoPeople) {
+        fullPrompt += `\n- ABSOLUTE PROHIBITION OF PEOPLE (HIGHEST PRIORITY): The client explicitly specified NO PEOPLE. DO NOT RENDER ANY HUMAN BEINGS, MODELS, FACES, OR PEOPLE! Replace any human subject area with clean layout elements, product, or large graphic space as requested.`;
+        antiDuplicateLogosAndIcons += ", people, person, human, model, man, woman, face, hands, body";
+      }
       if (negativePrompt && negativePrompt.trim() !== "") {
         fullPrompt += `\nAvoid / Negative constraints: old logos, original reference text, original reference text words, original reference titles, hallucinated words, blurry, pixelated, distorted, low resolution, bad colors, color banding, jpeg artifacts, low quality, glitch, out of focus, noise, visual bugs, ${antiDuplicateLogosAndIcons}, ${negativePrompt.trim()}`;
       } else {
         fullPrompt += `\nAvoid / Negative constraints: old logos, original reference text, original reference text words, original reference titles, original reference logos, hallucinated words, incorrect spelling, blurry, pixelated, distorted, low resolution, bad colors, color banding, jpeg artifacts, low quality, glitch, out of focus, noise, visual bugs, ${antiDuplicateLogosAndIcons}`;
       }
-      
+      if (typeof promptTraduzido === "string" && promptTraduzido.includes("[USER DIRECT MANDATE")) {
+        const mandateMatch = promptTraduzido.match(/\[USER DIRECT MANDATE[^\]]*\]:[^\n]*/);
+        if (mandateMatch && mandateMatch[0]) {
+          fullPrompt = `${mandateMatch[0]}\n\n${fullPrompt}`;
+        }
+      }
+      if (userWantsNoPeople) {
+        fullPrompt = `[ABSOLUTE MANDATE - NO PEOPLE / ZERO PESSOAS]: DO NOT RENDER ANY PEOPLE, HUMANS, FACES OR MODELS! Replace any person area with clean spacious layout panels as requested.\n\n${fullPrompt}`;
+      }
+
       fullPrompt += mandatorySuffix;
       parts.push({ text: fullPrompt });
 
@@ -7513,22 +7900,34 @@ ${logoMandatoryRule}`;
         });
       }
 
-      // 7. Add Logo References for native AI rendering (placed LAST, clearly labeled as header emblem)
-      if (useLogo || logoBase64 || (Array.isArray(logosList) && logosList.length > 0)) {
+      // 7. Add Logo References for native AI rendering (placed LAST, strictly deduplicated)
+      const uniqueGenerationLogos: string[] = [];
+      if (logoBase64 && typeof logoBase64 === "string" && logoBase64.trim()) {
+        uniqueGenerationLogos.push(logoBase64.trim());
+      }
+      if (Array.isArray(logosList)) {
+        for (const item of logosList) {
+          const l = typeof item === "string" ? item.trim() : (item?.url || item?.data || "");
+          if (l && !uniqueGenerationLogos.includes(l)) {
+            uniqueGenerationLogos.push(l);
+          }
+        }
+      }
+
+      if (useLogo || uniqueGenerationLogos.length > 0) {
         if (isLogoOverlayMode) {
-          if (logoBase64) {
-            addImagePart(logoBase64, "LOGOTIPO DA MARCA DO CLIENTE (MODO OVERLAY DIGITAL: NÃO DESENHE ESTA LOGO NO CANVAS. Apenas reserve um espaço limpo e vazio no canto superior esquerdo/direito para a inclusão digital. APAGUE COMPLETAMENTE QUALQUER LOGO ANTIGO DA FOTO DE REFERÊNCIA DE DESIGN!).");
-          }
-          if (Array.isArray(logosList)) {
-            logosList.forEach((ref: any, idx: number) => {
-              if (ref) addImagePart(ref, `LOGOTIPO DA MARCA DO CLIENTE Adicional ${idx + 1} (MODO OVERLAY DIGITAL: NÃO DESENHAR NO CANVAS)`);
-            });
-          }
+          uniqueGenerationLogos.forEach((ref, idx) => {
+            addImagePart(ref, idx === 0
+              ? "LOGOTIPO DA MARCA DO CLIENTE (MODO OVERLAY DIGITAL: NÃO DESENHE ESTA LOGO NO CANVAS. Apenas reserve um espaço limpo e vazio no canto superior esquerdo/direito para a inclusão digital. APAGUE COMPLETAMENTE QUALQUER LOGO ANTIGO DA FOTO DE REFERÊNCIA DE DESIGN!)."
+              : `LOGOTIPO DA MARCA DO CLIENTE Adicional ${idx + 1} (MODO OVERLAY DIGITAL: NÃO DESENHAR NO CANVAS)`
+            );
+          });
         } else {
-          if (logoBase64) {
-            let preparedLogoInput = logoBase64;
+          for (let idx = 0; idx < uniqueGenerationLogos.length; idx++) {
+            const rawRef = uniqueGenerationLogos[idx];
+            let preparedLogoInput = rawRef;
             try {
-              const rawParsed = parseBase64Part(logoBase64);
+              const rawParsed = parseBase64Part(rawRef);
               if (rawParsed && rawParsed.data) {
                 const prepared = await prepareLogoForGeminiVision(Buffer.from(rawParsed.data, "base64"), rawParsed.mimeType);
                 preparedLogoInput = `data:${prepared.mime};base64,${prepared.buffer.toString("base64")}`;
@@ -7536,25 +7935,13 @@ ${logoMandatoryRule}`;
             } catch (e) {
               console.warn("[/api/gerar] prepareLogoForGeminiVision warning:", e);
             }
-            addImagePart(preparedLogoInput, `LOGOTIPO DA MARCA DO CLIENTE (MANDATÓRIO — COMPLETE LOGO LOCKUP INTEGRITY):
-- COMPLETE LOGO LOCKUP INTEGRITY: Replicate the COMPLETE official brand lockup together: BOTH the brand name "CEPAR" in clean capital serif typography at the top AND the coat of arms / shield with laurel wreath below it.
-- PROHIBITION: NEVER cut off or crop out the name "CEPAR"! NEVER mutate or change the name to "Centro CE-PAR".
-- Render the complete brand lockup cleanly floating over the canvas with sharp, crisp contrast, without any artificial background container box.`);
-          }
-          if (Array.isArray(logosList)) {
-            for (let idx = 0; idx < logosList.length; idx++) {
-              const ref = logosList[idx];
-              if (ref) {
-                let preparedRefInput = ref;
-                try {
-                  const rawParsed = parseBase64Part(ref);
-                  if (rawParsed && rawParsed.data) {
-                    const prepared = await prepareLogoForGeminiVision(Buffer.from(rawParsed.data, "base64"), rawParsed.mimeType);
-                    preparedRefInput = `data:${prepared.mime};base64,${prepared.buffer.toString("base64")}`;
-                  }
-                } catch (e) {}
-                addImagePart(preparedRefInput, `LOGOTIPO DA MARCA DO CLIENTE Adicional ${idx + 1} (COMPLETE LOCKUP INTEGRITY: Preservar nome e escudo juntos sem cortes)`);
-              }
+
+            if (idx === 0) {
+              addImagePart(preparedLogoInput, `LOGOTIPO DA MARCA DO CLIENTE (MANDATÓRIO — IDENTIDADE VISUAL EXATA):
+- Render EXACTLY ONE single instance of this brand logo cleanly positioned (typically in the header corner).
+- PROHIBITION: NEVER duplicate, clone, or place multiple copies of the logo. Do NOT keep any old logos or emblems from the design reference image. Replicate ONLY this exact brand logo provided, preserving its authentic symbols, typography, and colors.`);
+            } else {
+              addImagePart(preparedLogoInput, `LOGOTIPO DA MARCA DO CLIENTE Adicional ${idx + 1} (Preservar símbolo e tipografia exatos sem duplicar)`);
             }
           }
         }
@@ -7619,13 +8006,17 @@ ${logoMandatoryRule}`;
             const targetDims = getResolutionDimensions(targetQuality, targetRatio);
             console.log(`[api/gerar] Enforcing exact output dimensions for ${targetQuality} (${targetDims.width}x${targetDims.height}) with Lanczos3...`);
 
+            const inMeta = await sharp(inBuf).metadata();
+            const inRatio = (inMeta.width && inMeta.height) ? (inMeta.width / inMeta.height) : 1;
+            const targetRatioVal = targetDims.width / targetDims.height;
+            // ALWAYS preserve aspect ratio with uniform scaling (zero stretching/squashing of logos, faces, and graphics)
             const resizedBuf = await sharp(inBuf)
               .resize(targetDims.width, targetDims.height, {
-                fit: "cover",
+                fit: (Math.abs(inRatio - targetRatioVal) <= 0.08) ? "fill" : "cover",
                 position: "center",
                 kernel: sharp.kernel.lanczos3
               })
-              .png({ compressionLevel: 6 })
+              .png({ compressionLevel: 0, quality: 100 })
               .toBuffer();
             finalImageBase64 = `data:${rawB64Mime || "image/png"};base64,${resizedBuf.toString("base64")}`;
           }

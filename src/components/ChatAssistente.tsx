@@ -75,7 +75,7 @@ const assistants: AssistantConfig[] = [
   { id: "enhance-builder", label: "Diretor: Enhance", sublabel: "Restauração, Upscale 4K & Pele Real", desc: "Restauração, upscale 4K, hiper-realismo de pele/poros e remoção de aspecto artificial de IA.", icon: <Sun size={14} />, color: "#7c3aed" },
   { id: "ref", label: "Diretor: REF Builder", sublabel: "Clonagem & Engenharia de Referências", desc: "Engenharia reversa de posters do Pinterest/Behance para transpor para sua marca.", icon: <Layers size={14} />, color: "#8B5CF6" },
   { id: "hydra", label: "Diretor: Hydra", sublabel: "Fotos de Produtos 3D & E-commerce", desc: "Packshots comerciais de alta conversão, estúdio fotográfico, reflexos e sombras realistas.", icon: <Box size={14} />, color: "#8B5CF6" },
-  { id: "design-builder1-2", label: "Diretor: Design Builder 1.2", sublabel: "Flyers Comerciais & Social Media", desc: "Campanhas publicitárias, headlines magnéticas, títulos dominantes e conversão.", icon: <Megaphone size={14} />, color: "#7c3aed" },
+  { id: "design-builder1-2", label: "Diretor: Zion Design", sublabel: "Flyers Comerciais & Social Media", desc: "Campanhas publicitárias, headlines magnéticas, títulos dominantes e conversão.", icon: <Megaphone size={14} />, color: "#7c3aed" },
   { id: "altera-facil", label: "Diretor: Altera Fácil", sublabel: "Consistência de Identidade, Poses & Roupas", desc: "Troca de vestimentas, poses e expressões mantendo 100% da fisionomia do sujeito.", icon: <Users size={14} />, color: "#a855f7" },
   // Top Featured Agents
   { id: "diretor-criativo", label: "Diretor Criativo IA", sublabel: "Direção de Arte & Marca", desc: "Avance além do bloqueio criativo com orientações estratégicas de design de alto impacto.", icon: <Eye size={14} />, color: "#a855f7" },
@@ -2463,7 +2463,7 @@ Exemplo de JSON de saída:
               { id: "enhance-builder", name: "Enhance", color: "#7c3aed", icon: "☀️" },
               { id: "ref", name: "REF", color: "#8B5CF6", icon: "📌" },
               { id: "hydra", name: "Hydra", color: "#8B5CF6", icon: "📦" },
-              { id: "design-builder1-2", name: "Design Builder 1.2", color: "#7c3aed", icon: "📢" },
+              { id: "design-builder1-2", name: "Zion Design", color: "#7c3aed", icon: "📢" },
               { id: "altera-facil", name: "Altera Fácil", color: "#a855f7", icon: "👥" }
             ].map((area) => {
               const isSelected = activeAssistant.id === area.id || (area.id === "orion-pro" && activeAssistant.id === "diretor-criativo");

@@ -22,7 +22,7 @@ import {
 
 export const AGENTS = [
   { slug: "orion-pro", name: "Órion Pro", href: "/orion-pro" },
-  { slug: "design-builder1-2", name: "Design Builder 1.2", href: "/agent/design-builder1-2" },
+  { slug: "design-builder1-2", name: "Zion Design", href: "/agent/design-builder1-2" },
   { slug: "ref", name: "REF", href: "/agent/ref" },
   { slug: "enhance-builder", name: "Enhance", href: "/enhance-builder" },
   { slug: "altera-facil", name: "Altera Fácil", href: "/altera-facil" },
