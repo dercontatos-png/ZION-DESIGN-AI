@@ -124,7 +124,11 @@ export const ComunidadeManager: React.FC<ComunidadeManagerProps> = ({
       .then((data) => {
         if (data && Array.isArray(data.items) && data.items.length > 0) {
           const formatted: CommunityCardItem[] = data.items
-            .filter((it: any) => it.src || it.image_url || it.thumbnail_url || it.result_url)
+            .filter((it: any) => {
+              const s = it.src || it.image_url || it.thumbnail_url || it.result_url || "";
+              if (s.includes("X-Amz-Signature") || s.includes("X-Amz-Expires")) return false;
+              return Boolean(s);
+            })
             .map((it: any, idx: number) => ({
               id: it.id || `comm-api-${idx}`,
               col: 0,
@@ -523,6 +527,12 @@ export const ComunidadeManager: React.FC<ComunidadeManagerProps> = ({
                             decoding="async"
                             className="absolute inset-0 block h-full w-full object-cover opacity-100 transition-transform duration-500 group-hover:scale-[1.03]"
                             src={card.src}
+                            onError={(e) => {
+                              const target = e.currentTarget;
+                              if (!target.src.includes("thumbnail.avif")) {
+                                target.src = "/comunidade_files/thumbnail.avif";
+                              }
+                            }}
                           />
 
                           {/* Desktop Hover Overlay Oficial */}

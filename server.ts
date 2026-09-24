@@ -858,10 +858,20 @@ export async function saveImageToDisk(rawData: string, rawMime: string): Promise
     const buffer = Buffer.from(rawData, "base64");
 
     const filename = `img_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${ext}`;
-    const publicGenDir = path.join(process.cwd(), "public", "generated-images");
-    if (!fs.existsSync(publicGenDir)) {
-      fs.mkdirSync(publicGenDir, { recursive: true });
-    }
+    const isServerlessEnv = Boolean(
+      process.env.VERCEL ||
+      process.env.AWS_LAMBDA_FUNCTION_NAME ||
+      process.env.LAMBDA_TASK_ROOT ||
+      process.env.NOW_REGION
+    );
+    const publicGenDir = isServerlessEnv
+      ? path.join(os.tmpdir(), "zion_storage", "generated-images")
+      : path.join(process.cwd(), "public", "generated-images");
+    try {
+      if (!fs.existsSync(publicGenDir)) {
+        fs.mkdirSync(publicGenDir, { recursive: true });
+      }
+    } catch (_) {}
     const filepath = path.join(publicGenDir, filename);
 
     await fs.promises.writeFile(filepath, buffer);
@@ -1560,8 +1570,72 @@ async function startServer() {
     "/Design_Builder1_2_files"
   ], express.static(designBuilderFilesDir));
 
+  // Secure Storage Base Directory (uses writable /tmp on serverless like Vercel/AWS Lambda)
+  const isServerlessEnv = Boolean(
+    process.env.VERCEL ||
+    process.env.AWS_LAMBDA_FUNCTION_NAME ||
+    process.env.LAMBDA_TASK_ROOT ||
+    process.env.NOW_REGION
+  );
+  const STORAGE_BASE_DIR = isServerlessEnv
+    ? path.join(os.tmpdir(), "zion_storage")
+    : path.resolve(process.cwd(), "local_storage");
+
+  try {
+    if (!fs.existsSync(STORAGE_BASE_DIR)) {
+      fs.mkdirSync(STORAGE_BASE_DIR, { recursive: true });
+    }
+  } catch (_) {}
+
+  // Fallback direct handlers for generated-images with Cloudflare R2 backup
+  app.get("/generated-images/:filename", async (req: any, res: any, next: any) => {
+    try {
+      const filename = path.basename(req.params.filename);
+      const localTmp = path.join(STORAGE_BASE_DIR, "generated-images", filename);
+      if (fs.existsSync(localTmp) && fs.statSync(localTmp).isFile()) {
+        return res.sendFile(localTmp);
+      }
+      const localPublic = path.join(process.cwd(), "public", "generated-images", filename);
+      if (fs.existsSync(localPublic) && fs.statSync(localPublic).isFile()) {
+        return res.sendFile(localPublic);
+      }
+      if (isR2Active()) {
+        const r2Obj = await downloadFromR2(`generated-images/${filename}`);
+        if (r2Obj) {
+          res.setHeader("Content-Type", r2Obj.contentType || "image/png");
+          res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+          return res.send(r2Obj.data);
+        }
+      }
+    } catch (_) {}
+    next();
+  });
+
+  // Fallback direct handlers for uploads with Cloudflare R2 backup
+  app.get("/uploads/:filename", async (req: any, res: any, next: any) => {
+    try {
+      const filename = path.basename(req.params.filename);
+      const localTmp = path.join(STORAGE_BASE_DIR, "uploads", filename);
+      if (fs.existsSync(localTmp) && fs.statSync(localTmp).isFile()) {
+        return res.sendFile(localTmp);
+      }
+      const localPublic = path.join(process.cwd(), "public", "uploads", filename);
+      if (fs.existsSync(localPublic) && fs.statSync(localPublic).isFile()) {
+        return res.sendFile(localPublic);
+      }
+      if (isR2Active()) {
+        const r2Obj = await downloadFromR2(`uploads/${filename}`);
+        if (r2Obj) {
+          res.setHeader("Content-Type", r2Obj.contentType || "image/jpeg");
+          res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+          return res.send(r2Obj.data);
+        }
+      }
+    } catch (_) {}
+    next();
+  });
+
   // Secure Storage Download Endpoint
-  const STORAGE_BASE_DIR = path.resolve(process.cwd(), "local_storage");
   app.get(["/api/bff/api/storage/download", "/api/storage/download"], async (req, res) => {
     try {
       const key = req.query.key;
@@ -2816,8 +2890,8 @@ CRITICAL RULES:
             jobRecord.progress = 85;
             jobRecord.message = "Otimizando imagem para alta definição...";
 
-            const resultsDir = path.join(process.cwd(), "public", "designbuilder", "results", jobId);
-            const thumbsDir = path.join(process.cwd(), "public", "designbuilder", "thumbnails", jobId);
+            const resultsDir = path.join(STORAGE_BASE_DIR, "results", jobId);
+            const thumbsDir = path.join(STORAGE_BASE_DIR, "thumbnails", jobId);
             fs.mkdirSync(resultsDir, { recursive: true });
             fs.mkdirSync(thumbsDir, { recursive: true });
 
@@ -4107,10 +4181,20 @@ CRITICAL RULES:
     });
   }, async (req: any, res: any) => {
     try {
-      const publicUploadsDir = path.join(process.cwd(), "public", "uploads");
-      if (!fs.existsSync(publicUploadsDir)) {
-        fs.mkdirSync(publicUploadsDir, { recursive: true });
-      }
+      const isServerlessEnv = Boolean(
+        process.env.VERCEL ||
+        process.env.AWS_LAMBDA_FUNCTION_NAME ||
+        process.env.LAMBDA_TASK_ROOT ||
+        process.env.NOW_REGION
+      );
+      const publicUploadsDir = isServerlessEnv
+        ? path.join(os.tmpdir(), "zion_storage", "uploads")
+        : path.join(process.cwd(), "public", "uploads");
+      try {
+        if (!fs.existsSync(publicUploadsDir)) {
+          fs.mkdirSync(publicUploadsDir, { recursive: true });
+        }
+      } catch (_) {}
 
       // If uploaded via multipart file
       if (req.file) {
@@ -4370,7 +4454,15 @@ CRITICAL RULES:
   });
 
   // ─── CLIENTES & MARCAS PERSISTÊNCIA PERMANENTE NO DISCO ─────────────
-  const CLIENTES_FILE_PATH = path.join(process.cwd(), "local_storage", "clientes_db.json");
+  const isServerlessClientes = Boolean(
+    process.env.VERCEL ||
+    process.env.AWS_LAMBDA_FUNCTION_NAME ||
+    process.env.LAMBDA_TASK_ROOT ||
+    process.env.NOW_REGION
+  );
+  const CLIENTES_FILE_PATH = isServerlessClientes
+    ? path.join(os.tmpdir(), "clientes_db.json")
+    : path.join(process.cwd(), "local_storage", "clientes_db.json");
 
   app.get("/api/clientes", async (_req, res) => {
     try {
