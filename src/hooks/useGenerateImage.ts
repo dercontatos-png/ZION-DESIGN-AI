@@ -394,6 +394,29 @@ export const useGenerateImage = (
       console.log(`[FRONT] Generation criada: id=${generationId}, task=${taskId}, status=${createData.status}`);
       store.setLastGeneratedId(generationId);
 
+      // Verificação de conclusão imediata (ambiente Vercel / Serverless)
+      const immediateResult = createData.result_url || createData.download_url || (createData.outputs && createData.outputs[0]?.url) || (createData.outputs && createData.outputs[0]?.preview_url);
+      if (createData.status === "done" && immediateResult) {
+        console.log("[FRONT] Imagem gerada imediatamente pelo servidor:", immediateResult);
+        recordImageGeneration(1);
+        const isActive = store.addImagesToProjectGallery(targetProjectId, [immediateResult]);
+        store.addGaleriaImage(immediateResult, { app: "design-builder" });
+        if (isActive) {
+          showToast(`Imagem ${is4K ? "4K Ultra HD" : "premium"} gerada com sucesso! ✔`, "success");
+        } else {
+          showToast(`Imagem do '${targetProjectName}' foi gerada no plano de fundo!`, "success");
+        }
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("zion-generation-done", { detail: { imageUrl: immediateResult, projectId: targetProjectId } }));
+        }
+        onSuccess?.(immediateResult, rawPreviousImage);
+        return;
+      }
+
+      if (createData.status === "error" || createData.error) {
+        throw new Error(createData.error || "Falha na geração da imagem.");
+      }
+
       // 3. Conectar no SSE stream para acompanhar progresso em tempo real
       const resultUrl = await new Promise<string>((resolve, reject) => {
         let resolved = false;

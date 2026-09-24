@@ -1515,7 +1515,8 @@ async function startServer() {
     "/api/gerar",
     "/api/omni-flash-generate",
     "/api/video-generate-frames",
-    "/api/generate-audio"
+    "/api/generate-audio",
+    "/api/bff/api/generate"
   ], (req: any, res: any, next: any) => {
     const userEmail = (
       req.headers["x-user-email"] ||
@@ -2168,15 +2169,10 @@ async function startServer() {
 
         bffGenerationJobs.set(jobId, jobRecord);
 
-        // Respond immediately to the frontend (Design Builder 1.2 contract)
-        res.json({
-          generation_id: jobId,
-          task_id: taskId,
-          status: "pending"
-        });
+        const isServerless = !!(process.env.VERCEL || req.headers["x-vercel-id"]);
 
-        // ── ASYNC: Trigger real AI image generation in the background ──
-        (async () => {
+        // ── Trigger real AI image generation (synchronous on serverless/Vercel, async on local) ──
+        const runGenerationExecution = async () => {
           try {
             const client = getAiClient(body.customApiKey);
             if (!client) {
@@ -2540,10 +2536,16 @@ CRITICAL RULES:
 
             // Upload to R2 if configured (both output results and input reference assets)
             if (isR2Active()) {
-              uploadToR2(`results/${jobId}/result.avif`, processedAvifBuffer, "image/avif").catch(() => {});
-              uploadToR2(`results/${jobId}/result.png`, processedPngBuffer, "image/png").catch(() => {});
-              uploadToR2(`thumbnails/${jobId}/thumbnail.avif`, thumbAvifBuffer, "image/avif").catch(() => {});
-              uploadToR2(`thumbnails/${jobId}/thumbnail.png`, thumbPngBuffer, "image/png").catch(() => {});
+              try {
+                await Promise.allSettled([
+                  uploadToR2(`results/${jobId}/result.avif`, processedAvifBuffer, "image/avif"),
+                  uploadToR2(`results/${jobId}/result.png`, processedPngBuffer, "image/png"),
+                  uploadToR2(`thumbnails/${jobId}/thumbnail.avif`, thumbAvifBuffer, "image/avif"),
+                  uploadToR2(`thumbnails/${jobId}/thumbnail.png`, thumbPngBuffer, "image/png")
+                ]);
+              } catch (r2Err) {
+                console.warn("[R2 Upload Warning]:", r2Err);
+              }
               if (files.fotos_do_sujeito_produto) {
                 files.fotos_do_sujeito_produto.forEach((f, idx) => {
                   uploadToR2(`inputs/${jobId}/fotos_do_sujeito_produto/${f.originalname || `${idx}.jpg`}`, f.buffer, f.mimetype || "image/jpeg").catch(() => {});
@@ -2629,7 +2631,29 @@ CRITICAL RULES:
             jobRecord.error = asyncErr?.message || "Unknown error";
             jobRecord.updated_at = Date.now();
           }
-        })();
+        };
+
+        if (isServerless) {
+          // On Vercel / serverless: MUST await generation so lambda does not terminate early
+          await runGenerationExecution();
+          return res.json({
+            generation_id: jobId,
+            task_id: taskId,
+            status: jobRecord.status || "done",
+            result_url: jobRecord.download_url || jobRecord.outputs?.[0]?.url,
+            download_url: jobRecord.download_url || jobRecord.outputs?.[0]?.url,
+            outputs: jobRecord.outputs || [],
+            error: jobRecord.status === "error" ? (jobRecord.error || jobRecord.message) : undefined
+          });
+        } else {
+          // On local persistent server: start in background and respond immediately
+          res.json({
+            generation_id: jobId,
+            task_id: taskId,
+            status: "pending"
+          });
+          runGenerationExecution();
+        }
 
       } catch (err: any) {
         console.error("[Generate Error]:", err);
