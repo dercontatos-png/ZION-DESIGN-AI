@@ -66,7 +66,10 @@ import {
   RefreshCw,
   Paperclip,
   Send,
-  Loader2
+  Loader2,
+  FileText,
+  Type,
+  Palette
 } from "lucide-react";
 
 interface DesignBuilderProps {
@@ -148,6 +151,7 @@ export default function DesignBuilder({
   const [isLinksOpen, setIsLinksOpen] = useState<boolean>(false);
   const [isFavorited, setIsFavorited] = useState<boolean>(false);
   const [isSavedRecently, setIsSavedRecently] = useState<boolean>(false);
+  const [mobileActiveCategory, setMobileActiveCategory] = useState<string | null>(null);
 
   // Toast feedback state
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "warning" | "info" } | null>(null);
