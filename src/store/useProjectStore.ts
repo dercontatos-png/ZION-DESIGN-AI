@@ -210,7 +210,8 @@ const getFreshDefaultConfig = (): ProjectConfig => JSON.parse(JSON.stringify(def
 
 const createDefaultProjects = (serverImages: string[] = ["/Design Builder1 2_files/result.avif"]) => {
   const proj1Config: ProjectConfig = getFreshDefaultConfig();
-  const proj2Config: ProjectConfig = {
+  const proj2Config: ProjectConfig = getFreshDefaultConfig();
+  /*
     ...getFreshDefaultConfig(),
     dimensao: "4:5",
     qualidade: "1K",
@@ -257,7 +258,7 @@ const createDefaultProjects = (serverImages: string[] = ["/Design Builder1 2_fil
     ],
     cenariosBase64List: ["/Prefeitura_Educacao.jpg"],
     cenarioBase64: "/Prefeitura_Educacao.jpg"
-  };
+  }; */
 
   return [
     { id: "proj_aba_1", name: "Aba 1", config: proj1Config, galeria: serverImages },

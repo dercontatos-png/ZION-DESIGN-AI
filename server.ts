@@ -2296,50 +2296,38 @@ ${userCustomPrompt}
 MANDATORY: If the user explicitly requested white squares, cards, panels, or specific visual elements, you MUST render them exactly as requested! Generic rules against central containers apply only to unprompted default containers, NEVER to elements explicitly requested here.`;
             }
 
-            // Restrição de modelo humano e slots de foto solicitados pelo usuário
-            const hasSubjectPhotos = !!(files.fotos_do_sujeito_produto && files.fotos_do_sujeito_produto.length > 0);
+            // Restrição de modelo humano e slots de foto: APENAS quando expressamente solicitado pelo usuário
             const allPromptDirectives = `${body.prompt_adicional || ""} ${body.subject_description || ""} ${body.poseDescription || ""}`.toLowerCase();
-            const userRequestedNoPerson = /sem (pessoa|modelo|mulher|homem|sujeito)|deixe.*quadrado|quadrados? branco|colocar foto depois|apenas (o )?layout|sem foto/i.test(allPromptDirectives);
-            const isLivreCategory = (body.categoria || "").toLowerCase() === "livre";
-            const hasHumanSubject = hasSubjectPhotos && !userRequestedNoPerson && !isLivreCategory;
+            const userRequestedNoPerson = /sem (pessoa|modelo|mulher|homem|sujeito)|colocar foto depois|apenas (o )?layout|sem foto/i.test(allPromptDirectives);
+            const userRequestedCards = /quadrado|caixa|box|espa[çc]o|slot/i.test(allPromptDirectives);
 
-            if (userRequestedNoPerson || !hasHumanSubject) {
-              fullPrompt += `\n\nSUBJECT RESTRICTION, PHOTO PLACEHOLDER SLOTS & VERTICAL HARMONY:
-- ABSOLUTE PROHIBITION OF HUMAN MODELS: ZERO people, ZERO women, ZERO nurses, ZERO doctors! Do NOT paint any person or model into the artwork!`;
-              if (/quadrado|caixa|box|espa[çc]o|slot/i.test(allPromptDirectives)) {
-                const numCardsMatch = allPromptDirectives.match(/(\d+)\s*(quadrados?|cards?|caixas?|boxes?|espa[çc]os?|slots?)/i) ||
-                                      allPromptDirectives.match(/(quatro|4)\s*(quadrados?|cards?|caixas?|boxes?)/i) ||
-                                      allPromptDirectives.match(/(tr[êe]s|3)\s*(quadrados?|cards?|caixas?|boxes?)/i) ||
-                                      allPromptDirectives.match(/(dois|duas|2)\s*(quadrados?|cards?|caixas?|boxes?)/i);
-                let detectedCardCount = 3;
-                if (numCardsMatch) {
-                  const w = numCardsMatch[1].toLowerCase();
-                  if (w === "4" || w === "quatro") detectedCardCount = 4;
-                  else if (w === "3" || w === "três" || w === "tres") detectedCardCount = 3;
-                  else if (w === "2" || w === "dois" || w === "duas") detectedCardCount = 2;
-                  else if (w === "5" || w === "cinco") detectedCardCount = 5;
-                  else { const n = parseInt(w); if (!isNaN(n) && n >= 1 && n <= 6) detectedCardCount = n; }
-                } else if (/mais um quadrado|adicione mais um quadrado/i.test(allPromptDirectives)) {
-                  detectedCardCount = 4;
-                }
-
-                fullPrompt += `\n- ${detectedCardCount.toString().toUpperCase()} PHOTO PLACEHOLDER CARDS & HARMONIC VERTICAL PROPORTIONS:
-  * Render exactly ${detectedCardCount} clean, prominent, white rectangular placeholder boxes arranged horizontally side-by-side ("${detectedCardCount} quadrados um do lado do outro") with clean rounded corners and pure solid white fill (#FFFFFF).
-  * ELEGANT CARD PROPORTIONS & AVOID TALL VERTICAL STRETCHING (CRITICAL):
-    - Because there are ${detectedCardCount} cards side-by-side, each card is narrower horizontally (~20% to 22% canvas width each for 4 cards).
-    - Therefore, each card's vertical height MUST ALSO be scaled down proportionately (~32% to 38% canvas height max). They MUST NOT be stretched into overly tall vertical pillars!
-    - Card vertical placement: The cards must start at ~38% of canvas height and END by ~60% of canvas height.
-    - This guarantees generous vertical space (at least 38% to 42% canvas height) below them for:
-      1) Course bullet points (e.g. 2 columns x 2 rows)
-      2) Foreground floating elements (e.g. stethoscopes)
-      3) WhatsApp contact phone numbers (stacked with matching font sizes)
-      4) Instagram & Facebook icons + @handle
-      5) PLUS the MANDATORY SAFE MARGIN (respiro de segurança) of at least 8% to 12% below the lowest text!
-  * ZERO CLIPPING & ZERO OVERCROWDING: All elements must have ample breathing room with zero text or icons touching or glued to borders!`;
-              }
+            if (userRequestedNoPerson) {
+              fullPrompt += `\n\nSUBJECT RESTRICTION:
+- NO HUMAN MODEL: The user explicitly requested an artwork without human models. Do NOT paint any person into the artwork. Focus entirely on typography, background environment, and layout.`;
             }
 
-            if (isLeftTextLayout && hasHumanSubject) {
+            if (userRequestedCards) {
+              const numCardsMatch = allPromptDirectives.match(/(\d+)\s*(quadrados?|cards?|caixas?|boxes?|espa[çc]os?|slots?)/i) ||
+                                    allPromptDirectives.match(/(quatro|4)\s*(quadrados?|cards?|caixas?|boxes?)/i) ||
+                                    allPromptDirectives.match(/(tr[êe]s|3)\s*(quadrados?|cards?|caixas?|boxes?)/i) ||
+                                    allPromptDirectives.match(/(dois|duas|2)\s*(quadrados?|cards?|caixas?|boxes?)/i);
+              let detectedCardCount = 3;
+              if (numCardsMatch) {
+                const w = numCardsMatch[1].toLowerCase();
+                if (w === "4" || w === "quatro") detectedCardCount = 4;
+                else if (w === "3" || w === "três" || w === "tres") detectedCardCount = 3;
+                else if (w === "2" || w === "dois" || w === "duas") detectedCardCount = 2;
+                else if (w === "5" || w === "cinco") detectedCardCount = 5;
+                else { const n = parseInt(w); if (!isNaN(n) && n >= 1 && n <= 6) detectedCardCount = n; }
+              } else if (/mais um quadrado|adicione mais um quadrado/i.test(allPromptDirectives)) {
+                detectedCardCount = 4;
+              }
+
+              fullPrompt += `\n- ${detectedCardCount.toString().toUpperCase()} PHOTO PLACEHOLDER CARDS:
+  * Render exactly ${detectedCardCount} clean, prominent, white rectangular placeholder boxes arranged horizontally side-by-side with clean rounded corners and pure solid white fill (#FFFFFF).`;
+            }
+
+            if (isLeftTextLayout && !userRequestedNoPerson) {
               fullPrompt += `\n\nSTRICT SPATIAL COMPOSITION LAW (LEFT ALIGNMENT & TWO COLUMNS):
 - LEFT COLUMN (0% to 45% canvas width): Dedicated to the typography stack (headline, subheadline, bullet points). All lines must be flush-left aligned with clean margin.
 - RIGHT COLUMN (45% to 100% canvas width): Dedicated to the main subject/person. The subject MUST be positioned strictly on the RIGHT side facing inward, leaving the entire left column free for text. The subject MUST NOT be placed on the left side!`;
@@ -2407,17 +2395,14 @@ MANDATORY: If the user explicitly requested white squares, cards, panels, or spe
                 const norm = await prepareLogoForGeminiVision(f.buffer, origMime);
                 parts.push({ text: `BRAND LOGO & EMBLEM (EXACTLY ONE (1) SINGLE LOGO INSTANCE — COMPLETE LOCKUP FIDELITY):
 - EXACTLY ONE (1) SINGLE LOGO INSTANCE (MANDATORY — NON-NEGOTIABLE):
-  * Render EXACTLY ONE (1) single brand logo lockup on the entire canvas, centered horizontally in the top header.
+  * Render EXACTLY ONE (1) single brand logo lockup on the entire canvas, positioned cleanly in the header or designated brand area.
   * ABSOLUTE PROHIBITION AGAINST DUPLICATE LOGOS: ZERO duplicate logos, ZERO twin logos side by side, ZERO repeated crests! NEVER render more than one logo on the entire artwork!
 - COMPLETE LOGO LOCKUP INTEGRITY (CRITICAL — MANDATORY):
-  * The attached logo reference contains TWO INTEGRATED VERTICAL ELEMENTS in one unified lockup:
-    1) AT THE TOP: The brand name text "CEPAR" in clean, capital serif typography.
-    2) AT THE BOTTOM: The coat of arms / shield with laurel wreath, open book, graduation cap, and pencil.
-  * You MUST replicate the COMPLETE logo lockup together. NEVER crop out, cut off, or omit the name "CEPAR"!
-  * NEVER alter or hallucinate the name (do NOT write "Centro CE-PAR" or anything other than "CEPAR").
-  * Replicate both the name "CEPAR" at the top AND the coat of arms shield at the bottom as one cohesive institutional brand mark.
+  * Replicate the brand mark, typography, and symbol faithfully from the attached logo reference image.
+  * Do NOT crop out or omit any word or graphic element present in the attached logo.
+  * Do NOT alter, misspell, or hallucinate the brand name or graphic symbol.
 - CONTRAST & INTEGRATION: Render ONLY the complete logo itself floating cleanly and seamlessly over the canvas environment without any artificial container box, sticker border, or card behind it!
-- PROFESSIONAL INSTITUTIONAL PLACEMENT: Position the ONE official brand logo centered horizontally in the top header with a MANDATORY generous safe margin of at least 16% to 20% down from the absolute top edge of the canvas (minimum 550 to 700 pixels in 4K resolution). NEVER touch, crop, or glue the logo to the top edge! ZERO elements may touch canvas borders.` });
+- PROFESSIONAL INSTITUTIONAL PLACEMENT: Position the official brand logo with a generous safe margin of at least 12% to 18% down from the absolute top edge of the canvas. NEVER touch, crop, or glue the logo to the edge!` });
                 parts.push({ inlineData: { data: norm.buffer.toString("base64"), mimeType: norm.mime } });
               }
             }

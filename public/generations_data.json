@@ -1,5 +1,31 @@
 [
   {
+    "id": "img_1790271644901_sh3r1",
+    "status": "done",
+    "result_url": "/generated-images/img_1790271644901_sh3r1.png",
+    "thumbnail_url": "/generated-images/img_1790271644901_sh3r1.png",
+    "created_at": "2026-09-24T17:40:44.978Z",
+    "agent_slug": "design-builder1-2",
+    "dimensions": "4:5",
+    "form_data": {
+      "quality": "4K",
+      "dimensions": "4:5"
+    }
+  },
+  {
+    "id": "img_1790271339979_xeco0",
+    "status": "done",
+    "result_url": "/generated-images/img_1790271339979_xeco0.png",
+    "thumbnail_url": "/generated-images/img_1790271339979_xeco0.png",
+    "created_at": "2026-09-24T17:35:40.022Z",
+    "agent_slug": "design-builder1-2",
+    "dimensions": "4:5",
+    "form_data": {
+      "quality": "4K",
+      "dimensions": "4:5"
+    }
+  },
+  {
     "id": "1790244192693_upnh2yl",
     "title": "Saúde, Cursos Técnicos, Capacitações Profissionais, Teoria e Prática Profissional",
     "timestamp": "2026-09-24T10:04:51.149Z",

@@ -27,6 +27,7 @@ import { useProjectStore, addDeletedImage } from "../store/useProjectStore";
 import { GenerationLoadingCanvas } from "./GenerationLoadingCanvas";
 import { set as idbSet, get as idbGet } from "idb-keyval";
 import { MagicRefineBar } from "./MagicRefineBar";
+import { getAuthHeaders, getCurrentUserEmail } from "../utils/userAuth";
 
 interface AlteraFacilTabState {
   id: string;
@@ -601,7 +602,7 @@ const AlteraFacilBuilder: React.FC<AlteraFacilBuilderProps> = ({
       const apiKey = localStorage.getItem("custom_gemini_api_key") || "";
       const res = await fetch("/api/gerar", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders(apiKey) },
         body: JSON.stringify({
           base64DoSujeito: photoBase64,
           sujeitosBase64List: [photoBase64],

@@ -1,3 +1,4 @@
+import { getAuthHeaders, getCurrentUserEmail } from "../utils/userAuth";
 import { useProjectStore, addDeletedImage, getDeletedImages } from "../store/useProjectStore";
 import React, { useState, useRef, useEffect } from "react";
 import {
@@ -483,7 +484,7 @@ export const HydraBuilder: React.FC<HydraBuilderProps> = ({
 
       const res = await fetch("/api/gerar", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders(apiKey) },
         body: JSON.stringify({
           base64DoSujeito: currentTab.productImage,
           sujeitosBase64List: [currentTab.productImage],

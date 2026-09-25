@@ -164,7 +164,7 @@ export const buildMasterPrompt = (config: ProjectConfig): string => {
   imageBindingRules.push("- PROPORTION INTEGRITY & ZERO DISTORTION LAW (MANDATORY - NON-NEGOTIABLE): NEVER stretch, squash, widen, or horizontally/vertically distort any logo, typography, human face/body, or reference graphic element. Circular emblems, seals, stamps, and icons MUST remain mathematically perfect 1:1 round circles - NEVER squashed into horizontal ovals or widened shapes! All subjects and logos MUST retain their authentic 1:1 native geometric proportions without any anamorphic stretching.");
 
   if (hasLogo && !isLogoOverlay) {
-    imageBindingRules.push("- SWAP SLOT — THE BRANDING & LOGO FIDELITY: Every logo, coat of arms, and insignia comes from the reference files supplied. The reference logo contains the COMPLETE brand lockup: BOTH the brand name 'CEPAR' in clean capital serif typography at the top AND the coat of arms emblem (shield, laurel wreath, open book, graduation cap, pencil) below it. You MUST replicate the ENTIRE lockup together. NEVER crop out, cut off, or drop the name 'CEPAR'! NEVER alter or hallucinate the name (do not change 'CEPAR' to 'Centro CE-PAR'). Replicate 100% of the graphic mark geometry with the requested colors. Position the complete logo in the institutional header (top-left or top-center) with a MANDATORY generous safe margin of at least 16% to 20% down from the absolute top edge of the canvas (minimum 550 to 700 pixels in 4K resolution). NEVER touch, crop, or glue the logo to the top edge! OR in the footer endorsement bar. NEVER place the logo in the middle under headlines.");
+    imageBindingRules.push("- SWAP SLOT — THE BRANDING & LOGO FIDELITY: Every logo, coat of arms, and insignia comes from the reference files supplied. Replicate the COMPLETE logo lockup faithfully: all brand typography and graphic marks present in the logo reference must be preserved. NEVER crop out, drop, alter, or hallucinate the brand name. Replicate 100% of the graphic mark geometry with the requested colors. Position the complete logo in the institutional header (top-left or top-center) with a generous safe margin of at least 12% to 18% down from the absolute top edge of the canvas. NEVER touch, crop, or glue the logo to the top edge! OR in the footer endorsement bar. NEVER place the logo in the middle under headlines.");
     if (isDarkCanvas) {
       imageBindingRules.push("- LOGO CONTRAST & ADAPTATION LAW: On dark background canvas, render the brand logo in high-contrast vibrant colors or requested clean white/metallic finish without background boxes or stickers.");
     }
@@ -465,15 +465,13 @@ ${handleDirective}
 - EXACTLY ONE (1) SINGLE LOGO INSTANCE (MANDATORY — NON-NEGOTIABLE):
   * Render EXACTLY ONE (1) single brand logo lockup on the entire canvas, centered horizontally in the top header.
   * ABSOLUTE PROHIBITION AGAINST DUPLICATE LOGOS: ZERO duplicate logos, ZERO twin logos side by side! NEVER render more than one logo on the entire artwork!
-- COMPLETE LOCKUP PRESERVATION: The logo asset consists of TWO INTEGRATED VERTICAL ELEMENTS in one unified lockup:
-  1) TOP: The brand name "CEPAR" in clean capital serif lettering.
-  2) BOTTOM: The coat of arms shield with laurel wreath, book, graduation cap, and pencil.
-  * You MUST replicate the COMPLETE lockup together: BOTH the name "CEPAR" at the top AND the emblem shield at the bottom.
-  * DO NOT cut off, crop out, or drop the name "CEPAR"! DO NOT mutate or hallucinate the name to "Centro CE-PAR" or anything other than "CEPAR".
-- INSTITUTIONAL PLACEMENT: Position the ONE official brand logo centered horizontally in the top header (with 10% to 14% safe top margin). NEVER place the logo in the middle of the body text or floating awkwardly between headline lines!
-- ABSOLUTE PROHIBITION against placing the logo touching or glued to the canvas borders or bottom edge (minimum 10% to 14% safe margins).
-- EMBLEM & GRAPHIC MARK FIDELITY: Replicate the EXACT graphic mark geometry, shield/escudo contours, laurel wreath, book, graduation cap, and symbols from the attached logo reference image.
-- BRAND TYPOGRAPHY: Render the brand name "CEPAR" in ${logoTextColor} with crisp vector sharpness.
+- COMPLETE LOCKUP PRESERVATION:
+  * Replicate 100% of the graphic symbol and exact typography shown in the attached logo file.
+  * You MUST replicate the COMPLETE logo lockup together with all symbols and text intact.
+  * DO NOT cut off, crop out, or drop any part of the brand name or graphic emblem.
+- INSTITUTIONAL PLACEMENT: Position the ONE official brand logo in the header with a generous 10% to 14% safe margin.
+- EMBLEM & GRAPHIC MARK FIDELITY: Replicate the EXACT graphic mark geometry, contours, and symbols from the attached logo reference image.
+- BRAND TYPOGRAPHY: Render the brand typography in ${logoTextColor} with crisp vector sharpness.
 - TRANSPARENCY: Render the single logo cleanly floating directly over the canvas environment with sharp, crisp contrast and subtle depth, without any artificial white card, pill box, or sticker background behind it.`);
   } else if (isLogoOverlay) {
     blocks.push(`BRAND LOGO DIRECTIVE:

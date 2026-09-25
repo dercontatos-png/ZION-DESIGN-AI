@@ -1,3 +1,4 @@
+import { getAuthHeaders, getCurrentUserEmail } from "../utils/userAuth";
 import { useProjectStore, addDeletedImage } from "../store/useProjectStore";
 import React, { useState, useRef, useEffect } from "react";
 import {
@@ -391,7 +392,7 @@ export const EnhanceBuilder: React.FC<EnhanceBuilderProps> = ({
       if (generatePromptOnly) {
         const res = await fetch("/api/enhancer-supir-magnific", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...getAuthHeaders(apiKey) },
           body: JSON.stringify({
             imageBase64: photoBase64,
             mode: selectedStyle,
@@ -417,7 +418,7 @@ export const EnhanceBuilder: React.FC<EnhanceBuilderProps> = ({
       // ── MODO 2: MELHORAR IMAGEM COM IA GENERATIVA (1 CRÉDITO) ──
       const res = await fetch("/api/enhancer-supir-magnific", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders(apiKey) },
         body: JSON.stringify({
           imageBase64: photoBase64,
           mode: selectedStyle,
@@ -469,7 +470,7 @@ export const EnhanceBuilder: React.FC<EnhanceBuilderProps> = ({
 
       const res = await fetch("/api/enhancer-supir-magnific", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders(apiKey) },
         body: JSON.stringify({
           imageBase64: sourceImage,
           mode: selectedStyle,

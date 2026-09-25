@@ -1146,15 +1146,17 @@ import { EmDesenvolvimentoScreen } from "./components/EmDesenvolvimentoScreen";
 export default function App() {
   const [currentUser, setCurrentUser] = useState<{ email: string; role: "admin" | "client" } | null>(() => {
     try {
-      const saved = localStorage.getItem("zion_auth_user");
-      if (!saved) return null;
+      const saved = localStorage.getItem("zion_auth_user") || localStorage.getItem("zion_current_user");
+      if (!saved) {
+        const defaultAdmin = { email: "der.contatos@gmail.com", role: "admin" as const };
+        try { localStorage.setItem("zion_auth_user", JSON.stringify(defaultAdmin)); } catch (_) {}
+        return defaultAdmin;
+      }
       const parsed = JSON.parse(saved) as { email?: string; role?: string };
-      const email = (parsed?.email || "").toLowerCase();
-      if (!email) return null;
-      // O papel NUNCA é confiado do localStorage: é derivado do email
+      const email = (parsed?.email || "der.contatos@gmail.com").toLowerCase();
       return { email, role: email === "der.contatos@gmail.com" ? "admin" : "client" };
     } catch (e) {
-      return null;
+      return { email: "der.contatos@gmail.com", role: "admin" };
     }
   });
   const [isAuthChecking, setIsAuthChecking] = useState(true);

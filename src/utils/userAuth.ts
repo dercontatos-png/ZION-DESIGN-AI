@@ -1,7 +1,7 @@
 export function getCurrentUserRole(): "admin" | "client" {
   try {
     if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("zion_current_user");
+      const saved = localStorage.getItem("zion_auth_user") || localStorage.getItem("zion_current_user");
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed?.role === "admin" || parsed?.email === "der.contatos@gmail.com") return "admin";
@@ -18,7 +18,7 @@ export function getCurrentUserRole(): "admin" | "client" {
 export function getCurrentUserEmail(): string {
   try {
     if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("zion_current_user");
+      const saved = localStorage.getItem("zion_auth_user") || localStorage.getItem("zion_current_user");
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed?.email) return parsed.email;
