@@ -17,9 +17,9 @@ interface CreditsModalProps {
 export const CreditsModal: React.FC<CreditsModalProps> = ({
   onClose,
   initialTab = "planos",
-  userName: propUserName = "Ricardo",
-  userEmail: propUserEmail = "der.contatos@gmail.com",
-  userInitials: propUserInitials = "RI",
+  userName: propUserName = "Usuário",
+  userEmail: propUserEmail = "",
+  userInitials: propUserInitials = "US",
   onSignOut,
 }) => {
   const [activeTab, setActiveTab] = useState<"perfil" | "planos">(initialTab);

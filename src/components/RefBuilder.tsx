@@ -4485,7 +4485,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
               />
             )}
             {/* Coluna de Histórico Oficial (72px) - Visível em todas as abas do Palco */}
-            {!(isManagingSujeitos || isManagingReferencias || isManagingAssets) && (
+            {/* Coluna de Histórico Oficial (72px) - Sempre Visível no Palco */}
                 <div data-tour="history" className={`coluna-de-historico z-50 shrink-0 flex-col transition-all duration-300 ${isMobileHistoryOpen ? "fixed inset-y-0 right-0 z-50 flex shadow-2xl bg-black border-l border-white/10 w-44" : "relative z-10 hidden h-full lg:flex"}`} style={{ width: isMobileHistoryOpen ? "176px" : "72px", "--largura-do-historico": isMobileHistoryOpen ? "176px" : "72px" } as any}>
                   <div className="historico-lateral relative flex h-full flex-col border-l border-white/[0.04] w-full" style={{ backgroundColor: "rgb(0, 0, 0)", width: "100%" }}>
                     {isMobileHistoryOpen && (
@@ -4569,7 +4569,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                     </div>
                   </div>
                 </div>
-            )}
+
           </div>
         </section>
       </div>

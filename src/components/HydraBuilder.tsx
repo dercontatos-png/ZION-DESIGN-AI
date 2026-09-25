@@ -1300,9 +1300,9 @@ export const HydraBuilder: React.FC<HydraBuilderProps> = ({
         </div>
 
         {/* ── MODO 1: BUILDER ── */}
+        <div className="flex flex-1 min-h-0 flex-row overflow-hidden">
         {activeMode === "builder" && (
-          <div className="flex flex-1 min-h-0 flex-row overflow-hidden">
-            <div className="relative flex flex-1 min-h-0 flex-col overflow-hidden">
+          <div className="relative flex flex-1 min-h-0 flex-col overflow-hidden">
               {/* Header: Estilos Ativos quando selecionados */}
               {currentTab.selectedInspirations.length > 0 && (
                 <div className="flex items-center justify-between px-6 py-2 border-b border-white/5 bg-zinc-950/40">
@@ -1463,107 +1463,7 @@ export const HydraBuilder: React.FC<HydraBuilderProps> = ({
               )}
             </div>
 
-            {isMobileHistoryOpen && (
-              <div
-                className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
-                onClick={() => setIsMobileHistoryOpen(false)}
-              />
             )}
-            {/* Coluna Lateral de Histórico (72px) Oficial */}
-            <div
-              data-tour="history"
-              className={`coluna-de-historico z-50 shrink-0 flex-col transition-all duration-300 ${isMobileHistoryOpen ? "fixed inset-y-0 right-0 z-50 flex shadow-2xl bg-black border-l border-white/10 w-44" : "relative z-10 hidden h-full lg:flex"}`}
-              style={{ width: isMobileHistoryOpen ? "176px" : "72px" }}
-            >
-              <div
-                className="historico-lateral relative flex h-full flex-col border-l border-white/[0.04] bg-black w-full"
-                style={{ width: "100%" }}
-              >
-                {isMobileHistoryOpen && (
-                  <div className="flex items-center justify-between px-3 py-2 border-b border-white/10 lg:hidden shrink-0">
-                    <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5 text-violet-400" />
-                      Histórico
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setIsMobileHistoryOpen(false)}
-                      className="p-1 rounded-md text-zinc-400 hover:text-white hover:bg-white/10 cursor-pointer"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                )}
-                <div
-                  className="absolute left-0 top-0 z-20 h-full w-1.5 -translate-x-1/2 cursor-col-resize transition-colors hover:bg-violet-500/30 hidden lg:block"
-                  title="Arraste para redimensionar"
-                />
-                <div className="flex-1 space-y-1.5 overflow-y-auto px-1.5 py-2 scrollbar-hide">
-                  {allGenerations.map((gen) => (
-                    <div
-                      key={gen.id}
-                      className="group relative w-full overflow-hidden rounded-lg border transition-all duration-200 border-white/[0.06] hover:border-white/[0.15] hover:shadow-[0_0_6px_rgba(139,92,246,0.08)] cursor-pointer"
-                    >
-                      <button
-                        type="button"
-                        onClick={() => {
-                          updateCurrentTab({ activeResultImage: gen.url });
-                          setIsMobileHistoryOpen(false);
-                          setMobileView("palco");
-                        }}
-                        className="block w-full"
-                        title="Geração — clique para visualizar no palco"
-                      >
-                        <img
-                          alt="Geração"
-                          src={gen.url}
-                          className="block w-full bg-black object-cover cursor-grab active:cursor-grabbing"
-                          loading="lazy"
-                          decoding="async"
-                          style={{
-                            aspectRatio: (gen as any).aspect || ((currentTab as any).dimension ? (currentTab as any).dimension.replace(":", " / ") : "4 / 5")
-                          }}
-                          onLoad={(e) => {
-                            const { naturalWidth, naturalHeight } = e.currentTarget;
-                            if (naturalWidth && naturalHeight) {
-                              e.currentTarget.style.aspectRatio = `${naturalWidth} / ${naturalHeight}`;
-                            }
-                          }}
-                        />
-                      </button>
-                      <div
-                        className="pointer-events-none absolute left-1 top-1 z-10 flex items-center rounded border px-1 py-0.5 text-[8px] font-semibold leading-none shadow-sm backdrop-blur-sm opacity-0 transition-opacity duration-150 group-hover:opacity-100 border-violet-400/30 bg-violet-950/85 text-violet-200"
-                      >
-                        <span>Geração</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const filename = gen.url.split("/").pop() || "";
-                          addDeletedImage(gen.id);
-                          addDeletedImage(gen.url);
-                          addDeletedImage(filename);
-                          useProjectStore.getState().deleteGaleriaImage(gen.url);
-                          fetch(`/api/bff/api/generations/${gen.id}`, { method: "DELETE" }).catch(() => {});
-                          if (filename.endsWith(".png") || filename.endsWith(".avif") || filename.endsWith(".webp") || filename.endsWith(".jpg")) {
-                            fetch(`/api/historico-imagens/${filename}`, { method: "DELETE" }).catch(() => {});
-                          }
-                          setGenerationsList((prev) => prev.filter((g) => g.id !== gen.id));
-                          showToast?.("Geração excluída permanentemente.", "info");
-                        }}
-                        className="absolute right-1 top-1 z-10 flex h-6 w-6 items-center justify-center rounded-md bg-black/70 text-zinc-300 ring-1 ring-white/10 backdrop-blur-sm opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-500/30 hover:text-red-300"
-                        title="Remover geração"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* ── MODO 2: GALERIA DE ESTILOS E INSPIRAÇÕES ── */}
         {activeMode === "galeria" && (
@@ -1968,6 +1868,107 @@ export const HydraBuilder: React.FC<HydraBuilderProps> = ({
             </div>
           </div>
         )}
+
+          {isMobileHistoryOpen && (
+              <div
+                className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+                onClick={() => setIsMobileHistoryOpen(false)}
+              />
+            )}
+            {/* Coluna Lateral de Histórico (72px) Oficial */}
+            <div
+              data-tour="history"
+              className={`coluna-de-historico z-50 shrink-0 flex-col transition-all duration-300 ${isMobileHistoryOpen ? "fixed inset-y-0 right-0 z-50 flex shadow-2xl bg-black border-l border-white/10 w-44" : "relative z-10 hidden h-full lg:flex"}`}
+              style={{ width: isMobileHistoryOpen ? "176px" : "72px" }}
+            >
+              <div
+                className="historico-lateral relative flex h-full flex-col border-l border-white/[0.04] bg-black w-full"
+                style={{ width: "100%" }}
+              >
+                {isMobileHistoryOpen && (
+                  <div className="flex items-center justify-between px-3 py-2 border-b border-white/10 lg:hidden shrink-0">
+                    <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-violet-400" />
+                      Histórico
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setIsMobileHistoryOpen(false)}
+                      className="p-1 rounded-md text-zinc-400 hover:text-white hover:bg-white/10 cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+                <div
+                  className="absolute left-0 top-0 z-20 h-full w-1.5 -translate-x-1/2 cursor-col-resize transition-colors hover:bg-violet-500/30 hidden lg:block"
+                  title="Arraste para redimensionar"
+                />
+                <div className="flex-1 space-y-1.5 overflow-y-auto px-1.5 py-2 scrollbar-hide">
+                  {allGenerations.map((gen) => (
+                    <div
+                      key={gen.id}
+                      className="group relative w-full overflow-hidden rounded-lg border transition-all duration-200 border-white/[0.06] hover:border-white/[0.15] hover:shadow-[0_0_6px_rgba(139,92,246,0.08)] cursor-pointer"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          updateCurrentTab({ activeResultImage: gen.url });
+                          setIsMobileHistoryOpen(false);
+                          setMobileView("palco");
+                        }}
+                        className="block w-full"
+                        title="Geração — clique para visualizar no palco"
+                      >
+                        <img
+                          alt="Geração"
+                          src={gen.url}
+                          className="block w-full bg-black object-cover cursor-grab active:cursor-grabbing"
+                          loading="lazy"
+                          decoding="async"
+                          style={{
+                            aspectRatio: (gen as any).aspect || ((currentTab as any).dimension ? (currentTab as any).dimension.replace(":", " / ") : "4 / 5")
+                          }}
+                          onLoad={(e) => {
+                            const { naturalWidth, naturalHeight } = e.currentTarget;
+                            if (naturalWidth && naturalHeight) {
+                              e.currentTarget.style.aspectRatio = `${naturalWidth} / ${naturalHeight}`;
+                            }
+                          }}
+                        />
+                      </button>
+                      <div
+                        className="pointer-events-none absolute left-1 top-1 z-10 flex items-center rounded border px-1 py-0.5 text-[8px] font-semibold leading-none shadow-sm backdrop-blur-sm opacity-0 transition-opacity duration-150 group-hover:opacity-100 border-violet-400/30 bg-violet-950/85 text-violet-200"
+                      >
+                        <span>Geração</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const filename = gen.url.split("/").pop() || "";
+                          addDeletedImage(gen.id);
+                          addDeletedImage(gen.url);
+                          addDeletedImage(filename);
+                          useProjectStore.getState().deleteGaleriaImage(gen.url);
+                          fetch(`/api/bff/api/generations/${gen.id}`, { method: "DELETE" }).catch(() => {});
+                          if (filename.endsWith(".png") || filename.endsWith(".avif") || filename.endsWith(".webp") || filename.endsWith(".jpg")) {
+                            fetch(`/api/historico-imagens/${filename}`, { method: "DELETE" }).catch(() => {});
+                          }
+                          setGenerationsList((prev) => prev.filter((g) => g.id !== gen.id));
+                          showToast?.("Geração excluída permanentemente.", "info");
+                        }}
+                        className="absolute right-1 top-1 z-10 flex h-6 w-6 items-center justify-center rounded-md bg-black/70 text-zinc-300 ring-1 ring-white/10 backdrop-blur-sm opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-500/30 hover:text-red-300"
+                        title="Remover geração"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+        </div>
       </main>
 
       {/* Modal de Tooltip / Explicação dos Campos */}

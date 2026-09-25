@@ -4,15 +4,18 @@ export function getCurrentUserRole(): "admin" | "client" {
       const saved = localStorage.getItem("zion_auth_user") || localStorage.getItem("zion_current_user");
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed?.role === "admin" || parsed?.email === "der.contatos@gmail.com") return "admin";
-        if (parsed?.role) return parsed.role;
+        if (parsed?.role === "admin" && parsed?.email?.toLowerCase()?.trim() === "der.contatos@gmail.com") return "admin";
+        if (parsed?.role === "client") return "client";
       }
-      const email = localStorage.getItem("zion_user_email");
-      if (email === "der.contatos@gmail.com") return "admin";
+      const email = localStorage.getItem("zion_user_email")?.toLowerCase()?.trim();
+      if (email === "der.contatos@gmail.com") {
+        const savedAuth = localStorage.getItem("zion_auth_user");
+        if (savedAuth && JSON.parse(savedAuth)?.role === "admin") return "admin";
+      }
       if (email) return "client";
     }
   } catch (e) {}
-  return "admin"; // Default fallback
+  return "client"; // Default fallback is always non-privileged client
 }
 
 export function getCurrentUserEmail(): string {
@@ -21,17 +24,23 @@ export function getCurrentUserEmail(): string {
       const saved = localStorage.getItem("zion_auth_user") || localStorage.getItem("zion_current_user");
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed?.email) return parsed.email;
+        if (parsed?.email) return parsed.email.trim();
       }
       const email = localStorage.getItem("zion_user_email");
-      if (email) return email;
+      if (email) return email.trim();
     }
   } catch (e) {}
-  return "der.contatos@gmail.com";
+  return "";
 }
 
 export function isUserAdmin(): boolean {
-  return true;
+  try {
+    const role = getCurrentUserRole();
+    const email = getCurrentUserEmail().toLowerCase().trim();
+    return role === "admin" && email === "der.contatos@gmail.com";
+  } catch (e) {
+    return false;
+  }
 }
 
 export function openPlanModal(): void {
@@ -41,7 +50,10 @@ export function openPlanModal(): void {
 }
 
 export function checkAdminOrOpenPlan(customApiKey?: string): boolean {
-  return true;
+  if (isUserAdmin()) return true;
+  if (customApiKey && customApiKey.trim().length > 10) return true;
+  openPlanModal();
+  return false;
 }
 
 export function getAuthHeaders(customApiKey?: string): Record<string, string> {

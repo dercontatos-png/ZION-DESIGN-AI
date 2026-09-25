@@ -1147,16 +1147,15 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<{ email: string; role: "admin" | "client" } | null>(() => {
     try {
       const saved = localStorage.getItem("zion_auth_user") || localStorage.getItem("zion_current_user");
-      if (!saved) {
-        const defaultAdmin = { email: "der.contatos@gmail.com", role: "admin" as const };
-        try { localStorage.setItem("zion_auth_user", JSON.stringify(defaultAdmin)); } catch (_) {}
-        return defaultAdmin;
-      }
+      if (!saved) return null;
       const parsed = JSON.parse(saved) as { email?: string; role?: string };
-      const email = (parsed?.email || "der.contatos@gmail.com").toLowerCase();
-      return { email, role: email === "der.contatos@gmail.com" ? "admin" : "client" };
+      if (!parsed?.email) return null;
+      const email = parsed.email.toLowerCase().trim();
+      if (!email) return null;
+      const role: "admin" | "client" = (email === "der.contatos@gmail.com" && parsed.role === "admin") ? "admin" : "client";
+      return { email, role };
     } catch (e) {
-      return { email: "der.contatos@gmail.com", role: "admin" };
+      return null;
     }
   });
   const [isAuthChecking, setIsAuthChecking] = useState(true);
@@ -1384,6 +1383,9 @@ export default function App() {
       console.warn("SignOut warning:", err);
     }
     localStorage.removeItem("zion_auth_user");
+    localStorage.removeItem("zion_current_user");
+    localStorage.removeItem("zion_user_email");
+    localStorage.removeItem("zion_local_owner");
     clearUserLocalCache();
     setSyncUserId(null);
     setCurrentUser(null);
@@ -4372,7 +4374,7 @@ ${textContent}`
               setLanguage={setLanguage}
               userInitials={(myProfile?.name || currentUser?.email || "EQ").substring(0, 2).toUpperCase()}
               userName={myProfile?.name || "Equipe Zion"}
-              userEmail={currentUser?.email || "der.contatos@gmail.com"}
+              userEmail={currentUser?.email || ""}
               onOpenProfile={() => setActiveTab("profile")}
               onSignOut={handleSignOut}
             />
@@ -4441,7 +4443,7 @@ ${textContent}`
                 setLanguage={setLanguage}
                 userInitials={(myProfile?.name || currentUser?.email || "EQ").substring(0, 2).toUpperCase()}
                 userName={myProfile?.name || "Equipe Zion"}
-                userEmail={currentUser?.email || "der.contatos@gmail.com"}
+                userEmail={currentUser?.email || ""}
                 onOpenProfile={() => {
                   setActiveTab("profile");
                   setIsMobileSidebarOpen(false);
@@ -4652,7 +4654,7 @@ ${textContent}`
                         </div>
                         <div>
                           <p className="text-xs font-bold text-white">{myProfile?.name || "Ricardo"}</p>
-                          <p className="text-[11px] text-zinc-500">{currentUser?.email || "der.contatos@gmail.com"}</p>
+                          <p className="text-[11px] text-zinc-500">{currentUser?.email || ""}</p>
                         </div>
                       </div>
                       <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
@@ -5334,7 +5336,7 @@ ${textContent}`
               myProfile={myProfile}
               onNavigateTab={(tab: string) => setActiveTab(tab)}
               activeMainTab={activeTab}
-              userEmail={myProfile?.email || "der.contatos@gmail.com"}
+              userEmail={myProfile?.email || currentUser?.email || ""}
               userName={myProfile?.name || "Equipe Zion"}
               userTokens={97}
             />
