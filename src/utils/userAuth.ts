@@ -52,6 +52,10 @@ export function openPlanModal(): void {
 export function checkAdminOrOpenPlan(customApiKey?: string): boolean {
   if (isUserAdmin()) return true;
   if (customApiKey && customApiKey.trim().length > 10) return true;
+  const email = getCurrentUserEmail().toLowerCase().trim();
+  if (email) {
+    return true;
+  }
   openPlanModal();
   return false;
 }

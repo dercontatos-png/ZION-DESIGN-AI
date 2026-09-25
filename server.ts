@@ -10,6 +10,7 @@ import os from "os";
 import { initWhatsAppEndpoints } from "./src/whatsapp-server";
 import { uploadToR2, downloadFromR2, isR2Active, deleteFromR2, deleteR2Prefix, listR2Objects } from "./src/utils/r2StorageService";
 import { buildEnhancedPrompt } from "./src/utils/promptEngine";
+import { getSubscribersList, saveSubscriber, deleteSubscriber, checkSubscriberAccess, deductCredit } from "./src/utils/subscriberService";
 
 const logPath = path.join(os.tmpdir(), "app.log");
 function syncLog(type: string, ...args: any[]) {
@@ -4477,6 +4478,76 @@ CRITICAL RULES:
     }
   });
 
+  // ── GESTÃO DE CLIENTES & ASSINANTES (EXCLUSIVO ADMIN: der.contatos@gmail.com) ──
+  app.get("/api/admin/subscribers", async (req, res) => {
+    try {
+      const callerEmail = ((req.headers["x-user-email"] as string) || (req.query.userEmail as string) || "").toLowerCase().trim();
+      if (callerEmail !== "der.contatos@gmail.com") {
+        return res.status(403).json({ error: "Acesso restrito ao administrador." });
+      }
+      const list = await getSubscribersList();
+      return res.json({ success: true, subscribers: list });
+    } catch (err: any) {
+      console.error("[api/admin/subscribers GET] Erro:", err);
+      return res.status(500).json({ error: err.message || "Erro ao listar assinantes" });
+    }
+  });
+
+  app.post("/api/admin/subscribers", async (req, res) => {
+    try {
+      const callerEmail = ((req.headers["x-user-email"] as string) || req.body?.adminEmail || "").toLowerCase().trim();
+      if (callerEmail !== "der.contatos@gmail.com") {
+        return res.status(403).json({ error: "Acesso restrito ao administrador." });
+      }
+      const sub = await saveSubscriber(req.body);
+      return res.json({ success: true, subscriber: sub });
+    } catch (err: any) {
+      console.error("[api/admin/subscribers POST] Erro:", err);
+      return res.status(400).json({ error: err.message || "Erro ao salvar assinante" });
+    }
+  });
+
+  app.delete("/api/admin/subscribers", async (req, res) => {
+    try {
+      const callerEmail = ((req.headers["x-user-email"] as string) || req.body?.adminEmail || "").toLowerCase().trim();
+      if (callerEmail !== "der.contatos@gmail.com") {
+        return res.status(403).json({ error: "Acesso restrito ao administrador." });
+      }
+      const targetEmail = (req.body?.email || req.query.email || "") as string;
+      if (!targetEmail) {
+        return res.status(400).json({ error: "E-mail do cliente é obrigatório para exclusão." });
+      }
+      await deleteSubscriber(targetEmail);
+      return res.json({ success: true });
+    } catch (err: any) {
+      console.error("[api/admin/subscribers DELETE] Erro:", err);
+      return res.status(500).json({ error: err.message || "Erro ao excluir assinante" });
+    }
+  });
+
+  // Checagem de status de assinatura por qualquer conta logada
+  app.get("/api/subscriber/check", async (req, res) => {
+    try {
+      const email = ((req.query.email as string) || (req.headers["x-user-email"] as string) || "").toLowerCase().trim();
+      const access = await checkSubscriberAccess(email);
+      return res.json({ success: true, ...access });
+    } catch (err: any) {
+      console.error("[api/subscriber/check] Erro:", err);
+      return res.status(500).json({ error: err.message || "Erro ao checar assinatura" });
+    }
+  });
+
+  // Consumo de crédito após geração bem-sucedida
+  app.post("/api/subscriber/consume-credit", async (req, res) => {
+    try {
+      const email = ((req.body?.email as string) || (req.headers["x-user-email"] as string) || "").toLowerCase().trim();
+      const result = await deductCredit(email);
+      return res.json({ success: true, ...result });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message || "Erro ao debitar crédito" });
+    }
+  });
+
   // Global Image Search (Proxy via Bing with Design Filters)
   app.get("/api/search/images", async (req, res) => {
     try {
@@ -4695,7 +4766,7 @@ CRITICAL RULES:
     }
   });
 
-  function verifyGenerationAccess(req: express.Request, res: express.Response): boolean {
+  async function verifyGenerationAccess(req: express.Request, res: express.Response): Promise<boolean> {
     const isLocalhost = req.hostname === "localhost" || req.hostname === "127.0.0.1" || req.ip === "127.0.0.1" || req.ip === "::1" || !process.env.VERCEL;
     if (isLocalhost) {
       return true;
@@ -4705,16 +4776,45 @@ CRITICAL RULES:
       return true;
     }
     const userRole = (req.headers["x-user-role"] as string) || req.body?.userRole;
-    const userEmail = (req.headers["x-user-email"] as string) || req.body?.userEmail;
-    const isAdmin = userRole === "admin" || userEmail === "der.contatos@gmail.com";
-    if (!isAdmin) {
-      res.status(403).json({
-        error: "Acesso negado: Apenas o administrador tem permissão para utilizar os recursos de geração da plataforma. Por favor, assine um plano para continuar.",
-        requiresPlan: true
-      });
-      return false;
+    const userEmail = ((req.headers["x-user-email"] as string) || req.body?.userEmail || "").toLowerCase().trim();
+    const isAdmin = (userRole === "admin" && userEmail === "der.contatos@gmail.com") || userEmail === "der.contatos@gmail.com";
+    if (isAdmin) {
+      return true;
     }
-    return true;
+
+    if (userEmail) {
+      try {
+        const access = await checkSubscriberAccess(userEmail);
+        if (access.allowed) {
+          return true;
+        }
+        if (access.reason === "sem_creditos") {
+          res.status(403).json({
+            error: "Seus créditos de geração esgotaram. Entre em contato pelo WhatsApp com o administrador para renovar seus créditos.",
+            requiresPlan: true,
+            reason: "sem_creditos"
+          });
+          return false;
+        }
+        if (access.reason === "bloqueado") {
+          res.status(403).json({
+            error: "Sua assinatura está temporariamente desativada. Entre em contato com o suporte para reativar seu acesso.",
+            requiresPlan: true,
+            reason: "bloqueado"
+          });
+          return false;
+        }
+      } catch (err) {
+        console.error("[verifyGenerationAccess] Erro ao verificar assinante:", err);
+      }
+    }
+
+    res.status(403).json({
+      error: "Acesso restrito: Você ainda não é assinante do Zion Design AI. Fale com o administrador para liberar seu acesso e créditos.",
+      requiresPlan: true,
+      reason: "nao_assinante"
+    });
+    return false;
   }
 
   app.get(["/api/config/active-key", "/api/google-key"], (req, res) => {
@@ -4855,7 +4955,7 @@ CRITICAL RULES:
   });
 
   app.post("/api/parse-task", upload.single("file") as any, async (req, res) => {
-    if (!verifyGenerationAccess(req, res)) return;
+    if (!await verifyGenerationAccess(req, res)) return;
     try {
       const prompt = req.body.prompt;
       const file = req.file;
@@ -4968,7 +5068,7 @@ ${textContent}`
   });
 
   app.post("/api/inpaint-image", async (req, res) => {
-    if (!verifyGenerationAccess(req, res)) return;
+    if (!await verifyGenerationAccess(req, res)) return;
     try {
       const { image, mask, prompt, customApiKey } = req.body;
       const currentAi = getAiClient(customApiKey);
@@ -5205,7 +5305,7 @@ Preserve 100% of the unmasked BLACK region without any changes.`;
   });
 
   app.post("/api/remove-bg", async (req, res) => {
-    if (!verifyGenerationAccess(req, res)) return;
+    if (!await verifyGenerationAccess(req, res)) return;
     try {
       const { imageBase64 } = req.body;
       if (!imageBase64) return res.status(400).json({ error: "Nenhuma imagem fornecida" });
@@ -5992,7 +6092,7 @@ If no issues are found, return an empty list. Output ONLY valid JSON.`;
   });
 
   app.post("/api/apply-refinements", async (req, res) => {
-    if (!verifyGenerationAccess(req, res)) return;
+    if (!await verifyGenerationAccess(req, res)) return;
     try {
       const {
         imageBase64,
@@ -6033,7 +6133,7 @@ If no issues are found, return an empty list. Output ONLY valid JSON.`;
 
   // Pre-Execution Technical Vision Analysis (SUPIR / Magnific AI Engine)
   app.post("/api/analyze-image-tech", async (req, res) => {
-    if (!verifyGenerationAccess(req, res)) return;
+    if (!await verifyGenerationAccess(req, res)) return;
     try {
       const { imageBase64, customApiKey } = req.body;
       if (!imageBase64) return res.status(400).json({ error: "Nenhuma imagem fornecida." });
@@ -6112,7 +6212,7 @@ Output ONLY the JSON object. Do not include conversational filler.`;
 
   // Generative Micro-Texture Reconstruction & Photo Enhancement (SUPIR / Magnific AI Motor & Enhance Builder)
   app.post(["/api/enhancer-supir-magnific", "/api/enhance", "/api/generate-enhance"], async (req, res) => {
-    if (!verifyGenerationAccess(req, res)) return;
+    if (!await verifyGenerationAccess(req, res)) return;
     try {
       const {
         imageBase64,
@@ -6390,7 +6490,7 @@ Diretrizes rígidas:
   });
 
   app.post(["/api/generate-image", "/api/generate-design", "/api/zion-ai-generate"], async (req, res) => {
-    if (!verifyGenerationAccess(req, res)) return;
+    if (!await verifyGenerationAccess(req, res)) return;
     try {
       const {
         imgConfig,
@@ -6839,7 +6939,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
   });
 
   app.post("/api/generate", async (req, res) => {
-    if (!verifyGenerationAccess(req, res)) return;
+    if (!await verifyGenerationAccess(req, res)) return;
     try {
       const {
         imgConfig,
@@ -7311,7 +7411,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
   }
 
   app.post("/api/gerar", async (req, res) => {
-    if (!verifyGenerationAccess(req, res)) return;
+    if (!await verifyGenerationAccess(req, res)) return;
     console.log(`\n\n[api/gerar] --> STARTING REQUEST AT ${new Date().toISOString()}`);
     console.log(`[api/gerar] Body size: ${JSON.stringify(req.body).length} bytes`);
     try {
@@ -8197,6 +8297,12 @@ ${logoMandatoryRule}`;
           height
         });
 
+        // Se for assinante não-admin, debita 1 crédito automaticamente
+        const userEmailForDeduct = ((req.headers["x-user-email"] as string) || req.body?.userEmail || "").toLowerCase().trim();
+        if (userEmailForDeduct && userEmailForDeduct !== "der.contatos@gmail.com") {
+          deductCredit(userEmailForDeduct, 1).catch(e => console.warn("[api/gerar] Erro ao debitar crédito:", e));
+        }
+
         // ── If this is an async job, store result in job map instead of HTTP response
         return res.json({ 
           image: responseImgUrl, 
@@ -8251,7 +8357,7 @@ ${logoMandatoryRule}`;
 
   // Prompt Extractor: analyze an image and return the prompt that describes its composition
   app.post("/api/extract-prompt", async (req, res) => {
-    if (!verifyGenerationAccess(req, res)) return;
+    if (!await verifyGenerationAccess(req, res)) return;
     try {
       const { imageData, mimeType, customApiKey } = req.body;
       if (!imageData) return res.status(400).json({ error: "Imagem não fornecida." });
@@ -8413,7 +8519,7 @@ ${logoMandatoryRule}`;
   });
 
   app.post("/api/scan-gc-to-xaml", async (req, res) => {
-    if (!verifyGenerationAccess(req, res)) return;
+    if (!await verifyGenerationAccess(req, res)) return;
     try {
       const { imageBase64, customApiKey, layoutStyleHint, userPrompt, customPrompt } = req.body;
       if (!imageBase64) return res.status(400).json({ error: "Imagem de referência de GC não fornecida." });
@@ -8667,7 +8773,7 @@ IMPORTANT: Return valid, strictly parseable JSON. Do not put unescaped raw newli
 
   // Chat Assistant Endpoint: routes user chats to different expert personas
   app.post(["/api/chat-assistente", "/api/chat-agentes"], async (req, res) => {
-    if (!verifyGenerationAccess(req, res)) return;
+    if (!await verifyGenerationAccess(req, res)) return;
     try {
       const { assistantId, message, imageBase64, attachedFiles = [], history = [], customApiKey, modelId } = req.body;
       const currentAi = getAiClient(customApiKey);
@@ -9609,7 +9715,7 @@ async function generateLyria002(promptText: string, customApiKey?: string): Prom
 }
 
   app.post("/api/generate-audio", upload.single("file") as any, async (req, res) => {
-    if (!verifyGenerationAccess(req, res)) return;
+    if (!await verifyGenerationAccess(req, res)) return;
     try {
       const promptText = req.body.prompt;
       const customApiKey = req.body.customApiKey;
@@ -9664,7 +9770,7 @@ async function generateLyria002(promptText: string, customApiKey?: string): Prom
   });
 
   app.post("/api/melhorar-prompt", async (req, res) => {
-    if (!verifyGenerationAccess(req, res)) return;
+    if (!await verifyGenerationAccess(req, res)) return;
     try {
       const { prompt, assistantId, agentName, customApiKey } = req.body;
       if (!prompt || typeof prompt !== "string" || !prompt.trim()) {
@@ -9737,7 +9843,7 @@ REGRAS RÍGIDAS:
 
   // Dedicated Master Prompt Generator (using DeepSeek V4)
   app.post("/api/build-master-prompt", async (req, res) => {
-    if (!verifyGenerationAccess(req, res)) return;
+    if (!await verifyGenerationAccess(req, res)) return;
     try {
       const {
         agent = "orion-pro",
@@ -9934,7 +10040,7 @@ Diretrizes Obrigatórias:
 
   // Endpoint para Melhorar Prompt com IA
   app.post("/api/omni-flash-enhance", async (req, res) => {
-    if (!verifyGenerationAccess(req, res)) return;
+    if (!await verifyGenerationAccess(req, res)) return;
     try {
       const { prompt, mediaBase64, mediaMimeType, customApiKey } = req.body;
       if (!prompt && !mediaBase64) {
@@ -9985,7 +10091,7 @@ Responda APENAS com o texto do prompt melhorado em Português (curto, direto e u
 
 
   app.post("/api/omni-flash-prompt", async (req, res) => {
-    if (!verifyGenerationAccess(req, res)) return;
+    if (!await verifyGenerationAccess(req, res)) return;
     try {
       const { 
         concept, mode, style, camera, lighting, motion, lens, aspectRatio, 
@@ -10106,7 +10212,7 @@ Responda ESTRITAMENTE em formato JSON com as seguintes chaves exatas:
   });
 
   app.post("/api/omni-flash-generate", async (req, res) => {
-    if (!verifyGenerationAccess(req, res)) return;
+    if (!await verifyGenerationAccess(req, res)) return;
     try {
       const { prompt, aspectRatio, duration, customApiKey } = req.body;
       if (!prompt || typeof prompt !== "string" || !prompt.trim()) {

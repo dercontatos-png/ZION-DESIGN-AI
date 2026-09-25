@@ -1142,6 +1142,7 @@ const DEFAULT_DEMO_TRANSACTIONS: Transaction[] = [
 import { AuthModal } from "./components/AuthModal";
 import { ProfileCompletePopup } from "./components/ProfileCompletePopup";
 import { EmDesenvolvimentoScreen } from "./components/EmDesenvolvimentoScreen";
+import { AdminSubscribersModal } from "./components/AdminSubscribersModal";
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<{ email: string; role: "admin" | "client" } | null>(() => {
@@ -1169,6 +1170,75 @@ export default function App() {
     } catch (e) {}
     setIsProfileCompleteOpen(false);
   };
+
+  // ── GESTÃO DE ASSINATURAS E CRÉDITOS ──
+  const [subscriberStatus, setSubscriberStatus] = useState<{
+    isSubscriber: boolean;
+    credits: number;
+    unlimited: boolean;
+    plan?: string;
+    reason?: string;
+    isChecking: boolean;
+  }>({
+    isSubscriber: false,
+    credits: 0,
+    unlimited: false,
+    isChecking: true,
+  });
+  const [isAdminSubscribersModalOpen, setIsAdminSubscribersModalOpen] = useState(false);
+
+  const checkSubscriber = React.useCallback(async (emailToCheck?: string) => {
+    const email = (emailToCheck || currentUser?.email || "").toLowerCase().trim();
+    if (!email) {
+      setSubscriberStatus({ isSubscriber: false, credits: 0, unlimited: false, isChecking: false });
+      return;
+    }
+    if (email === "der.contatos@gmail.com") {
+      setSubscriberStatus({ isSubscriber: true, credits: 999999, unlimited: true, plan: "Admin Geral", isChecking: false });
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/subscriber/check?email=${encodeURIComponent(email)}`, {
+        headers: { "x-user-email": email }
+      });
+      const data = await res.json();
+      if (data.success && data.allowed) {
+        setSubscriberStatus({
+          isSubscriber: true,
+          credits: data.unlimited ? 999999 : (data.credits || 0),
+          unlimited: Boolean(data.unlimited),
+          plan: data.plan,
+          isChecking: false
+        });
+      } else {
+        setSubscriberStatus({
+          isSubscriber: false,
+          credits: data.credits || 0,
+          unlimited: false,
+          plan: data.plan,
+          reason: data.reason || "nao_assinante",
+          isChecking: false
+        });
+      }
+    } catch (e) {
+      setSubscriberStatus({
+        isSubscriber: false,
+        credits: 0,
+        unlimited: false,
+        reason: "erro_conexao",
+        isChecking: false
+      });
+    }
+  }, [currentUser?.email]);
+
+  React.useEffect(() => {
+    if (currentUser?.email) {
+      checkSubscriber(currentUser.email);
+    } else {
+      setSubscriberStatus({ isSubscriber: false, credits: 0, unlimited: false, isChecking: false });
+    }
+  }, [currentUser?.email, checkSubscriber]);
   React.useEffect(() => {
     if (currentUser?.role !== "client") return;
     try {
@@ -1587,9 +1657,29 @@ export default function App() {
 
   useEffect(() => {
     const handleOpenCredits = () => setIsCreditsModalOpen(true);
+    const handleOpenAdminSubs = () => {
+      if (currentUser?.email === "der.contatos@gmail.com") {
+        setIsAdminSubscribersModalOpen(true);
+      }
+    };
     window.addEventListener("open-credits-modal", handleOpenCredits);
-    return () => window.removeEventListener("open-credits-modal", handleOpenCredits);
-  }, []);
+    window.addEventListener("open-admin-subscribers", handleOpenAdminSubs);
+    window.addEventListener("db:open_admin", handleOpenAdminSubs);
+    return () => {
+      window.removeEventListener("open-credits-modal", handleOpenCredits);
+      window.removeEventListener("open-admin-subscribers", handleOpenAdminSubs);
+      window.removeEventListener("db:open_admin", handleOpenAdminSubs);
+    };
+  }, [currentUser?.email]);
+
+  useEffect(() => {
+    if (activeTab === "admin") {
+      if (currentUser?.email === "der.contatos@gmail.com") {
+        setIsAdminSubscribersModalOpen(true);
+      }
+      setActiveTab("ai-tools");
+    }
+  }, [activeTab, currentUser?.email]);
 
   // i18n Language & Menu States (Português, Inglês, Espanhol)
   const [currentLang, setCurrentLang] = useState<"pt" | "en" | "es">(() => {
@@ -4260,16 +4350,24 @@ ${textContent}`
     );
   };
 
-  // ── TRAVA EXCLUSIVA DE ACESSO: APENAS der.contatos@gmail.com PODE ACESSAR ──
-  const isExclusiveAdmin = currentUser && currentUser.email?.toLowerCase() === "der.contatos@gmail.com";
+  // ── CONTROLE DE ACESSO: ADMIN (der.contatos@gmail.com) OU ASSINANTE ATIVO COM CRÉDITOS ──
+  const isExclusiveAdmin = currentUser && currentUser.email?.toLowerCase().trim() === "der.contatos@gmail.com";
+  const hasAppAccess = isExclusiveAdmin || subscriberStatus.isSubscriber;
 
-  if (!isAuthLoading && !isExclusiveAdmin) {
+  if (!isAuthLoading && (!currentUser || !hasAppAccess)) {
     return (
       <>
         <EmDesenvolvimentoScreen
           currentUser={currentUser}
           onOpenAuth={() => setIsAuthModalOpen(true)}
           onSignOut={handleSignOut}
+          onRecheck={() => checkSubscriber(currentUser?.email)}
+          onOpenPlanModal={() => setIsCreditsModalOpen(true)}
+          subscriberInfo={{
+            reason: subscriberStatus.reason,
+            credits: subscriberStatus.credits,
+            plan: subscriberStatus.plan
+          }}
         />
         <AuthModal
           isOpen={!isAuthChecking && (!currentUser || isAuthModalOpen)}
@@ -4280,9 +4378,16 @@ ${textContent}`
           initialViewMode={isPasswordResetMode ? "reset" : "login"}
           onLoginSuccess={(u) => {
             setCurrentUser(u);
+            checkSubscriber(u.email);
             if (u.role === "client") setActiveTab("ai-tools");
           }}
         />
+        {isCreditsModalOpen && (
+          <CreditsModal
+            onClose={() => setIsCreditsModalOpen(false)}
+            userEmail={currentUser?.email || ""}
+          />
+        )}
       </>
     );
   }
@@ -4661,6 +4766,28 @@ ${textContent}`
                         Proprietário / Admin
                       </span>
                     </div>
+
+                    {isExclusiveAdmin && (
+                      <div className="pt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-t border-white/5">
+                        <div>
+                          <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                            <Users className="w-3.5 h-3.5 text-amber-400" />
+                            Controle de Assinaturas & Créditos
+                          </p>
+                          <p className="text-[11px] text-zinc-400">
+                            Libere novos clientes, pause acessos e determine créditos de IA.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setIsAdminSubscribersModalOpen(true)}
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:brightness-110 text-black font-bold text-xs rounded-xl transition-all shadow-lg shadow-amber-500/20 cursor-pointer"
+                        >
+                          <Users className="w-3.5 h-3.5" />
+                          <span>Gerenciar Clientes & Créditos</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -5338,7 +5465,7 @@ ${textContent}`
               activeMainTab={activeTab}
               userEmail={myProfile?.email || currentUser?.email || ""}
               userName={myProfile?.name || "Equipe Zion"}
-              userTokens={97}
+              userTokens={isExclusiveAdmin ? 999999 : (subscriberStatus.unlimited ? 999999 : subscriberStatus.credits)}
             />
           )}
 
@@ -8053,6 +8180,16 @@ ${textContent}`
           setActiveTab("profile");
         }}
       />
+
+      {/* Modal de Gestão de Assinantes & Créditos (Exclusivo Admin: der.contatos@gmail.com) */}
+      {isExclusiveAdmin && (
+        <AdminSubscribersModal
+          isOpen={isAdminSubscribersModalOpen}
+          onClose={() => setIsAdminSubscribersModalOpen(false)}
+          adminEmail="der.contatos@gmail.com"
+          showToast={showToast}
+        />
+      )}
     </div>
   );
 }
