@@ -36,6 +36,8 @@ import {
   Layers,
   Loader2,
   Sliders,
+  SlidersHorizontal,
+  Clock,
   Scissors
 } from "lucide-react";
 
@@ -692,6 +694,26 @@ export const RefBuilder: React.FC<RefBuilderProps> = ({
       { id: "ref-demo-3", url: "/galeria/thumbnail(3).avif", type: "geracao", timestamp: Date.now() - 240000, isFavorited: false },
     ];
   });
+
+  const [mobileView, setMobileView] = useState<"form" | "palco">("form");
+  const [isMobileHistoryOpen, setIsMobileHistoryOpen] = useState(false);
+
+  const allRefHistory = React.useMemo(() => {
+    const map = new Map<string, any>();
+    refGalleryItems.forEach((r) => map.set(r.url, r));
+    (store.galeriaImages || []).forEach((url, idx) => {
+      if (!map.has(url)) {
+        map.set(url, {
+          id: `store-ref-${idx}`,
+          url,
+          type: "geracao",
+          timestamp: Date.now() - idx * 1000,
+          aspect: "4 / 5",
+        });
+      }
+    });
+    return Array.from(map.values());
+  }, [refGalleryItems, store.galeriaImages]);
 
   const saveToRefHistory = (url: string, type: "refino" | "geracao" = "geracao", customSettings?: any) => {
     try {
@@ -1782,6 +1804,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
 
     // Garante que o palco mude para o Builder imediatamente e feche workspaces de assets
     setActiveViewMode("builder");
+    setMobileView("palco");
     setIsManagingSujeitos(false);
     setIsManagingReferencias(false);
     setIsManagingAssets(false);
@@ -1878,7 +1901,12 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
   };
 
   return (
-    <main data-builder-workspace-shell="" className="relative flex h-full min-h-0 overflow-hidden bg-transparent lg:flex-row max-lg:grid max-lg:overflow-hidden max-lg:transition-[grid-template-rows] max-lg:duration-300 max-lg:ease-in-out max-lg:grid-rows-[1fr_0fr] flex-1">
+    <main
+      data-builder-workspace-shell=""
+      className={`relative flex h-full min-h-0 overflow-hidden bg-transparent lg:flex-row max-lg:grid max-lg:overflow-hidden max-lg:transition-[grid-template-rows] max-lg:duration-300 max-lg:ease-in-out flex-1 ${
+        (mobileView === "form" && !isProcessing) ? "max-lg:grid-rows-[0fr_1fr]" : "max-lg:grid-rows-[1fr_0fr]"
+      }`}
+    >
       {/* ── COLUNA DO FORMULÁRIO REF (LAYOUT 100% ORIGINAL) ── */}
       <aside
         data-aside-form-col=""
@@ -4450,13 +4478,34 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
               </div>
             )}
 
+            {isMobileHistoryOpen && (
+              <div
+                className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+                onClick={() => setIsMobileHistoryOpen(false)}
+              />
+            )}
             {/* Coluna de Histórico Oficial (72px) - Visível em todas as abas do Palco */}
             {!(isManagingSujeitos || isManagingReferencias || isManagingAssets) && (
-                <div data-tour="history" className="coluna-de-historico relative z-10 hidden h-full shrink-0 flex-col lg:flex" style={{ width: "72px", "--largura-do-historico": "72px" } as any}>
-                  <div className="historico-lateral absolute right-0 top-0 flex h-full flex-col border-l border-white/[0.04]" style={{ backgroundColor: "rgb(0, 0, 0)", width: "72px" }}>
-                    <div className="absolute left-0 top-0 z-20 h-full w-1.5 -translate-x-1/2 cursor-col-resize transition-colors hover:bg-violet-500/30" title="Arraste para redimensionar" />
+                <div data-tour="history" className={`coluna-de-historico z-50 shrink-0 flex-col transition-all duration-300 ${isMobileHistoryOpen ? "fixed inset-y-0 right-0 z-50 flex shadow-2xl bg-black border-l border-white/10 w-44" : "relative z-10 hidden h-full lg:flex"}`} style={{ width: isMobileHistoryOpen ? "176px" : "72px", "--largura-do-historico": isMobileHistoryOpen ? "176px" : "72px" } as any}>
+                  <div className="historico-lateral relative flex h-full flex-col border-l border-white/[0.04] w-full" style={{ backgroundColor: "rgb(0, 0, 0)", width: "100%" }}>
+                    {isMobileHistoryOpen && (
+                      <div className="flex items-center justify-between px-3 py-2 border-b border-white/10 lg:hidden shrink-0">
+                        <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5 text-violet-400" />
+                          Histórico
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setIsMobileHistoryOpen(false)}
+                          className="p-1 rounded-md text-zinc-400 hover:text-white hover:bg-white/10 cursor-pointer"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+                    <div className="absolute left-0 top-0 z-20 h-full w-1.5 -translate-x-1/2 cursor-col-resize transition-colors hover:bg-violet-500/30 hidden lg:block" title="Arraste para redimensionar" />
                     <div className="flex-1 space-y-1.5 overflow-y-auto px-1.5 py-2 scrollbar-hide">
-                      {refGalleryItems.map((item, idx) => (
+                      {allRefHistory.map((item, idx) => (
                         <div key={item.id || idx} data-media-window="mounted" className="w-full [content-visibility:auto] [contain-intrinsic-size:auto_400px]">
                           <div
                             className={`group relative w-full overflow-hidden rounded-lg border transition-all duration-200 ${
@@ -4468,7 +4517,11 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                           >
                             <button
                               type="button"
-                              onClick={() => setGeneratedImage(item.url)}
+                              onClick={() => {
+                                setGeneratedImage(item.url);
+                                setIsMobileHistoryOpen(false);
+                                setMobileView("palco");
+                              }}
                               className="block w-full cursor-pointer"
                               title={`Geração ${(item.id || "").slice(0, 6)} — clique para visualizar`}
                             >
@@ -5160,6 +5213,53 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
           <span>{toastMsg.msg}</span>
         </div>
       )}
+      {/* Barra de controle inferior mobile para alternar Ajustes / Palco / Histórico */}
+      <div className="fixed bottom-3 inset-x-0 z-40 flex justify-center px-4 lg:hidden pointer-events-none">
+        <div className="flex items-center gap-1 rounded-full border border-white/10 bg-black/85 p-1.5 backdrop-blur-xl shadow-2xl pointer-events-auto">
+          <button
+            type="button"
+            onClick={() => {
+              setMobileView("form");
+              setIsMobileHistoryOpen(false);
+            }}
+            className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+              mobileView === "form" && !isMobileHistoryOpen
+                ? "bg-violet-600 text-white shadow-md"
+                : "text-zinc-400 hover:text-white"
+            }`}
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+            <span>Ajustes</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMobileView("palco");
+              setIsMobileHistoryOpen(false);
+            }}
+            className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+              mobileView === "palco" && !isMobileHistoryOpen
+                ? "bg-violet-600 text-white shadow-md"
+                : "text-zinc-400 hover:text-white"
+            }`}
+          >
+            <Eye className="h-3.5 w-3.5" />
+            <span>Palco</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsMobileHistoryOpen((prev) => !prev)}
+            className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+              isMobileHistoryOpen
+                ? "bg-violet-600 text-white shadow-md"
+                : "text-zinc-400 hover:text-white"
+            }`}
+          >
+            <Clock className="h-3.5 w-3.5" />
+            <span>Histórico</span>
+          </button>
+        </div>
+      </div>
     </main>
   );
 };

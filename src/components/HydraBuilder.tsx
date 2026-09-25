@@ -23,6 +23,8 @@ import {
   Clock,
   LayoutGrid,
   Download,
+  SlidersHorizontal,
+  Eye,
   AlertTriangle,
   FolderPlus,
   MoreHorizontal,
@@ -285,6 +287,25 @@ export const HydraBuilder: React.FC<HydraBuilderProps> = ({
   }, []);
 
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
+  const store = useProjectStore();
+  const [mobileView, setMobileView] = useState<"form" | "palco">("form");
+  const [isMobileHistoryOpen, setIsMobileHistoryOpen] = useState(false);
+
+  const allGenerations = React.useMemo(() => {
+    const map = new Map<string, { id: string; url: string; createdAt: number; aspect?: string }>();
+    generationsList.forEach((g) => map.set(g.url, g));
+    (store.galeriaImages || []).forEach((url, idx) => {
+      if (!map.has(url)) {
+        map.set(url, {
+          id: `store-hydra-${idx}`,
+          url,
+          createdAt: Date.now() - idx * 1000,
+          aspect: "4 / 5",
+        });
+      }
+    });
+    return Array.from(map.values());
+  }, [generationsList, store.galeriaImages]);
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [previewImageModal, setPreviewImageModal] = useState<string | null>(null);
   const [isStyleNotesExpanded, setIsStyleNotesExpanded] = useState<boolean>(false);
@@ -457,6 +478,7 @@ export const HydraBuilder: React.FC<HydraBuilderProps> = ({
       return;
     }
     setIsGenerating(true);
+    setMobileView("palco");
     showToast?.("Criando ensaio fotográfico de produto com Hydra...", "info");
 
     try {
@@ -548,13 +570,15 @@ export const HydraBuilder: React.FC<HydraBuilderProps> = ({
   });
 
   return (
-    <div className="flex h-full w-full flex-1 overflow-hidden bg-black text-white relative font-sans select-none">
+    <div className={`flex h-full w-full flex-1 overflow-hidden bg-black text-white relative font-sans select-none lg:flex-row max-lg:grid max-lg:overflow-hidden max-lg:transition-[grid-template-rows] max-lg:duration-300 max-lg:ease-in-out ${
+      (mobileView === "form" && !isGenerating) ? "max-lg:grid-rows-[0fr_1fr]" : "max-lg:grid-rows-[1fr_0fr]"
+    }`}>
       {/* ── COLUNA ESQUERDA: FORMULÁRIO COMPLETO DO HYDRA (320px) ── */}
       <aside
         data-aside-form-col=""
         data-tour="form"
-        className="agent-form-col relative z-10 flex shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-white/5 scrollbar-hide px-2 py-3 lg:px-4 lg:py-5 transition-[filter,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] lg:sticky lg:top-0 lg:h-full max-lg:order-2 max-lg:w-full max-lg:min-h-0 bg-black"
-        style={{ width: "320px" }}
+        className="agent-form-col relative z-10 flex shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-white/5 scrollbar-hide px-2 py-3 lg:px-4 lg:py-5 transition-[filter,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] lg:sticky lg:top-0 lg:h-full max-lg:order-2 w-full lg:w-[320px] max-lg:min-h-0 bg-black"
+
       >
         <div className="flex flex-col gap-5 flex-1 min-h-max">
           {/* 1. Upload de Imagem */}
@@ -1439,29 +1463,54 @@ export const HydraBuilder: React.FC<HydraBuilderProps> = ({
               )}
             </div>
 
+            {isMobileHistoryOpen && (
+              <div
+                className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+                onClick={() => setIsMobileHistoryOpen(false)}
+              />
+            )}
             {/* Coluna Lateral de Histórico (72px) Oficial */}
             <div
               data-tour="history"
-              className="coluna-de-historico relative z-10 hidden h-full shrink-0 flex-col lg:flex"
-              style={{ width: "72px" }}
+              className={`coluna-de-historico z-50 shrink-0 flex-col transition-all duration-300 ${isMobileHistoryOpen ? "fixed inset-y-0 right-0 z-50 flex shadow-2xl bg-black border-l border-white/10 w-44" : "relative z-10 hidden h-full lg:flex"}`}
+              style={{ width: isMobileHistoryOpen ? "176px" : "72px" }}
             >
               <div
-                className="historico-lateral absolute right-0 top-0 flex h-full flex-col border-l border-white/[0.04] bg-black"
-                style={{ width: "72px" }}
+                className="historico-lateral relative flex h-full flex-col border-l border-white/[0.04] bg-black w-full"
+                style={{ width: "100%" }}
               >
+                {isMobileHistoryOpen && (
+                  <div className="flex items-center justify-between px-3 py-2 border-b border-white/10 lg:hidden shrink-0">
+                    <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-violet-400" />
+                      Histórico
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setIsMobileHistoryOpen(false)}
+                      className="p-1 rounded-md text-zinc-400 hover:text-white hover:bg-white/10 cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
                 <div
-                  className="absolute left-0 top-0 z-20 h-full w-1.5 -translate-x-1/2 cursor-col-resize transition-colors hover:bg-violet-500/30"
+                  className="absolute left-0 top-0 z-20 h-full w-1.5 -translate-x-1/2 cursor-col-resize transition-colors hover:bg-violet-500/30 hidden lg:block"
                   title="Arraste para redimensionar"
                 />
                 <div className="flex-1 space-y-1.5 overflow-y-auto px-1.5 py-2 scrollbar-hide">
-                  {generationsList.map((gen) => (
+                  {allGenerations.map((gen) => (
                     <div
                       key={gen.id}
                       className="group relative w-full overflow-hidden rounded-lg border transition-all duration-200 border-white/[0.06] hover:border-white/[0.15] hover:shadow-[0_0_6px_rgba(139,92,246,0.08)] cursor-pointer"
                     >
                       <button
                         type="button"
-                        onClick={() => updateCurrentTab({ activeResultImage: gen.url })}
+                        onClick={() => {
+                          updateCurrentTab({ activeResultImage: gen.url });
+                          setIsMobileHistoryOpen(false);
+                          setMobileView("palco");
+                        }}
                         className="block w-full"
                         title="Geração — clique para visualizar no palco"
                       >
@@ -2019,6 +2068,53 @@ export const HydraBuilder: React.FC<HydraBuilderProps> = ({
           </div>
         </div>
       )}
+      {/* Barra de controle inferior mobile para alternar Ajustes / Palco / Histórico */}
+      <div className="fixed bottom-3 inset-x-0 z-40 flex justify-center px-4 lg:hidden pointer-events-none">
+        <div className="flex items-center gap-1 rounded-full border border-white/10 bg-black/85 p-1.5 backdrop-blur-xl shadow-2xl pointer-events-auto">
+          <button
+            type="button"
+            onClick={() => {
+              setMobileView("form");
+              setIsMobileHistoryOpen(false);
+            }}
+            className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+              mobileView === "form" && !isMobileHistoryOpen
+                ? "bg-violet-600 text-white shadow-md"
+                : "text-zinc-400 hover:text-white"
+            }`}
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+            <span>Ajustes</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMobileView("palco");
+              setIsMobileHistoryOpen(false);
+            }}
+            className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+              mobileView === "palco" && !isMobileHistoryOpen
+                ? "bg-violet-600 text-white shadow-md"
+                : "text-zinc-400 hover:text-white"
+            }`}
+          >
+            <Eye className="h-3.5 w-3.5" />
+            <span>Palco</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsMobileHistoryOpen((prev) => !prev)}
+            className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+              isMobileHistoryOpen
+                ? "bg-violet-600 text-white shadow-md"
+                : "text-zinc-400 hover:text-white"
+            }`}
+          >
+            <Clock className="h-3.5 w-3.5" />
+            <span>Histórico</span>
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

@@ -69,7 +69,8 @@ import {
   Loader2,
   FileText,
   Type,
-  Palette
+  Palette,
+  Clock
 } from "lucide-react";
 
 interface DesignBuilderProps {
@@ -152,6 +153,7 @@ export default function DesignBuilder({
   const [isFavorited, setIsFavorited] = useState<boolean>(false);
   const [isSavedRecently, setIsSavedRecently] = useState<boolean>(false);
   const [mobileActiveCategory, setMobileActiveCategory] = useState<string | null>(null);
+  const [isMobileHistoryOpen, setIsMobileHistoryOpen] = useState<boolean>(false);
 
   // Toast feedback state
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "warning" | "info" } | null>(null);
@@ -1384,7 +1386,7 @@ export default function DesignBuilder({
           <main
             data-builder-workspace-shell=""
             className={`relative flex h-full min-h-0 overflow-hidden bg-black lg:flex-row max-lg:grid max-lg:overflow-hidden max-lg:transition-[grid-template-rows] max-lg:duration-300 max-lg:ease-in-out flex-1 ${
-              mobileActiveCategory ? "max-lg:grid-rows-[0fr_1fr]" : "max-lg:grid-rows-[1fr_0fr]"
+              (mobileActiveCategory && !isGenerating && !store.isGenerating) ? "max-lg:grid-rows-[0fr_1fr]" : "max-lg:grid-rows-[1fr_0fr]"
             }`}
           >
             {/* ── COLUNA ESQUERDA: FORMULÁRIO DO AGENTE (420px) ── */}
@@ -1418,7 +1420,11 @@ export default function DesignBuilder({
                 onOpenCropModal={handleOpenCropModal}
                 showToast={showToast}
                 isGenerating={isGenerating}
-                onGenerate={() => generatePremiumImage()}
+                onGenerate={() => {
+                  setMobileActiveCategory(null);
+                  setStudioPalcoTab("builder");
+                  generatePremiumImage();
+                }}
                 activePalcoMode={activePalcoMode}
                 agentColWidth={420}
               />
@@ -1729,7 +1735,7 @@ export default function DesignBuilder({
                   </div>
                 )}
               </div>
-            ) : store.isGenerating ? (
+            ) : (store.isGenerating || isGenerating) ? (
               <div className="flex w-full max-w-[440px] max-lg:max-w-[88vw] flex-col items-center gap-4 mx-auto p-3 lg:p-4 animate-in fade-in zoom-in-95 duration-300">
                 <div className={`relative w-full ${
                   store.dimensao === "9:16" ? "aspect-[9/16]" : store.dimensao === "16:9" ? "aspect-[16/9]" : store.dimensao === "1:1" ? "aspect-square" : "aspect-[4/5]"
@@ -2035,18 +2041,40 @@ export default function DesignBuilder({
             )}
           </div>
 
+          {isMobileHistoryOpen && (
+            <div
+              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+              onClick={() => setIsMobileHistoryOpen(false)}
+            />
+          )}
           {/* ── COLUNA LATERAL DE HISTÓRICO OFICIAL (72PX) À DIREITA ── */}
           <div
             data-tour="history"
-            className="coluna-de-historico relative z-10 hidden h-full shrink-0 flex-col lg:flex"
-            style={{ width: "72px", "--largura-do-historico": "72px" } as any}
+            className={`coluna-de-historico z-50 shrink-0 flex-col transition-all duration-300 ${isMobileHistoryOpen ? "fixed inset-y-0 right-0 z-50 flex shadow-2xl bg-black border-l border-white/10 w-44" : "relative z-10 hidden h-full lg:flex"}`}
+            style={{ width: isMobileHistoryOpen ? "176px" : "72px", "--largura-do-historico": isMobileHistoryOpen ? "176px" : "72px" } as any}
           >
             <div
-              className="historico-lateral absolute right-0 top-0 flex h-full flex-col border-l border-white/[0.04] bg-black"
-              style={{ width: "72px" }}
+              className="historico-lateral relative flex h-full flex-col border-l border-white/[0.04] bg-black w-full"
+              style={{ width: "100%" }}
             >
+              {isMobileHistoryOpen && (
+                <div className="flex items-center justify-between px-3 py-2 border-b border-white/10 lg:hidden shrink-0">
+                  <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-violet-400" />
+                    Histórico
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsMobileHistoryOpen(false)}
+                    className="p-1 rounded-md text-zinc-400 hover:text-white hover:bg-white/10 cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
               <div
-                className="absolute left-0 top-0 z-20 h-full w-1.5 -translate-x-1/2 cursor-col-resize transition-colors hover:bg-violet-500/30"
+                className="absolute left-0 top-0 z-20 h-full w-1.5 -translate-x-1/2 cursor-col-resize transition-colors hover:bg-violet-500/30 hidden lg:block"
                 title="Arraste para redimensionar"
               />
               <div className="flex-1 space-y-1.5 overflow-y-auto px-1.5 py-2 scrollbar-hide">
@@ -2072,7 +2100,10 @@ export default function DesignBuilder({
                       >
                         <button
                           type="button"
-                          onClick={() => store.setActiveImageIndex(i)}
+                          onClick={() => {
+                            store.setActiveImageIndex(i);
+                            setIsMobileHistoryOpen(false);
+                          }}
                           className="block w-full cursor-pointer"
                           title="Geração — clique para visualizar no palco"
                         >
@@ -2274,6 +2305,22 @@ export default function DesignBuilder({
                     <Sparkles className="h-[18px] w-[18px]" />
                   </span>
                   <span className="whitespace-nowrap text-[10px] font-medium leading-none">Prompt</span>
+                </button>
+
+                {/* Histórico Mobile */}
+                <button
+                  type="button"
+                  onClick={() => setIsMobileHistoryOpen(!isMobileHistoryOpen)}
+                  className={`group flex min-h-[50px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
+                    isMobileHistoryOpen ? "text-violet-400" : "text-zinc-500 hover:text-zinc-300"
+                  }`}
+                >
+                  <span className={`flex h-7 w-11 items-center justify-center rounded-full transition-colors ${
+                    isMobileHistoryOpen ? "bg-violet-500/20 ring-1 ring-violet-500/40" : "group-hover:bg-white/[0.06]"
+                  }`}>
+                    <Clock className="h-[18px] w-[18px]" />
+                  </span>
+                  <span className="whitespace-nowrap text-[10px] font-medium leading-none">Histórico</span>
                 </button>
 
                 <span aria-hidden="true" className="mx-0.5 my-2 w-px shrink-0 self-stretch bg-white/10" />

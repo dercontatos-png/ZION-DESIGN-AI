@@ -523,6 +523,8 @@ const AlteraFacilBuilder: React.FC<AlteraFacilBuilderProps> = ({
     showToast?.(`Configurações duplicadas para a Aba ${nextNum}!`, "success");
   };
   const [activeViewMode, setActiveViewMode] = useState<"builder" | "galeria">("builder");
+  const [mobileView, setMobileView] = useState<"form" | "palco">("form");
+  const [isMobileHistoryOpen, setIsMobileHistoryOpen] = useState(false);
   const [galleryTab, setGalleryTab] = useState<"todos" | "favs">("todos");
   const [zoomLevel, setZoomLevel] = useState(100);
   const [magicRefineText, setMagicRefineText] = useState("");
@@ -591,6 +593,7 @@ const AlteraFacilBuilder: React.FC<AlteraFacilBuilderProps> = ({
     }
 
     setIsProcessing(true);
+    setMobileView("palco");
     showToast?.("Alterando imagem com precisão de identidade...", "info");
 
     try {
@@ -662,7 +665,12 @@ const AlteraFacilBuilder: React.FC<AlteraFacilBuilderProps> = ({
   };
 
   return (
-    <main data-builder-workspace-shell="" className="relative flex h-full min-h-0 overflow-hidden bg-black lg:flex-row max-lg:grid max-lg:overflow-hidden max-lg:transition-[grid-template-rows] max-lg:duration-300 max-lg:ease-in-out max-lg:grid-rows-[1fr_0fr] flex-1">
+    <main
+      data-builder-workspace-shell=""
+      className={`relative flex h-full min-h-0 overflow-hidden bg-black lg:flex-row max-lg:grid max-lg:overflow-hidden max-lg:transition-[grid-template-rows] max-lg:duration-300 max-lg:ease-in-out flex-1 ${
+        (mobileView === "form" && !isProcessing) ? "max-lg:grid-rows-[0fr_1fr]" : "max-lg:grid-rows-[1fr_0fr]"
+      }`}
+    >
       {/* ── SIDEBAR OFICIAL ALTERA FÁCIL (420px) ── */}
       <aside
         data-aside-form-col=""
@@ -1478,18 +1486,39 @@ const AlteraFacilBuilder: React.FC<AlteraFacilBuilderProps> = ({
             )}
           </div>
 
+          {isMobileHistoryOpen && (
+            <div
+              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+              onClick={() => setIsMobileHistoryOpen(false)}
+            />
+          )}
           {/* Coluna Lateral de Histórico Oficial (72px) à Direita */}
             <div
               data-tour="history"
-              className="coluna-de-historico relative z-10 hidden h-full shrink-0 flex-col lg:flex"
-              style={{ width: "72px", "--largura-do-historico": "72px" } as any}
+              className={`coluna-de-historico z-50 shrink-0 flex-col transition-all duration-300 ${isMobileHistoryOpen ? "fixed inset-y-0 right-0 z-50 flex shadow-2xl bg-black border-l border-white/10 w-44" : "relative z-10 hidden h-full lg:flex"}`}
+              style={{ width: isMobileHistoryOpen ? "176px" : "72px", "--largura-do-historico": isMobileHistoryOpen ? "176px" : "72px" } as any}
             >
               <div
-                className="historico-lateral absolute right-0 top-0 flex h-full flex-col border-l border-white/[0.04] bg-black"
-                style={{ width: "72px" }}
+                className="historico-lateral relative flex h-full flex-col border-l border-white/[0.04] bg-black w-full"
+                style={{ width: "100%" }}
               >
+                {isMobileHistoryOpen && (
+                  <div className="flex items-center justify-between px-3 py-2 border-b border-white/10 lg:hidden shrink-0">
+                    <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <History className="w-3.5 h-3.5 text-violet-400" />
+                      Histórico
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setIsMobileHistoryOpen(false)}
+                      className="p-1 rounded-md text-zinc-400 hover:text-white hover:bg-white/10 cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
                 <div
-                  className="absolute left-0 top-0 z-20 h-full w-1.5 -translate-x-1/2 cursor-col-resize transition-colors hover:bg-violet-500/30"
+                  className="absolute left-0 top-0 z-20 h-full w-1.5 -translate-x-1/2 cursor-col-resize transition-colors hover:bg-violet-500/30 hidden lg:block"
                   title="Arraste para redimensionar"
                 />
                 <div className="flex-1 space-y-1.5 overflow-y-auto px-1.5 py-2 scrollbar-hide">
@@ -1501,7 +1530,11 @@ const AlteraFacilBuilder: React.FC<AlteraFacilBuilderProps> = ({
                       >
                         <button
                           type="button"
-                          onClick={() => setGeneratedImage(imgUrl)}
+                          onClick={() => {
+                            setGeneratedImage(imgUrl);
+                            setIsMobileHistoryOpen(false);
+                            setMobileView("palco");
+                          }}
                           className="block w-full cursor-pointer"
                           title="Geração — clique para visualizar no palco"
                         >
@@ -1549,6 +1582,53 @@ const AlteraFacilBuilder: React.FC<AlteraFacilBuilderProps> = ({
             </div>
         </div>
       </section>
+      {/* Barra de controle inferior mobile para alternar Ajustes / Palco / Histórico */}
+      <div className="fixed bottom-3 inset-x-0 z-40 flex justify-center px-4 lg:hidden pointer-events-none">
+        <div className="flex items-center gap-1 rounded-full border border-white/10 bg-black/85 p-1.5 backdrop-blur-xl shadow-2xl pointer-events-auto">
+          <button
+            type="button"
+            onClick={() => {
+              setMobileView("form");
+              setIsMobileHistoryOpen(false);
+            }}
+            className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+              mobileView === "form" && !isMobileHistoryOpen
+                ? "bg-purple-600 text-white shadow-md"
+                : "text-zinc-400 hover:text-white"
+            }`}
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+            <span>Ajustes</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMobileView("palco");
+              setIsMobileHistoryOpen(false);
+            }}
+            className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+              mobileView === "palco" && !isMobileHistoryOpen
+                ? "bg-purple-600 text-white shadow-md"
+                : "text-zinc-400 hover:text-white"
+            }`}
+          >
+            <Eye className="h-3.5 w-3.5" />
+            <span>Palco</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsMobileHistoryOpen(prev => !prev)}
+            className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+              isMobileHistoryOpen
+                ? "bg-purple-600 text-white shadow-md"
+                : "text-zinc-400 hover:text-white"
+            }`}
+          >
+            <History className="h-3.5 w-3.5" />
+            <span>Histórico</span>
+          </button>
+        </div>
+      </div>
     </main>
   );
 };
