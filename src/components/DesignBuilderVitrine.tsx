@@ -395,9 +395,9 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
         onOpenCreditsModal={onOpenCreditsModal}
         userEmail={userEmail}
         userName={userName}
-        userCredits={userEmail === "der.contatos@gmail.com" ? "Ilimitado" : userTokens}
-        isUnlimited={userEmail === "der.contatos@gmail.com"}
-        userPlan={userEmail === "der.contatos@gmail.com" ? "Administrador Geral" : "Assinante"}
+        userCredits={typeof userTokens === "number" && userTokens !== 999999 ? userTokens : 45}
+        isUnlimited={false}
+        userPlan="Profissional"
       />
 
       {/* ── Conteúdo Principal com Scroll Suave ─────────── */}

@@ -213,15 +213,17 @@ export async function checkSubscriberAccess(email: string): Promise<{
 }> {
   const cleanEmail = (email || "").toLowerCase().trim();
 
-  // Admin oficial sempre tem acesso total e irrestrito
+  // Admin oficial sincronizado com a cota real da plataforma
   if (cleanEmail === "der.contatos@gmail.com") {
+    const storedReal = typeof window !== "undefined" ? localStorage.getItem("zion_real_credits") : null;
+    const realCredits = (storedReal !== null && !isNaN(Number(storedReal))) ? Number(storedReal) : 45;
     return {
       allowed: true,
       isAdmin: true,
       isSubscriber: true,
-      credits: 999999,
-      unlimited: true,
-      plan: "Administrador Geral",
+      credits: realCredits,
+      unlimited: false,
+      plan: "Profissional",
     };
   }
 
@@ -294,7 +296,13 @@ export async function deductCredit(email: string, amount: number = 1): Promise<{
 }> {
   const cleanEmail = (email || "").toLowerCase().trim();
   if (cleanEmail === "der.contatos@gmail.com") {
-    return { success: true, remainingCredits: 999999 };
+    const storedReal = typeof window !== "undefined" ? localStorage.getItem("zion_real_credits") : null;
+    const current = (storedReal !== null && !isNaN(Number(storedReal))) ? Number(storedReal) : 45;
+    const newCredits = Math.max(0, current - amount);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("zion_real_credits", String(newCredits));
+    }
+    return { success: true, remainingCredits: newCredits };
   }
 
   const list = await getSubscribersList();

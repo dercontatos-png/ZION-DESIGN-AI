@@ -3560,9 +3560,9 @@ CRITICAL RULES:
     return res.json({
       success: true,
       allowed: true,
-      credits: isAdmin ? 999999 : 50,
-      unlimited: isAdmin,
-      plan: isAdmin ? "Admin Geral" : "Operação Design Builder",
+      credits: isAdmin ? 45 : 50,
+      unlimited: false,
+      plan: isAdmin ? "Profissional" : "Operação Design Builder",
       reason: "ativo"
     });
   });

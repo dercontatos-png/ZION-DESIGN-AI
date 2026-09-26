@@ -251,14 +251,10 @@ export const CreditsModal: React.FC<CreditsModalProps> = ({
                       <Zap className="h-5 w-5 shrink-0 text-violet-400" />
                       <div className="min-w-0">
                         <p className="text-xl font-bold leading-tight text-white tabular-nums">
-                          {propUserEmail?.toLowerCase() === "der.contatos@gmail.com"
-                            ? "∞ Ilimitado"
-                            : remaining.toLocaleString("pt-BR")}
+                          {remaining.toLocaleString("pt-BR")}
                         </p>
                         <p className="text-[11px] text-zinc-500">
-                          {propUserEmail?.toLowerCase() === "der.contatos@gmail.com"
-                            ? "créditos ilimitados de administrador"
-                            : "créditos reais disponíveis"}
+                          créditos reais disponíveis
                         </p>
                       </div>
                     </div>
@@ -288,17 +284,17 @@ export const CreditsModal: React.FC<CreditsModalProps> = ({
                     </p>
                     <div className="mt-0.5 flex items-baseline gap-1.5">
                       <span className="text-2xl font-semibold tabular-nums text-white">
-                        {propUserEmail?.toLowerCase() === "der.contatos@gmail.com" ? "Ilimitado" : remaining.toLocaleString("pt-BR")}
+                        {remaining.toLocaleString("pt-BR")}
                       </span>
                       <span className="text-sm text-zinc-400">
-                        {propUserEmail?.toLowerCase() === "der.contatos@gmail.com" ? "• Acesso Total" : "créditos"}
+                        créditos
                       </span>
                     </div>
                     <div className="mt-2.5 flex flex-wrap gap-1.5 border-t border-white/5 pt-2.5">
                       <span className="rounded-md bg-white/[0.04] px-2 py-0.5 text-[11px] text-zinc-400">
                         Status:
                         <span className="ml-1 font-semibold text-emerald-400">
-                          {propUserEmail?.toLowerCase() === "der.contatos@gmail.com" ? "Administrador Oficial" : remaining > 0 ? "Assinante Ativo" : "Sem Assinatura"}
+                          {propUserEmail?.toLowerCase() === "der.contatos@gmail.com" ? "Assinante Profissional" : remaining > 0 ? "Assinante Ativo" : "Sem Assinatura"}
                         </span>
                       </span>
                     </div>

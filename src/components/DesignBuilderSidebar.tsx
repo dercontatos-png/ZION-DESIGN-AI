@@ -154,10 +154,17 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
   }, [userEmail, propIsUnlimited, propUserCredits, propUserPlan]);
 
   const isCleanAdmin = (userEmail || "").toLowerCase().trim() === "der.contatos@gmail.com";
-  const effectiveUnlimited = isCleanAdmin || propIsUnlimited || subInfo.unlimited || subInfo.isAdmin;
-  const effectiveCredits = effectiveUnlimited ? 999999 : (typeof propUserCredits === "number" ? propUserCredits : subInfo.credits);
-  const effectivePlan = subInfo.plan || propUserPlan || (effectiveUnlimited ? "Administrador Geral" : "Assinante");
-  const isSubscriberActive = effectiveUnlimited || subInfo.isSubscriber || subInfo.allowed || effectiveCredits > 0;
+  const storedReal = typeof window !== "undefined" ? localStorage.getItem("zion_real_credits") : null;
+  const realCredits = (storedReal !== null && !isNaN(Number(storedReal)))
+    ? Number(storedReal)
+    : (typeof propUserCredits === "number" && propUserCredits !== 999999 ? propUserCredits : 45);
+
+  const effectiveUnlimited = Boolean(propIsUnlimited && !isCleanAdmin);
+  const effectiveCredits = typeof propUserCredits === "number" && propUserCredits !== 999999
+    ? propUserCredits
+    : (subInfo.credits && subInfo.credits !== 999999 ? subInfo.credits : realCredits);
+  const effectivePlan = subInfo.plan || propUserPlan || (isCleanAdmin ? "Profissional" : "Assinante");
+  const isSubscriberActive = isCleanAdmin || effectiveUnlimited || subInfo.isSubscriber || subInfo.allowed || effectiveCredits > 0;
 
   const handleHomeClick = () => {
     if (typeof window !== "undefined") {
@@ -403,48 +410,25 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
           }}
           className="block w-full px-5 pt-3 pb-2 text-left transition-colors hover:bg-white/[0.04] cursor-pointer"
         >
-          {effectiveUnlimited ? (
-            <>
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="text-xs text-white/90">
-                  <strong className="font-semibold text-white">999.999</strong> créditos
-                </span>
-                <span className="text-[11px] text-white/40">/ ∞</span>
-              </div>
-              <div
-                role="progressbar"
-                aria-valuenow={100}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-label="restantes"
-                className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/10"
-              >
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-400 transition-[width] duration-500"
-                  style={{ width: "100%" }}
-                />
-              </div>
-              <p className="mt-1.5 text-[11px] text-white/40">Acesso Total Ilimitado</p>
-            </>
-          ) : isSubscriberActive ? (
+          {isSubscriberActive ? (
             <>
               <div className="flex items-baseline justify-between gap-2">
                 <span className="text-xs text-white/90">
                   <strong className="font-semibold text-white">{effectiveCredits.toLocaleString("pt-BR")}</strong> créditos
                 </span>
-                <span className="text-[11px] text-white/40">/ {Math.max(effectiveCredits, 28)}</span>
+                <span className="text-[11px] text-white/40">/ {Math.max(effectiveCredits, 45)}</span>
               </div>
               <div
                 role="progressbar"
                 aria-valuenow={effectiveCredits}
                 aria-valuemin={0}
-                aria-valuemax={Math.max(effectiveCredits, 28)}
+                aria-valuemax={Math.max(effectiveCredits, 45)}
                 aria-label="restantes"
                 className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/10"
               >
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-400 transition-[width] duration-500"
-                  style={{ width: `${Math.min(100, Math.max(10, Math.round((effectiveCredits / Math.max(effectiveCredits, 28)) * 100)))}%` }}
+                  style={{ width: `${Math.min(100, Math.max(10, Math.round((effectiveCredits / Math.max(effectiveCredits, 45)) * 100)))}%` }}
                 />
               </div>
               <p className="mt-1.5 text-[11px] text-white/40">{creditState.totalGenerations || 6} usados</p>
