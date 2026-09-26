@@ -233,13 +233,14 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
             else if (fLower.includes("altera")) detectedSlug = "altera-facil";
             else if (fLower.includes("orion")) detectedSlug = "orion-pro";
 
+            const stableId = "store-gen-" + (imgUrl.split("/").pop() || idx).replace(/[^a-zA-Z0-9]/g, "_");
             newItems.push({
-              id: "store-gen-" + idx + "-" + Date.now(),
+              id: stableId,
               status: "done",
               result_url: imgUrl,
               thumbnail_url: imgUrl,
               fallback_url: "/Design%20Builder1%202_files/result.avif",
-              created_at: new Date().toISOString(),
+              created_at: "2026-03-20T12:00:00.000Z",
               date_formatted: "Hoje",
               agent_slug: detectedSlug,
               agent_name: detectedSlug === "ref" ? "REF" : detectedSlug === "hydra" ? "Hydra" : detectedSlug === "enhance" ? "Enhance" : detectedSlug === "altera-facil" ? "Altera Fácil" : "Zion Design",
@@ -258,7 +259,7 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
         const deletedSet = getDeletedImages();
         const isItemDeleted = (item: GalleryItem) => checkIsItemDeleted(item, deletedSet);
 
-                // Deduplicar itens por jobId entre BFF e Historico
+        // Deduplicar itens por jobId entre BFF e Historico
         const dedupedMap = new Map<string, GalleryItem>();
         newItems.forEach((item) => {
           const matchJob = (item.id + " " + (item.result_url || "") + " " + (item.thumbnail_url || "")).match(/(\d{13}_[a-z0-9]+)/i);
@@ -267,27 +268,25 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
             dedupedMap.set(key, item);
           } else {
             const current = dedupedMap.get(key)!;
-            // Preferir o item com thumbnail otimizado se disponível
             if ((item.thumbnail_url && item.thumbnail_url.includes("thumbnail")) || (item.thumbnail_url && item.thumbnail_url.endsWith(".avif"))) {
               dedupedMap.set(key, { ...current, ...item });
             }
           }
         });
         const dedupedNewItems = Array.from(dedupedMap.values());
-
         const validNewItems = dedupedNewItems.filter((item) => !isItemDeleted(item));
 
         if (isMounted) {
           setGenerations((prev) => {
             const map = new Map<string, GalleryItem>();
             
-            // 1. Inserir geracoes novas vindas do servidor (ficam no topo)
+            // 1. Inserir geracoes novas vindas do servidor
             validNewItems.forEach((item) => {
               const key = item.id || item.result_url || item.thumbnail_url;
               if (key) map.set(key, item);
             });
 
-            // 2. Preservar o catalogo inicial de geracoes do usuario sem descartar
+            // 2. Preservar catalogo existente sem duplicatas
             prev.forEach((existing) => {
               if (!isItemDeleted(existing)) {
                 const key = existing.id || existing.result_url || existing.thumbnail_url;
@@ -303,7 +302,17 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
             });
 
             const all = Array.from(map.values());
-            all.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+            all.sort((a, b) => {
+              const tb = new Date(b.created_at).getTime() || 0;
+              const ta = new Date(a.created_at).getTime() || 0;
+              return tb !== ta ? tb - ta : a.id.localeCompare(b.id);
+            });
+
+            // Evitar re-renderizacoes desnecessarias e reordenamento se a lista for igual
+            const prevIds = prev.map((p) => p.id).join(",");
+            const newIds = all.map((p) => p.id).join(",");
+            if (prevIds === newIds) return prev;
+
             return all;
           });
         }
@@ -314,13 +323,11 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
 
     loadServerGenerations();
 
-    // Sincronizacao instantanea em tempo real
+    // Sincronizacao apenas quando uma geracao e concluida intencionalmente
     const handleGenDone = () => {
       loadServerGenerations();
     };
     window.addEventListener("zion-generation-done", handleGenDone);
-    window.addEventListener("storage", handleGenDone);
-    window.addEventListener("focus", handleGenDone);
 
     let bc: BroadcastChannel | null = null;
     if (typeof window !== "undefined" && "BroadcastChannel" in window) {
@@ -330,19 +337,10 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
       };
     }
 
-    const interval = setInterval(() => {
-      if (typeof document !== "undefined" && document.visibilityState === "visible") {
-        loadServerGenerations();
-      }
-    }, 2500);
-
     return () => {
       isMounted = false;
       window.removeEventListener("zion-generation-done", handleGenDone);
-      window.removeEventListener("storage", handleGenDone);
-      window.removeEventListener("focus", handleGenDone);
       if (bc) bc.close();
-      clearInterval(interval);
     };
   }, []);
 

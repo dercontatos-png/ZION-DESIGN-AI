@@ -1320,7 +1320,7 @@ const AlteraFacilBuilder: React.FC<AlteraFacilBuilderProps> = ({
               <div className="group/viewer relative flex h-full min-h-0 min-w-0 flex-1 overflow-hidden items-center justify-center">
                 {isProcessing ? (
                   <div
-                    className="relative flex flex-col items-center justify-center rounded-2xl border border-violet-500/40 overflow-hidden shadow-2xl shadow-violet-950/60 animate-in fade-in zoom-in-95 duration-300"
+                    className="relative flex flex-col items-center justify-center rounded-2xl overflow-hidden db-generating-card animate-in fade-in zoom-in-95 duration-300"
                     style={{
                       width: "min(85%, 480px)",
                       aspectRatio: aspectRatio.replace(":", " / "),
@@ -1328,6 +1328,7 @@ const AlteraFacilBuilder: React.FC<AlteraFacilBuilderProps> = ({
                     }}
                   >
                     <GenerationLoadingCanvas
+                      className="w-full h-full"
                       agentColor="#a855f7"
                       subMessage="Altera Fácil aplicando pose e mantendo fisionomia"
                     />

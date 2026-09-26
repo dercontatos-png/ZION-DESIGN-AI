@@ -198,6 +198,16 @@ const VitrineHoverCard: React.FC<VitrineHoverCardProps> = ({
     }
   };
 
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!cardRef.current || images.length <= 1 || !e.touches[0]) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    const x = Math.max(0, Math.min(e.touches[0].clientX - rect.left, rect.width - 1));
+    const nextIndex = Math.min(images.length - 1, Math.floor((x / rect.width) * images.length));
+    if (nextIndex !== activeIndex) {
+      setActiveIndex(nextIndex);
+    }
+  };
+
   const handleMouseLeave = () => {
     setActiveIndex(0);
   };
@@ -210,6 +220,7 @@ const VitrineHoverCard: React.FC<VitrineHoverCardProps> = ({
       <div
         ref={cardRef}
         onMouseMove={handleMouseMove}
+        onTouchMove={handleTouchMove}
         onMouseLeave={handleMouseLeave}
         className={`relative ${aspectClass} overflow-hidden rounded-2xl ring-1 ring-white/[0.06]`}
       >
@@ -226,11 +237,16 @@ const VitrineHoverCard: React.FC<VitrineHoverCardProps> = ({
           />
         ))}
 
-        {/* Indicadores Pill Superiores (Ativo: w-5 bg-white | Inativos: w-2 bg-white/40) */}
+        {/* Indicadores Pill Superiores Reativos (Ativo: w-5 bg-white | Inativos: w-2 bg-white/40) */}
         <div className="pointer-events-none absolute inset-x-0 top-2.5 flex justify-center gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100 z-20">
-          <span className="h-1 rounded-full transition-all duration-200 w-2 bg-white/40" />
-          <span className="h-1 rounded-full transition-all duration-200 w-2 bg-white/40" />
-          <span className="h-1 rounded-full transition-all duration-200 w-5 bg-white" />
+          {images.map((_, idx) => (
+            <span
+              key={idx}
+              className={`h-1 rounded-full transition-all duration-200 ${
+                idx === activeIndex ? "w-5 bg-white" : "w-2 bg-white/40"
+              }`}
+            />
+          ))}
         </div>
 
         {/* Overlay com Título Inferior (Ex.: REF BUILDER) */}
@@ -368,6 +384,11 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
         onOpenAgentes={onOpenAgentes}
         onSelectAgent={(slug) => onOpenStudio(slug)}
         onOpenCreditsModal={onOpenCreditsModal}
+        userEmail={userEmail}
+        userName={userName}
+        userCredits={userEmail === "der.contatos@gmail.com" ? "Ilimitado" : userTokens}
+        isUnlimited={userEmail === "der.contatos@gmail.com"}
+        userPlan={userEmail === "der.contatos@gmail.com" ? "Administrador Geral" : "Assinante"}
       />
 
       {/* ── Conteúdo Principal com Scroll Suave ─────────── */}
@@ -380,7 +401,7 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {/* ÓRION PRO */}
                 <VitrineHoverCard
-                  images={["/Home_files/orion-3.avif", "/Home_files/orion-1.avif"]}
+                  images={["/Home_files/orion-3.avif", "/Home_files/orion-2.avif", "/Home_files/orion-1.avif"]}
                   alt="ÓRION PRO"
                   title="ÓRION PRO"
                   subtitle="Exponencialize sua imaginação"
@@ -389,7 +410,7 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
 
                 {/* HYDRA */}
                 <VitrineHoverCard
-                  images={["/Home_files/hydra-1.avif", "/Home_files/hydra-5.avif", "/Home_files/hydra-2.avif"]}
+                  images={["/Home_files/hydra-1.avif", "/Home_files/hydra-2.avif", "/Home_files/hydra-5.avif"]}
                   alt="HYDRA"
                   title="HYDRA"
                   subtitle="Use inspirações curadas por Designers sêniors"
@@ -485,11 +506,11 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
 
             {/* ═══════════ 2. HYDRA FAIXA DE DESTAQUE 3D ═════════ */}
             <div className="mt-12 lg:mt-16">
-              <section className="relative overflow-hidden rounded-3xl bg-black ring-1 ring-white/[0.06]">
+              <section className="relative min-h-[380px] sm:min-h-[440px] overflow-hidden rounded-3xl bg-black ring-1 ring-white/[0.06]">
                 {/* 6 Fanned 3D Cards */}
                 <div
                   aria-hidden="true"
-                  className="pointer-events-none absolute inset-y-0 right-0 hidden w-[68%] md:block"
+                  className="pointer-events-none absolute inset-y-0 right-0 w-[90%] md:w-[68%] block opacity-60 md:opacity-100"
                   style={{ perspective: "1400px" }}
                 >
                   {HYDRA_FANNED_CARDS.map((card, i) => (
@@ -498,7 +519,7 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
                       onMouseEnter={() => setHoveredHydraIndex(i)}
                       onMouseLeave={() => setHoveredHydraIndex(null)}
                       onClick={() => go("hydra")}
-                      className="pointer-events-auto absolute top-1/2 right-6 h-[126%] w-[40%] overflow-hidden rounded-[22px] shadow-[0_30px_60px_-20px_rgba(0,0,0,0.8)] cursor-pointer"
+                      className="pointer-events-auto absolute top-1/2 right-4 sm:right-6 h-[126%] w-[42%] sm:w-[40%] overflow-hidden rounded-[22px] shadow-[0_30px_60px_-20px_rgba(0,0,0,0.8)] cursor-pointer"
                       style={{
                         transform: hoveredHydraIndex === i
                           ? `translate(${card.translate}, calc(-50% - 18px)) rotate(${card.rotate}) scale(${Number(card.scale) * 1.05}) translateZ(30px)`
@@ -516,7 +537,7 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
                   ))}
                 </div>
 
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black via-black/70 to-transparent md:via-black/35 md:to-transparent" />
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black via-black/85 to-transparent md:via-black/35 md:to-transparent" />
 
                 <div className="relative max-w-2xl px-8 py-12 sm:px-12 sm:py-16">
                   <span className="inline-flex rounded-full bg-brand-accent/15 px-3.5 py-1.5 font-display text-[11px] font-bold uppercase tracking-[0.18em] text-brand-accent">

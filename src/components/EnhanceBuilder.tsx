@@ -1334,7 +1334,7 @@ export const EnhanceBuilder: React.FC<EnhanceBuilderProps> = ({
                 <div className="flex h-full min-h-0 min-w-0 flex-1 items-center justify-center overflow-hidden p-4 pb-32 sm:pb-36">
                   {isProcessing ? (
                     <div
-                      className="relative flex flex-col items-center justify-center rounded-2xl border border-violet-500/40 overflow-hidden shadow-2xl shadow-violet-950/60 animate-in fade-in zoom-in-95 duration-300"
+                      className="relative flex flex-col items-center justify-center rounded-2xl overflow-hidden db-generating-card animate-in fade-in zoom-in-95 duration-300"
                       style={{
                         width: "min(88%, 460px)",
                         aspectRatio: dimension === "9:16" ? "9/16" : dimension === "1:1" ? "1/1" : dimension === "16:9" ? "16/9" : "4/5",
@@ -1342,6 +1342,7 @@ export const EnhanceBuilder: React.FC<EnhanceBuilderProps> = ({
                       }}
                     >
                       <GenerationLoadingCanvas
+                        className="w-full h-full"
                         agentColor="#8b5cf6"
                         elapsedSeconds={elapsedSeconds}
                         subMessage="Enhance Builder aprimorando iluminação e nitidez"

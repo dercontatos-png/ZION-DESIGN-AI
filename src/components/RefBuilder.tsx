@@ -3366,14 +3366,15 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                             className="relative flex h-full min-h-0 w-full min-w-0 items-center justify-center overflow-hidden"
                           >
                             {isProcessing ? (
-                              <div className="flex w-full max-w-[440px] max-lg:max-w-[88vw] flex-col items-center gap-4 mx-auto p-3 lg:p-4 animate-in fade-in zoom-in-95 duration-300">
+                              <div className="relative flex h-full min-h-0 min-w-0 flex-1 overflow-hidden items-center justify-center p-3 pb-28 sm:pb-32 animate-in fade-in zoom-in-95 duration-300">
                                 <div
-                                  className={`relative w-full ${
+                                  className={`relative flex items-center justify-center h-full max-h-[72vh] sm:max-h-[78vh] w-auto ${
                                     dimension === "9:16" ? "aspect-[9/16]" : dimension === "16:9" ? "aspect-[16/9]" : dimension === "1:1" ? "aspect-square" : "aspect-[4/5]"
-                                  } rounded-2xl overflow-hidden border border-violet-500/40 shadow-2xl shadow-violet-950/60 transition-all duration-300`}
-                                  style={{ minHeight: "360px" }}
+                                  } max-w-full rounded-2xl overflow-hidden db-generating-card transition-all duration-300`}
+                                  style={{ minWidth: "min(320px, 90vw)", minHeight: "340px" }}
                                 >
                                   <GenerationLoadingCanvas
+                                    className="w-full h-full"
                                     agentColor="#8b5cf6"
                                     subMessage="REF Builder replicando estilo da referência com seu sujeito"
                                   />

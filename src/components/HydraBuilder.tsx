@@ -1333,7 +1333,7 @@ export const HydraBuilder: React.FC<HydraBuilderProps> = ({
               <div className="flex flex-1 min-h-0 items-center justify-center p-6 overflow-hidden">
                 {isGenerating ? (
                   <div
-                    className="relative flex flex-col items-center justify-center rounded-2xl border border-violet-500/40 overflow-hidden shadow-2xl shadow-violet-950/60 animate-in fade-in zoom-in-95 duration-300 w-full"
+                    className="relative flex flex-col items-center justify-center rounded-2xl overflow-hidden db-generating-card animate-in fade-in zoom-in-95 duration-300 w-full"
                     style={{
                       width: "min(92%, 480px)",
                       aspectRatio:
@@ -1348,6 +1348,7 @@ export const HydraBuilder: React.FC<HydraBuilderProps> = ({
                     }}
                   >
                     <GenerationLoadingCanvas
+                      className="w-full h-full"
                       agentColor="#8b5cf6"
                       subMessage="Hydra sintetizando composição comercial com produto"
                     />

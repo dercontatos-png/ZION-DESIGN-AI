@@ -52,6 +52,7 @@ import {
   Save,
   Check,
   ChevronUp,
+  ChevronDown,
   HelpCircle,
   Layers,
   BookOpen,
@@ -264,6 +265,28 @@ export default function DesignBuilder({
       window.removeEventListener("db:open_apps", handleOpenApps);
     };
   }, [onNavigateTab]);
+
+  // Scroll to selected category section on mobile
+  useEffect(() => {
+    if (!mobileActiveCategory) return;
+    const catMap: Record<string, string> = {
+      sujeito: '[data-tour="form-sec-subject"]',
+      contexto: '[data-tour="form-sec-context"]',
+      texto: '[data-tour="form-sec-step_1773771934403_6"]',
+      cores: '[data-tour="form-sec-advanced"]',
+      composicao: '[data-tour="form-sec-style"]',
+      prompt: '[data-tour="form-sec-step_1773770939424_4"]',
+    };
+    const selector = catMap[mobileActiveCategory];
+    if (!selector) return;
+    const timer = setTimeout(() => {
+      const el = document.querySelector(selector);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [mobileActiveCategory]);
 
   // Active image in gallery
   const activeImage = store.galeriaImages?.[store.activeImageIndex] || null;
@@ -1394,7 +1417,7 @@ export default function DesignBuilder({
               <aside
                 data-aside-form-col=""
                 data-tour="form"
-                className="agent-form-col relative z-10 shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-white/5 scrollbar-hide px-2 py-3 lg:p-6 w-full lg:h-full lg:w-[var(--agent-form-col-w,420px)] lg:min-w-[280px] lg:max-w-[700px] bg-[#0c0a15]/90 backdrop-blur-md flex transition-[filter,opacity] duration-500"
+                className="agent-form-col relative z-10 shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-white/5 scrollbar-hide px-2 py-3 lg:p-6 w-full lg:h-full lg:w-[var(--agent-form-col-w,420px)] lg:min-w-[280px] lg:max-w-[700px] bg-[#0c0a15]/90 backdrop-blur-md flex transition-[filter,opacity] duration-500 max-lg:order-last max-lg:min-h-0"
                 style={{ "--agent-form-col-w": "420px", "--agent-color": "#ffd500" } as any}
               >
                 <OrionProBuilder
@@ -1442,6 +1465,15 @@ export default function DesignBuilder({
 
             {/* ── COLUNA DIREITA: PALCO CENTRAL & HISTÓRICO ── */}
             <section className="palco-central relative flex flex-col overflow-hidden max-lg:order-first max-lg:min-h-0 lg:h-full lg:flex-1" style={{ minWidth: "0px" }}>
+              {/* Botão Minimizar / Alternar Filtros no Celular */}
+              <button
+                type="button"
+                aria-label="Minimizar filtros"
+                onClick={() => setMobileActiveCategory(mobileActiveCategory ? null : "sujeito")}
+                className="lg:hidden flex w-full shrink-0 items-center justify-center py-1 text-zinc-500 hover:text-white transition-colors cursor-pointer bg-[#0c0a15]/90 border-b border-white/[0.04]"
+              >
+                <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${mobileActiveCategory ? "rotate-180 text-violet-400" : ""}`} />
+              </button>
         {/* BARRA DE NAVEGAÇÃO PERSISTENTE (IDÊNTICO AO DESIGN BUILDER ORIGINAL) */}
         <div className="barra-de-navegacao navegacao-persistente relative flex w-full items-center justify-start gap-2 py-3 pl-3 pr-14 shrink-0 scrollbar-hide max-lg:flex-col max-lg:items-stretch max-lg:gap-1.5 max-lg:px-2 max-lg:py-1.5 max-lg:sticky max-lg:top-0 max-lg:z-20 max-lg:border-b max-lg:border-white/[0.06] max-lg:bg-[#0c0a15]/85 max-lg:backdrop-blur-sm lg:z-30 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:gap-0 lg:overflow-visible lg:pl-0 lg:pr-0">
           
@@ -1736,11 +1768,21 @@ export default function DesignBuilder({
                 )}
               </div>
             ) : (store.isGenerating || isGenerating) ? (
-              <div className="flex w-full max-w-[440px] max-lg:max-w-[88vw] flex-col items-center gap-4 mx-auto p-3 lg:p-4 animate-in fade-in zoom-in-95 duration-300">
-                <div className={`relative w-full ${
-                  store.dimensao === "9:16" ? "aspect-[9/16]" : store.dimensao === "16:9" ? "aspect-[16/9]" : store.dimensao === "1:1" ? "aspect-square" : "aspect-[4/5]"
-                } rounded-2xl overflow-hidden border border-violet-500/40 shadow-2xl shadow-violet-950/60 transition-all duration-300`}>
+              <div className="relative flex h-full min-h-0 min-w-0 flex-1 overflow-hidden items-center justify-center p-3 pb-28 sm:pb-32 animate-in fade-in zoom-in-95 duration-300">
+                <div
+                  className={`relative flex items-center justify-center h-full max-h-[72vh] sm:max-h-[78vh] w-auto ${
+                    store.dimensao === "9:16"
+                      ? "aspect-[9/16]"
+                      : store.dimensao === "16:9"
+                      ? "aspect-[16/9]"
+                      : store.dimensao === "1:1"
+                      ? "aspect-square"
+                      : "aspect-[4/5]"
+                  } max-w-full rounded-2xl overflow-hidden db-generating-card transition-all duration-300`}
+                  style={{ minWidth: "min(320px, 90vw)", minHeight: "340px" }}
+                >
                   <GenerationLoadingCanvas
+                    className="w-full h-full"
                     agentColor={isOrion ? "#ffd500" : "#a78bfa"}
                     elapsedSeconds={elapsedSeconds}
                     message={statusMessage}
@@ -1929,6 +1971,53 @@ export default function DesignBuilder({
                   >
                     <Sparkles className="h-4 w-4 text-amber-400" />
                     <span>Usar como base</span>
+                  </button>
+                </div>
+
+                {/* Mobile Floating Action Bar (Ações da Arte no Celular) */}
+                <div className="lg:hidden absolute bottom-24 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-black/85 backdrop-blur-md border border-white/10 shadow-2xl pointer-events-auto">
+                  <button
+                    type="button"
+                    onClick={() => handleReuseGeneration(activeImage)}
+                    title="Reutilizar"
+                    className="flex h-8 items-center gap-1 rounded-xl px-2.5 text-[11px] font-medium text-zinc-200 hover:text-white bg-white/5 active:bg-violet-600/30 cursor-pointer"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5 text-violet-400" />
+                    <span>Reutilizar</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsFavorited(!isFavorited);
+                      showToast(isFavorited ? "Removido dos favoritos" : "Favoritado!", "info");
+                    }}
+                    title="Favoritar"
+                    className="flex h-8 w-8 items-center justify-center rounded-xl text-zinc-200 hover:text-white bg-white/5 cursor-pointer"
+                  >
+                    <Heart className={`h-3.5 w-3.5 ${isFavorited ? "fill-red-500 text-red-500" : ""}`} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsExportDropdownOpen(!isExportDropdownOpen);
+                      setIsFormatDropdownOpen(false);
+                    }}
+                    title="Exportar"
+                    className="flex h-8 items-center gap-1 rounded-xl px-2.5 text-[11px] font-medium text-white bg-violet-600 active:bg-violet-500 shadow-md shadow-violet-600/30 cursor-pointer"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    <span>Exportar</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPreviewZoomImage(activeImage)}
+                    title="Expandir"
+                    className="flex h-8 w-8 items-center justify-center rounded-xl text-zinc-200 hover:text-white bg-white/5 cursor-pointer"
+                  >
+                    <Maximize2 className="h-3.5 w-3.5" />
                   </button>
                 </div>
 

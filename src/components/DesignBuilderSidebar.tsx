@@ -17,7 +17,8 @@ import {
   Shield,
   MessageCircle,
   BookOpen,
-  ExternalLink
+  ExternalLink,
+  X
 } from "lucide-react";
 
 export const AGENTS = [
@@ -199,7 +200,7 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
       }}
     >
       {/* ── Logo Oficial Zion Design ──────────────────────── */}
-      <div className="flex shrink-0 items-center px-6 pt-5 pb-5">
+      <div className="flex shrink-0 items-center justify-between px-6 pt-5 pb-5">
         <a
           aria-label="Zion Design"
           onClick={handleHomeClick}
@@ -216,6 +217,17 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
             style={{ color: "transparent" }}
           />
         </a>
+
+        {isMobile && (
+          <button
+            type="button"
+            onClick={onCloseMobile}
+            className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-white/80 hover:bg-white/20 hover:text-white transition-all active:scale-95"
+            aria-label="Fechar menu"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        )}
       </div>
 
       {/* ── Navegação Principal ─────────────────────────────── */}
@@ -332,6 +344,27 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
               </span>
             </span>
           </li>
+
+          {/* Painel do Administrador (Exclusivo der.contatos@gmail.com) */}
+          {isCleanAdmin && (
+            <li>
+              <button
+                type="button"
+                onClick={() => {
+                  if (isMobile) onCloseMobile?.();
+                  if (onOpenAdmin) onOpenAdmin();
+                  else onNavigateTab("admin");
+                }}
+                className="flex w-full items-center gap-3 rounded-lg px-4 py-2 text-[14px] font-semibold text-amber-300 hover:bg-amber-500/10 hover:text-amber-200 transition-colors cursor-pointer border border-amber-500/25 bg-amber-500/5 shadow-[0_0_12px_rgba(245,158,11,0.12)] my-1"
+              >
+                <Shield className="h-[18px] w-[18px] shrink-0 text-amber-400" aria-hidden="true" />
+                <span className="truncate">Painel Admin</span>
+                <span className="ml-auto shrink-0 rounded-full bg-amber-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-300 border border-amber-500/30">
+                  Gerenciar
+                </span>
+              </button>
+            </li>
+          )}
         </ul>
 
         <div className="my-2.5 h-px bg-white/10" />

@@ -313,6 +313,35 @@ body {
   outline: none;
   box-shadow: 0 0 0 3px #8b5cf614;
 }
+
+.pb-pill {
+  color: #5c5278;
+  background: linear-gradient(#0e092366, #0a061973) padding-box padding-box,
+              linear-gradient(135deg, #8b5cf612, #3c1e7808) border-box;
+  border: 1px solid transparent;
+  transition: all 0.18s;
+}
+
+.pb-pill:hover:not(.pb-pill-active) {
+  color: #9d94bb;
+}
+
+.pb-pill-active {
+  box-shadow: 0 0 10px #8b5cf61f;
+  color: #f0ecff !important;
+  background: linear-gradient(#160c3799, #0e0828a6) padding-box padding-box,
+              linear-gradient(135deg, #a855f759, #5028b414 50%, #e879f933) border-box !important;
+}
+
+.pb-ref-slot {
+  color: #5c5278;
+  background: #8b5cf608;
+  border: 2px dashed #8b5cf626;
+}
+
+.pb-mobile-nav {
+  padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+}
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
@@ -489,6 +518,17 @@ body {
 }
 .botao-externo__texto {
   margin-right: 14px;
+}
+
+/* 4.5. GENERATING CARD ROTATING IRIDESCENT BORDER */
+.db-generating-card {
+  --db-angulo: 0deg;
+  animation: db-gira-brilho 4s linear infinite;
+  background: 
+    linear-gradient(#0c0a15, #0c0a15) padding-box,
+    conic-gradient(from var(--db-angulo), #a855f7, #6366f1, #38bdf8, #ec4899, #a855f7) border-box;
+  border: 1.5px solid transparent;
+  box-shadow: 0 0 45px -5px rgba(168, 85, 247, 0.4), 0 20px 50px rgba(0, 0, 0, 0.8);
 }
 
 /* 5. HYDRA 3D FAN INTERACTIVE HOVER */

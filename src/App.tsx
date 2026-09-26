@@ -4475,6 +4475,7 @@ ${textContent}`
                 }, 50);
               }}
               onOpenCreditsModal={() => setIsCreditsModalOpen(true)}
+              onOpenAdmin={() => setIsAdminSubscribersModalOpen(true)}
               currentLang={currentLang}
               setLanguage={setLanguage}
               userInitials={(myProfile?.name || currentUser?.email || "EQ").substring(0, 2).toUpperCase()}
@@ -4545,6 +4546,10 @@ ${textContent}`
                 }}
                 onOpenCreditsModal={() => {
                   setIsCreditsModalOpen(true);
+                  setIsMobileSidebarOpen(false);
+                }}
+                onOpenAdmin={() => {
+                  setIsAdminSubscribersModalOpen(true);
                   setIsMobileSidebarOpen(false);
                 }}
                 currentLang={currentLang}
