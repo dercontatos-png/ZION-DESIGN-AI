@@ -92,15 +92,17 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
     plan?: string;
   }>(() => {
     const email = (userEmail || "").toLowerCase().trim();
-    if (email === "der.contatos@gmail.com" || propIsUnlimited) {
-      return { isLoaded: true, allowed: true, isAdmin: true, isSubscriber: true, credits: 999999, unlimited: true, plan: "Administrador Geral" };
+    const storedReal = typeof window !== "undefined" ? localStorage.getItem("zion_real_credits") : null;
+    const realCredits = (storedReal !== null && !isNaN(Number(storedReal))) ? Number(storedReal) : (typeof propUserCredits === "number" ? propUserCredits : 45);
+    if (email === "der.contatos@gmail.com") {
+      return { isLoaded: true, allowed: true, isAdmin: true, isSubscriber: true, credits: realCredits, unlimited: false, plan: "Profissional" };
     }
     return {
       isLoaded: false,
       allowed: false,
       isAdmin: false,
       isSubscriber: false,
-      credits: typeof propUserCredits === "number" ? propUserCredits : 0,
+      credits: typeof propUserCredits === "number" ? propUserCredits : realCredits,
       unlimited: Boolean(propIsUnlimited),
       plan: propUserPlan
     };
@@ -112,7 +114,9 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
       const email = (userEmail || "").toLowerCase().trim();
       if (!email) return;
       if (email === "der.contatos@gmail.com") {
-        if (isMounted) setSubInfo({ isLoaded: true, allowed: true, isAdmin: true, isSubscriber: true, credits: 999999, unlimited: true, plan: "Administrador Geral" });
+        const storedReal = typeof window !== "undefined" ? localStorage.getItem("zion_real_credits") : null;
+        const realCredits = (storedReal !== null && !isNaN(Number(storedReal))) ? Number(storedReal) : (typeof propUserCredits === "number" ? propUserCredits : 45);
+        if (isMounted) setSubInfo({ isLoaded: true, allowed: true, isAdmin: true, isSubscriber: true, credits: realCredits, unlimited: false, plan: "Profissional" });
         return;
       }
       try {

@@ -99,6 +99,14 @@ export default function DesignBuilder({
 }: DesignBuilderProps) {
   const store = useProjectStore();
 
+  const realCredits = (() => {
+    try {
+      const s = localStorage.getItem("zion_real_credits");
+      if (s !== null && !isNaN(Number(s))) return Number(s);
+    } catch(_) {}
+    return typeof userTokens === "number" && userTokens !== 999999 ? userTokens : 45;
+  })();
+
   // Helper function to detect agent from URL
   const detectAgentFromUrl = (): string => {
     if (typeof window !== "undefined") {
@@ -836,7 +844,7 @@ export default function DesignBuilder({
         <div className="flex flex-col items-center gap-1.5 rounded-2xl bg-zinc-950 px-2 py-3 shadow-2xl shadow-black/40 ring-1 ring-white/[0.06]">
           {/* Créditos */}
           <div
-            title={`${userTokens} créditos`}
+            title={`${realCredits} créditos`}
             onClick={() => setIsCreditsModalOpen(true)}
             className="group relative flex flex-col items-center gap-0.5 mb-0.5 cursor-pointer"
           >
@@ -859,10 +867,10 @@ export default function DesignBuilder({
               <circle cx="4" cy="20" r="2"></circle>
             </svg>
             <span className="text-[10px] font-bold tabular-nums leading-none text-amber-400">
-              {userTokens}
+              {realCredits}
             </span>
             <span className="pointer-events-none absolute left-full ml-3 whitespace-nowrap rounded-lg bg-zinc-800 px-2.5 py-1 text-xs font-medium text-zinc-200 opacity-0 shadow-lg ring-1 ring-white/10 transition-opacity group-hover:opacity-100 z-50">
-              {userTokens} créditos
+              {realCredits} créditos
             </span>
           </div>
 
@@ -1291,6 +1299,7 @@ export default function DesignBuilder({
               onSelectAgent={(agentId) => handleSwitchAgent(agentId)}
               onOpenVitrine={handleOpenVitrine}
               showToast={showToast}
+              userName={userName || "Ricardo"}
             />
           </div>
         ) : activePalcoMode === "projetos" ? (

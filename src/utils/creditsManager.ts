@@ -31,9 +31,9 @@ const STORAGE_KEY = "zion_credits_state_v2";
 export function getCreditState(): CreditState {
   if (typeof window === "undefined") {
     return {
-      total: 999999,
+      total: 45,
       used: 0,
-      remaining: 999999,
+      remaining: 45,
       mode: "custom",
       lastUpdated: new Date().toISOString(),
       isLiveGcp: false,
@@ -42,13 +42,13 @@ export function getCreditState(): CreditState {
   }
 
   try {
-    // 1. Verifica se a conta ativa é o Administrador der.contatos@gmail.com
-    const userEmail = (localStorage.getItem("zion_user_email") || "").toLowerCase().trim();
-    if (userEmail === "der.contatos@gmail.com") {
+    const storedReal = localStorage.getItem("zion_real_credits");
+    if (storedReal !== null && !isNaN(Number(storedReal))) {
+      const rem = Math.max(0, Number(storedReal));
       return {
-        total: 999999,
-        used: 0,
-        remaining: 999999,
+        total: Math.max(rem, 45),
+        used: Math.max(0, 45 - rem),
+        remaining: rem,
         mode: "custom",
         lastUpdated: new Date().toISOString(),
         isLiveGcp: false,
@@ -56,19 +56,15 @@ export function getCreditState(): CreditState {
       };
     }
 
-    // 2. Lê estado armazenado
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      // Se for a simulação antiga com 7451/7500 ou design-builder-682800-6bb, descarta
-      if (parsed.projectId === "design-builder-682800-6bb" || parsed.remaining === 7451) {
-        localStorage.removeItem(STORAGE_KEY);
-      } else if (typeof parsed.remaining === "number") {
+      if (typeof parsed.remaining === "number" && parsed.remaining !== 999999) {
         return {
-          total: parsed.total || parsed.remaining || 50,
+          total: parsed.total || Math.max(parsed.remaining, 45),
           used: parsed.used ?? 0,
           remaining: parsed.remaining,
-          mode: parsed.mode || "plan_28",
+          mode: parsed.mode || "custom",
           lastUpdated: parsed.lastUpdated || new Date().toISOString(),
           isLiveGcp: false,
           billingEnabled: true
@@ -79,15 +75,15 @@ export function getCreditState(): CreditState {
     console.error("Erro ao ler créditos:", e);
   }
 
-  // Padrão limpo: ilimitado para admin, 0 para visitantes não autenticados
+  // Padrão real: 45 créditos (conforme consta na conta oficial ativa do Design Builder)
   return {
-    total: 0,
+    total: 45,
     used: 0,
-    remaining: 0,
-    mode: "plan_28",
+    remaining: 45,
+    mode: "custom",
     lastUpdated: new Date().toISOString(),
     isLiveGcp: false,
-    billingEnabled: false
+    billingEnabled: true
   };
 }
 
@@ -335,6 +331,7 @@ export function deductCredit(amount = 1, details?: { agent?: string; action?: st
   }
 
   if (typeof window !== "undefined") {
+    localStorage.setItem("zion_real_credits", String(current.remaining));
     localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
     recordCreditTransaction({
       agent: details?.agent || "design-builder",
@@ -358,6 +355,7 @@ export function setTotalCredits(total: number, mode: "vertex_real" | "plan_28" |
   current.lastUpdated = new Date().toISOString();
 
   if (typeof window !== "undefined") {
+    localStorage.setItem("zion_real_credits", String(current.remaining));
     localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
     window.dispatchEvent(new CustomEvent("zion_credits_updated", { detail: current }));
   }
@@ -372,6 +370,7 @@ export function resetUsedCredits(): CreditState {
   current.lastUpdated = new Date().toISOString();
 
   if (typeof window !== "undefined") {
+    localStorage.setItem("zion_real_credits", String(current.remaining));
     localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
     window.dispatchEvent(new CustomEvent("zion_credits_updated", { detail: current }));
   }

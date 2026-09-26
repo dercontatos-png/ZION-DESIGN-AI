@@ -1226,7 +1226,9 @@ export default function App() {
       return;
     }
     if (email === "der.contatos@gmail.com") {
-      setSubscriberStatus({ isSubscriber: true, credits: 999999, unlimited: true, plan: "Admin Geral", isChecking: false });
+      const savedReal = typeof window !== "undefined" ? localStorage.getItem("zion_real_credits") : null;
+      const realCreds = (savedReal !== null && !isNaN(Number(savedReal))) ? Number(savedReal) : 45;
+      setSubscriberStatus({ isSubscriber: true, credits: realCreds, unlimited: false, plan: "Profissional", isChecking: false });
       return;
     }
 
@@ -5561,7 +5563,7 @@ ${textContent}`
               activeMainTab={activeTab}
               userEmail={myProfile?.email || currentUser?.email || ""}
               userName={myProfile?.name || "Equipe Zion"}
-              userTokens={isExclusiveAdmin ? 999999 : (subscriberStatus.unlimited ? 999999 : subscriberStatus.credits)}
+              userTokens={subscriberStatus.credits || 45}
             />
           )}
 
