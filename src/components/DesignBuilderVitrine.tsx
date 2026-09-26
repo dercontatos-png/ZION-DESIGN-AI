@@ -387,10 +387,7 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
         <button
           type="button"
           onClick={() => {
-            if (onOpenCreditsModal) onOpenCreditsModal();
-            else {
-              window.dispatchEvent(new CustomEvent("open-credits-modal"));
-            }
+            window.dispatchEvent(new CustomEvent("open-auth-modal"));
           }}
           className="inline-flex items-center gap-2 rounded-full bg-brand-accent px-4 py-2 text-sm font-semibold text-white cursor-pointer hover:brightness-110"
         >

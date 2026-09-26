@@ -409,8 +409,11 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
           type="button"
           aria-label="Ver extrato de créditos"
           onClick={() => {
-            if (onOpenCreditsModal) onOpenCreditsModal();
-            else {
+            if (!effectiveUnlimited && (!userEmail || userEmail === "zion@design.ai")) {
+              window.dispatchEvent(new CustomEvent("open-auth-modal"));
+            } else if (onOpenCreditsModal) {
+              onOpenCreditsModal();
+            } else {
               window.dispatchEvent(new CustomEvent("open-credits-modal"));
             }
           }}

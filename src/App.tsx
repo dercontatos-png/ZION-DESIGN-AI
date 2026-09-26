@@ -1160,8 +1160,40 @@ export default function App() {
     }
   });
   const [isAuthChecking, setIsAuthChecking] = useState(true);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(() => {
+    if (typeof window !== "undefined") {
+      const path = window.location.pathname.toLowerCase();
+      return path === "/login" || path === "/entrar" || path === "/cadastre-se";
+    }
+    return false;
+  });
+  const [userDismissedAuth, setUserDismissedAuth] = useState(false);
   const [isPasswordResetMode, setIsPasswordResetMode] = useState(false);
+
+  // Listen for /login URL routing and open-auth-modal events
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const checkPath = () => {
+        const path = window.location.pathname.toLowerCase();
+        if (path === "/login" || path === "/entrar" || path === "/cadastre-se") {
+          setIsAuthModalOpen(true);
+          setUserDismissedAuth(false);
+        }
+      };
+      checkPath();
+      const handleOpenAuth = () => {
+        setIsAuthModalOpen(true);
+        setUserDismissedAuth(false);
+      };
+      window.addEventListener("popstate", checkPath);
+      window.addEventListener("open-auth-modal", handleOpenAuth);
+      return () => {
+        window.removeEventListener("popstate", checkPath);
+        window.removeEventListener("open-auth-modal", handleOpenAuth);
+      };
+    }
+  }, []);
+
   // Popup "Complete seu cadastro": abre assim que o cliente loga (1x por sessão)
   const [isProfileCompleteOpen, setIsProfileCompleteOpen] = useState(false);
   const dismissProfileCompletePopup = () => {
@@ -1304,7 +1336,13 @@ export default function App() {
         localStorage.setItem("zion_auth_user", JSON.stringify(userPayload));
       } 
       setIsAuthChecking(false);
+    }).catch(() => {
+      setIsAuthChecking(false);
     });
+
+    const authTimeout = setTimeout(() => {
+      setIsAuthChecking(false);
+    }, 1500);
 
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       // Link de recuperação de senha: mostra a tela de definir nova senha
@@ -4359,7 +4397,10 @@ ${textContent}`
       <>
         <EmDesenvolvimentoScreen
           currentUser={currentUser}
-          onOpenAuth={() => setIsAuthModalOpen(true)}
+          onOpenAuth={() => {
+            setUserDismissedAuth(false);
+            setIsAuthModalOpen(true);
+          }}
           onSignOut={handleSignOut}
           onRecheck={() => checkSubscriber(currentUser?.email)}
           onOpenPlanModal={() => setIsCreditsModalOpen(true)}
@@ -4370,16 +4411,40 @@ ${textContent}`
           }}
         />
         <AuthModal
-          isOpen={!isAuthChecking && (!currentUser || isAuthModalOpen)}
+          isOpen={
+            !isAuthChecking &&
+            (isAuthModalOpen ||
+              (!currentUser &&
+                !userDismissedAuth &&
+                typeof window !== "undefined" &&
+                (window.location.pathname === "/login" ||
+                  window.location.pathname === "/entrar" ||
+                  window.location.pathname === "/cadastre-se")))
+          }
           onClose={() => {
             setIsAuthModalOpen(false);
+            setUserDismissedAuth(true);
             setIsPasswordResetMode(false);
+            if (typeof window !== "undefined") {
+              const path = window.location.pathname.toLowerCase();
+              if (path === "/login" || path === "/entrar" || path === "/cadastre-se") {
+                window.history.pushState({}, "", "/");
+              }
+            }
           }}
           initialViewMode={isPasswordResetMode ? "reset" : "login"}
           onLoginSuccess={(u) => {
             setCurrentUser(u);
             checkSubscriber(u.email);
             if (u.role === "client") setActiveTab("ai-tools");
+            setIsAuthModalOpen(false);
+            setUserDismissedAuth(false);
+            if (typeof window !== "undefined") {
+              const path = window.location.pathname.toLowerCase();
+              if (path === "/login" || path === "/entrar" || path === "/cadastre-se") {
+                window.history.pushState({}, "", "/");
+              }
+            }
           }}
         />
         {isCreditsModalOpen && (
@@ -8133,15 +8198,40 @@ ${textContent}`
       )}
 
       <AuthModal
-        isOpen={!isAuthChecking && (!currentUser || isAuthModalOpen)}
+        isOpen={
+          !isAuthChecking &&
+          (isAuthModalOpen ||
+            (!currentUser &&
+              !userDismissedAuth &&
+              typeof window !== "undefined" &&
+              (window.location.pathname === "/login" ||
+                window.location.pathname === "/entrar" ||
+                window.location.pathname === "/cadastre-se")))
+        }
         onClose={() => {
           setIsAuthModalOpen(false);
+          setUserDismissedAuth(true);
           setIsPasswordResetMode(false);
+          if (typeof window !== "undefined") {
+            const path = window.location.pathname.toLowerCase();
+            if (path === "/login" || path === "/entrar" || path === "/cadastre-se") {
+              window.history.pushState({}, "", "/");
+            }
+          }
         }}
         initialViewMode={isPasswordResetMode ? "reset" : "login"}
         onLoginSuccess={(u) => {
           setCurrentUser(u);
+          checkSubscriber(u.email);
           if (u.role === "client") setActiveTab("ai-tools");
+          setIsAuthModalOpen(false);
+          setUserDismissedAuth(false);
+          if (typeof window !== "undefined") {
+            const path = window.location.pathname.toLowerCase();
+            if (path === "/login" || path === "/entrar" || path === "/cadastre-se") {
+              window.history.pushState({}, "", "/");
+            }
+          }
         }}
       />
 
