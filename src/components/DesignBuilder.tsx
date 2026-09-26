@@ -2443,36 +2443,6 @@ export default function DesignBuilder({
         )}
       </div>
 
-      
-      {/* ── BOTÃO FLUTUANTE ASSISTENTE IA OFICIAL (data-tour="ai-assistant") ── */}
-      <button
-        data-tour="ai-assistant"
-        type="button"
-        onClick={() => setIsAssistantOpen(true)}
-        className="fixed bottom-[calc(5rem_+_env(safe-area-inset-bottom))] right-4 lg:bottom-6 lg:right-6 w-14 h-14 flex items-center justify-center rounded-full shadow-2xl transition-transform z-[9999] bg-brand-gradient text-white hover:scale-110 animate-pulse-slow cursor-pointer"
-        title="Assistente IA (segure para mover)"
-        style={{ touchAction: "none" }}
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="lucide lucide-message-circle-more w-6 h-6"
-          aria-hidden="true"
-        >
-          <path d="M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719"></path>
-          <path d="M8 12h.01"></path>
-          <path d="M12 12h.01"></path>
-          <path d="M16 12h.01"></path>
-        </svg>
-      </button>
-
       {/* ── BARRA DE NAVEGAÇÃO MOBILE PERSISTENTE (Matching app.designbuilder.co) ── */}
       <DesignBuilderMobileNav
         activeTab={
@@ -2544,16 +2514,14 @@ export default function DesignBuilder({
         />
       )}
 
-      {/* Modal do Assistente Criativo */}
-      {isAssistantOpen && (
-        <DesignBuilderAssistant
-          onApplyPrompt={(prompt) => {
-            store.updateConfig({ additionalPrompt: prompt });
-            showToast("Prompt aplicado ao formulário!", "success");
-          }}
-          showToast={showToast}
-        />
-      )}
+      {/* ── Assistente Criativo Oficial (Matching app.designbuilder.co) ── */}
+      <DesignBuilderAssistant
+        onApplyPrompt={(prompt) => {
+          store.updateConfig({ additionalPrompt: prompt });
+          showToast("Prompt aplicado ao formulário!", "success");
+        }}
+        showToast={showToast}
+      />
 
       {/* Modal Guia Rápido */}
       {isGuiaModalOpen && (

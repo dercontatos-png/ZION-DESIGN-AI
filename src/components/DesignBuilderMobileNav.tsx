@@ -34,7 +34,7 @@ export const DesignBuilderMobileNav: React.FC<DesignBuilderMobileNavProps> = ({
             e.preventDefault();
             onNavigateHome();
           }}
-          className={`group relative flex h-12 min-w-[48px] flex-col items-center justify-center gap-0.5 rounded-2xl outline-none transition-[transform,background-color] focus-visible:ring-2 focus-visible:ring-violet-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 active:scale-95 flex-1 cursor-pointer ${
+          className={`group relative flex h-12 min-w-0 flex-col items-center justify-center gap-0.5 rounded-2xl outline-none transition-[transform,background-color] focus-visible:ring-2 focus-visible:ring-violet-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 active:scale-95 flex-1 cursor-pointer ${
             activeTab === "home" ? "text-violet-400" : "text-zinc-400"
           }`}
         >
@@ -72,7 +72,7 @@ export const DesignBuilderMobileNav: React.FC<DesignBuilderMobileNavProps> = ({
             e.preventDefault();
             onNavigateProjects();
           }}
-          className={`group relative flex h-12 min-w-[48px] flex-col items-center justify-center gap-0.5 rounded-2xl outline-none transition-[transform,background-color] focus-visible:ring-2 focus-visible:ring-violet-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 active:scale-95 flex-1 cursor-pointer ${
+          className={`group relative flex h-12 min-w-0 flex-col items-center justify-center gap-0.5 rounded-2xl outline-none transition-[transform,background-color] focus-visible:ring-2 focus-visible:ring-violet-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 active:scale-95 flex-1 cursor-pointer ${
             activeTab === "projetos" ? "text-violet-400" : "text-zinc-400"
           }`}
         >
@@ -110,7 +110,7 @@ export const DesignBuilderMobileNav: React.FC<DesignBuilderMobileNavProps> = ({
             e.preventDefault();
             onNavigateGallery();
           }}
-          className={`group relative flex h-12 min-w-[48px] flex-col items-center justify-center gap-0.5 rounded-2xl outline-none transition-[transform,background-color] focus-visible:ring-2 focus-visible:ring-violet-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 active:scale-95 flex-1 cursor-pointer ${
+          className={`group relative flex h-12 min-w-0 flex-col items-center justify-center gap-0.5 rounded-2xl outline-none transition-[transform,background-color] focus-visible:ring-2 focus-visible:ring-violet-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 active:scale-95 flex-1 cursor-pointer ${
             activeTab === "gallery" ? "text-violet-400" : "text-zinc-400"
           }`}
         >
@@ -150,7 +150,7 @@ export const DesignBuilderMobileNav: React.FC<DesignBuilderMobileNavProps> = ({
             e.preventDefault();
             onNavigateCommunity();
           }}
-          className={`group relative flex h-12 min-w-[48px] flex-col items-center justify-center gap-0.5 rounded-2xl outline-none transition-[transform,background-color] focus-visible:ring-2 focus-visible:ring-violet-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 active:scale-95 flex-1 cursor-pointer ${
+          className={`group relative flex h-12 min-w-0 flex-col items-center justify-center gap-0.5 rounded-2xl outline-none transition-[transform,background-color] focus-visible:ring-2 focus-visible:ring-violet-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 active:scale-95 flex-1 cursor-pointer ${
             activeTab === "community" ? "text-violet-400" : "text-zinc-400"
           }`}
         >
@@ -187,9 +187,9 @@ export const DesignBuilderMobileNav: React.FC<DesignBuilderMobileNavProps> = ({
           aria-haspopup="dialog"
           aria-expanded="false"
           onClick={onOpenAccount}
-          className="group relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full outline-none transition-transform focus-visible:ring-2 focus-visible:ring-violet-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 active:scale-95 cursor-pointer"
+          className="group relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full outline-none transition-transform focus-visible:ring-2 focus-visible:ring-violet-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 active:scale-95 cursor-pointer"
         >
-          <span className="h-10 w-10 overflow-hidden rounded-full ring-2 transition-[box-shadow] ring-violet-500/30">
+          <span className="h-9 w-9 overflow-hidden rounded-full ring-2 transition-[box-shadow] ring-violet-500/30">
             <span className="flex h-full w-full items-center justify-center bg-gradient-to-br from-violet-500 to-fuchsia-500 text-sm font-semibold text-white">
               {userInitial}
             </span>
