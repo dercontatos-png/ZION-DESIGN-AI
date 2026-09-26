@@ -22,12 +22,12 @@ import {
 } from "lucide-react";
 
 export const AGENTS = [
-  { slug: "orion-pro", name: "Órion Pro", href: "/orion-pro" },
-  { slug: "design-builder1-2", name: "Zion Design", href: "/agent/design-builder1-2" },
   { slug: "ref", name: "REF", href: "/agent/ref" },
-  { slug: "enhance-builder", name: "Enhance", href: "/enhance-builder" },
-  { slug: "altera-facil", name: "Altera Fácil", href: "/altera-facil" },
   { slug: "hydra", name: "Hydra", href: "/hydra" },
+  { slug: "enhance-builder", name: "Enhance", href: "/enhance-builder" },
+  { slug: "design-builder1-2", name: "Design Builder 1.2", href: "/agent/design-builder1-2" },
+  { slug: "orion-pro", name: "Órion Pro", href: "/orion-pro" },
+  { slug: "altera-facil", name: "Altera Fácil", href: "/altera-facil" },
 ];
 
 export interface DesignBuilderSidebarProps {
@@ -345,26 +345,6 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
             </span>
           </li>
 
-          {/* Painel do Administrador (Exclusivo der.contatos@gmail.com) */}
-          {isCleanAdmin && (
-            <li>
-              <button
-                type="button"
-                onClick={() => {
-                  if (isMobile) onCloseMobile?.();
-                  if (onOpenAdmin) onOpenAdmin();
-                  else onNavigateTab("admin");
-                }}
-                className="flex w-full items-center gap-3 rounded-lg px-4 py-2 text-[14px] font-semibold text-amber-300 hover:bg-amber-500/10 hover:text-amber-200 transition-colors cursor-pointer border border-amber-500/25 bg-amber-500/5 shadow-[0_0_12px_rgba(245,158,11,0.12)] my-1"
-              >
-                <Shield className="h-[18px] w-[18px] shrink-0 text-amber-400" aria-hidden="true" />
-                <span className="truncate">Painel Admin</span>
-                <span className="ml-auto shrink-0 rounded-full bg-amber-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-300 border border-amber-500/30">
-                  Gerenciar
-                </span>
-              </button>
-            </li>
-          )}
         </ul>
 
         <div className="my-2.5 h-px bg-white/10" />
@@ -402,9 +382,9 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
         </ul>
       </nav>
 
-      {/* ── Rodapé Oficial com Créditos e Usuário ─────────────── */}
+      {/* ── Rodapé Oficial com Créditos e Usuário (Idêntico ao Home.html) ─────────────── */}
       <div className="shrink-0 rounded-b-3xl border-t border-white/[0.06]">
-        {/* Barra de Créditos Oficial Dinâmica */}
+        {/* Barra de Créditos Oficial */}
         <button
           type="button"
           aria-label="Ver extrato de créditos"
@@ -417,18 +397,15 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
               window.dispatchEvent(new CustomEvent("open-credits-modal"));
             }
           }}
-          className="block w-full px-4 py-3 text-left transition-colors hover:bg-white/[0.04] cursor-pointer"
+          className="block w-full px-5 pt-3 pb-2 text-left transition-colors hover:bg-white/[0.04] cursor-pointer"
         >
           {effectiveUnlimited ? (
             <>
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[15px] font-bold text-violet-300">Ilimitado</span>
-                  <span className="rounded bg-violet-500/20 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-violet-300 border border-violet-500/30 uppercase">
-                    Admin
-                  </span>
-                </div>
-                <span className="shrink-0 text-[10px] text-zinc-400 font-medium">Acesso Total</span>
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-xs text-white/90">
+                  <strong className="font-semibold text-white">999.999</strong> créditos
+                </span>
+                <span className="text-[11px] text-white/40">/ ∞</span>
               </div>
               <div
                 role="progressbar"
@@ -436,57 +413,50 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                 aria-valuemin={0}
                 aria-valuemax={100}
                 aria-label="restantes"
-                className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-violet-950/40 border border-violet-500/20"
+                className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/10"
               >
-                <div className="h-full w-full rounded-full bg-gradient-to-r from-violet-500 via-fuchsia-400 to-amber-300 shadow-[0_0_10px_rgba(168,85,247,0.5)]" />
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-400 transition-[width] duration-500"
+                  style={{ width: "100%" }}
+                />
               </div>
-              <p className="mt-1.5 text-[10px] text-zinc-400 flex items-center justify-between">
-                <span>Gerações ilimitadas ativas</span>
-                <span className="text-violet-400 font-bold">∞</span>
-              </p>
+              <p className="mt-1.5 text-[11px] text-white/40">Acesso Total Ilimitado</p>
             </>
           ) : isSubscriberActive ? (
             <>
               <div className="flex items-baseline justify-between gap-2">
-                <p className="text-[15px] font-semibold tabular-nums text-violet-300">
-                  {effectiveCredits.toLocaleString("pt-BR")}{" "}
-                  <span className="text-xs font-normal text-zinc-300">créditos</span>
-                </p>
-                <span className="shrink-0 text-[10px] text-zinc-400 font-medium">
-                  {effectivePlan}
+                <span className="text-xs text-white/90">
+                  <strong className="font-semibold text-white">{effectiveCredits.toLocaleString("pt-BR")}</strong> créditos
                 </span>
+                <span className="text-[11px] text-white/40">/ {Math.max(effectiveCredits, 28)}</span>
               </div>
               <div
                 role="progressbar"
                 aria-valuenow={effectiveCredits}
                 aria-valuemin={0}
-                aria-valuemax={Math.max(effectiveCredits, 50)}
+                aria-valuemax={Math.max(effectiveCredits, 28)}
                 aria-label="restantes"
                 className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/10"
               >
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-400 transition-[width] duration-500"
-                  style={{ width: `${Math.min(100, Math.max(10, Math.round((effectiveCredits / Math.max(effectiveCredits, 50)) * 100)))}%` }}
+                  style={{ width: `${Math.min(100, Math.max(10, Math.round((effectiveCredits / Math.max(effectiveCredits, 28)) * 100)))}%` }}
                 />
               </div>
-              <p className="mt-1.5 text-[10px] text-zinc-400">
-                Saldo real para gerar imagens
-              </p>
+              <p className="mt-1.5 text-[11px] text-white/40">{creditState.totalGenerations || 6} usados</p>
             </>
           ) : (
             <>
               <div className="flex items-baseline justify-between gap-2">
-                <p className="text-[14px] font-semibold text-zinc-400">
-                  0 <span className="text-xs font-normal text-zinc-500">créditos</span>
-                </p>
-                <span className="shrink-0 text-[10px] font-semibold text-amber-400">Sem Assinatura</span>
+                <span className="text-xs text-white/90">
+                  <strong className="font-semibold text-white">0</strong> créditos
+                </span>
+                <span className="text-[11px] text-white/40">/ 0</span>
               </div>
-              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/5">
+              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
                 <div className="h-full w-0 rounded-full bg-zinc-600" />
               </div>
-              <p className="mt-1.5 text-[10px] text-zinc-500">
-                Faça login com sua conta assinante
-              </p>
+              <p className="mt-1.5 text-[11px] text-white/40">Faça login para começar</p>
             </>
           )}
         </button>
@@ -617,6 +587,20 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                     <span className="text-xs font-bold text-white uppercase tracking-wider">Links Úteis</span>
                     <span className="text-[10px] text-zinc-500">Oficial</span>
                   </div>
+                  {isCleanAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onOpenAdmin) onOpenAdmin();
+                        else onNavigateTab("admin");
+                        setIsLinksMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-amber-300 hover:bg-amber-500/10 rounded-xl transition-all cursor-pointer text-left border border-amber-500/20 bg-amber-500/5 my-1"
+                    >
+                      <Shield size={14} className="text-amber-400" />
+                      <span>Painel do Administrador</span>
+                    </button>
+                  )}
                   <a
                     href="#suporte"
                     target="_blank"

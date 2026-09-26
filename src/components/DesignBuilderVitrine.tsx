@@ -433,7 +433,7 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
                 {/* Gerações Horizontal Strip */}
                 <div className="group/comunidade group/recentes relative flex flex-col overflow-hidden rounded-2xl bg-violet-500/[0.04] p-4 ring-1 ring-white/[0.06] md:col-span-2 lg:aspect-[5/2] lg:self-start">
                   <p className="shrink-0 font-display text-lg font-bold uppercase tracking-wider text-white">
-                    Gerações
+                    Comunidade
                   </p>
                   <div className="relative mt-3 h-[132px] shrink-0 lg:h-auto lg:min-h-0 lg:flex-1 lg:shrink">
                     <div className="h-full bordas-que-desvanecem">
