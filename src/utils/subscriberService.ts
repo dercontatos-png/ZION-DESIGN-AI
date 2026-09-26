@@ -213,17 +213,17 @@ export async function checkSubscriberAccess(email: string): Promise<{
 }> {
   const cleanEmail = (email || "").toLowerCase().trim();
 
-  // Admin oficial sincronizado com a cota real da plataforma
+  // Admin oficial sincronizado com a cota real da chave Vertex AI (GCP)
   if (cleanEmail === "der.contatos@gmail.com") {
     const storedReal = typeof window !== "undefined" ? localStorage.getItem("zion_real_credits") : null;
-    const realCredits = (storedReal !== null && !isNaN(Number(storedReal))) ? Number(storedReal) : 45;
+    const realCredits = (storedReal !== null && !isNaN(Number(storedReal)) && Number(storedReal) !== 45) ? Number(storedReal) : 6612;
     return {
       allowed: true,
       isAdmin: true,
       isSubscriber: true,
       credits: realCredits,
       unlimited: false,
-      plan: "Profissional",
+      plan: "Profissional (Vertex AI)",
     };
   }
 

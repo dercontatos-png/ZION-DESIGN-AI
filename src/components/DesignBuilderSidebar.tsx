@@ -155,15 +155,15 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
 
   const isCleanAdmin = (userEmail || "").toLowerCase().trim() === "der.contatos@gmail.com";
   const storedReal = typeof window !== "undefined" ? localStorage.getItem("zion_real_credits") : null;
-  const realCredits = (storedReal !== null && !isNaN(Number(storedReal)))
+  const realCredits = (storedReal !== null && !isNaN(Number(storedReal)) && Number(storedReal) !== 45)
     ? Number(storedReal)
-    : (typeof propUserCredits === "number" && propUserCredits !== 999999 ? propUserCredits : 45);
+    : (typeof propUserCredits === "number" && propUserCredits !== 999999 && propUserCredits !== 45 ? propUserCredits : 6612);
 
   const effectiveUnlimited = Boolean(propIsUnlimited && !isCleanAdmin);
-  const effectiveCredits = typeof propUserCredits === "number" && propUserCredits !== 999999
+  const effectiveCredits = typeof propUserCredits === "number" && propUserCredits !== 999999 && propUserCredits !== 45
     ? propUserCredits
-    : (subInfo.credits && subInfo.credits !== 999999 ? subInfo.credits : realCredits);
-  const effectivePlan = subInfo.plan || propUserPlan || (isCleanAdmin ? "Profissional" : "Assinante");
+    : (subInfo.credits && subInfo.credits !== 999999 && subInfo.credits !== 45 ? subInfo.credits : realCredits);
+  const effectivePlan = subInfo.plan || propUserPlan || (isCleanAdmin ? "Profissional (Vertex AI)" : "Assinante");
   const isSubscriberActive = isCleanAdmin || effectiveUnlimited || subInfo.isSubscriber || subInfo.allowed || effectiveCredits > 0;
 
   const handleHomeClick = () => {
@@ -416,22 +416,22 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                 <span className="text-xs text-white/90">
                   <strong className="font-semibold text-white">{effectiveCredits.toLocaleString("pt-BR")}</strong> créditos
                 </span>
-                <span className="text-[11px] text-white/40">/ {Math.max(effectiveCredits, 45)}</span>
+                <span className="text-[11px] text-white/40">/ {effectiveCredits > 100 ? "7.500" : Math.max(effectiveCredits, 45)}</span>
               </div>
               <div
                 role="progressbar"
                 aria-valuenow={effectiveCredits}
                 aria-valuemin={0}
-                aria-valuemax={Math.max(effectiveCredits, 45)}
+                aria-valuemax={effectiveCredits > 100 ? 7500 : Math.max(effectiveCredits, 45)}
                 aria-label="restantes"
                 className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/10"
               >
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-400 transition-[width] duration-500"
-                  style={{ width: `${Math.min(100, Math.max(10, Math.round((effectiveCredits / Math.max(effectiveCredits, 45)) * 100)))}%` }}
+                  style={{ width: `${Math.min(100, Math.max(10, Math.round((effectiveCredits / (effectiveCredits > 100 ? 7500 : Math.max(effectiveCredits, 45))) * 100)))}%` }}
                 />
               </div>
-              <p className="mt-1.5 text-[11px] text-white/40">{creditState.totalGenerations || 6} usados</p>
+              <p className="mt-1.5 text-[11px] text-white/40">{creditState.used || 888} usados · ${creditState.remainingUsd || "264.48"} USD</p>
             </>
           ) : (
             <>

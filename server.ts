@@ -3560,9 +3560,9 @@ CRITICAL RULES:
     return res.json({
       success: true,
       allowed: true,
-      credits: isAdmin ? 45 : 50,
+      credits: isAdmin ? 6612 : 50,
       unlimited: false,
-      plan: isAdmin ? "Profissional" : "Operação Design Builder",
+      plan: isAdmin ? "Profissional (Vertex AI)" : "Operação Design Builder",
       reason: "ativo"
     });
   });

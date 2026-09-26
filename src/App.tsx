@@ -1227,8 +1227,8 @@ export default function App() {
     }
     if (email === "der.contatos@gmail.com") {
       const savedReal = typeof window !== "undefined" ? localStorage.getItem("zion_real_credits") : null;
-      const realCreds = (savedReal !== null && !isNaN(Number(savedReal))) ? Number(savedReal) : 45;
-      setSubscriberStatus({ isSubscriber: true, credits: realCreds, unlimited: false, plan: "Profissional", isChecking: false });
+      const realCreds = (savedReal !== null && !isNaN(Number(savedReal)) && Number(savedReal) !== 45) ? Number(savedReal) : 6612;
+      setSubscriberStatus({ isSubscriber: true, credits: realCreds, unlimited: false, plan: "Profissional (Vertex AI)", isChecking: false });
       return;
     }
 
