@@ -1023,13 +1023,16 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
           else if (onNavigateTab) onNavigateTab("community");
         }}
         onOpenAccount={() => {
-          if (userEmail) {
-            if (onOpenCreditsModal) onOpenCreditsModal();
-            else window.dispatchEvent(new CustomEvent("open-credits-modal"));
-          } else {
-            window.dispatchEvent(new CustomEvent("open-auth-modal"));
-          }
+          window.dispatchEvent(new CustomEvent("open-auth-modal"));
         }}
+        onOpenAdmin={onOpenAdmin}
+        onOpenCredits={() => {
+          if (onOpenCreditsModal) onOpenCreditsModal();
+          else window.dispatchEvent(new CustomEvent("open-credits-modal"));
+        }}
+        userEmail={userEmail}
+        userName={userName}
+        isAdmin={userEmail?.toLowerCase()?.trim() === "der.contatos@gmail.com"}
         userInitial={userEmail ? (userName ? userName[0].toUpperCase() : userEmail[0].toUpperCase()) : "R"}
       />
 

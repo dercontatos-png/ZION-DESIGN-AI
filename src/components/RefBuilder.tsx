@@ -38,7 +38,8 @@ import {
   Sliders,
   SlidersHorizontal,
   Clock,
-  Scissors
+  Scissors,
+  ChevronLeft
 } from "lucide-react";
 
 interface RefBuilderProps {
@@ -1901,19 +1902,65 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
   };
 
   return (
-    <main
-      data-builder-workspace-shell=""
-      className={`relative flex h-full min-h-0 overflow-hidden bg-transparent lg:flex-row max-lg:grid max-lg:overflow-hidden max-lg:transition-[grid-template-rows] max-lg:duration-300 max-lg:ease-in-out flex-1 ${
-        (mobileView === "form" && !isProcessing) ? "max-lg:grid-rows-[0fr_1fr]" : "max-lg:grid-rows-[1fr_0fr]"
-      }`}
-    >
-      {/* ── COLUNA DO FORMULÁRIO REF (LAYOUT 100% ORIGINAL) ── */}
-      <aside
-        data-aside-form-col=""
-        data-tour="form"
-        className="agent-form-col relative z-10 shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-white/5 scrollbar-hide px-1.5 py-3 lg:p-6 transition-[filter,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] w-full lg:h-full lg:w-[var(--agent-form-col-w,420px)] lg:min-w-[280px] lg:max-w-[700px] lg:flex-shrink-0 flex max-lg:order-last max-lg:min-h-0 lg:flex"
-        style={{ "--agent-form-col-w": "420px", "--agent-color": "#8B5CF6" } as any}
+    <div className="flex h-full w-full flex-1 overflow-hidden bg-black text-white relative font-sans select-none flex-col">
+      {/* Header Mobile Oficial com Voltar e Alternar Visualização */}
+      <div className="lg:hidden flex items-center justify-between px-3 py-2 bg-[#0c0a15] border-b border-white/[0.08] z-30 shrink-0">
+        <button
+          type="button"
+          onClick={() => {
+            if (onOpenVitrine) onOpenVitrine();
+            else window.dispatchEvent(new CustomEvent("db:open_vitrine"));
+          }}
+          className="flex items-center gap-1 text-xs font-semibold text-zinc-300 hover:text-white px-2 py-1 rounded-lg bg-white/[0.04] border border-white/5 active:scale-95 transition-all cursor-pointer"
+        >
+          <ChevronLeft className="h-3.5 w-3.5" />
+          <span>Voltar</span>
+        </button>
+        <div className="flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-violet-400" />
+          <span className="text-xs font-bold text-white">Ref Builder</span>
+        </div>
+        <div className="flex items-center rounded-full bg-white/[0.06] p-0.5 border border-white/10">
+          <button
+            type="button"
+            onClick={() => {
+              setMobileView("form");
+              setIsMobileHistoryOpen(false);
+            }}
+            className={`px-2.5 py-1 text-[11px] font-semibold rounded-full transition-all cursor-pointer ${
+              mobileView === "form" && !isMobileHistoryOpen ? "bg-violet-600 text-white shadow-sm" : "text-zinc-400 hover:text-white"
+            }`}
+          >
+            Ajustes
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMobileView("palco");
+              setIsMobileHistoryOpen(false);
+            }}
+            className={`px-2.5 py-1 text-[11px] font-semibold rounded-full transition-all cursor-pointer ${
+              mobileView === "palco" && !isMobileHistoryOpen ? "bg-violet-600 text-white shadow-sm" : "text-zinc-400 hover:text-white"
+            }`}
+          >
+            Palco
+          </button>
+        </div>
+      </div>
+
+      <main
+        data-builder-workspace-shell=""
+        className={`relative flex h-full min-h-0 overflow-hidden bg-transparent lg:flex-row max-lg:grid max-lg:overflow-hidden max-lg:transition-[grid-template-rows] max-lg:duration-300 max-lg:ease-in-out flex-1 ${
+          (mobileView === "form" && !isProcessing) ? "max-lg:grid-rows-[0fr_1fr]" : "max-lg:grid-rows-[1fr_0fr]"
+        }`}
       >
+        {/* ── COLUNA DO FORMULÁRIO REF (LAYOUT 100% ORIGINAL) ── */}
+        <aside
+          data-aside-form-col=""
+          data-tour="form"
+          className="agent-form-col relative z-10 shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-white/5 scrollbar-hide px-1.5 py-3 pb-28 lg:p-6 lg:pb-6 transition-[filter,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] w-full lg:h-full lg:w-[var(--agent-form-col-w,420px)] lg:min-w-[280px] lg:max-w-[700px] lg:flex-shrink-0 flex max-lg:order-last max-lg:min-h-0 lg:flex"
+          style={{ "--agent-form-col-w": "420px", "--agent-color": "#8B5CF6" } as any}
+        >
         <form onSubmit={(e) => { e.preventDefault(); handleBuild(); }} className="flex flex-col gap-4 lg:gap-5">
           
           {/* ── SEÇÃO 1: ESSENCIAL (ORIGINAL) ── */}
@@ -5262,6 +5309,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
         </div>
       </div>
     </main>
+  </div>
   );
 };
 

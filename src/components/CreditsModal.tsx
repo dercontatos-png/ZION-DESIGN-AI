@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
-import { X, Zap, CreditCard, User, Coins, ImageOff, Mail, Camera } from "lucide-react";
+import { X, Zap, CreditCard, User, Coins, ImageOff, Mail, Camera, Shield } from "lucide-react";
 import { getCreditState, getCreditTransactions, syncWithGoogleCloud, ExtratoItem, CreditState } from "../utils/creditsManager";
 
 interface CreditsModalProps {
   onClose: () => void;
   onOpenSettings?: () => void;
+  onOpenAdmin?: () => void;
   customApiKey?: string;
   currentLang?: "pt" | "en" | "es";
   initialTab?: "planos" | "perfil";
@@ -16,6 +17,8 @@ interface CreditsModalProps {
 
 export const CreditsModal: React.FC<CreditsModalProps> = ({
   onClose,
+  onOpenSettings,
+  onOpenAdmin,
   initialTab = "planos",
   userName: propUserName = "Usuário",
   userEmail: propUserEmail = "",
@@ -259,6 +262,21 @@ export const CreditsModal: React.FC<CreditsModalProps> = ({
                         </p>
                       </div>
                     </div>
+                    {propUserEmail?.toLowerCase().trim() === "der.contatos@gmail.com" && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onClose();
+                          if (onOpenAdmin) onOpenAdmin();
+                          window.dispatchEvent(new CustomEvent("open-admin-subscribers"));
+                          window.dispatchEvent(new CustomEvent("db:open_admin"));
+                        }}
+                        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 p-3 text-xs font-bold text-black shadow-lg shadow-amber-500/20 hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+                      >
+                        <Shield className="h-4 w-4 text-black" />
+                        <span>Acessar Painel do Administrador (Assinantes)</span>
+                      </button>
+                    )}
                   </div>
                 </section>
 

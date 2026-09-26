@@ -1,16 +1,14 @@
 export function getCurrentUserRole(): "admin" | "client" {
   try {
     if (typeof window !== "undefined") {
+      const email = getCurrentUserEmail().toLowerCase().trim();
+      if (email === "der.contatos@gmail.com") return "admin";
+
       const saved = localStorage.getItem("zion_auth_user") || localStorage.getItem("zion_current_user");
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed?.role === "admin" && parsed?.email?.toLowerCase()?.trim() === "der.contatos@gmail.com") return "admin";
         if (parsed?.role === "client") return "client";
-      }
-      const email = localStorage.getItem("zion_user_email")?.toLowerCase()?.trim();
-      if (email === "der.contatos@gmail.com") {
-        const savedAuth = localStorage.getItem("zion_auth_user");
-        if (savedAuth && JSON.parse(savedAuth)?.role === "admin") return "admin";
       }
       if (email) return "client";
     }
@@ -35,9 +33,8 @@ export function getCurrentUserEmail(): string {
 
 export function isUserAdmin(): boolean {
   try {
-    const role = getCurrentUserRole();
     const email = getCurrentUserEmail().toLowerCase().trim();
-    return role === "admin" && email === "der.contatos@gmail.com";
+    return email === "der.contatos@gmail.com";
   } catch (e) {
     return false;
   }

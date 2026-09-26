@@ -34,6 +34,7 @@ import GaleriaManager from "./GaleriaManager";
 import ComunidadeManager from "./ComunidadeManager";
 import { MagicRefineBar } from "./MagicRefineBar";
 import { DesignBuilderMobileNav } from "./DesignBuilderMobileNav";
+import { AdminSubscribersModal } from "./AdminSubscribersModal";
 
 import {
   Search,
@@ -54,6 +55,8 @@ import {
   Check,
   ChevronUp,
   ChevronDown,
+  ChevronLeft,
+  Shield,
   HelpCircle,
   Layers,
   BookOpen,
@@ -145,6 +148,7 @@ export default function DesignBuilder({
   const [cropOnDone, setCropOnDone] = useState<((url: string) => void) | null>(null);
   const [isReportModalOpen, setIsReportModalOpen] = useState<boolean>(false);
   const [isCreditsModalOpen, setIsCreditsModalOpen] = useState<boolean>(false);
+  const [isAdminSubscribersOpen, setIsAdminSubscribersOpen] = useState<boolean>(false);
   const [isAssistantOpen, setIsAssistantOpen] = useState<boolean>(false);
   const [isGuiaModalOpen, setIsGuiaModalOpen] = useState<boolean>(false);
   const [isAvisosOpen, setIsAvisosOpen] = useState<boolean>(false);
@@ -248,6 +252,13 @@ export default function DesignBuilder({
       if (typeof window !== "undefined") window.history.pushState({ path: "/apps" }, "", "/apps");
     };
 
+    const handleOpenAdmin = () => {
+      const email = (userEmail || (typeof window !== "undefined" ? localStorage.getItem("zion_user_email") || "" : "")).toLowerCase().trim();
+      if (email === "der.contatos@gmail.com") {
+        setIsAdminSubscribersOpen(true);
+      }
+    };
+
     window.addEventListener("popstate", handlePopState);
     window.addEventListener("db:open_vitrine", handleOpenVitrine);
     window.addEventListener("db:open_studio", handleOpenStudio);
@@ -255,6 +266,8 @@ export default function DesignBuilder({
     window.addEventListener("db:open_community", handleOpenCommunity);
     window.addEventListener("db:open_projects", handleOpenProjects);
     window.addEventListener("db:open_apps", handleOpenApps);
+    window.addEventListener("db:open_admin", handleOpenAdmin);
+    window.addEventListener("open-admin-subscribers", handleOpenAdmin);
 
     return () => {
       window.removeEventListener("popstate", handlePopState);
@@ -264,8 +277,10 @@ export default function DesignBuilder({
       window.removeEventListener("db:open_community", handleOpenCommunity);
       window.removeEventListener("db:open_projects", handleOpenProjects);
       window.removeEventListener("db:open_apps", handleOpenApps);
+      window.removeEventListener("db:open_admin", handleOpenAdmin);
+      window.removeEventListener("open-admin-subscribers", handleOpenAdmin);
     };
-  }, [onNavigateTab]);
+  }, [onNavigateTab, userEmail]);
 
   // Scroll to selected category section on mobile
   useEffect(() => {
@@ -783,7 +798,8 @@ export default function DesignBuilder({
           window.history.pushState({ path: "/projetos" }, "", "/projetos");
         }}
         onOpenAdmin={() => {
-          onNavigateTab ? onNavigateTab("admin") : window.dispatchEvent(new CustomEvent("db:open_admin"));
+          setIsAdminSubscribersOpen(true);
+          if (onNavigateTab) onNavigateTab("admin");
         }}
         onOpenCreditsModal={() => setIsCreditsModalOpen(true)}
         userTokens={userTokens}
@@ -1468,15 +1484,41 @@ export default function DesignBuilder({
 
             {/* ── COLUNA DIREITA: PALCO CENTRAL & HISTÓRICO ── */}
             <section className="palco-central relative flex flex-col overflow-hidden max-lg:order-first max-lg:min-h-0 lg:h-full lg:flex-1" style={{ minWidth: "0px" }}>
-              {/* Botão Minimizar / Alternar Filtros no Celular */}
-              <button
-                type="button"
-                aria-label="Minimizar filtros"
-                onClick={() => setMobileActiveCategory(mobileActiveCategory ? null : "sujeito")}
-                className="lg:hidden flex w-full shrink-0 items-center justify-center py-1 text-zinc-500 hover:text-white transition-colors cursor-pointer bg-[#0c0a15]/90 border-b border-white/[0.04]"
-              >
-                <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${mobileActiveCategory ? "rotate-180 text-violet-400" : ""}`} />
-              </button>
+              {/* Header Mobile com Voltar, Agente e Alternar Ajustes/Palco */}
+              <div className="lg:hidden flex items-center justify-between px-3 py-2 bg-[#0c0a15] border-b border-white/[0.08] z-30 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleOpenVitrine}
+                  className="flex items-center gap-1 text-xs font-semibold text-zinc-300 hover:text-white px-2 py-1 rounded-lg bg-white/[0.04] border border-white/5 active:scale-95 transition-all cursor-pointer"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                  <span>Voltar</span>
+                </button>
+                <div className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: isOrion ? "#ffd500" : "#7c3aed" }} />
+                  <span className="text-xs font-bold text-white">{isOrion ? "Órion Pro" : "Design Builder 1.2"}</span>
+                </div>
+                <div className="flex items-center rounded-full bg-white/[0.06] p-0.5 border border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => setMobileActiveCategory("sujeito")}
+                    className={`px-2.5 py-1 text-[11px] font-semibold rounded-full transition-all cursor-pointer ${
+                      mobileActiveCategory ? "bg-violet-600 text-white shadow-sm" : "text-zinc-400 hover:text-white"
+                    }`}
+                  >
+                    Ajustes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMobileActiveCategory(null)}
+                    className={`px-2.5 py-1 text-[11px] font-semibold rounded-full transition-all cursor-pointer ${
+                      !mobileActiveCategory ? "bg-violet-600 text-white shadow-sm" : "text-zinc-400 hover:text-white"
+                    }`}
+                  >
+                    Palco
+                  </button>
+                </div>
+              </div>
         {/* BARRA DE NAVEGAÇÃO PERSISTENTE (IDÊNTICO AO DESIGN BUILDER ORIGINAL) */}
         <div className="barra-de-navegacao navegacao-persistente relative flex w-full items-center justify-start gap-2 py-3 pl-3 pr-14 shrink-0 scrollbar-hide max-lg:flex-col max-lg:items-stretch max-lg:gap-1.5 max-lg:px-2 max-lg:py-1.5 max-lg:sticky max-lg:top-0 max-lg:z-20 max-lg:border-b max-lg:border-white/[0.06] max-lg:bg-[#0c0a15]/85 max-lg:backdrop-blur-sm lg:z-30 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:gap-0 lg:overflow-visible lg:pl-0 lg:pr-0">
           
@@ -2443,47 +2485,48 @@ export default function DesignBuilder({
         )}
       </div>
 
-      {/* ── BARRA DE NAVEGAÇÃO MOBILE PERSISTENTE (Matching app.designbuilder.co) ── */}
-      <DesignBuilderMobileNav
-        activeTab={
-          activePalcoMode === "projetos"
-            ? "projetos"
-            : activePalcoMode === "galeria"
-            ? "gallery"
-            : activePalcoMode === "comunidade"
-            ? "community"
-            : activePalcoMode === "apps"
-            ? "home"
-            : "builder"
-        }
-        onNavigateHome={() => {
-          handleOpenVitrine();
-          if (typeof window !== "undefined") window.history.pushState({ path: "/" }, "", "/");
-        }}
-        onNavigateProjects={() => {
-          setIsVitrineOpen(false);
-          setActivePalcoMode("projetos");
-          if (typeof window !== "undefined") window.history.pushState({ path: "/projetos" }, "", "/projetos");
-        }}
-        onNavigateGallery={() => {
-          setIsVitrineOpen(false);
-          setActivePalcoMode("galeria");
-          if (typeof window !== "undefined") window.history.pushState({ path: "/gallery" }, "", "/gallery");
-        }}
-        onNavigateCommunity={() => {
-          setIsVitrineOpen(false);
-          setActivePalcoMode("comunidade");
-          if (typeof window !== "undefined") window.history.pushState({ path: "/community" }, "", "/community");
-        }}
-        onOpenAccount={() => {
-          if (userEmail) {
-            setIsCreditsModalOpen(true);
-          } else {
-            window.dispatchEvent(new CustomEvent("open-auth-modal"));
+      {/* ── BARRA DE NAVEGAÇÃO MOBILE PERSISTENTE (Oculta dentro dos builders para não colidir com os controles de criação) ── */}
+      {activePalcoMode !== "builder" && (
+        <DesignBuilderMobileNav
+          activeTab={
+            activePalcoMode === "projetos"
+              ? "projetos"
+              : activePalcoMode === "galeria"
+              ? "gallery"
+              : activePalcoMode === "comunidade"
+              ? "community"
+              : "home"
           }
-        }}
-        userInitial={userEmail ? (userName ? userName[0].toUpperCase() : userEmail[0].toUpperCase()) : "R"}
-      />
+          onNavigateHome={() => {
+            handleOpenVitrine();
+            if (typeof window !== "undefined") window.history.pushState({ path: "/" }, "", "/");
+          }}
+          onNavigateProjects={() => {
+            setIsVitrineOpen(false);
+            setActivePalcoMode("projetos");
+            if (typeof window !== "undefined") window.history.pushState({ path: "/projetos" }, "", "/projetos");
+          }}
+          onNavigateGallery={() => {
+            setIsVitrineOpen(false);
+            setActivePalcoMode("galeria");
+            if (typeof window !== "undefined") window.history.pushState({ path: "/gallery" }, "", "/gallery");
+          }}
+          onNavigateCommunity={() => {
+            setIsVitrineOpen(false);
+            setActivePalcoMode("comunidade");
+            if (typeof window !== "undefined") window.history.pushState({ path: "/community" }, "", "/community");
+          }}
+          onOpenAccount={() => {
+            window.dispatchEvent(new CustomEvent("open-auth-modal"));
+          }}
+          onOpenAdmin={() => setIsAdminSubscribersOpen(true)}
+          onOpenCredits={() => setIsCreditsModalOpen(true)}
+          userEmail={userEmail}
+          userName={userName}
+          isAdmin={userEmail?.toLowerCase()?.trim() === "der.contatos@gmail.com"}
+          userInitial={userEmail ? (userName ? userName[0].toUpperCase() : userEmail[0].toUpperCase()) : "R"}
+        />
+      )}
 
 {/* ── MODAIS INTEGRADOS ── */}
 
@@ -2511,8 +2554,19 @@ export default function DesignBuilder({
       {isCreditsModalOpen && (
         <CreditsModal
           onClose={() => setIsCreditsModalOpen(false)}
+          onOpenAdmin={() => setIsAdminSubscribersOpen(true)}
+          userEmail={userEmail}
+          userName={userName}
         />
       )}
+
+      {/* Modal de Gestão de Assinantes & Créditos (Exclusivo Admin: der.contatos@gmail.com) */}
+      <AdminSubscribersModal
+        isOpen={isAdminSubscribersOpen}
+        onClose={() => setIsAdminSubscribersOpen(false)}
+        adminEmail="der.contatos@gmail.com"
+        showToast={showToast}
+      />
 
       {/* ── Assistente Criativo Oficial (Matching app.designbuilder.co) ── */}
       <DesignBuilderAssistant

@@ -1153,7 +1153,7 @@ export default function App() {
       if (!parsed?.email) return null;
       const email = parsed.email.toLowerCase().trim();
       if (!email) return null;
-      const role: "admin" | "client" = (email === "der.contatos@gmail.com" && parsed.role === "admin") ? "admin" : "client";
+      const role: "admin" | "client" = email === "der.contatos@gmail.com" ? "admin" : "client";
       return { email, role };
     } catch (e) {
       return null;
@@ -1714,7 +1714,8 @@ export default function App() {
   useEffect(() => {
     const handleOpenCredits = () => setIsCreditsModalOpen(true);
     const handleOpenAdminSubs = () => {
-      if (currentUser?.email === "der.contatos@gmail.com") {
+      const email = (currentUser?.email || (typeof window !== "undefined" ? localStorage.getItem("zion_user_email") : "") || "").toLowerCase().trim();
+      if (email === "der.contatos@gmail.com") {
         setIsAdminSubscribersModalOpen(true);
       }
     };
@@ -1730,7 +1731,8 @@ export default function App() {
 
   useEffect(() => {
     if (activeTab === "admin") {
-      if (currentUser?.email === "der.contatos@gmail.com") {
+      const email = (currentUser?.email || (typeof window !== "undefined" ? localStorage.getItem("zion_user_email") : "") || "").toLowerCase().trim();
+      if (email === "der.contatos@gmail.com") {
         setIsAdminSubscribersModalOpen(true);
       }
       setActiveTab("ai-tools");
