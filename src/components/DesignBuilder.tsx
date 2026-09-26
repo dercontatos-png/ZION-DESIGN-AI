@@ -33,6 +33,7 @@ import ComunidadeDetailModal from "./ComunidadeDetailModal";
 import GaleriaManager from "./GaleriaManager";
 import ComunidadeManager from "./ComunidadeManager";
 import { MagicRefineBar } from "./MagicRefineBar";
+import { DesignBuilderMobileNav } from "./DesignBuilderMobileNav";
 
 import {
   Search,
@@ -2471,6 +2472,49 @@ export default function DesignBuilder({
           <path d="M16 12h.01"></path>
         </svg>
       </button>
+
+      {/* ── BARRA DE NAVEGAÇÃO MOBILE PERSISTENTE (Matching app.designbuilder.co) ── */}
+      <DesignBuilderMobileNav
+        activeTab={
+          activePalcoMode === "projetos"
+            ? "projetos"
+            : activePalcoMode === "galeria"
+            ? "gallery"
+            : activePalcoMode === "comunidade"
+            ? "community"
+            : activePalcoMode === "apps"
+            ? "home"
+            : "builder"
+        }
+        onNavigateHome={() => {
+          handleOpenVitrine();
+          if (typeof window !== "undefined") window.history.pushState({ path: "/" }, "", "/");
+        }}
+        onNavigateProjects={() => {
+          setIsVitrineOpen(false);
+          setActivePalcoMode("projetos");
+          if (typeof window !== "undefined") window.history.pushState({ path: "/projetos" }, "", "/projetos");
+        }}
+        onNavigateGallery={() => {
+          setIsVitrineOpen(false);
+          setActivePalcoMode("galeria");
+          if (typeof window !== "undefined") window.history.pushState({ path: "/gallery" }, "", "/gallery");
+        }}
+        onNavigateCommunity={() => {
+          setIsVitrineOpen(false);
+          setActivePalcoMode("comunidade");
+          if (typeof window !== "undefined") window.history.pushState({ path: "/community" }, "", "/community");
+        }}
+        onOpenAccount={() => {
+          if (userEmail) {
+            setIsCreditsModalOpen(true);
+          } else {
+            window.dispatchEvent(new CustomEvent("open-auth-modal"));
+          }
+        }}
+        userInitial={userEmail ? (userName ? userName[0].toUpperCase() : userEmail[0].toUpperCase()) : "R"}
+      />
+
 {/* ── MODAIS INTEGRADOS ── */}
 
       {/* Modal de Crop de Imagem */}

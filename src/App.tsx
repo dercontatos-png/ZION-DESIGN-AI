@@ -1311,12 +1311,30 @@ export default function App() {
     }
   }, [currentUser, activeTab]);
 
-  // Sempre que a aba galeria for acionada, usar a Galeria Oficial do Studio (DesignBuilder)
+  // Sempre que a aba galeria, projetos ou comunidade for acionada, usar o Studio Oficial (DesignBuilder)
   React.useEffect(() => {
     if (activeTab === "gallery") {
       setActiveTab("ai-tools");
       setTimeout(() => {
         window.dispatchEvent(new CustomEvent("db:open_gallery"));
+      }, 50);
+    }
+  }, [activeTab]);
+
+  React.useEffect(() => {
+    if (activeTab === "projetos" || activeTab === "projects") {
+      setActiveTab("ai-tools");
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent("db:open_projects"));
+      }, 50);
+    }
+  }, [activeTab]);
+
+  React.useEffect(() => {
+    if (activeTab === "community" || activeTab === "comunidade") {
+      setActiveTab("ai-tools");
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent("db:open_community"));
       }, 50);
     }
   }, [activeTab]);

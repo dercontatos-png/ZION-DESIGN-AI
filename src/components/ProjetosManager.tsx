@@ -212,7 +212,7 @@ export const ProjetosManager: React.FC<ProjetosManagerProps> = ({
   const [previewImage, setPreviewImage] = useState<AssetFile | null>(null);
 
   // Responsividade mobile (alternar lista de clientes vs conteúdo da pasta)
-  const [mobileView, setMobileView] = useState<"sidebar" | "content">("content");
+  const [mobileView, setMobileView] = useState<"sidebar" | "content">("sidebar");
 
   // Salvar permanentemente no servidor, IndexedDB e LocalStorage sempre que houver alteração
   useEffect(() => {
@@ -544,19 +544,19 @@ export const ProjetosManager: React.FC<ProjetosManagerProps> = ({
         <div className={`w-full shrink-0 lg:flex lg:w-auto ${mobileView === "sidebar" || !selectedClientId ? "flex" : "hidden lg:flex"}`}>
           <div className="flex w-full shrink-0 flex-col bg-zinc-950 max-lg:h-full max-lg:min-h-0 lg:sticky lg:top-0 lg:h-screen lg:border-r lg:border-white/[0.06] lg:-ml-[60px] lg:w-[340px] lg:min-w-[300px] lg:pl-[60px]">
             {/* Header da Sidebar */}
-            <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
-              <span className="text-[13px] font-semibold text-zinc-300">Clientes</span>
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-zinc-800 bg-zinc-950 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+              <span className="text-sm font-semibold text-zinc-200">Clientes</span>
               <button
                 type="button"
                 onClick={() => {
                   setIsCreatingClient(true);
                   setIsCreatingFolderForClientId(null);
                 }}
-                className="flex items-center gap-1 rounded-lg bg-zinc-800 px-2.5 py-1 text-[11px] font-medium text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors cursor-pointer"
+                className="flex min-h-[44px] items-center gap-1.5 rounded-xl bg-zinc-800 px-3 text-[13px] font-medium text-zinc-200 shadow-depth-rest transition-[transform,box-shadow,background-color] duration-150 ease-out active:scale-[.985] active:bg-zinc-700 active:shadow-depth-press cursor-pointer"
                 title="Novo cliente"
               >
-                <Plus className="h-3 w-3" aria-hidden="true" />
-                <span>Novo cliente</span>
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                <span>Novo</span>
               </button>
             </div>
 
@@ -657,19 +657,56 @@ export const ProjetosManager: React.FC<ProjetosManagerProps> = ({
                           </button>
                         </div>
                       ) : (
-                        <div
-                          className="group flex items-center gap-2 px-3 mx-1 cursor-pointer py-2 rounded-lg transition-colors max-lg:min-h-[44px] max-lg:rounded-r-2xl max-lg:rounded-l-lg max-lg:transition-[transform,box-shadow,background-color] max-lg:duration-150 max-lg:ease-out max-lg:active:scale-[.985] hover:bg-zinc-800/80 border-l-2 border-transparent max-lg:active:bg-zinc-800/60 max-lg:active:shadow-depth-press"
-                          onClick={() => {
-                            setSelectedClientId(client.id);
-                            if (!expandedClients[client.id]) {
-                              setExpandedClients((prev) => ({ ...prev, [client.id]: true }));
-                            }
-                            if (client.folders && client.folders.length > 0) {
-                              setSelectedFolderId(client.folders[0].id);
+                        <>
+                          {/* Card do Cliente Mobile (1:1 com snippet 1) */}
+                          <div
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => {
+                              setSelectedClientId(client.id);
+                              if (client.folders && client.folders.length > 0) {
+                                setSelectedFolderId(client.folders[0].id);
+                              }
                               setMobileView("content");
-                            }
-                          }}
-                        >
+                            }}
+                            className="mx-2 my-1 flex min-h-[56px] cursor-pointer items-center gap-3 rounded-2xl px-3 transition-[transform,box-shadow,background-color] duration-150 ease-out active:scale-[.985] active:shadow-depth-press shadow-depth-rest hover:bg-zinc-900/60 lg:hidden"
+                          >
+                            <span
+                              className="h-3 w-3 shrink-0 rounded-full"
+                              style={{ backgroundColor: client.color || "rgb(139, 92, 246)" }}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-[14px] font-medium text-zinc-100">{client.name}</p>
+                              <p className="truncate text-[11px] text-zinc-500">Toque para ver pastas</p>
+                            </div>
+                            <div className="relative shrink-0">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setClientMenuOpenId(clientMenuOpenId === client.id ? null : client.id);
+                                }}
+                                className="flex h-11 w-11 items-center justify-center rounded-xl text-zinc-500 active:text-zinc-300 cursor-pointer"
+                              >
+                                <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+                              </button>
+                            </div>
+                            <ChevronRight className="h-5 w-5 shrink-0 text-zinc-600" aria-hidden="true" />
+                          </div>
+
+                          {/* Desktop Tree View Item */}
+                          <div
+                            className="hidden lg:flex group items-center gap-2 px-3 mx-1 cursor-pointer py-2 rounded-lg transition-colors hover:bg-zinc-800/80 border-l-2 border-transparent"
+                            onClick={() => {
+                              setSelectedClientId(client.id);
+                              if (!expandedClients[client.id]) {
+                                setExpandedClients((prev) => ({ ...prev, [client.id]: true }));
+                              }
+                              if (client.folders && client.folders.length > 0) {
+                                setSelectedFolderId(client.folders[0].id);
+                              }
+                            }}
+                          >
                           {/* Botão de Expandir / Recolher */}
                           <button
                             type="button"
@@ -750,11 +787,12 @@ export const ProjetosManager: React.FC<ProjetosManagerProps> = ({
                             )}
                           </div>
                         </div>
-                      )}
+                      </>
+                    )}
 
-                      {/* Pastas Aninhadas (quando expandido) */}
-                      {isExpanded && (
-                        <div className="ml-6 border-l border-zinc-800 pl-1">
+                    {/* Pastas Aninhadas (quando expandido no desktop) */}
+                    {isExpanded && (
+                      <div className="hidden lg:block ml-6 border-l border-zinc-800 pl-1">
                           {client.folders.map((folder) => {
                             const isFolderSelected =
                               selectedClientId === client.id && selectedFolderId === folder.id;

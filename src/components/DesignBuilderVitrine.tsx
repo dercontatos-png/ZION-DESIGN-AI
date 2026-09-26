@@ -13,6 +13,7 @@ import {
 import { DesignBuilderSidebar } from "./DesignBuilderSidebar";
 import { CosmicBackground } from "./CosmicBackground";
 import { DesignBuilderAssistant } from "./DesignBuilderAssistant";
+import { DesignBuilderMobileNav } from "./DesignBuilderMobileNav";
 
 interface DesignBuilderVitrineProps {
   onOpenStudio: (agentSlug?: string) => void;
@@ -1006,95 +1007,31 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
       </div>
 
       {/* ── Mobile Bottom Navigation (Matching Home.html lines 175-233) ── */}
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] lg:hidden">
-        <nav
-          aria-label="Navegação principal"
-          className="pointer-events-auto flex h-16 items-center rounded-[28px] bg-zinc-950/95 px-2 shadow-[0_8px_28px_rgba(0,0,0,0.5)] ring-1 ring-white/10 backdrop-blur-xl w-full max-w-md justify-around gap-1"
-        >
-          {/* Início */}
-          <a
-            aria-label="Início"
-            aria-current="page"
-            className="group relative flex h-12 min-w-[48px] flex-col items-center justify-center gap-0.5 rounded-2xl outline-none transition-[transform,background-color] focus-visible:ring-2 focus-visible:ring-violet-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 active:scale-95 flex-1 text-violet-400 cursor-pointer"
-            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          >
-            <span className="flex h-6 w-9 items-center justify-center rounded-full transition-colors bg-violet-500/15">
-              <Home className="h-[22px] w-[22px]" />
-            </span>
-            <span className="max-w-full truncate text-[9px] font-medium leading-none tracking-tight">Início</span>
-          </a>
-
-          {/* Projetos */}
-          <a
-            aria-label="Projetos"
-            className="group relative flex h-12 min-w-[48px] flex-col items-center justify-center gap-0.5 rounded-2xl outline-none transition-[transform,background-color] focus-visible:ring-2 focus-visible:ring-violet-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 active:scale-95 flex-1 text-zinc-400 cursor-pointer"
-            onClick={() => {
-              if (onOpenProjects) onOpenProjects();
-              else if (onNavigateTab) onNavigateTab("projetos");
-            }}
-          >
-            <span className="flex h-6 w-9 items-center justify-center rounded-full transition-colors group-hover:bg-white/[0.06]">
-              <Briefcase className="h-[22px] w-[22px]" />
-            </span>
-            <span className="max-w-full truncate text-[9px] font-medium leading-none tracking-tight">Projetos</span>
-          </a>
-
-          {/* Galeria */}
-          <a
-            aria-label="Galeria"
-            className="group relative flex h-12 min-w-[48px] flex-col items-center justify-center gap-0.5 rounded-2xl outline-none transition-[transform,background-color] focus-visible:ring-2 focus-visible:ring-violet-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 active:scale-95 flex-1 text-zinc-400 cursor-pointer"
-            onClick={() => {
-              if (onOpenGallery) onOpenGallery();
-              else onNavigateTab?.("gallery");
-            }}
-          >
-            <span className="flex h-6 w-9 items-center justify-center rounded-full transition-colors group-hover:bg-white/[0.06]">
-              <Images className="h-[22px] w-[22px]" />
-            </span>
-            <span className="max-w-full truncate text-[9px] font-medium leading-none tracking-tight">Galeria</span>
-          </a>
-
-          {/* Comunidade */}
-          <a
-            aria-label="Comunidade"
-            className="group relative flex h-12 min-w-[48px] flex-col items-center justify-center gap-0.5 rounded-2xl outline-none transition-[transform,background-color] focus-visible:ring-2 focus-visible:ring-violet-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 active:scale-95 flex-1 text-zinc-400 cursor-pointer"
-            onClick={() => {
-              if (onOpenCommunity) onOpenCommunity();
-              else onNavigateTab?.("community");
-            }}
-          >
-            <span className="flex h-6 w-9 items-center justify-center rounded-full transition-colors group-hover:bg-white/[0.06]">
-              <Globe className="h-[22px] w-[22px]" />
-            </span>
-            <span className="max-w-full truncate text-[9px] font-medium leading-none tracking-tight">Comunidade</span>
-          </a>
-
-          {/* User Button */}
-          <button
-            type="button"
-            aria-label="Abrir conta e notificações"
-            aria-haspopup="dialog"
-            aria-expanded="false"
-            onClick={() => {
-              if (userEmail) {
-                if (onOpenCreditsModal) onOpenCreditsModal();
-                else {
-                  window.dispatchEvent(new CustomEvent("open-credits-modal"));
-                }
-              } else {
-                window.dispatchEvent(new CustomEvent("open-auth-modal"));
-              }
-            }}
-            className="group relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full outline-none transition-transform focus-visible:ring-2 focus-visible:ring-violet-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 active:scale-95 cursor-pointer"
-          >
-            <span className="h-10 w-10 overflow-hidden rounded-full ring-2 transition-[box-shadow] ring-violet-500/30">
-              <span className="flex h-full w-full items-center justify-center bg-gradient-to-br from-violet-500 to-fuchsia-500 text-sm font-semibold text-white">
-                {userEmail ? (userName ? userName[0].toUpperCase() : userEmail[0].toUpperCase()) : "R"}
-              </span>
-            </span>
-          </button>
-        </nav>
-      </div>
+      <DesignBuilderMobileNav
+        activeTab="home"
+        onNavigateHome={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+        onNavigateProjects={() => {
+          if (onOpenProjects) onOpenProjects();
+          else if (onNavigateTab) onNavigateTab("projetos");
+        }}
+        onNavigateGallery={() => {
+          if (onOpenGallery) onOpenGallery();
+          else if (onNavigateTab) onNavigateTab("gallery");
+        }}
+        onNavigateCommunity={() => {
+          if (onOpenCommunity) onOpenCommunity();
+          else if (onNavigateTab) onNavigateTab("community");
+        }}
+        onOpenAccount={() => {
+          if (userEmail) {
+            if (onOpenCreditsModal) onOpenCreditsModal();
+            else window.dispatchEvent(new CustomEvent("open-credits-modal"));
+          } else {
+            window.dispatchEvent(new CustomEvent("open-auth-modal"));
+          }
+        }}
+        userInitial={userEmail ? (userName ? userName[0].toUpperCase() : userEmail[0].toUpperCase()) : "R"}
+      />
 
       {/* ── Assistente IA Flutuante Oficial (Matching Home.html lines 1176-1305) ── */}
       <DesignBuilderAssistant />
