@@ -281,7 +281,35 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
   onOpenAgentes,
   onNavigateTab,
   onOpenCreditsModal,
+  userEmail: propUserEmail,
+  userName: propUserName,
+  userTokens: propUserTokens = 0,
 }) => {
+  const [userEmail, setUserEmail] = useState(() => {
+    if (propUserEmail) return propUserEmail;
+    try {
+      const u = localStorage.getItem("currentUser") || localStorage.getItem("zion_user");
+      if (u) {
+        const parsed = JSON.parse(u);
+        return parsed?.email || "";
+      }
+    } catch (_) {}
+    return "";
+  });
+
+  const [userName, setUserName] = useState(() => {
+    if (propUserName) return propUserName;
+    try {
+      const u = localStorage.getItem("currentUser") || localStorage.getItem("zion_user");
+      if (u) {
+        const parsed = JSON.parse(u);
+        return parsed?.name || parsed?.full_name || "Equipe Zion";
+      }
+    } catch (_) {}
+    return "Equipe Zion";
+  });
+
+  const userTokens = propUserTokens;
   const [activeTab, setActiveTab] = useState<"comunidade" | "em_alta" | "recentes">("comunidade");
   const [isCommunityExpanded, setIsCommunityExpanded] = useState(false);
   const [previewArt, setPreviewArt] = useState<{ id: string; src: string; author: string; avatar?: string; initial?: string } | null>(null);

@@ -786,6 +786,8 @@ export default function DesignBuilder({
         }}
         onOpenCreditsModal={() => setIsCreditsModalOpen(true)}
         userTokens={userTokens}
+        userEmail={userEmail}
+        userName={userName}
       />
     );
   }
