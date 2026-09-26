@@ -76,19 +76,14 @@ export const NaoAssinanteScreen: React.FC<NaoAssinanteScreenProps> = ({
       {/* Top Header */}
       <header className="relative z-10 w-full max-w-6xl mx-auto px-6 py-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#7c3aed] via-[#a855f7] to-[#ffd500] p-0.5 flex items-center justify-center shadow-lg shadow-purple-500/20">
-            <div className="w-full h-full bg-[#0c0a15] rounded-[10px] flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-[#ffd500]" />
-            </div>
-          </div>
-          <div>
-            <span className="font-extrabold tracking-wider text-base bg-clip-text text-transparent bg-gradient-to-r from-white via-zinc-200 to-zinc-400">
-              ZION DESIGN AI
-            </span>
-            <span className="block text-[9px] font-mono tracking-widest text-zinc-500 uppercase">
-              STUDIO PRO • v2.0
-            </span>
-          </div>
+          <img
+            src="/logo-zion.svg"
+            alt="Zion Design"
+            className="h-9 w-auto"
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).src = "/logo-zion.webp";
+            }}
+          />
         </div>
 
         <div>
