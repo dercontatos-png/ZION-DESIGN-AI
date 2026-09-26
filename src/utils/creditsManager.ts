@@ -31,40 +31,47 @@ const STORAGE_KEY = "zion_credits_state_v2";
 export function getCreditState(): CreditState {
   if (typeof window === "undefined") {
     return {
-      total: 7500,
-      used: 49,
-      remaining: 7451,
-      mode: "vertex_real",
+      total: 999999,
+      used: 0,
+      remaining: 999999,
+      mode: "custom",
       lastUpdated: new Date().toISOString(),
-      isLiveGcp: true,
-      remainingUsd: "298.04",
-      costUsd: "1.96",
-      initialTrialUsd: "300.00",
-      totalRequestsGcp: 49,
+      isLiveGcp: false,
+      billingEnabled: true
     };
   }
 
   try {
+    // 1. Verifica se a conta ativa é o Administrador der.contatos@gmail.com
+    const userEmail = (localStorage.getItem("zion_user_email") || "").toLowerCase().trim();
+    if (userEmail === "der.contatos@gmail.com") {
+      return {
+        total: 999999,
+        used: 0,
+        remaining: 999999,
+        mode: "custom",
+        lastUpdated: new Date().toISOString(),
+        isLiveGcp: false,
+        billingEnabled: true
+      };
+    }
+
+    // 2. Lê estado armazenado
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (typeof parsed.total === "number") {
+      // Se for a simulação antiga com 7451/7500 ou design-builder-682800-6bb, descarta
+      if (parsed.projectId === "design-builder-682800-6bb" || parsed.remaining === 7451) {
+        localStorage.removeItem(STORAGE_KEY);
+      } else if (typeof parsed.remaining === "number") {
         return {
-          total: parsed.total,
+          total: parsed.total || parsed.remaining || 50,
           used: parsed.used ?? 0,
-          remaining: typeof parsed.remaining === "number" ? parsed.remaining : Math.max(0, parsed.total - (parsed.used ?? 0)),
-          mode: parsed.mode || (parsed.isLiveGcp ? "vertex_real" : "plan_28"),
+          remaining: parsed.remaining,
+          mode: parsed.mode || "plan_28",
           lastUpdated: parsed.lastUpdated || new Date().toISOString(),
-          isLiveGcp: parsed.isLiveGcp ?? (parsed.mode === "vertex_real"),
-          projectId: parsed.projectId || "design-builder-682800-6bb",
-          clientEmail: parsed.clientEmail || "design-builder-vertex@design-builder-682800-6bb.iam.gserviceaccount.com",
-          billingAccount: parsed.billingAccount || "0143B6-EADAB3-6F1258",
-          billingEnabled: parsed.billingEnabled ?? true,
-          totalRequestsGcp: parsed.totalRequestsGcp ?? parsed.used ?? 49,
-          initialTrialUsd: parsed.initialTrialUsd || "300.00",
-          costUsd: parsed.costUsd || "1.96",
-          remainingUsd: parsed.remainingUsd || "298.04",
-          lastGcpSync: parsed.lastGcpSync || new Date().toISOString(),
+          isLiveGcp: false,
+          billingEnabled: true
         };
       }
     }
@@ -72,30 +79,16 @@ export function getCreditState(): CreditState {
     console.error("Erro ao ler créditos:", e);
   }
 
-  // Padrão com dados reais da API Google Cloud
-  const initial: CreditState = {
-    total: 7500,
-    used: 49,
-    remaining: 7451,
-    mode: "vertex_real",
+  // Padrão limpo: ilimitado para admin, 0 para visitantes não autenticados
+  return {
+    total: 0,
+    used: 0,
+    remaining: 0,
+    mode: "plan_28",
     lastUpdated: new Date().toISOString(),
-    isLiveGcp: true,
-    projectId: "design-builder-682800-6bb",
-    clientEmail: "design-builder-vertex@design-builder-682800-6bb.iam.gserviceaccount.com",
-    billingAccount: "0143B6-EADAB3-6F1258",
-    billingEnabled: true,
-    totalRequestsGcp: 49,
-    initialTrialUsd: "300.00",
-    costUsd: "1.96",
-    remainingUsd: "298.04",
-    lastGcpSync: new Date().toISOString(),
+    isLiveGcp: false,
+    billingEnabled: false
   };
-
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
-  } catch (_) {}
-
-  return initial;
 }
 
 /**

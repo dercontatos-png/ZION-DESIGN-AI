@@ -228,14 +228,18 @@ export const CreditsModal: React.FC<CreditsModalProps> = ({
                       </div>
                       <div className="flex-1 min-w-0">
                         <h2 className="text-sm font-semibold text-white">
-                          {creditState.isLiveGcp
-                            ? "Seu plano é Google Cloud Vertex AI"
-                            : "Seu plano é Operação Design Builder"}
+                          {propUserEmail?.toLowerCase() === "der.contatos@gmail.com"
+                            ? "Seu plano é Administrador Geral (Acesso Total)"
+                            : creditState.remaining > 0
+                            ? "Seu plano de Assinatura Zion Design"
+                            : "Nenhuma assinatura ativa encontrada"}
                         </h2>
                         <p className="mt-0.5 text-xs text-zinc-500">
-                          {creditState.isLiveGcp
-                            ? `API Conectada · Projeto: ${creditState.projectId || "Vertex AI"}`
-                            : "Gerencie seu plano de assinatura"}
+                          {propUserEmail?.toLowerCase() === "der.contatos@gmail.com"
+                            ? "der.contatos@gmail.com · Gestão total de clientes e agentes"
+                            : propUserEmail
+                            ? `Conectado como ${propUserEmail}`
+                            : "Faça login com sua conta para acessar créditos"}
                         </p>
                       </div>
                     </div>
@@ -244,10 +248,14 @@ export const CreditsModal: React.FC<CreditsModalProps> = ({
                       <Zap className="h-5 w-5 shrink-0 text-violet-400" />
                       <div className="min-w-0">
                         <p className="text-xl font-bold leading-tight text-white tabular-nums">
-                          {remaining.toLocaleString("pt-BR")}
+                          {propUserEmail?.toLowerCase() === "der.contatos@gmail.com"
+                            ? "∞ Ilimitado"
+                            : remaining.toLocaleString("pt-BR")}
                         </p>
                         <p className="text-[11px] text-zinc-500">
-                          créditos disponíveis
+                          {propUserEmail?.toLowerCase() === "der.contatos@gmail.com"
+                            ? "créditos ilimitados de administrador"
+                            : "créditos reais disponíveis"}
                         </p>
                       </div>
                     </div>
@@ -262,22 +270,19 @@ export const CreditsModal: React.FC<CreditsModalProps> = ({
                     </p>
                     <div className="mt-0.5 flex items-baseline gap-1.5">
                       <span className="text-2xl font-semibold tabular-nums text-white">
-                        {remaining.toLocaleString("pt-BR")}
+                        {propUserEmail?.toLowerCase() === "der.contatos@gmail.com" ? "Ilimitado" : remaining.toLocaleString("pt-BR")}
                       </span>
-                      <span className="text-sm text-zinc-400">créditos</span>
+                      <span className="text-sm text-zinc-400">
+                        {propUserEmail?.toLowerCase() === "der.contatos@gmail.com" ? "• Acesso Total" : "créditos"}
+                      </span>
                     </div>
                     <div className="mt-2.5 flex flex-wrap gap-1.5 border-t border-white/5 pt-2.5">
                       <span className="rounded-md bg-white/[0.04] px-2 py-0.5 text-[11px] text-zinc-400">
-                        Compra
-                        <span className="ml-1 tabular-nums text-zinc-300">
-                          {remaining.toLocaleString("pt-BR")}
+                        Status:
+                        <span className="ml-1 font-semibold text-emerald-400">
+                          {propUserEmail?.toLowerCase() === "der.contatos@gmail.com" ? "Administrador Oficial" : remaining > 0 ? "Assinante Ativo" : "Sem Assinatura"}
                         </span>
                       </span>
-                      {creditState.isLiveGcp && creditState.remainingUsd && (
-                        <span className="rounded-md bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-400 border border-emerald-500/20">
-                          GCP: ${creditState.remainingUsd} USD restantes (~{remaining.toLocaleString("pt-BR")} imagens)
-                        </span>
-                      )}
                     </div>
                   </div>
 

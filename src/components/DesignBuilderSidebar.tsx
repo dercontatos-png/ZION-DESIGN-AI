@@ -49,6 +49,9 @@ export interface DesignBuilderSidebarProps {
   onSignOut?: () => void;
   onCloseMobile?: () => void;
   isMobile?: boolean;
+  userCredits?: number | string;
+  isUnlimited?: boolean;
+  userPlan?: string;
 }
 
 export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
@@ -69,25 +72,87 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
   onSignOut,
   onCloseMobile,
   isMobile = false,
+  userCredits: propUserCredits,
+  isUnlimited: propIsUnlimited,
+  userPlan: propUserPlan,
 }) => {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isLinksMenuOpen, setIsLinksMenuOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [reportText, setReportText] = useState("");
   const [creditState, setCreditState] = useState<CreditState>(getCreditState);
+  const [subInfo, setSubInfo] = useState<{
+    isLoaded: boolean;
+    allowed: boolean;
+    isAdmin: boolean;
+    isSubscriber: boolean;
+    credits: number;
+    unlimited: boolean;
+    plan?: string;
+  }>(() => {
+    const email = (userEmail || "").toLowerCase().trim();
+    if (email === "der.contatos@gmail.com" || propIsUnlimited) {
+      return { isLoaded: true, allowed: true, isAdmin: true, isSubscriber: true, credits: 999999, unlimited: true, plan: "Administrador Geral" };
+    }
+    return {
+      isLoaded: false,
+      allowed: false,
+      isAdmin: false,
+      isSubscriber: false,
+      credits: typeof propUserCredits === "number" ? propUserCredits : 0,
+      unlimited: Boolean(propIsUnlimited),
+      plan: propUserPlan
+    };
+  });
 
   useEffect(() => {
-    // Sincroniza dados reais do GCP
-    syncWithGoogleCloud(false).then((updated) => setCreditState(updated));
-
-    const update = () => setCreditState(getCreditState());
-    window.addEventListener("zion_credits_updated", update);
-    window.addEventListener("storage", update);
-    return () => {
-      window.removeEventListener("zion_credits_updated", update);
-      window.removeEventListener("storage", update);
+    let isMounted = true;
+    const fetchSub = async () => {
+      const email = (userEmail || "").toLowerCase().trim();
+      if (!email) return;
+      if (email === "der.contatos@gmail.com") {
+        if (isMounted) setSubInfo({ isLoaded: true, allowed: true, isAdmin: true, isSubscriber: true, credits: 999999, unlimited: true, plan: "Administrador Geral" });
+        return;
+      }
+      try {
+        const res = await fetch(`/api/subscriber/check?email=${encodeURIComponent(email)}`, {
+          headers: { "x-user-email": email }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted) {
+            setSubInfo({
+              isLoaded: true,
+              allowed: Boolean(data.allowed),
+              isAdmin: Boolean(data.isAdmin),
+              isSubscriber: Boolean(data.isSubscriber),
+              credits: data.unlimited ? 999999 : (typeof data.credits === "number" ? data.credits : 0),
+              unlimited: Boolean(data.unlimited),
+              plan: data.plan || "Assinante"
+            });
+          }
+        }
+      } catch (_) {}
     };
-  }, []);
+
+    fetchSub();
+    const handleSync = () => fetchSub();
+    window.addEventListener("zion_subscriber_updated", handleSync);
+    window.addEventListener("zion_credits_updated", handleSync);
+    window.addEventListener("zion-generation-done", handleSync);
+    return () => {
+      isMounted = false;
+      window.removeEventListener("zion_subscriber_updated", handleSync);
+      window.removeEventListener("zion_credits_updated", handleSync);
+      window.removeEventListener("zion-generation-done", handleSync);
+    };
+  }, [userEmail, propIsUnlimited, propUserCredits, propUserPlan]);
+
+  const isCleanAdmin = (userEmail || "").toLowerCase().trim() === "der.contatos@gmail.com";
+  const effectiveUnlimited = isCleanAdmin || propIsUnlimited || subInfo.unlimited || subInfo.isAdmin;
+  const effectiveCredits = effectiveUnlimited ? 999999 : (typeof propUserCredits === "number" ? propUserCredits : subInfo.credits);
+  const effectivePlan = subInfo.plan || propUserPlan || (effectiveUnlimited ? "Administrador Geral" : "Assinante");
+  const isSubscriberActive = effectiveUnlimited || subInfo.isSubscriber || subInfo.allowed || effectiveCredits > 0;
 
   const handleHomeClick = () => {
     if (typeof window !== "undefined") {
@@ -318,49 +383,76 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
           }}
           className="block w-full px-4 py-3 text-left transition-colors hover:bg-white/[0.04] cursor-pointer"
         >
-          <div className="flex items-baseline justify-between gap-2">
-            <p className="text-[15px] font-semibold tabular-nums text-violet-300">
-              {(creditState.remaining ?? 0).toLocaleString("pt-BR")}{" "}
-              <span className="text-xs font-normal text-zinc-300">créditos</span>
-            </p>
-            <span className="shrink-0 text-[10px] tabular-nums text-zinc-500">
-              / {(creditState.total || 0).toLocaleString("pt-BR")}
-            </span>
-          </div>
-          <div
-            role="progressbar"
-            aria-valuenow={creditState.remaining ?? 0}
-            aria-valuemin={0}
-            aria-valuemax={creditState.total || 1}
-            aria-label="restantes"
-            className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/10"
-          >
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-400 transition-[width] duration-500"
-              style={{
-                width: `${
-                  (creditState.total || 0) > 0
-                    ? Math.min(
-                        100,
-                        Math.max(
-                          0,
-                          Math.round(
-                            ((creditState.remaining ?? 0) / (creditState.total || 1)) * 100
-                          )
-                        )
-                      )
-                    : 100
-                }%`,
-              }}
-            />
-          </div>
-          <p className="mt-1.5 text-[10px] tabular-nums text-zinc-500">
-            {(
-              creditState.used ??
-              Math.max(0, (creditState.total || 0) - (creditState.remaining ?? 0))
-            ).toLocaleString("pt-BR")}{" "}
-            usados
-          </p>
+          {effectiveUnlimited ? (
+            <>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[15px] font-bold text-violet-300">Ilimitado</span>
+                  <span className="rounded bg-violet-500/20 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-violet-300 border border-violet-500/30 uppercase">
+                    Admin
+                  </span>
+                </div>
+                <span className="shrink-0 text-[10px] text-zinc-400 font-medium">Acesso Total</span>
+              </div>
+              <div
+                role="progressbar"
+                aria-valuenow={100}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label="restantes"
+                className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-violet-950/40 border border-violet-500/20"
+              >
+                <div className="h-full w-full rounded-full bg-gradient-to-r from-violet-500 via-fuchsia-400 to-amber-300 shadow-[0_0_10px_rgba(168,85,247,0.5)]" />
+              </div>
+              <p className="mt-1.5 text-[10px] text-zinc-400 flex items-center justify-between">
+                <span>Gerações ilimitadas ativas</span>
+                <span className="text-violet-400 font-bold">∞</span>
+              </p>
+            </>
+          ) : isSubscriberActive ? (
+            <>
+              <div className="flex items-baseline justify-between gap-2">
+                <p className="text-[15px] font-semibold tabular-nums text-violet-300">
+                  {effectiveCredits.toLocaleString("pt-BR")}{" "}
+                  <span className="text-xs font-normal text-zinc-300">créditos</span>
+                </p>
+                <span className="shrink-0 text-[10px] text-zinc-400 font-medium">
+                  {effectivePlan}
+                </span>
+              </div>
+              <div
+                role="progressbar"
+                aria-valuenow={effectiveCredits}
+                aria-valuemin={0}
+                aria-valuemax={Math.max(effectiveCredits, 50)}
+                aria-label="restantes"
+                className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/10"
+              >
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-400 transition-[width] duration-500"
+                  style={{ width: `${Math.min(100, Math.max(10, Math.round((effectiveCredits / Math.max(effectiveCredits, 50)) * 100)))}%` }}
+                />
+              </div>
+              <p className="mt-1.5 text-[10px] text-zinc-400">
+                Saldo real para gerar imagens
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="flex items-baseline justify-between gap-2">
+                <p className="text-[14px] font-semibold text-zinc-400">
+                  0 <span className="text-xs font-normal text-zinc-500">créditos</span>
+                </p>
+                <span className="shrink-0 text-[10px] font-semibold text-amber-400">Sem Assinatura</span>
+              </div>
+              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/5">
+                <div className="h-full w-0 rounded-full bg-zinc-600" />
+              </div>
+              <p className="mt-1.5 text-[10px] text-zinc-500">
+                Faça login com sua conta assinante
+              </p>
+            </>
+          )}
         </button>
 
         {/* Linha do Usuário */}

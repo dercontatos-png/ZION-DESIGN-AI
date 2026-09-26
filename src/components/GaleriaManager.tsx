@@ -28,6 +28,34 @@ interface GaleriaManagerProps {
   showToast?: (message: string, type: "success" | "error" | "info" | "warning") => void;
 }
 
+export const checkIsItemDeleted = (item: GalleryItem, deletedSet: Set<string>): boolean => {
+  const url = (item.result_url || "").toLowerCase();
+  const thumb = (item.thumbnail_url || "").toLowerCase();
+  const id = (item.id || "").toLowerCase();
+  
+  if (deletedSet.has(id)) return true;
+  if (url && (deletedSet.has(url) || deletedSet.has(item.result_url))) return true;
+  if (thumb && (deletedSet.has(thumb) || deletedSet.has(item.thumbnail_url))) return true;
+
+  const bname = (url.split("/").pop() || "").split("?")[0].toLowerCase();
+  if (bname && !GENERIC_DELETED_NAMES.has(bname) && deletedSet.has(bname)) return true;
+  const bnameNoExt = bname.replace(/\.[^/.]+$/, "");
+  if (bnameNoExt && !GENERIC_DELETED_NAMES.has(bnameNoExt) && deletedSet.has(bnameNoExt)) return true;
+
+  const thumbBname = (thumb.split("/").pop() || "").split("?")[0].toLowerCase();
+  if (thumbBname && !GENERIC_DELETED_NAMES.has(thumbBname) && deletedSet.has(thumbBname)) return true;
+  const thumbBnameNoExt = thumbBname.replace(/\.[^/.]+$/, "");
+  if (thumbBnameNoExt && !GENERIC_DELETED_NAMES.has(thumbBnameNoExt) && deletedSet.has(thumbBnameNoExt)) return true;
+
+  const matchJob = (url + " " + thumb + " " + id).match(/(\d{13}_[a-z0-9]+)/i);
+  if (matchJob && (deletedSet.has(matchJob[1]) || deletedSet.has(matchJob[1].toLowerCase()))) return true;
+
+  const matchUuid = (url + " " + thumb + " " + id).match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+  if (matchUuid && (deletedSet.has(matchUuid[1]) || deletedSet.has(matchUuid[1].toLowerCase()))) return true;
+
+  return false;
+};
+
 export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
   onOpenVitrine,
   onOpenStudio,
@@ -38,17 +66,36 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
 
   // Itens da Galeria: combina itens reais do HAR com gerações recentes do store
   const [generations, setGenerations] = useState<GalleryItem[]>(() => {
-    const list = REAL_USER_GENERATIONS.filter(
-      (g) => !g.result_url?.includes("9b5acaa4fb5a7649b098778a4320abc3") && !g.result_url?.includes("X-Amz-Signature")
-    );
+    const deletedSet = getDeletedImages();
+    let initialList: GalleryItem[] = [];
 
-    // Se o store tiver imagens geradas pelo usuário que não estão no mock, adiciona no topo
+    // Tenta carregar do cache persistente do usuário
+    try {
+      const cached = localStorage.getItem("zion_gallery_generations");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          initialList = parsed.filter((it: GalleryItem) => !checkIsItemDeleted(it, deletedSet));
+        }
+      }
+    } catch (_) {}
+
+    // Fallback inicial: gerações reais filtrando exclusões
+    if (initialList.length === 0) {
+      initialList = REAL_USER_GENERATIONS.filter(
+        (g) => !g.result_url?.includes("9b5acaa4fb5a7649b098778a4320abc3") &&
+               !g.result_url?.includes("X-Amz-Signature") &&
+               !checkIsItemDeleted(g, deletedSet)
+      );
+    }
+
+    // Se o store tiver imagens geradas pelo usuário que não foram excluídas, adiciona no topo
     if (store.galeriaImages && store.galeriaImages.length > 0) {
       store.galeriaImages.forEach((imgUrl, idx) => {
-        if (!list.some((g) => g.result_url === imgUrl || g.thumbnail_url === imgUrl)) {
+        if (!deletedSet.has(imgUrl) && !initialList.some((g) => g.result_url === imgUrl || g.thumbnail_url === imgUrl)) {
           const storeDim = (store.dimensao as string) || "1:1";
           const storeAspect = storeDim.includes(":") ? storeDim.replace(":", "/") : "1/1";
-          list.unshift({
+          initialList.unshift({
             id: `local-gen-${idx}-${Date.now()}`,
             status: "done",
             result_url: imgUrl,
@@ -69,7 +116,7 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
         }
       });
     }
-    return list;
+    return initialList;
   });
 
   // Buscar geracoes atualizadas do servidor (BFF + Historico) com sincronizacao em tempo real
@@ -209,25 +256,7 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
 
         // Filtrar imagens deletadas com protecao contra nomes genericos
         const deletedSet = getDeletedImages();
-        const isItemDeleted = (item: GalleryItem) => {
-          const url = item.result_url || "";
-          const thumb = item.thumbnail_url || "";
-          const id = item.id || "";
-          if (deletedSet.has(id)) return true;
-          if (url && deletedSet.has(url)) return true;
-          if (thumb && deletedSet.has(thumb)) return true;
-
-          const bname = (url.split("/").pop() || "").split("?")[0].toLowerCase();
-          if (bname && !GENERIC_DELETED_NAMES.has(bname) && deletedSet.has(bname)) return true;
-
-          const matchJob = (url + " " + thumb + " " + id).match(/(\d{13}_[a-z0-9]+)/i);
-          if (matchJob && deletedSet.has(matchJob[1])) return true;
-
-          const matchUuid = (url + " " + thumb + " " + id).match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
-          if (matchUuid && deletedSet.has(matchUuid[1])) return true;
-
-          return false;
-        };
+        const isItemDeleted = (item: GalleryItem) => checkIsItemDeleted(item, deletedSet);
 
                 // Deduplicar itens por jobId entre BFF e Historico
         const dedupedMap = new Map<string, GalleryItem>();
@@ -460,29 +489,49 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
   };
 
   // Excluir Geração Permanentemente
-  const handleDelete = (id: string, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    const item = generations.find((g) => g.id === id);
-    const targetUrl = item?.result_url || item?.thumbnail_url || "";
-    const filename = targetUrl.split("/").pop() || "";
+  const handleDelete = (id: string, srcUrl?: string | React.MouseEvent, e?: React.MouseEvent) => {
+    let actualSrc = typeof srcUrl === "string" ? srcUrl : "";
+    let evt = (typeof srcUrl === "object" ? srcUrl : e) as React.MouseEvent | undefined;
+    if (evt && typeof evt.stopPropagation === "function") evt.stopPropagation();
+
+    const item = generations.find((g) => g.id === id || (actualSrc && (g.result_url === actualSrc || g.thumbnail_url === actualSrc)));
+    const targetUrl = actualSrc || item?.result_url || item?.thumbnail_url || (id.startsWith("http") || id.startsWith("/") ? id : "");
+    const filename = targetUrl ? (targetUrl.split("/").pop() || "").split("?")[0] : "";
 
     // 1. Grava na lista negra permanente de excluídos
     addDeletedImage(id);
+    if (item?.id) addDeletedImage(item.id);
     if (targetUrl) addDeletedImage(targetUrl);
-    if (filename && !GENERIC_DELETED_NAMES.has(filename.toLowerCase())) addDeletedImage(filename);
+    if (item?.result_url) addDeletedImage(item.result_url);
+    if (item?.thumbnail_url) addDeletedImage(item.thumbnail_url);
+    if (filename && !GENERIC_DELETED_NAMES.has(filename.toLowerCase())) {
+      addDeletedImage(filename);
+      const noExt = filename.replace(/\.[^/.]+$/, "");
+      if (noExt && !GENERIC_DELETED_NAMES.has(noExt.toLowerCase())) {
+        addDeletedImage(noExt);
+      }
+    }
 
     // 2. Remove do Zustand useProjectStore e IDB
     useProjectStore.getState().deleteGaleriaImage(targetUrl || id);
 
     // 3. Aciona remoção física no backend
-    fetch(`/api/bff/api/generations/${id}`, { method: "DELETE" }).catch(() => {});
+    fetch(`/api/bff/api/generations/${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => {});
+    if (item?.id && item.id !== id) {
+      fetch(`/api/bff/api/generations/${encodeURIComponent(item.id)}`, { method: "DELETE" }).catch(() => {});
+    }
     if (filename && (filename.endsWith(".png") || filename.endsWith(".avif") || filename.endsWith(".webp") || filename.endsWith(".jpg"))) {
-      fetch(`/api/historico-imagens/${filename}`, { method: "DELETE" }).catch(() => {});
+      fetch(`/api/historico-imagens/${encodeURIComponent(filename)}`, { method: "DELETE" }).catch(() => {});
     }
 
     // 4. Atualiza estado e localStorage da Galeria
     setGenerations((prev) => {
-      const next = prev.filter((it) => it.id !== id && it.result_url !== targetUrl);
+      const next = prev.filter((it) => {
+        if (it.id === id || (item?.id && it.id === item.id)) return false;
+        if (targetUrl && (it.result_url === targetUrl || it.thumbnail_url === targetUrl)) return false;
+        if (actualSrc && (it.result_url === actualSrc || it.thumbnail_url === actualSrc)) return false;
+        return true;
+      });
       try {
         localStorage.setItem("zion_gallery_generations", JSON.stringify(next));
       } catch (_) {}
@@ -492,6 +541,7 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
     setSelectedIds((prev) => {
       const next = new Set(prev);
       next.delete(id);
+      if (item?.id) next.delete(item.id);
       return next;
     });
 
@@ -501,6 +551,13 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
     if (showToast) {
       showToast("Geração excluída permanentemente.", "success");
     }
+
+    // Broadcast para outras abas e componentes
+    try {
+      if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+        new BroadcastChannel("zion-gallery-sync").postMessage({ type: "deleted", id, targetUrl });
+      }
+    } catch (_) {}
   };
 
   // Excluir em Lote Permanentemente
@@ -514,9 +571,9 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
       if (filename && !GENERIC_DELETED_NAMES.has(filename.toLowerCase())) addDeletedImage(filename);
 
       useProjectStore.getState().deleteGaleriaImage(targetUrl || item.id);
-      fetch(`/api/bff/api/generations/${item.id}`, { method: "DELETE" }).catch(() => {});
+      fetch(`/api/bff/api/generations/${encodeURIComponent(item.id)}`, { method: "DELETE" }).catch(() => {});
       if (filename && (filename.endsWith(".png") || filename.endsWith(".avif") || filename.endsWith(".webp") || filename.endsWith(".jpg"))) {
-        fetch(`/api/historico-imagens/${filename}`, { method: "DELETE" }).catch(() => {});
+        fetch(`/api/historico-imagens/${encodeURIComponent(filename)}`, { method: "DELETE" }).catch(() => {});
       }
     });
 
@@ -1004,7 +1061,7 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
                                   <button
                                     type="button"
                                     onClick={(e) => {
-                                      handleDelete(item.id, e);
+                                      handleDelete(item.id, item.result_url || item.thumbnail_url, e);
                                       setActiveCardMenuId(null);
                                     }}
                                     className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-red-400 hover:bg-red-500/20 hover:text-red-300 rounded-lg transition-colors cursor-pointer text-left"
@@ -1041,7 +1098,7 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
                             <button
                               type="button"
                               title="Excluir"
-                              onClick={(e) => handleDelete(item.id, e)}
+                              onClick={(e) => handleDelete(item.id, item.result_url || item.thumbnail_url, e)}
                               className="flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white/80 hover:text-red-400 hover:bg-black/80 backdrop-blur-sm transition-all cursor-pointer"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
@@ -1126,7 +1183,7 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
           }}
           onToggleFavorite={(cardId) => toggleFavorite(cardId)}
           onToggleLike={(cardId) => toggleUpvote(cardId)}
-          onDelete={(cardId) => handleDelete(cardId)}
+          onDelete={(cardId, cardSrc) => handleDelete(cardId, cardSrc)}
           onOpenApp={(appSlug) => {
             onOpenStudio(appSlug);
             setDetailIndex(null);

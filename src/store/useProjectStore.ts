@@ -14,7 +14,15 @@ export const getDeletedImages = (): Set<string> => {
   if (typeof window === "undefined") return new Set();
   try {
     const saved = localStorage.getItem("zion_deleted_images");
-    const rawList = saved ? JSON.parse(saved) : [];
+    const rawList: string[] = saved ? JSON.parse(saved) : [];
+    const altSaved = localStorage.getItem("zion_galeria_deleted_ids");
+    if (altSaved) {
+      try {
+        const altList = JSON.parse(altSaved);
+        if (Array.isArray(altList)) rawList.push(...altList);
+      } catch (_) {}
+    }
+
     // Sanitizar: nunca permitir nomes genericos que limpam a galeria inteira
     const filtered = rawList.filter((item) => {
       if (!item || typeof item !== "string") return false;
@@ -26,9 +34,6 @@ export const getDeletedImages = (): Set<string> => {
       }
       return true;
     });
-    if (filtered.length !== rawList.length) {
-      localStorage.setItem("zion_deleted_images", JSON.stringify(filtered));
-    }
     return new Set(filtered);
   } catch {
     return new Set();
@@ -40,21 +45,36 @@ export const addDeletedImage = (idOrUrl: string) => {
   try {
     const deleted = getDeletedImages();
     const clean = idOrUrl.trim();
-    const bname = clean.split("/").pop()?.split("?")[0] || "";
+    const cleanLower = clean.toLowerCase();
     
-    // NUNCA adicionar nomes de arquivo genericos soltos (ex: result.avif)
-    if (!GENERIC_DELETED_NAMES.has(bname.toLowerCase())) {
-      deleted.add(clean);
-    } else if (clean.includes("/") && clean.length > bname.length) {
-      deleted.add(clean);
+    deleted.add(clean);
+    deleted.add(cleanLower);
+
+    const bname = (clean.split("/").pop() || "").split("?")[0];
+    if (bname && !GENERIC_DELETED_NAMES.has(bname.toLowerCase())) {
+      deleted.add(bname);
+      deleted.add(bname.toLowerCase());
+      const withoutExt = bname.replace(/\.[^/.]+$/, "");
+      if (withoutExt && !GENERIC_DELETED_NAMES.has(withoutExt.toLowerCase())) {
+        deleted.add(withoutExt);
+        deleted.add(withoutExt.toLowerCase());
+      }
     }
     
     const matchId = clean.match(/(\d{13}_[a-z0-9]+)/i);
-    if (matchId) deleted.add(matchId[1]);
+    if (matchId) {
+      deleted.add(matchId[1]);
+      deleted.add(matchId[1].toLowerCase());
+    }
     const matchUuid = clean.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
-    if (matchUuid) deleted.add(matchUuid[1]);
+    if (matchUuid) {
+      deleted.add(matchUuid[1]);
+      deleted.add(matchUuid[1].toLowerCase());
+    }
     
-    localStorage.setItem("zion_deleted_images", JSON.stringify(Array.from(deleted)));
+    const serialized = JSON.stringify(Array.from(deleted));
+    localStorage.setItem("zion_deleted_images", serialized);
+    localStorage.setItem("zion_galeria_deleted_ids", serialized);
   } catch (_) {}
 };
 

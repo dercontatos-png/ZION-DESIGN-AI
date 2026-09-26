@@ -1,8 +1,13 @@
 node_modules
 .git
 .tempmediaStorage
+.user_uploaded
 whatsapp-sessions
 public/generated-images
+local_storage
+ref_imgs
+scratch
+landing-gemini-pro
 *.log
 dev.err
 dev.log
@@ -15,3 +20,4 @@ get-*
 parse*
 revert*
 *.patch
+*.har

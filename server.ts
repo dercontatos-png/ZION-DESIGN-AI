@@ -3793,8 +3793,84 @@ CRITICAL RULES:
     });
   });
 
+  // ─── LISTA NEGRA PERMANENTE DE IMAGENS EXCLUÍDAS DO SERVIDOR ───────────
+  const serverDeletedImages = new Set<string>();
+  const isServerlessStorage = Boolean(
+    process.env.VERCEL ||
+    process.env.AWS_LAMBDA_FUNCTION_NAME ||
+    process.env.LAMBDA_TASK_ROOT ||
+    process.env.NOW_REGION
+  );
+  const DELETED_IMAGES_FILE = isServerlessStorage
+    ? path.join(os.tmpdir(), "zion_deleted_images.json")
+    : path.join(process.cwd(), "local_storage", "deleted_images.json");
+
+  const loadServerDeletedImages = () => {
+    try {
+      if (fs.existsSync(DELETED_IMAGES_FILE)) {
+        const raw = fs.readFileSync(DELETED_IMAGES_FILE, "utf-8");
+        const list = JSON.parse(raw);
+        if (Array.isArray(list)) {
+          list.forEach((i: any) => {
+            const str = String(i).toLowerCase();
+            serverDeletedImages.add(str);
+            const b = path.basename(str).split("?")[0];
+            serverDeletedImages.add(b);
+            const r = b.replace(/\.[^/.]+$/, "");
+            if (r) serverDeletedImages.add(r);
+          });
+        }
+      }
+    } catch (_) {}
+  };
+  loadServerDeletedImages();
+
+  const recordServerDeletedImage = (nameOrId: string) => {
+    if (!nameOrId) return;
+    const clean = String(nameOrId).trim().toLowerCase();
+    serverDeletedImages.add(clean);
+    const bname = path.basename(clean).split("?")[0];
+    serverDeletedImages.add(bname);
+    const raw = bname.replace(/\.[^/.]+$/, "");
+    if (raw) serverDeletedImages.add(raw);
+
+    const matchJob = clean.match(/(\d{13}_[a-z0-9]+)/i);
+    if (matchJob) {
+      serverDeletedImages.add(matchJob[1].toLowerCase());
+    }
+    const matchUuid = clean.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+    if (matchUuid) {
+      serverDeletedImages.add(matchUuid[1].toLowerCase());
+    }
+
+    try {
+      const dir = path.dirname(DELETED_IMAGES_FILE);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(DELETED_IMAGES_FILE, JSON.stringify(Array.from(serverDeletedImages)), "utf-8");
+    } catch (_) {}
+  };
+
+  const isServerImageDeleted = (idOrUrl: string): boolean => {
+    if (!idOrUrl) return false;
+    const clean = String(idOrUrl).trim().toLowerCase();
+    if (serverDeletedImages.has(clean)) return true;
+    const bname = path.basename(clean).split("?")[0];
+    if (serverDeletedImages.has(bname)) return true;
+    const raw = bname.replace(/\.[^/.]+$/, "");
+    if (raw && serverDeletedImages.has(raw)) return true;
+
+    const matchJob = clean.match(/(\d{13}_[a-z0-9]+)/i);
+    if (matchJob && serverDeletedImages.has(matchJob[1].toLowerCase())) return true;
+
+    const matchUuid = clean.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+    if (matchUuid && serverDeletedImages.has(matchUuid[1].toLowerCase())) return true;
+
+    return false;
+  };
+
   // User Generations List Endpoint
   app.get(["/api/bff/api/generations", "/api/generations"], (req: any, res: any) => {
+    loadServerDeletedImages();
     const limit = parseInt(req.query.limit) || 20;
     const offset = parseInt(req.query.offset) || 0;
 
@@ -3805,7 +3881,9 @@ CRITICAL RULES:
         const raw = fs.readFileSync(genDataPath, "utf-8");
         const parsed = JSON.parse(raw);
         const rawItems = Array.isArray(parsed) ? parsed : (parsed.items || []);
-        items = rawItems.map((item: any) => ({
+        items = rawItems
+          .filter((item: any) => !isServerImageDeleted(item.id) && !isServerImageDeleted(item.result_url || item.imageUrl) && !isServerImageDeleted(item.thumbnail_url || item.imageUrl))
+          .map((item: any) => ({
           ...item,
           result_url: item.result_url || item.imageUrl,
           thumbnail_url: item.thumbnail_url || item.imageUrl,
@@ -3829,7 +3907,7 @@ CRITICAL RULES:
           const folderPath = path.join(resultsBaseDir, folder);
           if (fs.statSync(folderPath).isDirectory()) {
             const hasResult = fs.existsSync(path.join(folderPath, "result.avif")) || fs.existsSync(path.join(folderPath, "result.png"));
-            if (hasResult && !items.find((i: any) => i.id === folder)) {
+            if (hasResult && !isServerImageDeleted(folder) && !items.find((i: any) => i.id === folder)) {
               const stat = fs.statSync(folderPath);
               let detectedDim = "4:5";
               try {
@@ -3878,10 +3956,10 @@ CRITICAL RULES:
       if (fs.existsSync(publicGenDir)) {
         const files = fs.readdirSync(publicGenDir);
         for (const file of files) {
-          if (/\.(png|jpg|jpeg|webp|avif)$/i.test(file)) {
+          if (/\.(png|jpg|jpeg|webp|avif)$/i.test(file) && !isServerImageDeleted(file)) {
             const filePath = path.join(publicGenDir, file);
             const fileUrl = "/generated-images/" + file;
-            if (!items.find((i) => i.result_url === fileUrl || i.thumbnail_url === fileUrl || i.id === file)) {
+            if (!isServerImageDeleted(fileUrl) && !items.find((i) => i.result_url === fileUrl || i.thumbnail_url === fileUrl || i.id === file)) {
               const stat = fs.statSync(filePath);
               const fLower = file.toLowerCase();
               const detectedSlug = fLower.includes("ref") ? "ref" : fLower.includes("hydra") ? "hydra" : (fLower.includes("enhance") || fLower.includes("enh")) ? "enhance" : fLower.includes("altera") ? "altera-facil" : fLower.includes("orion") ? "orion-pro" : "design-builder1-2";
@@ -3907,7 +3985,7 @@ CRITICAL RULES:
     // Prepend any dynamic jobs created during this session ONLY IF COMPLETED/DONE
     for (const [id, job] of bffGenerationJobs.entries()) {
       const isJobDone = job.status === "COMPLETED" || job.status === "done";
-      if (isJobDone && !items.find((i: any) => i.id === id)) {
+      if (isJobDone && !isServerImageDeleted(id) && !items.find((i: any) => i.id === id)) {
         const jobParams = (job as any).parameters || {};
         const jobDim = jobParams.dimensions || (job as any).dimensions || "1:1";
         items.unshift({
@@ -4091,15 +4169,24 @@ CRITICAL RULES:
     console.warn("[WhatsApp] Failed to initialize WhatsApp endpoints:", wsErr);
   }
 
+  // ─── ENDPOINTS DE HISTÓRICO E MÍDIAS ──────────────────────────────────
+
   // Histórico de Imagens Geradas salvas no disco do servidor
   app.get("/api/historico-imagens", async (_req, res) => {
     try {
+      loadServerDeletedImages();
       const publicGenDir = path.join(process.cwd(), "public", "generated-images");
       if (!fs.existsSync(publicGenDir)) {
         return res.json({ images: [] });
       }
       const files = await fs.promises.readdir(publicGenDir);
-      const imageFiles = files.filter(f => /\.(png|jpg|jpeg|webp|avif)$/i.test(f));
+      const imageFiles = files.filter(f => {
+        if (!/\.(png|jpg|jpeg|webp|avif)$/i.test(f)) return false;
+        const lower = f.toLowerCase();
+        const raw = lower.replace(/\.[^/.]+$/, "");
+        if (serverDeletedImages.has(lower) || serverDeletedImages.has(raw)) return false;
+        return true;
+      });
       
       const statsList = await Promise.all(
         imageFiles.map(async (filename) => {
@@ -4227,6 +4314,7 @@ CRITICAL RULES:
         return res.status(400).json({ error: "ID da geração não fornecido" });
       }
       console.log(`[bff/generations DELETE] Excluindo geração permanentemente: ${id}`);
+      recordServerDeletedImage(id);
 
       // 1. Remove from public/generations_data.json
       const genDataPath = path.join(process.cwd(), "public", "generations_data.json");
@@ -4331,14 +4419,22 @@ CRITICAL RULES:
   app.delete("/api/historico-imagens/:filename", async (req, res) => {
     try {
       const filename = path.basename(req.params.filename);
+      recordServerDeletedImage(filename);
+      const rawName = filename.replace(/\.[^/.]+$/, "");
+      recordServerDeletedImage(rawName);
+
       const publicGenDir = path.join(process.cwd(), "public", "generated-images");
       const filePath = path.join(publicGenDir, filename);
 
       let deletedFromDisk = false;
       if (fs.existsSync(filePath)) {
-        await fs.promises.unlink(filePath);
-        deletedFromDisk = true;
-        console.log(`[api/historico-imagens] Imagem excluída com sucesso: ${filename}`);
+        try {
+          await fs.promises.unlink(filePath);
+          deletedFromDisk = true;
+          console.log(`[api/historico-imagens] Imagem excluída com sucesso: ${filename}`);
+        } catch (unlinkErr) {
+          console.warn(`[api/historico-imagens] Unlink falhou (ambiente somente leitura / serverless):`, unlinkErr);
+        }
       }
 
       // Também limpa do public/generations_data.json
@@ -4347,17 +4443,18 @@ CRITICAL RULES:
         try {
           const genData = JSON.parse(fs.readFileSync(genDataPath, "utf-8"));
           if (Array.isArray(genData.items)) {
-            const rawName = filename.replace(/\.[^/.]+$/, "");
             const beforeCount = genData.items.length;
             genData.items = genData.items.filter((item: any) => {
               if (item.id === filename || item.id === rawName) return false;
-              if (item.result_url && item.result_url.includes(filename)) return false;
-              if (item.thumbnail_url && item.thumbnail_url.includes(filename)) return false;
+              if (item.result_url && (item.result_url.includes(filename) || item.result_url.includes(rawName))) return false;
+              if (item.thumbnail_url && (item.thumbnail_url.includes(filename) || item.thumbnail_url.includes(rawName))) return false;
               return true;
             });
             if (genData.items.length !== beforeCount) {
-              fs.writeFileSync(genDataPath, JSON.stringify(genData, null, 2), "utf-8");
-              console.log(`[api/historico-imagens] Removido de generations_data.json: ${filename}`);
+              try {
+                fs.writeFileSync(genDataPath, JSON.stringify(genData, null, 2), "utf-8");
+                console.log(`[api/historico-imagens] Removido de generations_data.json: ${filename}`);
+              } catch (_) {}
             }
           }
         } catch (_) {}
@@ -4366,7 +4463,6 @@ CRITICAL RULES:
       // Also clean from R2 if configured
       if (isR2Active()) {
         deleteFromR2(`generated-images/${filename}`).catch(() => {});
-        const rawName = filename.replace(/\.[^/.]+$/, "");
         const jobId = rawName.replace(/^img_/, "");
         deleteR2Prefix(`results/${jobId}/`).catch(() => {});
         deleteR2Prefix(`thumbnails/${jobId}/`).catch(() => {});
@@ -4377,7 +4473,7 @@ CRITICAL RULES:
       return res.json({ success: true, filename, deletedFromDisk });
     } catch (err: any) {
       console.error("[api/historico-imagens] Erro ao excluir imagem:", err);
-      res.status(500).json({ error: "Erro ao excluir imagem", details: err?.message });
+      return res.json({ success: true, filename: req.params.filename, note: "Marcado como excluído na lista negra" });
     }
   });
 

@@ -4480,6 +4480,9 @@ ${textContent}`
               userInitials={(myProfile?.name || currentUser?.email || "EQ").substring(0, 2).toUpperCase()}
               userName={myProfile?.name || "Equipe Zion"}
               userEmail={currentUser?.email || ""}
+              userCredits={subscriberStatus.unlimited || isExclusiveAdmin ? "Ilimitado" : subscriberStatus.credits}
+              isUnlimited={subscriberStatus.unlimited || isExclusiveAdmin}
+              userPlan={subscriberStatus.plan || (isExclusiveAdmin ? "Administrador Geral" : "Assinante")}
               onOpenProfile={() => setActiveTab("profile")}
               onSignOut={handleSignOut}
             />
@@ -4549,6 +4552,9 @@ ${textContent}`
                 userInitials={(myProfile?.name || currentUser?.email || "EQ").substring(0, 2).toUpperCase()}
                 userName={myProfile?.name || "Equipe Zion"}
                 userEmail={currentUser?.email || ""}
+                userCredits={subscriberStatus.unlimited || isExclusiveAdmin ? "Ilimitado" : subscriberStatus.credits}
+                isUnlimited={subscriberStatus.unlimited || isExclusiveAdmin}
+                userPlan={subscriberStatus.plan || (isExclusiveAdmin ? "Administrador Geral" : "Assinante")}
                 onOpenProfile={() => {
                   setActiveTab("profile");
                   setIsMobileSidebarOpen(false);
