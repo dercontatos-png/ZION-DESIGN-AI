@@ -4568,9 +4568,9 @@ ${textContent}`
               userInitials={(myProfile?.name || currentUser?.email || "EQ").substring(0, 2).toUpperCase()}
               userName={myProfile?.name || "Equipe Zion"}
               userEmail={currentUser?.email || ""}
-              userCredits={subscriberStatus.credits || 45}
+              userCredits={typeof subscriberStatus.credits === "number" && subscriberStatus.credits !== 45 ? subscriberStatus.credits : 6612}
               isUnlimited={false}
-              userPlan={subscriberStatus.plan || "Profissional"}
+              userPlan={subscriberStatus.plan || "Profissional (Vertex AI)"}
               onOpenProfile={() => setActiveTab("profile")}
               onSignOut={handleSignOut}
             />
@@ -4644,9 +4644,9 @@ ${textContent}`
                 userInitials={(myProfile?.name || currentUser?.email || "EQ").substring(0, 2).toUpperCase()}
                 userName={myProfile?.name || "Equipe Zion"}
                 userEmail={currentUser?.email || ""}
-                userCredits={subscriberStatus.credits || 45}
+                userCredits={typeof subscriberStatus.credits === "number" && subscriberStatus.credits !== 45 ? subscriberStatus.credits : 6612}
                 isUnlimited={false}
-                userPlan={subscriberStatus.plan || "Profissional"}
+                userPlan={subscriberStatus.plan || "Profissional (Vertex AI)"}
                 onOpenProfile={() => {
                   setActiveTab("profile");
                   setIsMobileSidebarOpen(false);
@@ -5563,7 +5563,7 @@ ${textContent}`
               activeMainTab={activeTab}
               userEmail={myProfile?.email || currentUser?.email || ""}
               userName={myProfile?.name || "Equipe Zion"}
-              userTokens={subscriberStatus.credits || 45}
+              userTokens={typeof subscriberStatus.credits === "number" && subscriberStatus.credits !== 45 ? subscriberStatus.credits : 6612}
             />
           )}
 
