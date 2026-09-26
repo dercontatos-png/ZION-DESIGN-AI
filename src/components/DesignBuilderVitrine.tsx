@@ -379,23 +379,6 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
       {/* ── Background Canvas de Estrelas / Cometas ──────── */}
       <CosmicBackground />
 
-      {/* ── Header Mobile Oficial (Fixo no topo em telas menores) ─ */}
-      <header className="fixed inset-x-3 top-3 z-50 flex h-14 items-center justify-between rounded-2xl bg-black/80 px-4 ring-1 ring-white/10 backdrop-blur-xl lg:hidden">
-        <a aria-label="Zion Design" href="/" onClick={(e) => { e.preventDefault(); if (typeof window !== "undefined") window.history.pushState({ path: "/" }, "", "/"); }}>
-          <img alt="Zion Design" width={399} height={85} decoding="async" className="h-6 w-auto" src="/logo-zion.svg" onError={(e) => { (e.target as HTMLElement).setAttribute("src", "/logo-zion.webp"); }} style={{ color: "transparent" }} />
-        </a>
-        <button
-          type="button"
-          onClick={() => {
-            window.dispatchEvent(new CustomEvent("open-auth-modal"));
-          }}
-          className="inline-flex items-center gap-2 rounded-full bg-brand-accent px-4 py-2 text-sm font-semibold text-white cursor-pointer hover:brightness-110"
-        >
-          <LogIn className="h-4 w-4" />
-          <span>Entrar</span>
-        </button>
-      </header>
-
       {/* ── Sidebar Desktop Oficial à Esquerda ───────────── */}
       <DesignBuilderSidebar
         activeTab="home"
@@ -419,7 +402,7 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
       {/* ── Conteúdo Principal com Scroll Suave ─────────── */}
       <div className="flex-1 min-h-0 max-lg:overflow-x-hidden lg:pb-0 overflow-y-auto overscroll-contain pb-mobile-nav lg:overflow-y-auto">
         <main className="max-lg:min-h-full lg:min-h-screen overflow-x-hidden lg:pl-72">
-          <div className="mx-auto w-full max-w-[1800px] px-4 pb-10 sm:px-6 sm:pb-14 xl:px-10 2xl:px-14 pt-24 sm:pt-28 lg:pt-14">
+          <div className="mx-auto w-full max-w-[1800px] px-4 pb-10 sm:px-6 sm:pb-14 xl:px-10 2xl:px-14 pt-10 sm:pt-14">
 
             {/* ═══════════ 1. HERO CARDS (ÓRION PRO & HYDRA) ═════ */}
             <section className="mb-12 lg:mb-16">
@@ -1090,17 +1073,23 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
           <button
             type="button"
             aria-label="Abrir conta e notificações"
+            aria-haspopup="dialog"
+            aria-expanded="false"
             onClick={() => {
-              if (onOpenCreditsModal) onOpenCreditsModal();
-              else {
-                window.dispatchEvent(new CustomEvent("open-credits-modal"));
+              if (userEmail) {
+                if (onOpenCreditsModal) onOpenCreditsModal();
+                else {
+                  window.dispatchEvent(new CustomEvent("open-credits-modal"));
+                }
+              } else {
+                window.dispatchEvent(new CustomEvent("open-auth-modal"));
               }
             }}
             className="group relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full outline-none transition-transform focus-visible:ring-2 focus-visible:ring-violet-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 active:scale-95 cursor-pointer"
           >
             <span className="h-10 w-10 overflow-hidden rounded-full ring-2 transition-[box-shadow] ring-violet-500/30">
               <span className="flex h-full w-full items-center justify-center bg-gradient-to-br from-violet-500 to-fuchsia-500 text-sm font-semibold text-white">
-                R
+                {userEmail ? (userName ? userName[0].toUpperCase() : userEmail[0].toUpperCase()) : "R"}
               </span>
             </span>
           </button>
