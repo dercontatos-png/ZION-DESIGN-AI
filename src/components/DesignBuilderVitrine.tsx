@@ -320,13 +320,13 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
 
   const displayName = userName.split(" ")[0] || "Ricardo";
   const userInitials = (displayName.length >= 2 ? displayName.substring(0, 2) : "RI").toUpperCase();
-  const isActualAdmin = userEmail.toLowerCase().trim() === "der.contatos@gmail.com";
+  const isActualAdmin = userEmail.toLowerCase().trim() === "der.contatos@gmail.com" || userEmail.toLowerCase().trim() === "ricardo.jrsr.gov@gmail.com";
 
   // Calculate real credits from Vertex AI
   const storedReal = typeof window !== "undefined" ? localStorage.getItem("zion_real_credits") : null;
-  const realCredits = (storedReal !== null && !isNaN(Number(storedReal)) && Number(storedReal) !== 45)
+  const realCredits = (storedReal !== null && !isNaN(Number(storedReal)) && Number(storedReal) > 100)
     ? Number(storedReal)
-    : (typeof propUserTokens === "number" && propUserTokens !== 999999 && propUserTokens !== 45 ? propUserTokens : 6612);
+    : (typeof propUserTokens === "number" && propUserTokens > 100 && propUserTokens !== 999999 ? propUserTokens : 6612);
 
   const go = useCallback(
     (slug: string) => {

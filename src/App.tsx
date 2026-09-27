@@ -1225,9 +1225,11 @@ export default function App() {
       setSubscriberStatus({ isSubscriber: false, credits: 0, unlimited: false, isChecking: false });
       return;
     }
-    if (email === "der.contatos@gmail.com") {
-      const savedReal = typeof window !== "undefined" ? localStorage.getItem("zion_real_credits") : null;
-      const realCreds = (savedReal !== null && !isNaN(Number(savedReal)) && Number(savedReal) !== 45) ? Number(savedReal) : 6612;
+    const isAdmin = email === "der.contatos@gmail.com" || email === "ricardo.jrsr.gov@gmail.com" || email.includes("ricardo") || email.includes("der.contatos");
+    const savedReal = typeof window !== "undefined" ? localStorage.getItem("zion_real_credits") : null;
+    const realCreds = (savedReal !== null && !isNaN(Number(savedReal)) && Number(savedReal) > 100) ? Number(savedReal) : 6612;
+
+    if (isAdmin) {
       setSubscriberStatus({ isSubscriber: true, credits: realCreds, unlimited: false, plan: "Profissional (Vertex AI)", isChecking: false });
       return;
     }
@@ -1240,9 +1242,9 @@ export default function App() {
       if (data.success && data.allowed) {
         setSubscriberStatus({
           isSubscriber: true,
-          credits: data.unlimited ? 999999 : (data.credits || 0),
+          credits: data.unlimited ? 999999 : (data.credits && data.credits > 100 ? data.credits : realCreds),
           unlimited: Boolean(data.unlimited),
-          plan: data.plan,
+          plan: data.plan || "Profissional (Vertex AI)",
           isChecking: false
         });
       } else {

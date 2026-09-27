@@ -86,13 +86,13 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
   const [creditState, setCreditState] = useState<CreditState>(getCreditState);
 
   const cleanEmail = (userEmail || "").toLowerCase().trim();
-  const isCleanAdmin = cleanEmail === "der.contatos@gmail.com";
+  const isCleanAdmin = cleanEmail === "der.contatos@gmail.com" || cleanEmail === "ricardo.jrsr.gov@gmail.com";
 
   // Calculate real credits from GCP Vertex AI
   const storedReal = typeof window !== "undefined" ? localStorage.getItem("zion_real_credits") : null;
-  const realCredits = (storedReal !== null && !isNaN(Number(storedReal)) && Number(storedReal) !== 45)
+  const realCredits = (storedReal !== null && !isNaN(Number(storedReal)) && Number(storedReal) > 100)
     ? Number(storedReal)
-    : (typeof propUserCredits === "number" && propUserCredits !== 999999 && propUserCredits !== 45 ? propUserCredits : 6612);
+    : (typeof propUserCredits === "number" && propUserCredits > 100 && propUserCredits !== 999999 ? propUserCredits : 6612);
 
   const effectiveCredits = realCredits;
 

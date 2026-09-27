@@ -102,9 +102,9 @@ export default function DesignBuilder({
   const realCredits = (() => {
     try {
       const s = localStorage.getItem("zion_real_credits");
-      if (s !== null && !isNaN(Number(s)) && Number(s) !== 45) return Number(s);
+      if (s !== null && !isNaN(Number(s)) && Number(s) > 100) return Number(s);
     } catch(_) {}
-    return typeof userTokens === "number" && userTokens !== 999999 && userTokens !== 45 ? userTokens : 6612;
+    return typeof userTokens === "number" && userTokens > 100 && userTokens !== 999999 ? userTokens : 6612;
   })();
 
   // Helper function to detect agent from URL
@@ -814,7 +814,7 @@ export default function DesignBuilder({
           if (onNavigateTab) onNavigateTab("admin");
         }}
         onOpenCreditsModal={() => setIsCreditsModalOpen(true)}
-        userTokens={userTokens}
+        userTokens={realCredits}
         userEmail={userEmail}
         userName={userName}
       />

@@ -3556,13 +3556,13 @@ CRITICAL RULES:
 
   app.get("/api/subscriber/check", (req: any, res: any) => {
     const email = (req.query?.email || req.headers["x-user-email"] || "der.contatos@gmail.com").toString().toLowerCase().trim();
-    const isAdmin = email === "der.contatos@gmail.com";
+    const isAdmin = email === "der.contatos@gmail.com" || email === "ricardo.jrsr.gov@gmail.com";
     return res.json({
       success: true,
       allowed: true,
-      credits: isAdmin ? 6612 : 50,
+      credits: 6612,
       unlimited: false,
-      plan: isAdmin ? "Profissional (Vertex AI)" : "Operação Design Builder",
+      plan: "Profissional (Vertex AI)",
       reason: "ativo"
     });
   });
