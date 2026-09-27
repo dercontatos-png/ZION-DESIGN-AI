@@ -1341,6 +1341,46 @@ export default function App() {
     }
   }, [activeTab]);
 
+  React.useEffect(() => {
+    if (activeTab === "home" || activeTab === "vitrine") {
+      setActiveTab("ai-tools");
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent("db:open_vitrine"));
+      }, 50);
+    }
+  }, [activeTab]);
+
+  React.useEffect(() => {
+    if (activeTab === "apps" || activeTab === "todos-os-apps") {
+      setActiveTab("ai-tools");
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent("db:open_apps"));
+      }, 50);
+    }
+  }, [activeTab]);
+
+  // Global listeners for db:open_* navigation events
+  React.useEffect(() => {
+    const handleVitrineNav = () => {
+      setActiveTab("ai-tools");
+    };
+    window.addEventListener("db:open_vitrine", handleVitrineNav);
+    window.addEventListener("db:open_apps", handleVitrineNav);
+    window.addEventListener("db:open_gallery", handleVitrineNav);
+    window.addEventListener("db:open_projects", handleVitrineNav);
+    window.addEventListener("db:open_community", handleVitrineNav);
+    window.addEventListener("db:open_studio", handleVitrineNav);
+    return () => {
+      window.removeEventListener("db:open_vitrine", handleVitrineNav);
+      window.removeEventListener("db:open_apps", handleVitrineNav);
+      window.removeEventListener("db:open_gallery", handleVitrineNav);
+      window.removeEventListener("db:open_projects", handleVitrineNav);
+      window.removeEventListener("db:open_community", handleVitrineNav);
+      window.removeEventListener("db:open_studio", handleVitrineNav);
+    };
+  }, []);
+
+
   // Listen for Supabase OAuth redirect logins (Google Login)
   React.useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {

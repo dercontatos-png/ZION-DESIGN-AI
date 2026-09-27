@@ -99,6 +99,16 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
     onCloseMobile?.();
   };
 
+  const handleAppsClick = () => {
+    if (typeof window !== "undefined") {
+      window.history.pushState({ path: "/apps" }, "", "/apps");
+      window.dispatchEvent(new CustomEvent("db:open_apps"));
+    }
+    if (onOpenAgentes) onOpenAgentes();
+    else onNavigateTab("ai-tools");
+    onCloseMobile?.();
+  };
+
   const handleAgentClick = (slug: string) => {
     const agentObj = AGENTS.find(a => a.slug === slug);
     const targetPath = agentObj ? agentObj.href : `/${slug}`;
@@ -385,7 +395,7 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                   href="/apps"
                   onClick={(e) => {
                     e.preventDefault();
-                    handleHomeClick();
+                    handleAppsClick();
                   }}
                 >
                   <LayoutGrid className="h-3.5 w-3.5 shrink-0" />

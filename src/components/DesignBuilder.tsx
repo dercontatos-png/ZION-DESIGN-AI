@@ -234,7 +234,10 @@ export default function DesignBuilder({
         setActivePalcoMode("builder");
       }
     };
-    const handleOpenVitrine = () => { setIsVitrineOpen(true); };
+    const handleOpenVitrine = () => {
+      setIsVitrineOpen(true);
+      setActivePalcoMode("builder");
+    };
     const handleOpenStudio = (e: any) => {
       const agent = e?.detail?.agent || "design-builder1-2";
       handleSwitchAgent(agent);
@@ -768,6 +771,7 @@ export default function DesignBuilder({
   // Open Vitrine
   const handleOpenVitrine = () => {
     setIsVitrineOpen(true);
+    setActivePalcoMode("builder");
     if (typeof window !== "undefined") {
       window.history.pushState({ path: "/" }, "", "/");
     }
