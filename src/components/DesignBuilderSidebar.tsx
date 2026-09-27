@@ -15,8 +15,13 @@ import {
   CreditCard,
   LogOut,
   ExternalLink,
-  X
+  X,
+  Settings,
+  ArrowRight,
+  Headphones,
+  BookOpen
 } from "lucide-react";
+import { DesignBuilderSettingsModal } from "./DesignBuilderSettingsModal";
 
 export const AGENTS = [
   { slug: "ref", name: "REF", href: "/agent/ref", color: "rgb(139, 92, 246)" },
@@ -76,6 +81,7 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
 }) => {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isLinksMenuOpen, setIsLinksMenuOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [creditState, setCreditState] = useState<CreditState>(getCreditState);
 
@@ -275,80 +281,72 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                 </div>
               </button>
 
-              {/* Menu do Usuário Flutuante */}
+              {/* Menu do Usuário Flutuante 1:1 Oficial */}
               {isProfileMenuOpen && (
-                <div className="absolute left-full ml-3 top-0 z-50 w-56 rounded-xl border border-white/10 bg-zinc-950/95 p-2 shadow-2xl backdrop-blur-xl animate-in fade-in duration-150">
-                  <div className="px-2 py-1.5">
-                    <p className="text-xs font-bold text-white truncate">{userName}</p>
-                    <p className="text-[10px] text-zinc-400 truncate">{cleanEmail}</p>
-                    <div className="mt-1 flex items-center gap-1 text-[10px] text-emerald-400 font-semibold">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 inline-block" />
-                      Assinante Profissional
+                <div
+                  role="menu"
+                  className="absolute left-full z-50 ml-3 w-64 top-0 rounded-2xl border border-white/10 bg-black/85 backdrop-blur-2xl shadow-[0_25px_80px_-15px_rgba(0,0,0,0.7),0_0_60px_-15px_rgba(139,92,246,0.25)] overflow-hidden animate-in fade-in-0 zoom-in-95 slide-in-from-left-2 duration-150"
+                >
+                  <div className="flex items-center gap-3 border-b border-white/10 px-4 py-3.5">
+                    <div className="h-9 w-9 flex-shrink-0 overflow-hidden rounded-full ring-2 ring-violet-500/30">
+                      <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-violet-500 to-fuchsia-500 text-sm font-semibold text-white">
+                        {userInitials}
+                      </div>
+                    </div>
+                    <div className="flex flex-col overflow-hidden">
+                      <span className="truncate text-sm font-medium text-white">{userName}</span>
+                      <span className="truncate text-xs text-zinc-400">{cleanEmail}</span>
                     </div>
                   </div>
-                  <div className="h-px bg-white/10 my-1" />
-                  
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsProfileMenuOpen(false);
-                      onOpenCreditsModal?.();
-                    }}
-                    className="w-full text-left px-2.5 py-2 text-xs text-amber-300 hover:bg-white/5 rounded-lg transition-colors flex items-center gap-2 cursor-pointer font-medium"
-                  >
-                    <CreditCard size={14} className="text-amber-400" />
-                    <span>Planos / Créditos ({effectiveCredits})</span>
-                  </button>
-
-                  {isCleanAdmin && (
+                  <div className="flex flex-col py-1.5">
                     <button
                       type="button"
+                      role="menuitem"
                       onClick={() => {
                         setIsProfileMenuOpen(false);
-                        if (onOpenAdmin) onOpenAdmin();
+                        setIsSettingsModalOpen(true);
+                      }}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-200 text-left transition-colors hover:bg-white/[0.06] hover:text-white cursor-pointer"
+                    >
+                      <Settings className="h-4 w-4 text-zinc-400" />
+                      Configurações
+                    </button>
+                    {isCleanAdmin && (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setIsProfileMenuOpen(false);
+                          if (onOpenAdmin) onOpenAdmin();
+                          else {
+                            window.dispatchEvent(new CustomEvent("open-admin-subscribers"));
+                            window.dispatchEvent(new CustomEvent("db:open_admin"));
+                          }
+                        }}
+                        className="flex items-center gap-3 px-4 py-2 text-sm text-amber-400 text-left transition-colors hover:bg-amber-500/10 cursor-pointer font-bold"
+                      >
+                        <Shield className="h-4 w-4 text-amber-400" />
+                        Painel Admin
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setIsProfileMenuOpen(false);
+                        if (onSignOut) onSignOut();
                         else {
-                          window.dispatchEvent(new CustomEvent("open-admin-subscribers"));
-                          window.dispatchEvent(new CustomEvent("db:open_admin"));
+                          localStorage.removeItem("zion_auth_user");
+                          localStorage.removeItem("currentUser");
+                          window.location.reload();
                         }
                       }}
-                      className="w-full text-left px-2.5 py-2 text-xs text-amber-400 hover:bg-amber-500/10 rounded-lg transition-colors flex items-center gap-2 cursor-pointer font-bold"
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-200 transition-colors hover:bg-white/[0.06] hover:text-white disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
                     >
-                      <Shield size={14} />
-                      <span>Painel do Administrador</span>
+                      <LogOut className="h-4 w-4 text-zinc-400" />
+                      Sair
                     </button>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsProfileMenuOpen(false);
-                      if (onOpenProfile) onOpenProfile();
-                      else onNavigateTab("profile");
-                    }}
-                    className="w-full text-left px-2.5 py-2 text-xs text-zinc-300 hover:bg-white/5 rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
-                  >
-                    <User size={14} />
-                    <span>Configurações do Perfil</span>
-                  </button>
-
-                  <div className="h-px bg-white/10 my-1" />
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsProfileMenuOpen(false);
-                      if (onSignOut) onSignOut();
-                      else {
-                        localStorage.removeItem("zion_auth_user");
-                        localStorage.removeItem("currentUser");
-                        window.location.reload();
-                      }
-                    }}
-                    className="w-full text-left px-2.5 py-2 text-xs text-red-400 hover:bg-red-500/10 rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
-                  >
-                    <LogOut size={14} />
-                    <span>Sair da Conta</span>
-                  </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -520,34 +518,67 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                   </button>
 
                   {isLinksMenuOpen && (
-                    <div className="absolute left-full ml-3 bottom-0 z-50 w-48 rounded-xl border border-white/10 bg-zinc-950/95 p-2 shadow-2xl backdrop-blur-xl animate-in fade-in duration-150">
-                      <p className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-zinc-500">Links Úteis</p>
-                      <a
-                        href="/termos"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex items-center justify-between px-2 py-1.5 text-xs text-zinc-300 hover:bg-white/5 hover:text-white rounded-lg transition-colors"
+                    <div className="absolute left-full ml-3 bottom-0 z-50 w-80 rounded-xl border border-white/10 bg-zinc-950/95 p-2 shadow-2xl backdrop-blur-xl animate-in fade-in-0 zoom-in-95 slide-in-from-left-2 duration-150">
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setIsLinksMenuOpen(false);
+                          setIsSettingsModalOpen(true);
+                        }}
+                        className="group/link flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-white transition-all hover:bg-white/10 cursor-pointer"
                       >
-                        <span>Termos de Uso</span>
-                        <ExternalLink size={12} className="text-zinc-500" />
+                        <span
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+                          style={{ background: "rgba(139, 92, 246, 0.125)", border: "1px solid rgba(139, 92, 246, 0.19)" }}
+                        >
+                          <BookOpen className="h-4 w-4" style={{ color: "rgb(139, 92, 246)" }} />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-semibold leading-tight">Documentação</span>
+                          <span className="block text-xs text-zinc-500">Guias e tutoriais do Design Builder</span>
+                        </span>
+                        <ArrowRight className="h-3.5 w-3.5 text-zinc-600 transition-colors group-hover/link:text-zinc-400" />
+                      </button>
+
+                      <a
+                        role="menuitem"
+                        href="https://link.easybuilder.com.br/fale-com-luiz"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group/link flex items-center gap-3 rounded-lg px-3 py-2.5 text-white transition-all hover:bg-white/10 cursor-pointer"
+                      >
+                        <span
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+                          style={{ background: "rgba(167, 139, 250, 0.125)", border: "1px solid rgba(167, 139, 250, 0.19)" }}
+                        >
+                          <Briefcase className="h-4 w-4" style={{ color: "rgb(167, 139, 250)" }} />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-semibold leading-tight">Falar com comercial</span>
+                          <span className="block text-xs text-zinc-500">Planos, upgrades e condições</span>
+                        </span>
+                        <ExternalLink className="h-3.5 w-3.5 text-zinc-600 transition-colors group-hover/link:text-zinc-400" />
                       </a>
+
                       <a
-                        href="/privacidade"
+                        role="menuitem"
+                        href="https://link.easybuilder.com.br/fale-com-o-suporte"
                         target="_blank"
-                        rel="noreferrer"
-                        className="flex items-center justify-between px-2 py-1.5 text-xs text-zinc-300 hover:bg-white/5 hover:text-white rounded-lg transition-colors"
+                        rel="noopener noreferrer"
+                        className="group/link flex items-center gap-3 rounded-lg px-3 py-2.5 text-white transition-all hover:bg-white/10 cursor-pointer"
                       >
-                        <span>Privacidade</span>
-                        <ExternalLink size={12} className="text-zinc-500" />
-                      </a>
-                      <a
-                        href="https://wa.me/5511999999999"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex items-center justify-between px-2 py-1.5 text-xs text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors"
-                      >
-                        <span>Suporte WhatsApp</span>
-                        <ExternalLink size={12} className="text-emerald-500" />
+                        <span
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+                          style={{ background: "rgba(96, 165, 250, 0.125)", border: "1px solid rgba(96, 165, 250, 0.19)" }}
+                        >
+                          <Headphones className="h-4 w-4" style={{ color: "rgb(96, 165, 250)" }} />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-semibold leading-tight">Falar com o suporte</span>
+                          <span className="block text-xs text-zinc-500">Ajuda com dúvidas ou problemas</span>
+                        </span>
+                        <ExternalLink className="h-3.5 w-3.5 text-zinc-600 transition-colors group-hover/link:text-zinc-400" />
                       </a>
                     </div>
                   )}
@@ -562,6 +593,16 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
 
       {/* Modal de Report */}
       <ReportModal isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} />
+
+      {/* Modal de Configurações 1:1 Oficial */}
+      <DesignBuilderSettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+        userEmail={cleanEmail}
+        userName={userName}
+        onOpenCredits={onOpenCreditsModal}
+        onOpenAdmin={onOpenAdmin}
+      />
     </>
   );
 };

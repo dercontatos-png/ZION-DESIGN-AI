@@ -5,6 +5,7 @@ import {
   Images,
   Globe,
   ArrowUpRight,
+  ArrowRight,
   ChevronRight,
   Sparkles,
   AlertTriangle,
@@ -16,11 +17,16 @@ import {
   User,
   LogOut,
   FolderOpen,
-  Bot
+  Bot,
+  Settings,
+  ExternalLink,
+  Headphones,
+  BookOpen
 } from "lucide-react";
 import { CosmicBackground } from "./CosmicBackground";
 import { DesignBuilderAssistant } from "./DesignBuilderAssistant";
 import { DesignBuilderMobileNav } from "./DesignBuilderMobileNav";
+import { DesignBuilderSettingsModal } from "./DesignBuilderSettingsModal";
 import ReportModal from "./ReportModal";
 
 interface DesignBuilderVitrineProps {
@@ -277,6 +283,9 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
   const [isHoveredRefFaixa, setIsHoveredRefFaixa] = useState(false);
   const [previewArt, setPreviewArt] = useState<any | null>(null);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [isLinksMenuOpen, setIsLinksMenuOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isGuiaModalOpen, setIsGuiaModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -293,19 +302,24 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
   });
 
   const [userName] = useState(() => {
-    if (propUserName && propUserName !== "Usuário") return propUserName;
+    if (typeof window !== "undefined") {
+      const savedName = localStorage.getItem("zion_user_name");
+      if (savedName) return savedName;
+    }
+    if (propUserName && propUserName !== "Usuário" && propUserName !== "Equipe Zion") return propUserName;
     try {
       const u = localStorage.getItem("currentUser") || localStorage.getItem("zion_user");
       if (u) {
         const parsed = JSON.parse(u);
-        return parsed?.name || parsed?.full_name || "Ricardo";
+        if (parsed?.name && parsed.name !== "Equipe Zion") return parsed.name;
+        if (parsed?.full_name && parsed.full_name !== "Equipe Zion") return parsed.full_name;
       }
     } catch (_) {}
     return "Ricardo";
   });
 
   const displayName = userName.split(" ")[0] || "Ricardo";
-  const userInitials = (displayName.substring(0, 2) || "RI").toUpperCase();
+  const userInitials = (displayName.length >= 2 ? displayName.substring(0, 2) : "RI").toUpperCase();
   const isActualAdmin = userEmail.toLowerCase().trim() === "der.contatos@gmail.com";
 
   // Calculate real credits from Vertex AI
@@ -348,31 +362,31 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
         className="fixed inset-y-3 left-3 z-50 hidden flex-col rounded-3xl ring-1 ring-white/[0.06] lg:flex w-64 select-none"
         style={{ background: "linear-gradient(rgb(23, 16, 42) 0%, rgb(12, 8, 24) 55%, rgb(5, 3, 8) 100%)" }}
       >
-        {/* Logo Design Builder */}
+        {/* Logo Zion Design */}
         <div className="flex shrink-0 items-center px-7 pt-7 pb-8">
           <a
-            aria-label="Design Builder"
+            aria-label="Zion Design"
             href="/"
             onClick={(e) => {
               e.preventDefault();
               window.scrollTo({ top: 0, behavior: "smooth" });
             }}
-            className="cursor-pointer"
+            className="cursor-pointer flex items-center"
           >
             <img
-              alt="Design Builder"
+              alt="Zion Design"
               width={399}
               height={85}
               decoding="async"
               className="h-7 w-auto"
-              src="/logo-db.webp"
+              src="/logo-zion.svg"
               onError={(e) => { (e.target as HTMLElement).setAttribute("src", "/logo-zion.webp"); }}
               style={{ color: "transparent" }}
             />
           </a>
         </div>
 
-        {/* Menu Principal de Navegação */}
+        {/* Menu Principal de Navegação (Matching Home.html Oficial) */}
         <nav className="flex-1 overflow-y-auto overscroll-contain px-3 pb-4 scrollbar-hide">
           <ul className="space-y-0.5">
             {/* 1. Home (Ativo) */}
@@ -386,7 +400,7 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
                 }}
                 className="flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-left text-[15px] transition-colors bg-violet-600/25 font-medium text-white cursor-pointer"
               >
-                <Home className="h-[18px] w-[18px] shrink-0 text-violet-400" />
+                <Home className="h-[18px] w-[18px] shrink-0 text-white" aria-hidden="true" />
                 <span className="truncate">Home</span>
               </a>
             </li>
@@ -402,7 +416,7 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
                 }}
                 className="flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-left text-[15px] transition-colors text-zinc-300 hover:bg-white/[0.06] hover:text-white cursor-pointer"
               >
-                <FolderOpen className="h-[18px] w-[18px] shrink-0 text-zinc-400" />
+                <FolderOpen className="h-[18px] w-[18px] shrink-0 text-zinc-400" aria-hidden="true" />
                 <span className="truncate">Projetos</span>
               </a>
             </li>
@@ -418,7 +432,7 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
                 }}
                 className="flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-left text-[15px] transition-colors text-zinc-300 hover:bg-white/[0.06] hover:text-white cursor-pointer"
               >
-                <Images className="h-[18px] w-[18px] shrink-0 text-zinc-400" />
+                <Images className="h-[18px] w-[18px] shrink-0 text-zinc-400" aria-hidden="true" />
                 <span className="truncate">Galeria</span>
               </a>
             </li>
@@ -434,97 +448,96 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
                 }}
                 className="flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-left text-[15px] transition-colors text-zinc-300 hover:bg-white/[0.06] hover:text-white cursor-pointer"
               >
-                <Globe className="h-[18px] w-[18px] shrink-0 text-zinc-400" />
+                <Globe className="h-[18px] w-[18px] shrink-0 text-zinc-400" aria-hidden="true" />
                 <span className="truncate">Comunidade</span>
               </a>
             </li>
 
-            {/* 5. Agentes (Todos os apps) */}
+            {/* 5. Agentes (Em breve Oficial) */}
             <li>
-              <a
-                href="/apps"
-                onClick={(e) => {
-                  e.preventDefault();
-                  if (onOpenAgentes) onOpenAgentes();
-                  else if (typeof window !== "undefined") {
-                    window.history.pushState({ path: "/apps" }, "", "/apps");
-                    window.dispatchEvent(new CustomEvent("db:open_apps"));
-                  }
-                }}
-                className="flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-left text-[15px] transition-colors text-zinc-300 hover:bg-white/[0.06] hover:text-white cursor-pointer"
+              <span
+                title="Em breve"
+                aria-disabled="true"
+                className="flex cursor-not-allowed items-center gap-3 rounded-lg px-4 py-2.5 text-[15px] text-zinc-600 select-none"
               >
-                <Bot className="h-[18px] w-[18px] shrink-0 text-zinc-400" />
+                <Bot className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
                 <span className="truncate">Agentes</span>
-                <span className="ml-auto shrink-0 rounded-full bg-violet-500/20 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-violet-300">
-                  6 apps
+                <span className="ml-auto shrink-0 rounded-full bg-white/[0.04] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-zinc-500">
+                  Em breve
                 </span>
-              </a>
+              </span>
             </li>
           </ul>
 
           <div className="my-4 h-px bg-white/10" />
 
-          {/* Lista Direta dos 6 Agentes */}
+          {/* Lista Direta dos 6 Agentes (Sem bolinhas, texto limpo) */}
           <ul className="space-y-0.5">
             <li>
-              <a
-                href="/agent/ref"
-                onClick={(e) => { e.preventDefault(); go("ref"); }}
-                className="flex w-full items-center gap-3 rounded-lg px-4 py-2 text-left text-[14px] transition-colors text-zinc-400 hover:bg-white/[0.06] hover:text-white cursor-pointer"
-              >
-                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "rgb(139, 92, 246)" }} />
-                <span className="truncate">REF</span>
-              </a>
+              <div>
+                <a
+                  href="/agent/ref"
+                  onClick={(e) => { e.preventDefault(); go("ref"); }}
+                  className="flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-left text-[15px] transition-colors text-zinc-300 hover:bg-white/[0.06] hover:text-white cursor-pointer"
+                >
+                  <span className="truncate">REF</span>
+                </a>
+              </div>
             </li>
             <li>
-              <a
-                href="/hydra"
-                onClick={(e) => { e.preventDefault(); go("hydra"); }}
-                className="flex w-full items-center gap-3 rounded-lg px-4 py-2 text-left text-[14px] transition-colors text-zinc-400 hover:bg-white/[0.06] hover:text-white cursor-pointer"
-              >
-                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "rgb(139, 92, 246)" }} />
-                <span className="truncate">Hydra</span>
-              </a>
+              <div>
+                <a
+                  href="/hydra"
+                  onClick={(e) => { e.preventDefault(); go("hydra"); }}
+                  className="flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-left text-[15px] transition-colors text-zinc-300 hover:bg-white/[0.06] hover:text-white cursor-pointer"
+                >
+                  <span className="truncate">Hydra</span>
+                </a>
+              </div>
             </li>
             <li>
-              <a
-                href="/enhance-builder"
-                onClick={(e) => { e.preventDefault(); go("enhance-builder"); }}
-                className="flex w-full items-center gap-3 rounded-lg px-4 py-2 text-left text-[14px] transition-colors text-zinc-400 hover:bg-white/[0.06] hover:text-white cursor-pointer"
-              >
-                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "rgb(124, 58, 237)" }} />
-                <span className="truncate">Enhance</span>
-              </a>
+              <div>
+                <a
+                  href="/enhance-builder"
+                  onClick={(e) => { e.preventDefault(); go("enhance-builder"); }}
+                  className="flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-left text-[15px] transition-colors text-zinc-300 hover:bg-white/[0.06] hover:text-white cursor-pointer"
+                >
+                  <span className="truncate">Enhance</span>
+                </a>
+              </div>
             </li>
             <li>
-              <a
-                href="/agent/design-builder1-2"
-                onClick={(e) => { e.preventDefault(); go("design-builder1-2"); }}
-                className="flex w-full items-center gap-3 rounded-lg px-4 py-2 text-left text-[14px] transition-colors text-zinc-400 hover:bg-white/[0.06] hover:text-white cursor-pointer"
-              >
-                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "rgb(124, 58, 237)" }} />
-                <span className="truncate">Design Builder 1.2</span>
-              </a>
+              <div>
+                <a
+                  href="/agent/design-builder1-2"
+                  onClick={(e) => { e.preventDefault(); go("design-builder1-2"); }}
+                  className="flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-left text-[15px] transition-colors text-zinc-300 hover:bg-white/[0.06] hover:text-white cursor-pointer"
+                >
+                  <span className="truncate">Design Builder 1.2</span>
+                </a>
+              </div>
             </li>
             <li>
-              <a
-                href="/orion-pro"
-                onClick={(e) => { e.preventDefault(); go("orion-pro"); }}
-                className="flex w-full items-center gap-3 rounded-lg px-4 py-2 text-left text-[14px] transition-colors text-zinc-400 hover:bg-white/[0.06] hover:text-white cursor-pointer"
-              >
-                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "rgb(255, 213, 0)" }} />
-                <span className="truncate">Órion Pro</span>
-              </a>
+              <div>
+                <a
+                  href="/orion-pro"
+                  onClick={(e) => { e.preventDefault(); go("orion-pro"); }}
+                  className="flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-left text-[15px] transition-colors text-zinc-300 hover:bg-white/[0.06] hover:text-white cursor-pointer"
+                >
+                  <span className="truncate">Órion Pro</span>
+                </a>
+              </div>
             </li>
             <li>
-              <a
-                href="/altera-facil"
-                onClick={(e) => { e.preventDefault(); go("altera-facil"); }}
-                className="flex w-full items-center gap-3 rounded-lg px-4 py-2 text-left text-[14px] transition-colors text-zinc-400 hover:bg-white/[0.06] hover:text-white cursor-pointer"
-              >
-                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "rgb(168, 85, 247)" }} />
-                <span className="truncate">Altera Fácil</span>
-              </a>
+              <div>
+                <a
+                  href="/altera-facil"
+                  onClick={(e) => { e.preventDefault(); go("altera-facil"); }}
+                  className="flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-left text-[15px] transition-colors text-zinc-300 hover:bg-white/[0.06] hover:text-white cursor-pointer"
+                >
+                  <span className="truncate">Altera Fácil</span>
+                </a>
+              </div>
             </li>
           </ul>
         </nav>
@@ -563,13 +576,16 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
           </button>
 
           {/* Linha do Usuário */}
-          <div className="flex items-center gap-2 border-t border-white/[0.06] px-4 py-3">
+          <div className="flex items-center gap-2 border-t border-white/[0.06] px-4 py-3 relative">
             <div className="relative">
               <button
                 type="button"
                 aria-label="Abrir menu do usuário"
                 aria-expanded={isProfileMenuOpen}
-                onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                onClick={() => {
+                  setIsProfileMenuOpen(!isProfileMenuOpen);
+                  setIsLinksMenuOpen(false);
+                }}
                 className="h-7 w-7 overflow-hidden rounded-full ring-2 transition-all focus:outline-none focus-visible:ring-violet-400 ring-violet-500/20 hover:ring-violet-400/50 cursor-pointer"
               >
                 <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-violet-500 to-fuchsia-500 text-[11px] font-semibold text-white">
@@ -577,76 +593,69 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
                 </div>
               </button>
 
-              {/* Popover do Perfil */}
+              {/* Popover do Perfil 1:1 Oficial */}
               {isProfileMenuOpen && (
-                <div className="absolute left-0 bottom-full mb-3 z-50 w-56 rounded-2xl border border-white/10 bg-zinc-950/95 p-2 shadow-2xl backdrop-blur-xl animate-in fade-in duration-150">
-                  <div className="px-2 py-1.5">
-                    <p className="text-xs font-bold text-white truncate">{userName}</p>
-                    <p className="text-[10px] text-zinc-400 truncate">{userEmail}</p>
-                    <div className="mt-1 flex items-center gap-1 text-[10px] text-emerald-400 font-semibold">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 inline-block" />
-                      Assinante Profissional
+                <div
+                  role="menu"
+                  className="absolute left-full z-50 ml-3 w-64 bottom-0 rounded-2xl border border-white/10 bg-black/85 backdrop-blur-2xl shadow-[0_25px_80px_-15px_rgba(0,0,0,0.7),0_0_60px_-15px_rgba(139,92,246,0.25)] overflow-hidden animate-in fade-in-0 zoom-in-95 slide-in-from-left-2 duration-150"
+                >
+                  <div className="flex items-center gap-3 border-b border-white/10 px-4 py-3.5">
+                    <div className="h-9 w-9 flex-shrink-0 overflow-hidden rounded-full ring-2 ring-violet-500/30">
+                      <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-violet-500 to-fuchsia-500 text-sm font-semibold text-white">
+                        {userInitials}
+                      </div>
+                    </div>
+                    <div className="flex flex-col overflow-hidden">
+                      <span className="truncate text-sm font-medium text-white">{userName}</span>
+                      <span className="truncate text-xs text-zinc-400">{userEmail}</span>
                     </div>
                   </div>
-                  <div className="h-px bg-white/10 my-1" />
-                  
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsProfileMenuOpen(false);
-                      onOpenCreditsModal?.();
-                    }}
-                    className="w-full text-left px-2.5 py-2 text-xs text-amber-300 hover:bg-white/5 rounded-lg transition-colors flex items-center gap-2 cursor-pointer font-medium"
-                  >
-                    <CreditCard size={14} className="text-amber-400" />
-                    <span>Planos / Créditos ({realCredits.toLocaleString("pt-BR")})</span>
-                  </button>
-
-                  {isActualAdmin && (
+                  <div className="flex flex-col py-1.5">
                     <button
                       type="button"
+                      role="menuitem"
                       onClick={() => {
                         setIsProfileMenuOpen(false);
-                        if (onOpenAdmin) onOpenAdmin();
-                        else {
-                          window.dispatchEvent(new CustomEvent("open-admin-subscribers"));
-                          window.dispatchEvent(new CustomEvent("db:open_admin"));
-                        }
+                        setIsSettingsModalOpen(true);
                       }}
-                      className="w-full text-left px-2.5 py-2 text-xs text-amber-400 hover:bg-amber-500/10 rounded-lg transition-colors flex items-center gap-2 cursor-pointer font-bold"
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-200 text-left transition-colors hover:bg-white/[0.06] hover:text-white cursor-pointer"
                     >
-                      <Shield size={14} />
-                      <span>Painel do Administrador</span>
+                      <Settings className="h-4 w-4 text-zinc-400" />
+                      Configurações
                     </button>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsProfileMenuOpen(false);
-                      onNavigateTab?.("profile");
-                    }}
-                    className="w-full text-left px-2.5 py-2 text-xs text-zinc-300 hover:bg-white/5 rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
-                  >
-                    <User size={14} />
-                    <span>Configurações do Perfil</span>
-                  </button>
-
-                  <div className="h-px bg-white/10 my-1" />
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsProfileMenuOpen(false);
-                      localStorage.removeItem("zion_auth_user");
-                      localStorage.removeItem("currentUser");
-                      window.location.reload();
-                    }}
-                    className="w-full text-left px-2.5 py-2 text-xs text-red-400 hover:bg-red-500/10 rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
-                  >
-                    <LogOut size={14} />
-                    <span>Sair da Conta</span>
-                  </button>
+                    {isActualAdmin && (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setIsProfileMenuOpen(false);
+                          if (onOpenAdmin) onOpenAdmin();
+                          else {
+                            window.dispatchEvent(new CustomEvent("open-admin-subscribers"));
+                            window.dispatchEvent(new CustomEvent("db:open_admin"));
+                          }
+                        }}
+                        className="flex items-center gap-3 px-4 py-2 text-sm text-amber-400 text-left transition-colors hover:bg-amber-500/10 cursor-pointer font-bold"
+                      >
+                        <Shield className="h-4 w-4 text-amber-400" />
+                        Painel Admin
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setIsProfileMenuOpen(false);
+                        localStorage.removeItem("zion_auth_user");
+                        localStorage.removeItem("currentUser");
+                        window.location.reload();
+                      }}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-200 transition-colors hover:bg-white/[0.06] hover:text-white disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+                    >
+                      <LogOut className="h-4 w-4 text-zinc-400" />
+                      Sair
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -660,14 +669,77 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
               >
                 <AlertTriangle className="h-[18px] w-[18px]" />
               </button>
-              <button
-                type="button"
-                onClick={() => onOpenCreditsModal?.()}
-                className="group relative flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200 text-zinc-500 hover:bg-white/10 hover:text-white cursor-pointer"
-                title="Links úteis"
-              >
-                <MoreHorizontal className="h-[18px] w-[18px]" />
-              </button>
+
+              {/* Botão dos 3 pontinhos */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsLinksMenuOpen(!isLinksMenuOpen);
+                    setIsProfileMenuOpen(false);
+                  }}
+                  className="group relative flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200 text-zinc-500 hover:bg-white/10 hover:text-white cursor-pointer"
+                  title="Mais opções"
+                >
+                  <MoreHorizontal className="h-[18px] w-[18px]" />
+                </button>
+
+                {/* Popover dos 3 pontinhos 1:1 Oficial */}
+                {isLinksMenuOpen && (
+                  <div className="absolute left-full z-50 ml-3 w-80 bottom-0 rounded-xl border border-white/10 bg-zinc-950/95 p-2 shadow-2xl backdrop-blur-xl animate-in fade-in-0 zoom-in-95 slide-in-from-left-2 duration-150">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setIsLinksMenuOpen(false);
+                        setIsGuiaModalOpen(true);
+                      }}
+                      className="group/link flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-white transition-all hover:bg-white/10 cursor-pointer"
+                    >
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ background: "rgba(139, 92, 246, 0.125)", border: "1px solid rgba(139, 92, 246, 0.19)" }}>
+                        <BookOpen className="h-4 w-4" style={{ color: "rgb(139, 92, 246)" }} />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-semibold leading-tight">Documentação</span>
+                        <span className="block text-xs text-zinc-500">Guias e tutoriais do Design Builder</span>
+                      </span>
+                      <ArrowRight className="h-3.5 w-3.5 text-zinc-600 transition-colors group-hover/link:text-zinc-400" />
+                    </button>
+                    <a
+                      role="menuitem"
+                      href="https://link.easybuilder.com.br/fale-com-luiz"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group/link flex items-center gap-3 rounded-lg px-3 py-2.5 text-white transition-all hover:bg-white/10 cursor-pointer"
+                    >
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ background: "rgba(167, 139, 250, 0.125)", border: "1px solid rgba(167, 139, 250, 0.19)" }}>
+                        <Briefcase className="h-4 w-4" style={{ color: "rgb(167, 139, 250)" }} />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-semibold leading-tight">Falar com comercial</span>
+                        <span className="block text-xs text-zinc-500">Planos, upgrades e condições</span>
+                      </span>
+                      <ExternalLink className="h-3.5 w-3.5 text-zinc-600 transition-colors group-hover/link:text-zinc-400" />
+                    </a>
+                    <a
+                      role="menuitem"
+                      href="https://link.easybuilder.com.br/fale-com-o-suporte"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group/link flex items-center gap-3 rounded-lg px-3 py-2.5 text-white transition-all hover:bg-white/10 cursor-pointer"
+                    >
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ background: "rgba(96, 165, 250, 0.125)", border: "1px solid rgba(96, 165, 250, 0.19)" }}>
+                        <Headphones className="h-4 w-4" style={{ color: "rgb(96, 165, 250)" }} />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-semibold leading-tight">Falar com o suporte</span>
+                        <span className="block text-xs text-zinc-500">Ajuda com dúvidas ou problemas</span>
+                      </span>
+                      <ExternalLink className="h-3.5 w-3.5 text-zinc-600 transition-colors group-hover/link:text-zinc-400" />
+                    </a>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -961,12 +1033,12 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
 
                 <div className="relative flex flex-col items-center gap-5 px-6 py-16 text-center sm:py-20">
                   <img
-                    alt="Design Builder"
+                    alt="Zion Design"
                     width={399}
                     height={85}
                     decoding="async"
                     className="h-8 w-auto opacity-90"
-                    src="/logo-db.webp"
+                    src="/logo-zion.svg"
                     onError={(e) => { (e.target as HTMLElement).setAttribute("src", "/logo-zion.webp"); }}
                     style={{ color: "transparent" }}
                   />
@@ -1104,6 +1176,16 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
           </div>
         </div>
       )}
+
+      {/* ── Modal de Configurações 1:1 Oficial ── */}
+      <DesignBuilderSettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+        userEmail={userEmail}
+        userName={userName}
+        onOpenCredits={onOpenCreditsModal}
+        onOpenAdmin={onOpenAdmin}
+      />
     </div>
   );
 };
