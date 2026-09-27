@@ -76,7 +76,15 @@ const HYDRA_FANNED_CARDS = [
 ];
 
 /* ─────────────────────────── Community Feed 4 Colunas Oficiais (24 Cards) ────────── */
-const COMMUNITY_COL_1 = [
+interface CommunityCard {
+  id: string;
+  src: string;
+  author: string;
+  avatar?: string;
+  initial?: string;
+}
+
+const COMMUNITY_COL_1: CommunityCard[] = [
   { id: "EGCPV", src: "/Home_files/thumbnail(18).avif", author: "Joao Celistrino", avatar: "/Home_files/cb80a483e74e954f27902f85296e3d2c.jpg" },
   { id: "UHR0F", src: "/Home_files/thumbnail(19).avif", author: "Rafael Dias", initial: "R" },
   { id: "35SU4", src: "/Home_files/thumbnail(20).avif", author: "André Lira", initial: "A" },
@@ -85,7 +93,7 @@ const COMMUNITY_COL_1 = [
   { id: "4O8SC", src: "/Home_files/thumbnail(23).avif", author: "Erick Lorenzi Vasconcelos", initial: "E" },
 ];
 
-const COMMUNITY_COL_2 = [
+const COMMUNITY_COL_2: CommunityCard[] = [
   { id: "ULP5G", src: "/Home_files/thumbnail(24).avif", author: "Lucas Albert", avatar: "/Home_files/47658fbc02ba49f99b54465a2574324e__06.PERFIL_LUCAS.png" },
   { id: "OJ5OZ", src: "/Home_files/thumbnail(25).avif", author: "Rafael Dias", initial: "R" },
   { id: "VZDJI", src: "/Home_files/thumbnail(26).avif", author: "CARLOS LOPES", initial: "C" },
@@ -94,7 +102,7 @@ const COMMUNITY_COL_2 = [
   { id: "CY3TE", src: "/Home_files/thumbnail(29).avif", author: "Rafael Dias", initial: "R" },
 ];
 
-const COMMUNITY_COL_3 = [
+const COMMUNITY_COL_3: CommunityCard[] = [
   { id: "NOCW9", src: "/Home_files/thumbnail(30).avif", author: "Lucas Albert", avatar: "/Home_files/47658fbc02ba49f99b54465a2574324e__06.PERFIL_LUCAS.png" },
   { id: "37GSI", src: "/Home_files/thumbnail(31).avif", author: "CARLOS LOPES", initial: "C" },
   { id: "6HJ71", src: "/Home_files/thumbnail(32).avif", author: "CARLOS LOPES", initial: "C" },
@@ -103,7 +111,7 @@ const COMMUNITY_COL_3 = [
   { id: "8C4FP", src: "/Home_files/thumbnail(35).avif", author: "Rafael Dias", initial: "R" },
 ];
 
-const COMMUNITY_COL_4 = [
+const COMMUNITY_COL_4: CommunityCard[] = [
   { id: "G8MYA", src: "/Home_files/thumbnail(36).avif", author: "Rafael Dias", initial: "R" },
   { id: "VQ7YH", src: "/Home_files/thumbnail(37).avif", author: "André Lira", initial: "A" },
   { id: "W0GVC", src: "/Home_files/thumbnail(38).avif", author: "Radinho 24h", initial: "R" },
@@ -112,69 +120,92 @@ const COMMUNITY_COL_4 = [
   { id: "2ZC0V", src: "/Home_files/thumbnail(41).avif", author: "Rafael Dias", initial: "R" },
 ];
 
-/* ─────────────────────────── Ref Builder 5 Cards com Entradas Flutuantes ─── */
-const REF_FAIXA_CARDS = [
+/* ─────────────────────────── Ref Builder 5 Cards com Sub-Cards Flutuantes ─── */
+interface RefSubcard {
+  img: string;
+  baseTransform: string;
+  hoverTransform: string;
+  delay: number;
+}
+
+interface RefCardData {
+  id: number;
+  mainImg: string;
+  width: string;
+  marginLeft?: string;
+  baseTransform: string;
+  hoverTransform: string;
+  baseZ: number;
+  subcards: RefSubcard[];
+}
+
+const REF_FANNED_CARDS: RefCardData[] = [
   {
-    img: "/Home_files/ref-1.avif",
-    w: "20%",
-    ml: "0%",
-    ty: "14%",
-    rot: "-13deg",
-    z: 8,
-    inputs: [
-      { src: "/Home_files/1-1.avif", transform: "translate(-76%, 75%) rotate(-9deg) scale(0.85)", delay: 0 },
-      { src: "/Home_files/1-2.avif", transform: "translate(0%, 63%) rotate(0deg) scale(0.85)", delay: 55 },
-      { src: "/Home_files/1-3.avif", transform: "translate(76%, 75%) rotate(9deg) scale(0.85)", delay: 110 },
+    id: 1,
+    mainImg: "/Home_files/ref-1.avif",
+    width: "20%",
+    baseTransform: "translateY(14%) rotate(-13deg)",
+    hoverTransform: "translateY(0%) rotate(-13deg) scale(1.04)",
+    baseZ: 8,
+    subcards: [
+      { img: "/Home_files/1-1.avif", baseTransform: "translate(-76%, 75%) rotate(-9deg) scale(0.85)", hoverTransform: "translate(-76%, -32%) rotate(-9deg) scale(0.88)", delay: 0 },
+      { img: "/Home_files/1-2.avif", baseTransform: "translate(0%, 63%) rotate(0deg) scale(0.85)", hoverTransform: "translate(0%, -46%) rotate(0deg) scale(0.88)", delay: 55 },
+      { img: "/Home_files/1-3.avif", baseTransform: "translate(76%, 75%) rotate(9deg) scale(0.85)", hoverTransform: "translate(76%, -32%) rotate(9deg) scale(0.88)", delay: 110 },
     ],
   },
   {
-    img: "/Home_files/ref-2.avif",
-    w: "20%",
-    ml: "-1%",
-    ty: "4.5%",
-    rot: "-6deg",
-    z: 7,
-    inputs: [
-      { src: "/Home_files/2-1.avif", transform: "translate(-62%, 78%) rotate(-6deg) scale(0.85)", delay: 35 },
-      { src: "/Home_files/2-2.avif", transform: "translate(62%, 78%) rotate(6deg) scale(0.85)", delay: 85 },
+    id: 2,
+    mainImg: "/Home_files/ref-2.avif",
+    width: "20%",
+    marginLeft: "-1%",
+    baseTransform: "translateY(4.5%) rotate(-6deg)",
+    hoverTransform: "translateY(-6%) rotate(-6deg) scale(1.04)",
+    baseZ: 9,
+    subcards: [
+      { img: "/Home_files/2-1.avif", baseTransform: "translate(-27.5%, 75%) rotate(-4.5deg) scale(0.85)", hoverTransform: "translate(-27.5%, -38%) rotate(-4.5deg) scale(0.88)", delay: 0 },
+      { img: "/Home_files/2-2.avif", baseTransform: "translate(27.5%, 75%) rotate(4.5deg) scale(0.85)", hoverTransform: "translate(27.5%, -38%) rotate(4.5deg) scale(0.88)", delay: 55 },
     ],
   },
   {
-    img: "/Home_files/ref-3.avif",
-    w: "22%",
-    ml: "-1%",
-    ty: "0%",
-    rot: "0deg",
-    z: 10,
-    inputs: [
-      { src: "/Home_files/3-1.avif", transform: "translate(-88%, 70%) rotate(-10deg) scale(0.85)", delay: 20 },
-      { src: "/Home_files/3-2.avif", transform: "translate(0%, 60%) rotate(0deg) scale(0.85)", delay: 70 },
-      { src: "/Home_files/3-3.avif", transform: "translate(88%, 70%) rotate(10deg) scale(0.85)", delay: 120 },
+    id: 3,
+    mainImg: "/Home_files/ref-3.avif",
+    width: "20%",
+    marginLeft: "-1%",
+    baseTransform: "translateY(0%) rotate(0deg)",
+    hoverTransform: "translateY(-10%) rotate(0deg) scale(1.04)",
+    baseZ: 10,
+    subcards: [
+      { img: "/Home_files/3-1.avif", baseTransform: "translate(-76%, 75%) rotate(-9deg) scale(0.85)", hoverTransform: "translate(-76%, -32%) rotate(-9deg) scale(0.88)", delay: 0 },
+      { img: "/Home_files/3-2.avif", baseTransform: "translate(0%, 63%) rotate(0deg) scale(0.85)", hoverTransform: "translate(0%, -46%) rotate(0deg) scale(0.88)", delay: 55 },
+      { img: "/Home_files/3-3.avif", baseTransform: "translate(76%, 75%) rotate(9deg) scale(0.85)", hoverTransform: "translate(76%, -32%) rotate(9deg) scale(0.88)", delay: 110 },
     ],
   },
   {
-    img: "/Home_files/ref-4(1).avif",
-    w: "20%",
-    ml: "-1%",
-    ty: "4.5%",
-    rot: "6deg",
-    z: 6,
-    inputs: [
-      { src: "/Home_files/4-1.avif", transform: "translate(-62%, 78%) rotate(-6deg) scale(0.85)", delay: 40 },
-      { src: "/Home_files/4-2.avif", transform: "translate(62%, 78%) rotate(6deg) scale(0.85)", delay: 90 },
+    id: 4,
+    mainImg: "/Home_files/ref-4(1).avif",
+    width: "20%",
+    marginLeft: "-1%",
+    baseTransform: "translateY(4.5%) rotate(6deg)",
+    hoverTransform: "translateY(-6%) rotate(6deg) scale(1.04)",
+    baseZ: 9,
+    subcards: [
+      { img: "/Home_files/4-1.avif", baseTransform: "translate(-76%, 75%) rotate(-9deg) scale(0.85)", hoverTransform: "translate(-76%, -32%) rotate(-9deg) scale(0.88)", delay: 0 },
+      { img: "/Home_files/4-2.avif", baseTransform: "translate(0%, 63%) rotate(0deg) scale(0.85)", hoverTransform: "translate(0%, -46%) rotate(0deg) scale(0.88)", delay: 55 },
+      { img: "/Home_files/4-3.avif", baseTransform: "translate(76%, 75%) rotate(9deg) scale(0.85)", hoverTransform: "translate(76%, -32%) rotate(9deg) scale(0.88)", delay: 110 },
     ],
   },
   {
-    img: "/Home_files/ref-5.avif",
-    w: "20%",
-    ml: "-1%",
-    ty: "14%",
-    rot: "13deg",
-    z: 5,
-    inputs: [
-      { src: "/Home_files/5-1.avif", transform: "translate(-76%, 75%) rotate(-9deg) scale(0.85)", delay: 45 },
-      { src: "/Home_files/5-2.avif", transform: "translate(0%, 63%) rotate(0deg) scale(0.85)", delay: 95 },
-      { src: "/Home_files/5-3.avif", transform: "translate(76%, 75%) rotate(9deg) scale(0.85)", delay: 145 },
+    id: 5,
+    mainImg: "/Home_files/ref-5.avif",
+    width: "20%",
+    marginLeft: "-1%",
+    baseTransform: "translateY(14%) rotate(13deg)",
+    hoverTransform: "translateY(0%) rotate(13deg) scale(1.04)",
+    baseZ: 8,
+    subcards: [
+      { img: "/Home_files/5-1.avif", baseTransform: "translate(-76%, 75%) rotate(-9deg) scale(0.85)", hoverTransform: "translate(-76%, -32%) rotate(-9deg) scale(0.88)", delay: 0 },
+      { img: "/Home_files/5-2.avif", baseTransform: "translate(0%, 63%) rotate(0deg) scale(0.85)", hoverTransform: "translate(0%, -46%) rotate(0deg) scale(0.88)", delay: 55 },
+      { img: "/Home_files/5-3.avif", baseTransform: "translate(76%, 75%) rotate(9deg) scale(0.85)", hoverTransform: "translate(76%, -32%) rotate(9deg) scale(0.88)", delay: 110 },
     ],
   },
 ];
@@ -278,14 +309,13 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
   userName: propUserName,
   userTokens: propUserTokens = 6612,
 }) => {
-  const [activeTab, setActiveTab] = useState<"comunidade" | "em_alta" | "meus_favoritos">("comunidade");
+  const [activeTab, setActiveTab] = useState<"comunidade" | "em_alta" | "recentes">("comunidade");
   const [hoveredHydraIndex, setHoveredHydraIndex] = useState<number | null>(null);
-  const [isHoveredRefFaixa, setIsHoveredRefFaixa] = useState(false);
+  const [hoveredRefIndex, setHoveredRefIndex] = useState<number | null>(null);
   const [previewArt, setPreviewArt] = useState<any | null>(null);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isLinksMenuOpen, setIsLinksMenuOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-  const [isGuiaModalOpen, setIsGuiaModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -341,6 +371,13 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
     }
   };
 
+  // Determine which column set to display based on active tab
+  const activeCommunityColumns = activeTab === "comunidade"
+    ? [COMMUNITY_COL_1, COMMUNITY_COL_2, COMMUNITY_COL_3, COMMUNITY_COL_4]
+    : activeTab === "em_alta"
+    ? [COMMUNITY_COL_2, COMMUNITY_COL_4, COMMUNITY_COL_1, COMMUNITY_COL_3]
+    : [COMMUNITY_COL_3, COMMUNITY_COL_1, COMMUNITY_COL_4, COMMUNITY_COL_2];
+
   return (
     <div
       className="flex h-[100dvh] flex-col overflow-hidden relative z-[2]"
@@ -348,37 +385,35 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
     >
       {/* ── Background Glow Orbs Oficiais ─────────────────── */}
       <div aria-hidden="true">
-        <div className="bg-orb bg-orb-1" />
-        <div className="bg-orb bg-orb-2" />
-        <div className="bg-orb bg-orb-3" />
+        <div
+          className="pointer-events-none fixed top-[-20%] left-[-10%] h-[600px] w-[600px] rounded-full blur-[140px] opacity-25"
+          style={{ background: "radial-gradient(circle, rgba(139, 92, 246, 0.45) 0%, transparent 70%)" }}
+        />
+        <div
+          className="pointer-events-none fixed bottom-[-15%] right-[-10%] h-[700px] w-[700px] rounded-full blur-[160px] opacity-20"
+          style={{ background: "radial-gradient(circle, rgba(217, 70, 239, 0.35) 0%, transparent 70%)" }}
+        />
+        <div
+          className="pointer-events-none fixed top-[40%] right-[15%] h-[500px] w-[500px] rounded-full blur-[150px] opacity-15"
+          style={{ background: "radial-gradient(circle, rgba(99, 102, 241, 0.3) 0%, transparent 70%)" }}
+        />
       </div>
 
-      {/* ── Background Canvas de Estrelas / Cometas ──────── */}
-      <CosmicBackground />
-
-      {/* ── Sidebar Desktop Oficial à Esquerda (Home.html w-64) ── */}
-      <aside
-        aria-label="Navegação principal"
-        className="fixed inset-y-3 left-3 z-50 hidden flex-col rounded-3xl ring-1 ring-white/[0.06] lg:flex w-64 select-none"
-        style={{ background: "linear-gradient(rgb(23, 16, 42) 0%, rgb(12, 8, 24) 55%, rgb(5, 3, 8) 100%)" }}
-      >
-        {/* Logo Zion Design */}
-        <div className="flex shrink-0 items-center px-7 pt-7 pb-8">
+      {/* ── Sidebar Desktop Oficial 1:1 ────────────────────── */}
+      <aside className="fixed top-0 bottom-0 left-0 z-30 hidden w-72 flex-col rounded-r-3xl bg-black/60 backdrop-blur-2xl ring-1 ring-white/[0.06] lg:flex">
+        {/* Logo Oficial Zion Design */}
+        <div className="flex h-20 shrink-0 items-center px-6">
           <a
-            aria-label="Zion Design"
             href="/"
-            onClick={(e) => {
-              e.preventDefault();
-              window.scrollTo({ top: 0, behavior: "smooth" });
-            }}
-            className="cursor-pointer flex items-center"
+            onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+            className="flex items-center gap-3 cursor-pointer group"
           >
             <img
               alt="Zion Design"
-              width={399}
-              height={85}
+              width={200}
+              height={44}
               decoding="async"
-              className="h-7 w-auto"
+              className="h-9 w-auto object-contain transition-transform duration-300 group-hover:scale-[1.02]"
               src="/logo-zion.svg"
               onError={(e) => { (e.target as HTMLElement).setAttribute("src", "/logo-zion.webp"); }}
               style={{ color: "transparent" }}
@@ -386,92 +421,92 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
           </a>
         </div>
 
-        {/* Menu Principal de Navegação (Matching Home.html Oficial) */}
-        <nav className="flex-1 overflow-y-auto overscroll-contain px-3 pb-4 scrollbar-hide">
-          <ul className="space-y-0.5">
-            {/* 1. Home (Ativo) */}
+        {/* Itens do Menu Principal */}
+        <nav className="flex-1 overflow-y-auto px-4 py-2 scrollbar-hide">
+          <ul className="space-y-1">
             <li>
               <a
-                aria-current="page"
                 href="/"
-                onClick={(e) => {
-                  e.preventDefault();
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                }}
-                className="flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-left text-[15px] transition-colors bg-violet-600/25 font-medium text-white cursor-pointer"
+                onClick={(e) => { e.preventDefault(); }}
+                className="flex items-center gap-3 rounded-lg px-4 py-2.5 text-[15px] font-medium transition-colors bg-white/[0.08] text-white cursor-pointer"
               >
-                <Home className="h-[18px] w-[18px] shrink-0 text-white" aria-hidden="true" />
-                <span className="truncate">Home</span>
+                <Home className="h-5 w-5 text-violet-400" />
+                <span>Início</span>
               </a>
             </li>
-
-            {/* 2. Projetos */}
             <li>
               <a
                 href="/projetos"
                 onClick={(e) => {
                   e.preventDefault();
                   if (onOpenProjects) onOpenProjects();
-                  else onNavigateTab?.("projetos");
+                  else if (onNavigateTab) onNavigateTab("projetos");
                 }}
-                className="flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-left text-[15px] transition-colors text-zinc-300 hover:bg-white/[0.06] hover:text-white cursor-pointer"
+                className="flex items-center gap-3 rounded-lg px-4 py-2.5 text-[15px] font-medium transition-colors text-zinc-400 hover:bg-white/[0.06] hover:text-white cursor-pointer"
               >
-                <FolderOpen className="h-[18px] w-[18px] shrink-0 text-zinc-400" aria-hidden="true" />
-                <span className="truncate">Projetos</span>
+                <Briefcase className="h-5 w-5 text-zinc-400" />
+                <span>Projetos</span>
               </a>
             </li>
-
-            {/* 3. Galeria */}
             <li>
               <a
-                href="/gallery"
+                href="/galeria"
                 onClick={(e) => {
                   e.preventDefault();
                   if (onOpenGallery) onOpenGallery();
-                  else onNavigateTab?.("gallery");
+                  else if (onNavigateTab) onNavigateTab("gallery");
                 }}
-                className="flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-left text-[15px] transition-colors text-zinc-300 hover:bg-white/[0.06] hover:text-white cursor-pointer"
+                className="flex items-center gap-3 rounded-lg px-4 py-2.5 text-[15px] font-medium transition-colors text-zinc-400 hover:bg-white/[0.06] hover:text-white cursor-pointer"
               >
-                <Images className="h-[18px] w-[18px] shrink-0 text-zinc-400" aria-hidden="true" />
-                <span className="truncate">Galeria</span>
+                <Images className="h-5 w-5 text-zinc-400" />
+                <span>Galeria</span>
               </a>
             </li>
-
-            {/* 4. Comunidade */}
             <li>
               <a
-                href="/community"
+                href="/comunidade"
                 onClick={(e) => {
                   e.preventDefault();
                   if (onOpenCommunity) onOpenCommunity();
-                  else onNavigateTab?.("community");
+                  else if (onNavigateTab) onNavigateTab("community");
                 }}
-                className="flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-left text-[15px] transition-colors text-zinc-300 hover:bg-white/[0.06] hover:text-white cursor-pointer"
+                className="flex items-center gap-3 rounded-lg px-4 py-2.5 text-[15px] font-medium transition-colors text-zinc-400 hover:bg-white/[0.06] hover:text-white cursor-pointer"
               >
-                <Globe className="h-[18px] w-[18px] shrink-0 text-zinc-400" aria-hidden="true" />
-                <span className="truncate">Comunidade</span>
+                <Globe className="h-5 w-5 text-zinc-400" />
+                <span>Comunidade</span>
               </a>
             </li>
 
-            {/* 5. Agentes (Em breve Oficial) */}
-            <li>
-              <span
-                title="Em breve"
-                aria-disabled="true"
-                className="flex cursor-not-allowed items-center gap-3 rounded-lg px-4 py-2.5 text-[15px] text-zinc-600 select-none"
+            {/* Agentes com Badge Em breve Oficial */}
+            <li className="pt-1">
+              <a
+                href="/agentes"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (onOpenAgentes) onOpenAgentes();
+                  else if (onNavigateTab) onNavigateTab("agentes");
+                }}
+                className="flex items-center justify-between rounded-lg px-4 py-2.5 text-[15px] font-medium transition-colors text-zinc-400 hover:bg-white/[0.06] hover:text-white cursor-pointer group"
               >
-                <Bot className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
-                <span className="truncate">Agentes</span>
-                <span className="ml-auto shrink-0 rounded-full bg-white/[0.04] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-zinc-500">
+                <div className="flex items-center gap-3">
+                  <Bot className="h-5 w-5 text-zinc-400 group-hover:text-white transition-colors" />
+                  <span>Agentes</span>
+                </div>
+                <span className="rounded-full bg-violet-500/10 px-2 py-0.5 text-[10px] font-semibold text-violet-400 border border-violet-500/20">
                   Em breve
                 </span>
-              </span>
+              </a>
             </li>
           </ul>
 
-          <div className="my-4 h-px bg-white/10" />
+          {/* Divisor "Agentes" na Sidebar */}
+          <div className="my-4 border-t border-white/[0.06]" />
+          <div className="px-4 pb-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+              Agentes
+            </span>
+          </div>
 
-          {/* Lista Direta dos 6 Agentes (Sem bolinhas, texto limpo) */}
           <ul className="space-y-0.5">
             <li>
               <div>
@@ -648,6 +683,7 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
                         setIsProfileMenuOpen(false);
                         localStorage.removeItem("zion_auth_user");
                         localStorage.removeItem("currentUser");
+                        localStorage.removeItem("zion_user");
                         window.location.reload();
                       }}
                       className="flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-200 transition-colors hover:bg-white/[0.06] hover:text-white disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
@@ -661,6 +697,16 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
             </div>
 
             <div className="ml-auto flex items-center gap-1">
+              <button
+                type="button"
+                aria-label="Notificações"
+                title="Notificações"
+                onClick={() => alert("Nenhuma nova notificação.")}
+                className="flex h-9 w-9 items-center justify-center rounded-xl text-zinc-400 transition-colors hover:bg-white/10 hover:text-white cursor-pointer"
+              >
+                <Bell className="h-[18px] w-[18px]" />
+              </button>
+
               <button
                 type="button"
                 title="Reportar erro ou sugestão"
@@ -687,13 +733,11 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
                 {/* Popover dos 3 pontinhos 1:1 Oficial */}
                 {isLinksMenuOpen && (
                   <div className="absolute left-full z-50 ml-3 w-80 bottom-0 rounded-xl border border-white/10 bg-zinc-950/95 p-2 shadow-2xl backdrop-blur-xl animate-in fade-in-0 zoom-in-95 slide-in-from-left-2 duration-150">
-                    <button
-                      type="button"
+                    <a
                       role="menuitem"
-                      onClick={() => {
-                        setIsLinksMenuOpen(false);
-                        setIsGuiaModalOpen(true);
-                      }}
+                      href="https://aulas.easybuilder.com.br/"
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="group/link flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-white transition-all hover:bg-white/10 cursor-pointer"
                     >
                       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ background: "rgba(139, 92, 246, 0.125)", border: "1px solid rgba(139, 92, 246, 0.19)" }}>
@@ -704,7 +748,7 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
                         <span className="block text-xs text-zinc-500">Guias e tutoriais do Design Builder</span>
                       </span>
                       <ArrowRight className="h-3.5 w-3.5 text-zinc-600 transition-colors group-hover/link:text-zinc-400" />
-                    </button>
+                    </a>
                     <a
                       role="menuitem"
                       href="https://link.easybuilder.com.br/fale-com-luiz"
@@ -750,8 +794,11 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
         <main className="max-lg:min-h-full lg:min-h-screen overflow-x-hidden lg:pl-72">
           <div className="mx-auto w-full max-w-[1800px] px-4 pb-10 sm:px-6 sm:pb-14 xl:px-10 2xl:px-14 pt-10 sm:pt-14">
 
-            {/* 1. HERO CARDS (ÓRION PRO & HYDRA) */}
+            {/* ══════════════════════════════════════════════════════
+                1. HERO SHOWCASE & 3-SUBGRID (Home.html Seção 1)
+            ══════════════════════════════════════════════════════ */}
             <section className="mb-12 lg:mb-16">
+              {/* Linha Superior: ÓRION PRO e HYDRA */}
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {/* ÓRION PRO */}
                 <VitrineHoverCard
@@ -772,7 +819,7 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
                 />
               </div>
 
-              {/* 2ª LINHA: COMUNIDADE STRIP, REF BUILDER, ENHANCE */}
+              {/* 2ª Linha: Comunidade Strip, REF BUILDER, ENHANCE */}
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 mt-12 lg:mt-16">
                 
                 {/* Comunidade Horizontal Strip */}
@@ -819,7 +866,7 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
 
                 {/* REF BUILDER */}
                 <VitrineHoverCard
-                  images={["/Home_files/ref-4.avif", "/Home_files/ref-1.avif", "/Home_files/ref-2.avif"]}
+                  images={["/Home_files/ref-4.avif", "/Home_files/ref-1.avif", "/Home_files/ref-2.avif", "/Home_files/ref-3.avif"]}
                   alt="REF BUILDER"
                   title="REF BUILDER"
                   aspectClass="aspect-[5/4]"
@@ -847,8 +894,8 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
                     aria-label="ENHANCE"
                     className="h-full w-full object-cover zoom-lento"
                   >
+                    <source src="/Home_files/enhance-builder.mp4" type="video/mp4" />
                     <source src="https://apidb20.designbuilder.co/api/agent-videos/enhance-builder?v=4" type="video/mp4" />
-                    <source src="/vitrine/enhance-video.mp4" type="video/mp4" />
                   </video>
                   <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-4 pb-4 pt-16">
                     <span className="font-display text-lg font-bold tracking-wider text-white">ENHANCE</span>
@@ -858,13 +905,15 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
               </div>
             </section>
 
-            {/* 2. HYDRA FAIXA DE DESTAQUE 3D */}
+            {/* ══════════════════════════════════════════════════════
+                2. HYDRA FAIXA DE DESTAQUE 3D (Home.html Seção 2)
+            ══════════════════════════════════════════════════════ */}
             <div className="mt-12 lg:mt-16">
               <section className="relative min-h-[380px] sm:min-h-[440px] overflow-hidden rounded-3xl bg-black ring-1 ring-white/[0.06]">
                 {/* 6 Fanned 3D Cards */}
                 <div
                   aria-hidden="true"
-                  className="pointer-events-none absolute inset-y-0 right-0 w-[90%] md:w-[68%] block opacity-60 md:opacity-100"
+                  className="pointer-events-none absolute inset-y-0 right-0 hidden w-[68%] md:block"
                   style={{ perspective: "1400px" }}
                 >
                   {HYDRA_FANNED_CARDS.map((card, i) => (
@@ -873,7 +922,7 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
                       onMouseEnter={() => setHoveredHydraIndex(i)}
                       onMouseLeave={() => setHoveredHydraIndex(null)}
                       onClick={() => go("hydra")}
-                      className="pointer-events-auto absolute top-1/2 right-4 sm:right-6 h-[126%] w-[42%] sm:w-[40%] overflow-hidden rounded-[22px] shadow-[0_30px_60px_-20px_rgba(0,0,0,0.8)] cursor-pointer"
+                      className="pointer-events-auto absolute top-1/2 right-6 h-[126%] w-[40%] overflow-hidden rounded-[22px] shadow-[0_30px_60px_-20px_rgba(0,0,0,0.8)] cursor-pointer"
                       style={{
                         transform: hoveredHydraIndex === i
                           ? `translate(${card.translate}, calc(-50% - 18px)) rotate(${card.rotate}) scale(${Number(card.scale) * 1.05}) translateZ(30px)`
@@ -891,7 +940,7 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
                   ))}
                 </div>
 
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black via-black/85 to-transparent md:via-black/35 md:to-transparent" />
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black via-black/70 to-transparent md:via-black/35 md:to-transparent" />
 
                 <div className="relative max-w-2xl px-8 py-12 sm:px-12 sm:py-16">
                   <span className="inline-flex rounded-full bg-violet-500/15 px-3.5 py-1.5 font-display text-[11px] font-bold uppercase tracking-[0.18em] text-violet-400">
@@ -917,9 +966,12 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
               </section>
             </div>
 
-            {/* 3. COMUNIDADE FEED MASONRY (4 COLUNAS) */}
+            {/* ══════════════════════════════════════════════════════
+                3. COMUNIDADE FEED MASONRY 24 CARDS (Home.html Seção 3)
+            ══════════════════════════════════════════════════════ */}
             <div className="mt-12 lg:mt-16">
               <section>
+                {/* Abas Oficiais */}
                 <div className="flex flex-wrap items-center gap-6 border-b border-white/[0.06] pb-3">
                   <button
                     type="button"
@@ -943,114 +995,308 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
                   </button>
                   <button
                     type="button"
-                    aria-pressed={activeTab === "meus_favoritos"}
-                    onClick={() => setActiveTab("meus_favoritos")}
+                    aria-pressed={activeTab === "recentes"}
+                    onClick={() => setActiveTab("recentes")}
                     className={`font-display text-lg font-bold uppercase tracking-wider transition-colors cursor-pointer ${
-                      activeTab === "meus_favoritos" ? "text-violet-400" : "text-white/90 hover:text-white"
+                      activeTab === "recentes" ? "text-violet-400" : "text-white/90 hover:text-white"
                     }`}
                   >
-                    Meus favoritos
+                    Recentes
                   </button>
                 </div>
 
-                <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-                  {/* Coluna 1 */}
-                  <div className="space-y-4">
-                    {COMMUNITY_COL_1.map((item) => (
-                      <div
-                        key={item.id}
-                        onClick={() => setPreviewArt(item)}
-                        className="group relative overflow-hidden rounded-2xl bg-zinc-950 ring-1 ring-white/[0.06] cursor-pointer"
-                      >
-                        <img alt="" loading="lazy" className="w-full object-cover zoom-lento" src={item.src} />
-                        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100 flex items-end p-3">
-                          <span className="text-xs font-medium text-white">{item.author}</span>
-                        </div>
+                {/* Grid 4 Colunas 1:1 Oficial */}
+                <div className="relative">
+                  <div className="mt-4 flex gap-[2px]" style={{ "--duracao-zoom": "280ms" } as React.CSSProperties}>
+                    {activeCommunityColumns.map((col, colIdx) => (
+                      <div key={colIdx} className="flex min-w-0 flex-1 flex-col gap-[2px]">
+                        {col.map((item) => (
+                          <a
+                            key={item.id}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setPreviewArt(item);
+                            }}
+                            className="group relative block overflow-hidden rounded-md cursor-pointer"
+                          >
+                            <img
+                              alt={`[${item.id}]`}
+                              loading="lazy"
+                              className="h-auto w-full zoom-lento"
+                              src={item.src}
+                            />
+                            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center gap-2 px-2.5 pt-10 pb-2">
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-transparent opacity-0 transition-opacity duration-[400ms] ease-suave group-hover:opacity-100" />
+                              {item.avatar ? (
+                                <img
+                                  alt=""
+                                  loading="lazy"
+                                  className="relative h-7 w-7 shrink-0 rounded-full object-cover ring-1 ring-white/40 shadow-[0_2px_10px_rgba(0,0,0,0.7)]"
+                                  src={item.avatar}
+                                />
+                              ) : (
+                                <span className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-black/50 text-[11px] font-semibold text-white ring-1 ring-white/40 shadow-[0_2px_10px_rgba(0,0,0,0.7)]">
+                                  {item.initial || "R"}
+                                </span>
+                              )}
+                              <span className="relative min-w-0 max-w-0 -translate-x-1 overflow-hidden opacity-0 transition-all duration-[400ms] ease-suave group-hover:max-w-[240px] group-hover:translate-x-0 group-hover:opacity-100">
+                                <span className="block truncate text-[12px] font-medium leading-tight text-white">
+                                  {item.author}
+                                </span>
+                              </span>
+                            </div>
+                          </a>
+                        ))}
                       </div>
                     ))}
                   </div>
 
-                  {/* Coluna 2 */}
-                  <div className="space-y-4">
-                    {COMMUNITY_COL_2.map((item) => (
-                      <div
-                        key={item.id}
-                        onClick={() => setPreviewArt(item)}
-                        className="group relative overflow-hidden rounded-2xl bg-zinc-950 ring-1 ring-white/[0.06] cursor-pointer"
-                      >
-                        <img alt="" loading="lazy" className="w-full object-cover zoom-lento" src={item.src} />
-                        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100 flex items-end p-3">
-                          <span className="text-xs font-medium text-white">{item.author}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Coluna 3 */}
-                  <div className="space-y-4">
-                    {COMMUNITY_COL_3.map((item) => (
-                      <div
-                        key={item.id}
-                        onClick={() => setPreviewArt(item)}
-                        className="group relative overflow-hidden rounded-2xl bg-zinc-950 ring-1 ring-white/[0.06] cursor-pointer"
-                      >
-                        <img alt="" loading="lazy" className="w-full object-cover zoom-lento" src={item.src} />
-                        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100 flex items-end p-3">
-                          <span className="text-xs font-medium text-white">{item.author}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Coluna 4 */}
-                  <div className="space-y-4">
-                    {COMMUNITY_COL_4.map((item) => (
-                      <div
-                        key={item.id}
-                        onClick={() => setPreviewArt(item)}
-                        className="group relative overflow-hidden rounded-2xl bg-zinc-950 ring-1 ring-white/[0.06] cursor-pointer"
-                      >
-                        <img alt="" loading="lazy" className="w-full object-cover zoom-lento" src={item.src} />
-                        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100 flex items-end p-3">
-                          <span className="text-xs font-medium text-white">{item.author}</span>
-                        </div>
-                      </div>
-                    ))}
+                  {/* Gradiente de Desvanecimento Inferior */}
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-64 bg-gradient-to-t from-black via-black/85 to-transparent" />
+                  
+                  {/* Botão Central Ver Mais */}
+                  <div className="absolute inset-x-0 bottom-0 flex justify-center pb-6">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onOpenCommunity) onOpenCommunity();
+                        else onNavigateTab?.("community");
+                      }}
+                      className="inline-flex items-center gap-2 rounded-full bg-violet-600 px-7 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-900/40 transition-[filter] duration-300 hover:brightness-110 disabled:opacity-60 cursor-pointer"
+                    >
+                      Ver mais
+                      <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+                    </button>
                   </div>
                 </div>
               </section>
             </div>
 
-            {/* 4. BANNER DA ÁREA DE MEMBROS */}
-            <div className="mt-16 sm:mt-24">
-              <section className="relative overflow-hidden rounded-3xl ring-1 ring-white/10" style={{ background: "#08040f" }}>
-                <div
-                  className="pointer-events-none absolute inset-0"
-                  style={{
-                    background: "radial-gradient(ellipse at center, rgba(8,4,15,0.92) 0%, rgba(8,4,15,0.55) 45%, transparent 75%)",
+            {/* ══════════════════════════════════════════════════════
+                4. REF BUILDER 3D FAN SHOWCASE (Home.html Seção 4)
+            ══════════════════════════════════════════════════════ */}
+            <div className="mt-12 lg:mt-16">
+              <section
+                className="relative overflow-hidden rounded-3xl bg-[#08040f]"
+                style={{
+                  boxShadow: "rgba(139, 92, 246, 0.35) 0px 0px 90px 10px inset, rgba(217, 70, 239, 0.12) 0px 0px 200px 40px inset, rgba(139, 92, 246, 0.4) 0px 0px 60px -20px",
+                }}
+              >
+                {/* Vídeo de Fundo Oficial */}
+                <video
+                  src="/Home_files/fundo-secao-referencias.mp4"
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  preload="metadata"
+                  aria-hidden="true"
+                  ref={(el) => {
+                    if (el) {
+                      el.muted = true;
+                      el.play().catch(() => {});
+                    }
                   }}
+                  className="pointer-events-none absolute inset-0 h-full w-full object-cover"
                 />
 
-                <div className="relative flex flex-col items-center gap-5 px-6 py-16 text-center sm:py-20">
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(8,4,15,0.86)_0%,rgba(8,4,15,0.72)_55%,rgba(8,4,15,0.9)_100%)]" />
+
+                <div className="relative flex flex-col items-center gap-5 px-6 pt-16 pb-10 text-center sm:pt-20 md:pb-16 xl:pb-24">
+                  {/* Logo Zion Design */}
                   <img
                     alt="Zion Design"
+                    loading="lazy"
                     width={399}
                     height={85}
                     decoding="async"
-                    className="h-8 w-auto opacity-90"
+                    className="h-8 w-auto"
                     src="/logo-zion.svg"
                     onError={(e) => { (e.target as HTMLElement).setAttribute("src", "/logo-zion.webp"); }}
                     style={{ color: "transparent" }}
                   />
+
+                  <p className="font-display text-2xl leading-tight text-white sm:text-4xl">
+                    <span className="block">Transforme inspirações</span>
+                    <span className="block">em criações únicas</span>
+                  </p>
+
+                  <p className="max-w-xl text-[15px] text-zinc-300">
+                    Combine suas inspirações no Ref Builder e crie uma imagem com identidade própria.
+                  </p>
+
+                  <a
+                    onClick={(e) => { e.preventDefault(); go("ref"); }}
+                    className="botao-externo cursor-pointer"
+                    href="/agent/ref"
+                  >
+                    <span className="botao-externo__seta">
+                      <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+                    </span>
+                    <span className="botao-externo__texto">Criar com inspirações</span>
+                  </a>
+
+                  {/* Leque 3D Interativo de 5 Cards com Entradas Flutuantes */}
+                  <div className="mt-8 hidden w-full max-w-[1400px] items-end justify-center md:flex">
+                    {REF_FANNED_CARDS.map((card, idx) => {
+                      const isHovered = hoveredRefIndex === idx;
+                      return (
+                        <div
+                          key={card.id}
+                          onMouseEnter={() => setHoveredRefIndex(idx)}
+                          onMouseLeave={() => setHoveredRefIndex(null)}
+                          onClick={() => go("ref")}
+                          className="relative aspect-[3/4] shrink-0 overflow-hidden rounded-2xl shadow-[0_26px_60px_-18px_rgba(0,0,0,0.85)] cursor-pointer"
+                          style={{
+                            width: card.width,
+                            marginLeft: card.marginLeft,
+                            transform: isHovered ? card.hoverTransform : card.baseTransform,
+                            filter: isHovered ? "brightness(1.1)" : "brightness(0.92)",
+                            transitionProperty: "transform, filter",
+                            transitionDuration: "320ms",
+                            transitionTimingFunction: "cubic-bezier(0.32, 0.72, 0, 1)",
+                            zIndex: isHovered ? 50 : card.baseZ,
+                          }}
+                        >
+                          <img alt="" loading="lazy" className="h-full w-full object-cover" src={card.mainImg} />
+
+                          {/* Escurecimento suave no hover */}
+                          <div
+                            className="pointer-events-none absolute inset-0 bg-black"
+                            style={{
+                              opacity: isHovered ? 0.45 : 0,
+                              transitionProperty: "opacity",
+                              transitionDuration: "460ms",
+                              transitionTimingFunction: "cubic-bezier(0.32, 0.72, 0, 1)",
+                            }}
+                          />
+
+                          {/* Miniaturas de Inspiração Flutuantes que abrem no hover */}
+                          <div className="pointer-events-none absolute inset-0 grid place-items-center">
+                            {card.subcards.map((sub, sidx) => (
+                              <div
+                                key={sidx}
+                                className="col-start-1 row-start-1 aspect-[3/4] w-[36%] overflow-hidden rounded-lg shadow-[0_10px_24px_-8px_rgba(0,0,0,0.9)] ring-1 ring-white/25"
+                                style={{
+                                  transform: isHovered ? sub.hoverTransform : sub.baseTransform,
+                                  opacity: isHovered ? 1 : 0,
+                                  transitionProperty: "transform, opacity",
+                                  transitionDuration: "560ms",
+                                  transitionTimingFunction: "cubic-bezier(0.32, 0.72, 0, 1)",
+                                  transitionDelay: `${sub.delay}ms`,
+                                }}
+                              >
+                                <img alt="" loading="lazy" className="h-full w-full object-cover" src={sub.img} />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            {/* ══════════════════════════════════════════════════════
+                5. ÁREA DE MEMBROS COM WIREFRAME 3D SVG (Home.html Seção 5)
+            ══════════════════════════════════════════════════════ */}
+            <div className="mt-12 lg:mt-16">
+              <section
+                className="relative overflow-hidden rounded-3xl bg-[#08040f]"
+                style={{
+                  boxShadow: "rgba(139, 92, 246, 0.35) 0px 0px 90px 10px inset, rgba(217, 70, 239, 0.12) 0px 0px 200px 40px inset, rgba(139, 92, 246, 0.4) 0px 0px 60px -20px",
+                }}
+              >
+                {/* Grid 3D de Perspectiva da Sala Oficial */}
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 1000 400"
+                  preserveAspectRatio="none"
+                  className="pointer-events-none absolute inset-0 h-full w-full"
+                >
+                  <g stroke="rgba(167, 139, 250, 0.13)" strokeWidth="1" fill="none">
+                    <path d="M0 0 L340 130" />
+                    <path d="M0 400 L340 270" />
+                    <path d="M0 0 L340 130" />
+                    <path d="M1000 0 L660 130" />
+                    <path d="M100 0 L372 130" />
+                    <path d="M100 400 L372 270" />
+                    <path d="M0 40 L340 144" />
+                    <path d="M1000 40 L660 144" />
+                    <path d="M200 0 L404 130" />
+                    <path d="M200 400 L404 270" />
+                    <path d="M0 80 L340 158" />
+                    <path d="M1000 80 L660 158" />
+                    <path d="M300 0 L436 130" />
+                    <path d="M300 400 L436 270" />
+                    <path d="M0 120 L340 172" />
+                    <path d="M1000 120 L660 172" />
+                    <path d="M400 0 L468 130" />
+                    <path d="M400 400 L468 270" />
+                    <path d="M0 160 L340 186" />
+                    <path d="M1000 160 L660 186" />
+                    <path d="M500 0 L500 130" />
+                    <path d="M500 400 L500 270" />
+                    <path d="M0 200 L340 200" />
+                    <path d="M1000 200 L660 200" />
+                    <path d="M600 0 L532 130" />
+                    <path d="M600 400 L532 270" />
+                    <path d="M0 240 L340 214" />
+                    <path d="M1000 240 L660 214" />
+                    <path d="M700 0 L564 130" />
+                    <path d="M700 400 L564 270" />
+                    <path d="M0 280 L340 228" />
+                    <path d="M1000 280 L660 228" />
+                    <path d="M800 0 L596 130" />
+                    <path d="M800 400 L596 270" />
+                    <path d="M0 320 L340 242" />
+                    <path d="M1000 320 L660 242" />
+                    <path d="M900 0 L628 130" />
+                    <path d="M900 400 L628 270" />
+                    <path d="M0 360 L340 256" />
+                    <path d="M1000 360 L660 256" />
+                    <path d="M1000 0 L660 130" />
+                    <path d="M1000 400 L660 270" />
+                    <path d="M0 400 L340 270" />
+                    <path d="M1000 400 L660 270" />
+                  </g>
+                  <g stroke="rgba(167, 139, 250, 0.11)" strokeWidth="1" fill="none">
+                    <rect x="6.938775510204081" y="2.6530612244897958" width="986.1224489795918" height="394.69387755102036" />
+                    <rect x="27.755102040816325" y="10.612244897959183" width="944.4897959183672" height="378.7755102040817" />
+                    <rect x="62.44897959183673" y="23.877551020408163" width="875.1020408163265" height="352.2448979591836" />
+                    <rect x="111.0204081632653" y="42.44897959183673" width="777.9591836734694" height="315.1020408163265" />
+                    <rect x="173.46938775510205" y="66.3265306122449" width="653.0612244897959" height="267.34693877551024" />
+                    <rect x="249.79591836734693" y="95.51020408163265" width="500.4081632653061" height="208.9795918367347" />
+                  </g>
+                  <rect x="340" y="130" width="320" height="140" fill="none" stroke="rgba(167, 139, 250, 0.28)" strokeWidth="1" />
+                </svg>
+
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(8,4,15,0.92)_0%,rgba(8,4,15,0.55)_45%,transparent_75%)]" />
+
+                <div className="relative flex flex-col items-center gap-5 px-6 py-16 text-center sm:py-20">
+                  <img
+                    alt="Zion Design"
+                    loading="lazy"
+                    width={399}
+                    height={85}
+                    decoding="async"
+                    className="h-8 w-auto"
+                    src="/logo-zion.svg"
+                    onError={(e) => { (e.target as HTMLElement).setAttribute("src", "/logo-zion.webp"); }}
+                    style={{ color: "transparent" }}
+                  />
+
                   <p className="font-display text-2xl leading-tight text-white sm:text-4xl">
                     <span className="block">Assista nossos conteúdos</span>
                     <span className="block">na área de membros!</span>
                   </p>
+
                   <a
-                    href="#aulas"
+                    href="https://aulas.easybuilder.com.br/"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="botao-externo cursor-pointer"
+                    className="botao-externo"
                   >
                     <span className="botao-externo__seta">
                       <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
@@ -1102,7 +1348,7 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
         />
       )}
 
-      {/* ── Modal de Detalhe da Comunidade ── */}
+      {/* ── Modal de Detalhe da Arte da Comunidade ── */}
       {previewArt && (
         <div 
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200"
