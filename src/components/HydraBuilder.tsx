@@ -579,7 +579,7 @@ export const HydraBuilder: React.FC<HydraBuilderProps> = ({
           type="button"
           onClick={() => {
             if (onOpenVitrine) onOpenVitrine();
-            else window.dispatchEvent(new CustomEvent("db:open_vitrine"));
+            else if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("db:go_home"));
           }}
           className="flex items-center gap-1 text-xs font-semibold text-zinc-300 hover:text-white px-2 py-1 rounded-lg bg-white/[0.04] border border-white/5 active:scale-95 transition-all cursor-pointer"
         >
@@ -625,7 +625,7 @@ export const HydraBuilder: React.FC<HydraBuilderProps> = ({
       <aside
         data-aside-form-col=""
         data-tour="form"
-        className="agent-form-col relative z-10 flex shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-white/5 scrollbar-hide px-2 py-3 pb-28 lg:px-4 lg:py-5 lg:pb-5 transition-[filter,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] lg:sticky lg:top-0 lg:h-full max-lg:order-2 w-full lg:w-[320px] max-lg:min-h-0 bg-black"
+        className="agent-form-col relative z-10 flex shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-white/5 scrollbar-hide px-2 py-3 lg:px-4 lg:py-5 lg:pb-5 transition-[filter,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] lg:sticky lg:top-0 lg:h-full max-lg:order-2 w-full lg:w-[320px] max-lg:min-h-0 bg-black"
       >
         <div className="flex flex-col gap-5 flex-1 min-h-max">
           {/* 1. Upload de Imagem */}
@@ -1166,10 +1166,9 @@ export const HydraBuilder: React.FC<HydraBuilderProps> = ({
 
           <div className="flex-1" />
 
-          {/* 11. STICKY ACTION CARD (Sempre visível fixado na base da barra lateral) */}
-          <div className="sticky bottom-3 z-30 -mx-1 animate-in fade-in slide-in-from-bottom-2 duration-200">
-            <div className="rounded-2xl border border-white/10 bg-black/85 px-2 py-2 shadow-2xl backdrop-blur-md">
-              <div className="w-full">
+          {/* 11. ACTION CARD (Botão Construir) */}
+          <div className="mt-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <div className="w-full">
                 <button
                   type="button"
                   onClick={handleBuild}
@@ -1206,10 +1205,9 @@ export const HydraBuilder: React.FC<HydraBuilderProps> = ({
                     <RotateCcw className="h-3 w-3" />
                     <span>Resetar</span>
                   </button>
-                </div>
-              </div>
             </div>
           </div>
+        </div>
 
           <div className="h-4 shrink-0" aria-hidden="true" />
 
@@ -2117,53 +2115,7 @@ export const HydraBuilder: React.FC<HydraBuilderProps> = ({
           </div>
         </div>
       )}
-      {/* Barra de controle inferior mobile para alternar Ajustes / Palco / Histórico */}
-      <div className="fixed bottom-3 inset-x-0 z-40 flex justify-center px-4 lg:hidden pointer-events-none">
-        <div className="flex items-center gap-1 rounded-full border border-white/10 bg-black/85 p-1.5 backdrop-blur-xl shadow-2xl pointer-events-auto">
-          <button
-            type="button"
-            onClick={() => {
-              setMobileView("form");
-              setIsMobileHistoryOpen(false);
-            }}
-            className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
-              mobileView === "form" && !isMobileHistoryOpen
-                ? "bg-violet-600 text-white shadow-md"
-                : "text-zinc-400 hover:text-white"
-            }`}
-          >
-            <SlidersHorizontal className="h-3.5 w-3.5" />
-            <span>Ajustes</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setMobileView("palco");
-              setIsMobileHistoryOpen(false);
-            }}
-            className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
-              mobileView === "palco" && !isMobileHistoryOpen
-                ? "bg-violet-600 text-white shadow-md"
-                : "text-zinc-400 hover:text-white"
-            }`}
-          >
-            <Eye className="h-3.5 w-3.5" />
-            <span>Palco</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsMobileHistoryOpen((prev) => !prev)}
-            className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
-              isMobileHistoryOpen
-                ? "bg-violet-600 text-white shadow-md"
-                : "text-zinc-400 hover:text-white"
-            }`}
-          >
-            <Clock className="h-3.5 w-3.5" />
-            <span>Histórico</span>
-          </button>
-        </div>
-      </div>
+      {/* Barra de controle inferior mobile removida pois já existe no header superior e estava sobrepondo o botão Construir */}
       </div>
     </div>
   );

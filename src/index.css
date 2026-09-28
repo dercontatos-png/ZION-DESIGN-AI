@@ -1,6 +1,4 @@
 @import "tailwindcss";
-
-
 @theme {
   --font-sans: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: "Geist Mono", monospace;
@@ -850,3 +848,39 @@ button:active:not(:disabled),
   transform: translateX(-50%) rotateY(180deg);
 }
 
+/* ── Custom Animations & Effects from Original Site ── */
+.zoom-lento {
+  transition: transform var(--duracao-zoom, .6s) var(--ease-suave);
+  will-change: transform;
+  backface-visibility: hidden;
+  transform: translateZ(0) scale(1);
+}
+.zoom-lento, .group:focus-visible .zoom-lento {
+  transform: translateZ(0) scale(1.06);
+}
+.zoom-lento, .group:hover .zoom-lento, .group:focus-visible .zoom-lento {
+  transition: none;
+  transform: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .group:hover .zoom-lento {
+    transform: translateZ(0) scale(1.06) !important;
+    transition: transform var(--duracao-zoom, .6s) cubic-bezier(.32, .72, 0, 1) !important;
+  }
+}
+.ease-suave {
+  transition-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+}
+:root {
+  --duracao-zoom: 600ms;
+  --ease-suave: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@media (max-width: 1024px) {
+  .max-lg\:grid-rows-\[0fr_1fr\] {
+    grid-template-rows: 0fr 1fr !important;
+  }
+  .max-lg\:grid-rows-\[1fr_0fr\] {
+    grid-template-rows: 1fr 0fr !important;
+  }
+}

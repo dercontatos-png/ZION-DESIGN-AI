@@ -672,7 +672,7 @@ const AlteraFacilBuilder: React.FC<AlteraFacilBuilderProps> = ({
           type="button"
           onClick={() => {
             if (onOpenVitrine) onOpenVitrine();
-            else window.dispatchEvent(new CustomEvent("db:open_vitrine"));
+            else if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("db:go_home"));
           }}
           className="flex items-center gap-1 text-xs font-semibold text-zinc-300 hover:text-white px-2 py-1 rounded-lg bg-white/[0.04] border border-white/5 active:scale-95 transition-all cursor-pointer"
         >
@@ -721,7 +721,7 @@ const AlteraFacilBuilder: React.FC<AlteraFacilBuilderProps> = ({
         <aside
           data-aside-form-col=""
           data-tour="form"
-          className="agent-form-col relative z-10 flex shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-white/5 scrollbar-hide px-2 py-3 pb-28 lg:px-6 lg:py-6 lg:pb-6 transition-[filter,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] gap-5 lg:gap-6 lg:sticky lg:top-0 lg:h-full max-lg:order-2 w-full lg:w-[420px] lg:min-w-[280px] lg:max-w-[700px] max-lg:min-h-0"
+          className="agent-form-col relative z-10 flex shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-white/5 scrollbar-hide px-2 py-3 max-lg:pb-4 lg:px-6 lg:py-6 lg:pb-6 transition-[filter,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] gap-5 lg:gap-6 lg:sticky lg:top-0 lg:h-full max-lg:order-2 w-full lg:w-[420px] lg:min-w-[280px] lg:max-w-[700px] max-lg:min-h-0"
         >
         {/* 1. Foto para alterar */}
         <div data-tour="form-sec-ef-foto" className="campo-com-info">

@@ -15,6 +15,7 @@ import { downloadImage } from "../utils/downloadImage";
 import { checkAdminOrOpenPlan, getAuthHeaders, openPlanModal } from "../utils/userAuth";
 
 // Modular App Builders & Hubs
+import { DesignBuilderHome } from "./DesignBuilderHome";
 import { DesignBuilderVitrine } from "./DesignBuilderVitrine";
 import { DesignBuilderAppsHub } from "./DesignBuilderAppsHub";
 import { OrionProBuilder } from "./OrionProBuilder";
@@ -122,11 +123,19 @@ export default function DesignBuilder({
     return "design-builder1-2";
   };
 
-  const detectIsVitrineFromUrl = (): boolean => {
+  const detectIsHomeFromUrl = (): boolean => {
+    if (typeof window !== "undefined") {
+      const p = window.location.pathname;
+      if (p === "/" || p === "" || p === "/home") return true;
+    }
+    return false;
+  };
+
+  const detectIsAppsFromUrl = (): boolean => {
     if (typeof window !== "undefined") {
       const p = window.location.pathname;
       const search = new URLSearchParams(window.location.search);
-      if (p === "/" || p === "" || p === "/home" || p === "/vitrine" || search.get("vitrine") === "true") return true;
+      if (p === "/apps" || p === "/todos-os-apps" || search.get("vitrine") === "true") return true;
     }
     return false;
   };
@@ -134,6 +143,7 @@ export default function DesignBuilder({
   const detectPalcoModeFromUrl = (): string => {
     if (typeof window !== "undefined") {
       const p = window.location.pathname;
+      if (p === "/" || p === "" || p === "/home") return "home";
       if (p === "/apps" || p === "/todos-os-apps") return "apps";
       if (p === "/projetos" || p === "/projects") return "projetos";
       if (p === "/community" || p === "/comunidade") return "comunidade";
@@ -144,7 +154,9 @@ export default function DesignBuilder({
   };
 
   // Main UI routing states
-  const [isVitrineOpen, setIsVitrineOpen] = useState<boolean>(detectIsVitrineFromUrl);
+  const [isHomeOpen, setIsHomeOpen] = useState<boolean>(detectIsHomeFromUrl);
+  const [isAppsOpen, setIsAppsOpen] = useState<boolean>(detectIsAppsFromUrl);
+  const [isVitrineOpen, setIsVitrineOpen] = useState<boolean>(false);
   const [selectedAgent, setSelectedAgent] = useState<string>(detectAgentFromUrl);
   const [activePalcoMode, setActivePalcoMode] = useState<string>(detectPalcoModeFromUrl);
   const [studioPalcoTab, setStudioPalcoTab] = useState<"builder" | "pinterest" | "comunidade" | "galeria">("builder");
@@ -210,57 +222,99 @@ export default function DesignBuilder({
         onNavigateTab?.("admin");
         return;
       }
-      if (p === "/apps" || p === "/todos-os-apps") {
+      if (p === "/" || p === "" || p === "/home") {
+        setIsHomeOpen(true);
+        setIsAppsOpen(false);
+        setIsVitrineOpen(false);
+        setActivePalcoMode("home");
+      } else if (p === "/apps" || p === "/todos-os-apps" || p === "/vitrine") {
+        setIsHomeOpen(false);
+        setIsAppsOpen(true);
         setIsVitrineOpen(false);
         setActivePalcoMode("apps");
       } else if (p === "/projetos" || p === "/projects") {
+        setIsHomeOpen(false);
+        setIsAppsOpen(false);
         setIsVitrineOpen(false);
         setActivePalcoMode("projetos");
       } else if (p === "/community" || p === "/comunidade") {
+        setIsHomeOpen(false);
+        setIsAppsOpen(false);
         setIsVitrineOpen(false);
         setActivePalcoMode("comunidade");
       } else if (p === "/gallery" || p === "/galeria") {
+        setIsHomeOpen(false);
+        setIsAppsOpen(false);
         setIsVitrineOpen(false);
         setActivePalcoMode("galeria");
       } else if (p === "/pinterest") {
+        setIsHomeOpen(false);
+        setIsAppsOpen(false);
         setIsVitrineOpen(false);
         setActivePalcoMode("pinterest");
-      } else if (p === "/" || p === "" || p === "/home") {
-        setIsVitrineOpen(true);
       } else if (p.startsWith("/agent/") || p === "/orion-pro" || p === "/hydra" || p === "/ref" || p === "/enhance-builder" || p === "/altera-facil" || p === "/enhance") {
+        setIsHomeOpen(false);
+        setIsAppsOpen(false);
         setIsVitrineOpen(false);
         const ag = detectAgentFromUrl();
         setSelectedAgent(ag);
         setActivePalcoMode("builder");
       }
     };
-    const handleOpenVitrine = () => {
-      setIsVitrineOpen(true);
-      setActivePalcoMode("builder");
+    const handleGoHome = () => {
+      setIsHomeOpen(true);
+      setIsAppsOpen(false);
+      setIsVitrineOpen(false);
+      setActivePalcoMode("home");
+      if (onNavigateTab) {
+        onNavigateTab("home");
+      }
+      if (typeof window !== "undefined") {
+        window.history.pushState({ path: "/" }, "", "/");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
     };
+    const handleOpenApps = () => {
+      setIsHomeOpen(false);
+      setIsAppsOpen(true);
+      setIsVitrineOpen(false);
+      setActivePalcoMode("apps");
+      if (onNavigateTab) {
+        onNavigateTab("apps");
+      }
+      if (typeof window !== "undefined") {
+        window.history.pushState({ path: "/apps" }, "", "/apps");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    };
+    const handleOpenVitrine = handleGoHome;
     const handleOpenStudio = (e: any) => {
-      const agent = e?.detail?.agent || "design-builder1-2";
+      setIsHomeOpen(false);
+      setIsAppsOpen(false);
+      setIsVitrineOpen(false);
+      const agent = typeof e === "string" ? e : (e?.detail?.agent || "design-builder1-2");
       handleSwitchAgent(agent);
     };
     const handleOpenGallery = () => {
+      setIsHomeOpen(false);
+      setIsAppsOpen(false);
       setIsVitrineOpen(false);
       setActivePalcoMode("galeria");
       if (typeof window !== "undefined") window.history.pushState({ path: "/gallery" }, "", "/gallery");
     };
     const handleOpenCommunity = () => {
+      setIsHomeOpen(false);
+      setIsAppsOpen(false);
       setIsVitrineOpen(false);
       setActivePalcoMode("comunidade");
       if (typeof window !== "undefined") window.history.pushState({ path: "/community" }, "", "/community");
     };
     const handleOpenProjects = () => {
+      setIsHomeOpen(false);
+      setIsAppsOpen(false);
       setIsVitrineOpen(false);
       setActivePalcoMode("projetos");
       if (typeof window !== "undefined") window.history.pushState({ path: "/projetos" }, "", "/projetos");
-    };
-    const handleOpenApps = () => {
-      setIsVitrineOpen(false);
-      setActivePalcoMode("apps");
-      if (typeof window !== "undefined") window.history.pushState({ path: "/apps" }, "", "/apps");
     };
 
     const handleOpenAdmin = () => {
@@ -271,23 +325,25 @@ export default function DesignBuilder({
     };
 
     window.addEventListener("popstate", handlePopState);
-    window.addEventListener("db:open_vitrine", handleOpenVitrine);
+    window.addEventListener("db:go_home", handleGoHome);
+    window.addEventListener("db:open_vitrine", handleGoHome);
+    window.addEventListener("db:open_apps", handleOpenApps);
     window.addEventListener("db:open_studio", handleOpenStudio);
     window.addEventListener("db:open_gallery", handleOpenGallery);
     window.addEventListener("db:open_community", handleOpenCommunity);
     window.addEventListener("db:open_projects", handleOpenProjects);
-    window.addEventListener("db:open_apps", handleOpenApps);
     window.addEventListener("db:open_admin", handleOpenAdmin);
     window.addEventListener("open-admin-subscribers", handleOpenAdmin);
 
     return () => {
       window.removeEventListener("popstate", handlePopState);
-      window.removeEventListener("db:open_vitrine", handleOpenVitrine);
+      window.removeEventListener("db:go_home", handleGoHome);
+      window.removeEventListener("db:open_vitrine", handleGoHome);
+      window.removeEventListener("db:open_apps", handleOpenApps);
       window.removeEventListener("db:open_studio", handleOpenStudio);
       window.removeEventListener("db:open_gallery", handleOpenGallery);
       window.removeEventListener("db:open_community", handleOpenCommunity);
       window.removeEventListener("db:open_projects", handleOpenProjects);
-      window.removeEventListener("db:open_apps", handleOpenApps);
       window.removeEventListener("db:open_admin", handleOpenAdmin);
       window.removeEventListener("open-admin-subscribers", handleOpenAdmin);
     };
@@ -768,13 +824,45 @@ export default function DesignBuilder({
     showToast(`Iniciando ${clean === "orion-pro" ? "Órion Pro" : clean === "design-builder1-2" ? "Zion Design" : clean}...`, "success");
   };
 
-  // Open Vitrine
-  const handleOpenVitrine = () => {
-    setIsVitrineOpen(true);
-    setActivePalcoMode("builder");
+  // Open Home (Dashboard)
+  const handleGoHome = () => {
+    setIsHomeOpen(true);
+    setIsAppsOpen(false);
+    setIsVitrineOpen(false);
+    setActivePalcoMode("home");
+    if (onNavigateTab) {
+      onNavigateTab("ai-tools");
+    }
     if (typeof window !== "undefined") {
       window.history.pushState({ path: "/" }, "", "/");
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
+  };
+
+  // Open Apps (6 Agents Showcase)
+  const handleOpenApps = () => {
+    setIsHomeOpen(false);
+    setIsAppsOpen(true);
+    setIsVitrineOpen(false);
+    setActivePalcoMode("apps");
+    if (onNavigateTab) {
+      onNavigateTab("ai-tools");
+    }
+    if (typeof window !== "undefined") {
+      window.history.pushState({ path: "/apps" }, "", "/apps");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  const handleOpenVitrine = handleGoHome;
+
+  // Open Studio
+  const handleOpenStudio = (agentSlug?: string) => {
+    setIsHomeOpen(false);
+    setIsAppsOpen(false);
+    setIsVitrineOpen(false);
+    setActivePalcoMode("builder");
+    handleSwitchAgent(agentSlug || "design-builder1-2");
   };
 
   // Crop modal callback
@@ -784,28 +872,64 @@ export default function DesignBuilder({
     setIsCropModalOpen(true);
   };
 
-  // RENDER: VITRINE (HOME VIEW)
-  if (isVitrineOpen) {
+  // RENDER: HOME DASHBOARD (Exact match to app.designbuilder.co Home)
+  if (isHomeOpen) {
     return (
-      <DesignBuilderVitrine
-        onOpenStudio={(agentSlug) => handleSwitchAgent(agentSlug || "design-builder1-2")}
+      <DesignBuilderHome
+        onOpenStudio={handleOpenStudio}
+        onOpenAgentes={handleOpenApps}
         onOpenGallery={() => {
-          setIsVitrineOpen(false);
+          setIsHomeOpen(false);
+          setIsAppsOpen(false);
           setActivePalcoMode("galeria");
           window.history.pushState({ path: "/gallery" }, "", "/gallery");
         }}
         onOpenCommunity={() => {
-          setIsVitrineOpen(false);
+          setIsHomeOpen(false);
+          setIsAppsOpen(false);
           setActivePalcoMode("comunidade");
           window.history.pushState({ path: "/community" }, "", "/community");
         }}
-        onOpenAgentes={() => {
-          setIsVitrineOpen(false);
-          setActivePalcoMode("apps");
-          window.history.pushState({ path: "/apps" }, "", "/apps");
-        }}
         onOpenProjects={() => {
-          setIsVitrineOpen(false);
+          setIsHomeOpen(false);
+          setIsAppsOpen(false);
+          setActivePalcoMode("projetos");
+          window.history.pushState({ path: "/projetos" }, "", "/projetos");
+        }}
+        onOpenAdmin={() => {
+          setIsAdminSubscribersOpen(true);
+          if (onNavigateTab) onNavigateTab("admin");
+        }}
+        onOpenCreditsModal={() => setIsCreditsModalOpen(true)}
+        userTokens={realCredits}
+        userEmail={userEmail}
+        userName={userName}
+      />
+    );
+  }
+
+  // RENDER: TODOS OS APPS (6 Agentes Vitrine - /apps)
+  if (isAppsOpen) {
+    return (
+      <DesignBuilderVitrine
+        onGoHome={handleGoHome}
+        onOpenStudio={handleOpenStudio}
+        onOpenGallery={() => {
+          setIsHomeOpen(false);
+          setIsAppsOpen(false);
+          setActivePalcoMode("galeria");
+          window.history.pushState({ path: "/gallery" }, "", "/gallery");
+        }}
+        onOpenCommunity={() => {
+          setIsHomeOpen(false);
+          setIsAppsOpen(false);
+          setActivePalcoMode("comunidade");
+          window.history.pushState({ path: "/community" }, "", "/community");
+        }}
+        onOpenAgentes={handleOpenApps}
+        onOpenProjects={() => {
+          setIsHomeOpen(false);
+          setIsAppsOpen(false);
           setActivePalcoMode("projetos");
           window.history.pushState({ path: "/projetos" }, "", "/projetos");
         }}
@@ -901,11 +1025,11 @@ export default function DesignBuilder({
                     type="button"
                     onClick={() => {
                       setIsUserMenuOpen(false);
-                      handleOpenVitrine();
+                      handleOpenApps();
                     }}
                     className="w-full text-left px-2 py-1.5 text-xs text-zinc-300 hover:bg-white/5 hover:text-white rounded-lg transition-colors cursor-pointer"
                   >
-                    Voltar à Vitrine
+                    Todos os apps
                   </button>
                   <button
                     type="button"
@@ -927,16 +1051,16 @@ export default function DesignBuilder({
           {/* Início / Apps */}
           <div className="group/home relative">
             <a
-              title="Apps"
+              title="Início"
               className={`flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200 cursor-pointer ${
-                activePalcoMode === "apps"
+                activePalcoMode === "builder" && selectedAgent === "design-builder1-2"
                   ? "bg-violet-500/20 text-violet-400"
                   : "text-zinc-400 hover:bg-white/10 hover:text-white"
               }`}
               href="/"
               onClick={(e) => {
                 e.preventDefault();
-                handleOpenVitrine();
+                handleGoHome();
               }}
             >
               <svg
@@ -959,12 +1083,11 @@ export default function DesignBuilder({
             <div className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 pl-3 opacity-0 transition-all duration-200 group-hover/home:pointer-events-auto group-hover/home:opacity-100 z-50">
               <div className="flex flex-col gap-0.5 rounded-xl bg-zinc-900 p-1.5 shadow-2xl shadow-black/60 ring-1 ring-white/[0.08] min-w-[200px]">
                 <a
-                  className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition-colors text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100 cursor-pointer"
+                  className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] bg-violet-500/15 text-violet-300 font-medium hover:bg-violet-500/25 transition-colors cursor-pointer"
                   href="/apps"
                   onClick={(e) => {
                     e.preventDefault();
-                    setActivePalcoMode("apps");
-                    if (typeof window !== "undefined") window.history.pushState({ path: "/apps" }, "", "/apps");
+                    handleOpenApps();
                   }}
                 >
                   <svg
@@ -1369,7 +1492,7 @@ export default function DesignBuilder({
           <div className="flex-1 flex flex-col h-full overflow-hidden">
             <HydraBuilder
               onSwitchAgent={handleSwitchAgent}
-              onOpenVitrine={handleOpenVitrine}
+              onOpenVitrine={handleGoHome}
               onOpenGallery={() => {
                 setActivePalcoMode("galeria");
                 if (typeof window !== "undefined") window.history.pushState({ path: "/gallery" }, "", "/gallery");
@@ -1387,7 +1510,7 @@ export default function DesignBuilder({
           <div className="flex-1 flex flex-col h-full overflow-hidden">
             <AlteraFacilBuilder
               onSwitchAgent={handleSwitchAgent}
-              onOpenVitrine={handleOpenVitrine}
+              onOpenVitrine={handleGoHome}
               onOpenGallery={() => {
                 setActivePalcoMode("galeria");
                 if (typeof window !== "undefined") window.history.pushState({ path: "/gallery" }, "", "/gallery");
@@ -1405,7 +1528,7 @@ export default function DesignBuilder({
           <div className="flex-1 flex flex-col h-full overflow-hidden">
             <RefBuilder
               onSwitchAgent={handleSwitchAgent}
-              onOpenVitrine={handleOpenVitrine}
+              onOpenVitrine={handleGoHome}
               onOpenGallery={() => {
                 setActivePalcoMode("galeria");
                 if (typeof window !== "undefined") window.history.pushState({ path: "/gallery" }, "", "/gallery");
@@ -1423,7 +1546,7 @@ export default function DesignBuilder({
           <div className="flex-1 flex flex-col h-full overflow-hidden">
             <EnhanceBuilder
               onSwitchAgent={handleSwitchAgent}
-              onOpenVitrine={handleOpenVitrine}
+              onOpenVitrine={handleGoHome}
               onOpenGallery={() => {
                 setActivePalcoMode("galeria");
                 if (typeof window !== "undefined") window.history.pushState({ path: "/gallery" }, "", "/gallery");
@@ -1454,7 +1577,7 @@ export default function DesignBuilder({
               >
                 <OrionProBuilder
                   onSwitchAgent={handleSwitchAgent}
-                  onOpenVitrine={handleOpenVitrine}
+                  onOpenVitrine={handleGoHome}
                   onOpenGallery={() => {
                     setActivePalcoMode("galeria");
                     if (typeof window !== "undefined") window.history.pushState({ path: "/gallery" }, "", "/gallery");
@@ -1501,11 +1624,11 @@ export default function DesignBuilder({
               <div className="lg:hidden flex items-center justify-between px-3 py-2 bg-[#0c0a15] border-b border-white/[0.08] z-30 shrink-0">
                 <button
                   type="button"
-                  onClick={handleOpenVitrine}
+                  onClick={handleGoHome}
                   className="flex items-center gap-1 text-xs font-semibold text-zinc-300 hover:text-white px-2 py-1 rounded-lg bg-white/[0.04] border border-white/5 active:scale-95 transition-all cursor-pointer"
                 >
                   <ChevronLeft className="h-3.5 w-3.5" />
-                  <span>Voltar</span>
+                  <span>Início</span>
                 </button>
                 <div className="flex items-center gap-1.5">
                   <span className="h-2 w-2 rounded-full" style={{ backgroundColor: isOrion ? "#ffd500" : "#7c3aed" }} />
@@ -2335,7 +2458,7 @@ export default function DesignBuilder({
                 <button
                   type="button"
                   aria-label="Sair para o início"
-                  onClick={handleOpenVitrine}
+                  onClick={handleGoHome}
                   className="group flex min-h-[50px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 text-zinc-300 cursor-pointer"
                 >
                   <span className="flex h-7 w-11 items-center justify-center rounded-full transition-colors bg-white/[0.05] ring-1 ring-white/15 group-hover:bg-white/[0.10]">
@@ -2511,8 +2634,7 @@ export default function DesignBuilder({
               : "home"
           }
           onNavigateHome={() => {
-            handleOpenVitrine();
-            if (typeof window !== "undefined") window.history.pushState({ path: "/" }, "", "/");
+            handleGoHome();
           }}
           onNavigateProjects={() => {
             setIsVitrineOpen(false);

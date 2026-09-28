@@ -19,7 +19,8 @@ import {
   Settings,
   ArrowRight,
   Headphones,
-  BookOpen
+  BookOpen,
+  Bot
 } from "lucide-react";
 import { DesignBuilderSettingsModal } from "./DesignBuilderSettingsModal";
 
@@ -33,6 +34,7 @@ export const AGENTS = [
 ];
 
 export interface DesignBuilderSidebarProps {
+  variant?: "dock" | "expanded";
   activeTab: string;
   onNavigateTab: (tab: string) => void;
   onOpenCommunity?: () => void;
@@ -58,6 +60,7 @@ export interface DesignBuilderSidebarProps {
 }
 
 export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
+  variant = "dock",
   activeTab,
   onNavigateTab,
   onOpenCommunity,
@@ -99,7 +102,8 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
   const handleHomeClick = () => {
     if (typeof window !== "undefined") {
       window.history.pushState({ path: "/" }, "", "/");
-      window.dispatchEvent(new CustomEvent("db:open_vitrine"));
+      window.dispatchEvent(new CustomEvent("db:go_home"));
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
     onNavigateTab("ai-tools");
     onCloseMobile?.();
@@ -223,8 +227,290 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
             <Globe size={18} />
             <span>Comunidade</span>
           </a>
+
+          <div
+            title="Em breve"
+            aria-disabled="true"
+            className="flex items-center gap-3 p-3 rounded-xl text-sm font-medium text-zinc-600 cursor-not-allowed select-none"
+          >
+            <Bot size={18} />
+            <span>Agentes</span>
+            <span className="ml-auto rounded-full bg-white/[0.04] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-zinc-500">
+              Em breve
+            </span>
+          </div>
         </div>
       </div>
+    );
+  }
+
+  // Desktop Expanded Sidebar (Exact match to app.designbuilder.co Home page)
+  if (variant === "expanded") {
+    return (
+      <aside
+        aria-label="Navegação principal"
+        className="fixed inset-y-3 left-3 z-50 hidden flex-col rounded-3xl ring-1 ring-white/[0.06] lg:flex w-64 select-none"
+        style={{
+          background: "linear-gradient(rgb(23, 16, 42) 0%, rgb(12, 8, 24) 55%, rgb(5, 3, 8) 100%)",
+        }}
+      >
+        {/* Logo */}
+        <div className="flex shrink-0 items-center px-7 pt-7 pb-8">
+          <a
+            aria-label="Design Builder"
+            href="/"
+            onClick={(e) => {
+              e.preventDefault();
+              handleHomeClick();
+            }}
+            className="cursor-pointer"
+          >
+            <img
+              alt="Design Builder"
+              width={399}
+              height={85}
+              className="h-7 w-auto"
+              src="/logo-zion.svg"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).src = "/logo-zion.webp";
+              }}
+            />
+          </a>
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto overscroll-contain px-3 pb-4">
+          <ul className="space-y-0.5">
+            <li>
+              <a
+                href="/"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleHomeClick();
+                }}
+                className={`flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-left text-[15px] transition-colors cursor-pointer ${
+                  activeTab === "home" || activeTab === "ai-tools"
+                    ? "bg-violet-600/25 font-medium text-white shadow-[0_0_20px_rgba(139,92,246,0.2)]"
+                    : "text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100"
+                }`}
+              >
+                <Home className="h-[18px] w-[18px] shrink-0 text-violet-400" />
+                <span className="truncate">Home</span>
+              </a>
+            </li>
+            <li>
+              <a
+                href="/projetos"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (onOpenProjects) onOpenProjects();
+                  else onNavigateTab("projetos");
+                }}
+                className={`flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-left text-[15px] transition-colors cursor-pointer ${
+                  isProjectsActive
+                    ? "bg-violet-600/25 font-medium text-white"
+                    : "text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100"
+                }`}
+              >
+                <Briefcase className="h-[18px] w-[18px] shrink-0" />
+                <span className="truncate">Projetos</span>
+              </a>
+            </li>
+            <li>
+              <a
+                href="/gallery"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (onOpenGallery) onOpenGallery();
+                  else onNavigateTab("gallery");
+                }}
+                className={`flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-left text-[15px] transition-colors cursor-pointer ${
+                  isGalleryActive
+                    ? "bg-violet-600/25 font-medium text-white"
+                    : "text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100"
+                }`}
+              >
+                <Images className="h-[18px] w-[18px] shrink-0" />
+                <span className="truncate">Galeria</span>
+              </a>
+            </li>
+            <li>
+              <a
+                href="/community"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (onOpenCommunity) onOpenCommunity();
+                  else onNavigateTab("community");
+                }}
+                className={`flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-left text-[15px] transition-colors cursor-pointer ${
+                  isCommunityActive
+                    ? "bg-violet-600/25 font-medium text-white"
+                    : "text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100"
+                }`}
+              >
+                <Globe className="h-[18px] w-[18px] shrink-0" />
+                <span className="truncate">Comunidade</span>
+              </a>
+            </li>
+            <li>
+              <span
+                title="Em breve"
+                aria-disabled="true"
+                className="flex cursor-not-allowed items-center gap-3 rounded-lg px-4 py-2.5 text-[15px] text-zinc-600 select-none"
+              >
+                <Bot className="h-[18px] w-[18px] shrink-0 text-zinc-600" />
+                <span className="truncate">Agentes</span>
+                <span className="ml-auto shrink-0 rounded-full bg-white/[0.04] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-zinc-500">
+                  Em breve
+                </span>
+              </span>
+            </li>
+          </ul>
+
+          <div className="my-3 mx-4 h-px bg-white/[0.06]" />
+
+          <ul className="space-y-0.5">
+            {AGENTS.map((agent) => (
+              <li key={agent.slug}>
+                <a
+                  href={agent.href}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleAgentClick(agent.slug);
+                  }}
+                  className={`flex w-full items-center gap-3 rounded-lg px-4 py-2 text-left text-[14px] transition-colors cursor-pointer ${
+                    selectedAgent === agent.slug
+                      ? "bg-violet-600/20 font-medium text-white"
+                      : "text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100"
+                  }`}
+                >
+                  <span className="truncate">{agent.name}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        {/* Footer: Créditos + Perfil */}
+        <div className="shrink-0 p-4 border-t border-white/[0.06] bg-black/20">
+          <div
+            onClick={() => onOpenCreditsModal?.()}
+            className="group/cred mb-3 cursor-pointer rounded-xl bg-white/[0.03] p-3 ring-1 ring-white/[0.06] transition-all hover:bg-white/[0.06]"
+          >
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-bold text-white">
+                {effectiveCredits.toLocaleString("pt-BR")} créditos
+              </span>
+              <span className="text-zinc-500">/ 56</span>
+            </div>
+            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all duration-500"
+                style={{ width: `${Math.min(100, Math.max(10, (effectiveCredits / 100) * 100))}%` }}
+              />
+            </div>
+            <span className="mt-1.5 block text-[11px] text-zinc-400">
+              11 usados
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                className="flex items-center gap-2.5 rounded-full p-1 text-left ring-1 ring-white/10 transition-all hover:ring-violet-400/50 cursor-pointer"
+              >
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 text-[11px] font-semibold text-white">
+                  {userInitials}
+                </div>
+              </button>
+
+              {isProfileMenuOpen && (
+                <div
+                  role="menu"
+                  className="absolute bottom-full left-0 mb-3 w-60 rounded-2xl border border-white/10 bg-black/90 backdrop-blur-2xl shadow-2xl p-2 z-50"
+                >
+                  <div className="px-3 py-2 border-b border-white/10 mb-1">
+                    <p className="text-sm font-semibold text-white truncate">{userName}</p>
+                    <p className="text-xs text-zinc-400 truncate">{cleanEmail}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsProfileMenuOpen(false);
+                      setIsSettingsModalOpen(true);
+                    }}
+                    className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-zinc-300 hover:bg-white/10 hover:text-white cursor-pointer"
+                  >
+                    <Settings className="h-3.5 w-3.5" />
+                    <span>Configurações</span>
+                  </button>
+                  {isCleanAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsProfileMenuOpen(false);
+                        onOpenAdmin?.();
+                      }}
+                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-amber-400 hover:bg-amber-500/10 font-bold cursor-pointer"
+                    >
+                      <Shield className="h-3.5 w-3.5" />
+                      <span>Painel Admin</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsProfileMenuOpen(false);
+                      onSignOut ? onSignOut() : window.location.reload();
+                    }}
+                    className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-red-400 hover:bg-red-500/10 cursor-pointer"
+                  >
+                    <LogOut className="h-3.5 w-3.5" />
+                    <span>Sair</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setIsReportOpen(true)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:bg-white/10 hover:text-amber-400 transition-colors cursor-pointer"
+                title="Reportar problema"
+              >
+                <AlertTriangle className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsSettingsModalOpen(true)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
+                title="Configurações"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {isSettingsModalOpen && (
+          <DesignBuilderSettingsModal
+            isOpen={isSettingsModalOpen}
+            onClose={() => setIsSettingsModalOpen(false)}
+            onOpenReport={() => setIsReportOpen(true)}
+            onOpenAdmin={() => {
+              setIsSettingsModalOpen(false);
+              onOpenAdmin?.();
+            }}
+            userCredits={effectiveCredits}
+            userPlan={userPlan || "Profissional (Vertex AI)"}
+            isAdmin={isCleanAdmin}
+          />
+        )}
+        <ReportModal isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} />
+      </aside>
     );
   }
 
@@ -357,7 +643,7 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
           {/* 3. Início / Apps com Flyout Menu */}
           <div className="group/home relative">
             <a
-              title="Apps"
+              title="Início"
               href="/"
               onClick={(e) => {
                 e.preventDefault();

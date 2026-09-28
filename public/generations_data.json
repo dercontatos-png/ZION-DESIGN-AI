@@ -1,5 +1,55 @@
 [
   {
+    "id": "1790489997993_t4bwi3w",
+    "title": "Design Builder Arte",
+    "timestamp": "2026-09-27T06:20:26.628Z",
+    "created_at": "2026-09-27T06:20:26.628Z",
+    "imageUrl": "/designbuilder/results/1790489997993_t4bwi3w/result.avif",
+    "result_url": "/designbuilder/results/1790489997993_t4bwi3w/result.avif",
+    "thumbnail_url": "/designbuilder/thumbnails/1790489997993_t4bwi3w/thumbnail.avif",
+    "pngUrl": "/designbuilder/results/1790489997993_t4bwi3w/result.png",
+    "aspectRatio": "4:5",
+    "dimensions": "4:5",
+    "resolution": "1K",
+    "agent_slug": "orion-pro",
+    "prompt": "[Style]: ultra_realistic. [Framing]: medium. [Scene Background]: spaço cideral. [Main Subject]: neymar com roupa de astronauta (male), positioned at center. [Floating Elements]: None. [Color Palette]: ambient_color: #CA00E5, complementary_color: #E85700, complementary_light: #39ED53. [Text Layout]: No text overlay at align-center (Gradient: true). [Output Specs]: Aspect Ratio 4:5, Quality: 1K, Variations: 1.",
+    "form_data": {
+      "plano": "medium",
+      "quality": "1K",
+      "dimensions": "4:5",
+      "quantidade": "1",
+      "genero": "male",
+      "subject_description": "neymar com roupa de astronauta",
+      "subject_position": "center",
+      "scene_description": "spaço cideral",
+      "estilo_visual": "ultra_realistic",
+      "nicho_projeto": "",
+      "prompt_adicional": "",
+      "text_blocks": [],
+      "color_palette": {
+        "ambient_color": "#CA00E5",
+        "complementary_color": "#E85700",
+        "complementary_light": "#39ED53"
+      },
+      "degrade": "true",
+      "posicao_do_texto": "align-center",
+      "elementos_flutuantes": "",
+      "usar_desfoque_blur": "true",
+      "sobriedade_criatividade": "50",
+      "saved_files": {
+        "fotos_do_sujeito_produto": "inputs/1790489997993_t4bwi3w/fotos_do_sujeito_produto/sujeito_0.jpg",
+        "brand_identity_images": null,
+        "referencias_de_ambiente": null,
+        "referencias_de_estilo": null
+      }
+    },
+    "input_image_urls": {
+      "fotos_do_sujeito_produto": [
+        "/designbuilder/inputs/1790489997993_t4bwi3w/fotos_do_sujeito_produto/0.jpg"
+      ]
+    }
+  },
+  {
     "id": "img_1790271644901_sh3r1",
     "status": "done",
     "result_url": "/generated-images/img_1790271644901_sh3r1.png",

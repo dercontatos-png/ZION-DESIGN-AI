@@ -1344,16 +1344,16 @@ export default function App() {
   }, [activeTab]);
 
   React.useEffect(() => {
-    if (activeTab === "home" || activeTab === "vitrine") {
+    if (activeTab === "home") {
       setActiveTab("ai-tools");
       setTimeout(() => {
-        window.dispatchEvent(new CustomEvent("db:open_vitrine"));
+        window.dispatchEvent(new CustomEvent("db:go_home"));
       }, 50);
     }
   }, [activeTab]);
 
   React.useEffect(() => {
-    if (activeTab === "apps" || activeTab === "todos-os-apps") {
+    if (activeTab === "apps" || activeTab === "todos-os-apps" || activeTab === "vitrine") {
       setActiveTab("ai-tools");
       setTimeout(() => {
         window.dispatchEvent(new CustomEvent("db:open_apps"));
@@ -1366,6 +1366,7 @@ export default function App() {
     const handleVitrineNav = () => {
       setActiveTab("ai-tools");
     };
+    window.addEventListener("db:go_home", handleVitrineNav);
     window.addEventListener("db:open_vitrine", handleVitrineNav);
     window.addEventListener("db:open_apps", handleVitrineNav);
     window.addEventListener("db:open_gallery", handleVitrineNav);
@@ -1373,6 +1374,7 @@ export default function App() {
     window.addEventListener("db:open_community", handleVitrineNav);
     window.addEventListener("db:open_studio", handleVitrineNav);
     return () => {
+      window.removeEventListener("db:go_home", handleVitrineNav);
       window.removeEventListener("db:open_vitrine", handleVitrineNav);
       window.removeEventListener("db:open_apps", handleVitrineNav);
       window.removeEventListener("db:open_gallery", handleVitrineNav);

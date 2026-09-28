@@ -1909,7 +1909,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
           type="button"
           onClick={() => {
             if (onOpenVitrine) onOpenVitrine();
-            else window.dispatchEvent(new CustomEvent("db:open_vitrine"));
+            else if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("db:go_home"));
           }}
           className="flex items-center gap-1 text-xs font-semibold text-zinc-300 hover:text-white px-2 py-1 rounded-lg bg-white/[0.04] border border-white/5 active:scale-95 transition-all cursor-pointer"
         >
@@ -1958,7 +1958,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
         <aside
           data-aside-form-col=""
           data-tour="form"
-          className="agent-form-col relative z-10 shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-white/5 scrollbar-hide px-1.5 py-3 pb-28 lg:p-6 lg:pb-6 transition-[filter,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] w-full lg:h-full lg:w-[var(--agent-form-col-w,420px)] lg:min-w-[280px] lg:max-w-[700px] lg:flex-shrink-0 flex max-lg:order-last max-lg:min-h-0 lg:flex"
+          className="agent-form-col relative z-10 shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-white/5 scrollbar-hide px-1.5 py-3 max-lg:pb-4 lg:p-6 lg:pb-6 transition-[filter,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] w-full lg:h-full lg:w-[var(--agent-form-col-w,420px)] lg:min-w-[280px] lg:max-w-[700px] lg:flex-shrink-0 flex max-lg:order-last max-lg:min-h-0 lg:flex"
           style={{ "--agent-form-col-w": "420px", "--agent-color": "#8B5CF6" } as any}
         >
         <form onSubmit={(e) => { e.preventDefault(); handleBuild(); }} className="flex flex-col gap-4 lg:gap-5">
@@ -5261,53 +5261,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
           <span>{toastMsg.msg}</span>
         </div>
       )}
-      {/* Barra de controle inferior mobile para alternar Ajustes / Palco / Histórico */}
-      <div className="fixed bottom-3 inset-x-0 z-40 flex justify-center px-4 lg:hidden pointer-events-none">
-        <div className="flex items-center gap-1 rounded-full border border-white/10 bg-black/85 p-1.5 backdrop-blur-xl shadow-2xl pointer-events-auto">
-          <button
-            type="button"
-            onClick={() => {
-              setMobileView("form");
-              setIsMobileHistoryOpen(false);
-            }}
-            className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
-              mobileView === "form" && !isMobileHistoryOpen
-                ? "bg-violet-600 text-white shadow-md"
-                : "text-zinc-400 hover:text-white"
-            }`}
-          >
-            <SlidersHorizontal className="h-3.5 w-3.5" />
-            <span>Ajustes</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setMobileView("palco");
-              setIsMobileHistoryOpen(false);
-            }}
-            className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
-              mobileView === "palco" && !isMobileHistoryOpen
-                ? "bg-violet-600 text-white shadow-md"
-                : "text-zinc-400 hover:text-white"
-            }`}
-          >
-            <Eye className="h-3.5 w-3.5" />
-            <span>Palco</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsMobileHistoryOpen((prev) => !prev)}
-            className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
-              isMobileHistoryOpen
-                ? "bg-violet-600 text-white shadow-md"
-                : "text-zinc-400 hover:text-white"
-            }`}
-          >
-            <Clock className="h-3.5 w-3.5" />
-            <span>Histórico</span>
-          </button>
-        </div>
-      </div>
+      {/* Barra de controle inferior mobile removida pois já existe no header superior e estava sobrepondo o botão Construir */}
     </main>
   </div>
   );
