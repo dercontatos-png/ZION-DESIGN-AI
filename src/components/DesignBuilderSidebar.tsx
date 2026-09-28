@@ -85,9 +85,11 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isLinksMenuOpen, setIsLinksMenuOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [settingsInitialTab, setSettingsInitialTab] = useState<"perfil" | "plano" | "uso" | "documentacao">("perfil");
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [creditState, setCreditState] = useState<CreditState>(getCreditState);
 
+  const userPlan = propUserPlan || "Profissional (Vertex AI)";
   const cleanEmail = (userEmail || "").toLowerCase().trim();
   const isCleanAdmin = cleanEmail === "der.contatos@gmail.com" || cleanEmail === "ricardo.jrsr.gov@gmail.com";
 
@@ -247,9 +249,10 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
   // Desktop Expanded Sidebar (Exact match to app.designbuilder.co Home page)
   if (variant === "expanded") {
     return (
-      <aside
-        aria-label="Navegação principal"
-        className="fixed inset-y-3 left-3 z-50 hidden flex-col rounded-3xl ring-1 ring-white/[0.06] lg:flex w-64 select-none"
+      <>
+        <aside
+          aria-label="Navegação principal"
+          className="fixed inset-y-3 left-3 z-50 hidden flex-col rounded-3xl ring-1 ring-white/[0.06] lg:flex w-64 select-none"
         style={{
           background: "linear-gradient(rgb(23, 16, 42) 0%, rgb(12, 8, 24) 55%, rgb(5, 3, 8) 100%)",
         }}
@@ -439,6 +442,7 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                     type="button"
                     onClick={() => {
                       setIsProfileMenuOpen(false);
+                      setSettingsInitialTab("perfil");
                       setIsSettingsModalOpen(true);
                     }}
                     className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-zinc-300 hover:bg-white/10 hover:text-white cursor-pointer"
@@ -479,40 +483,116 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                 type="button"
                 onClick={() => setIsReportOpen(true)}
                 className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:bg-white/10 hover:text-amber-400 transition-colors cursor-pointer"
-                title="Reportar problema"
+                title="Reportar erro ou sugestão"
               >
                 <AlertTriangle className="h-4 w-4" />
               </button>
-              <button
-                type="button"
-                onClick={() => setIsSettingsModalOpen(true)}
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
-                title="Configurações"
-              >
-                <MoreHorizontal className="h-4 w-4" />
-              </button>
+
+              <div className="relative">
+                <button
+                  type="button"
+                  aria-label="Links úteis"
+                  aria-haspopup="menu"
+                  aria-expanded={isLinksMenuOpen}
+                  onClick={() => setIsLinksMenuOpen(!isLinksMenuOpen)}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
+                  title="Links úteis"
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </button>
+
+                {isLinksMenuOpen && (
+                  <div className="absolute right-0 bottom-full mb-3 z-50 w-72 rounded-xl border border-white/10 bg-zinc-950/95 p-2 shadow-2xl backdrop-blur-xl animate-in fade-in-0 zoom-in-95 duration-150">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setIsLinksMenuOpen(false);
+                        setSettingsInitialTab("documentacao");
+                        setIsSettingsModalOpen(true);
+                      }}
+                      className="group/link flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-white transition-all hover:bg-white/10 cursor-pointer"
+                    >
+                      <span
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+                        style={{ background: "rgba(139, 92, 246, 0.125)", border: "1px solid rgba(139, 92, 246, 0.19)" }}
+                      >
+                        <BookOpen className="h-4 w-4" style={{ color: "rgb(139, 92, 246)" }} />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-semibold leading-tight">Documentação</span>
+                        <span className="block text-xs text-zinc-500">Guias e tutoriais do Design Builder</span>
+                      </span>
+                      <ArrowRight className="h-3.5 w-3.5 text-zinc-600 transition-colors group-hover/link:text-zinc-400" />
+                    </button>
+
+                    <a
+                      role="menuitem"
+                      href="https://link.easybuilder.com.br/fale-com-luiz"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group/link flex items-center gap-3 rounded-lg px-3 py-2.5 text-white transition-all hover:bg-white/10 cursor-pointer"
+                    >
+                      <span
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+                        style={{ background: "rgba(167, 139, 250, 0.125)", border: "1px solid rgba(167, 139, 250, 0.19)" }}
+                      >
+                        <Briefcase className="h-4 w-4" style={{ color: "rgb(167, 139, 250)" }} />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-semibold leading-tight">Falar com comercial</span>
+                        <span className="block text-xs text-zinc-500">Planos, upgrades e condições</span>
+                      </span>
+                      <ExternalLink className="h-3.5 w-3.5 text-zinc-600 transition-colors group-hover/link:text-zinc-400" />
+                    </a>
+
+                    <a
+                      role="menuitem"
+                      href="https://link.easybuilder.com.br/fale-com-o-suporte"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group/link flex items-center gap-3 rounded-lg px-3 py-2.5 text-white transition-all hover:bg-white/10 cursor-pointer"
+                    >
+                      <span
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+                        style={{ background: "rgba(96, 165, 250, 0.125)", border: "1px solid rgba(96, 165, 250, 0.19)" }}
+                      >
+                        <Headphones className="h-4 w-4" style={{ color: "rgb(96, 165, 250)" }} />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-semibold leading-tight">Falar com o suporte</span>
+                        <span className="block text-xs text-zinc-500">Ajuda com dúvidas ou problemas</span>
+                      </span>
+                      <ExternalLink className="h-3.5 w-3.5 text-zinc-600 transition-colors group-hover/link:text-zinc-400" />
+                    </a>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
-
-        {isSettingsModalOpen && (
-          <DesignBuilderSettingsModal
-            isOpen={isSettingsModalOpen}
-            onClose={() => setIsSettingsModalOpen(false)}
-            onOpenReport={() => setIsReportOpen(true)}
-            onOpenAdmin={() => {
-              setIsSettingsModalOpen(false);
-              onOpenAdmin?.();
-            }}
-            userCredits={effectiveCredits}
-            userPlan={userPlan || "Profissional (Vertex AI)"}
-            isAdmin={isCleanAdmin}
-          />
-        )}
-        <ReportModal isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} />
       </aside>
-    );
-  }
+
+      {/* Modal de Configurações 1:1 Oficial */}
+      <DesignBuilderSettingsModal
+        isOpen={isSettingsModalOpen}
+        initialTab={settingsInitialTab}
+        onClose={() => setIsSettingsModalOpen(false)}
+        userEmail={cleanEmail}
+        userName={userName}
+        userCredits={effectiveCredits}
+        userPlan={userPlan}
+        isAdmin={isCleanAdmin}
+        onOpenCredits={onOpenCreditsModal}
+        onOpenAdmin={onOpenAdmin}
+        onOpenReport={() => setIsReportOpen(true)}
+      />
+
+      {/* Modal de Report */}
+      <ReportModal isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} />
+    </>
+  );
+}
 
   // Desktop Floating Dock (Exact match to app.designbuilder.co)
   return (
@@ -590,6 +670,7 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                       role="menuitem"
                       onClick={() => {
                         setIsProfileMenuOpen(false);
+                        setSettingsInitialTab("perfil");
                         setIsSettingsModalOpen(true);
                       }}
                       className="flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-200 text-left transition-colors hover:bg-white/[0.06] hover:text-white cursor-pointer"
@@ -810,6 +891,7 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                         role="menuitem"
                         onClick={() => {
                           setIsLinksMenuOpen(false);
+                          setSettingsInitialTab("documentacao");
                           setIsSettingsModalOpen(true);
                         }}
                         className="group/link flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-white transition-all hover:bg-white/10 cursor-pointer"
@@ -883,11 +965,16 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
       {/* Modal de Configurações 1:1 Oficial */}
       <DesignBuilderSettingsModal
         isOpen={isSettingsModalOpen}
+        initialTab={settingsInitialTab}
         onClose={() => setIsSettingsModalOpen(false)}
         userEmail={cleanEmail}
         userName={userName}
+        userCredits={effectiveCredits}
+        userPlan={userPlan}
+        isAdmin={isCleanAdmin}
         onOpenCredits={onOpenCreditsModal}
         onOpenAdmin={onOpenAdmin}
+        onOpenReport={() => setIsReportOpen(true)}
       />
     </>
   );

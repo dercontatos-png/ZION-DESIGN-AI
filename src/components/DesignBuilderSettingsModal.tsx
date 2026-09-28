@@ -20,8 +20,13 @@ export interface DesignBuilderSettingsModalProps {
   onClose: () => void;
   userEmail?: string;
   userName?: string;
+  userCredits?: number;
+  userPlan?: string;
+  isAdmin?: boolean;
+  initialTab?: "perfil" | "plano" | "uso" | "documentacao";
   onOpenCredits?: () => void;
   onOpenAdmin?: () => void;
+  onOpenReport?: () => void;
 }
 
 export const DesignBuilderSettingsModal: React.FC<DesignBuilderSettingsModalProps> = ({
@@ -29,10 +34,21 @@ export const DesignBuilderSettingsModal: React.FC<DesignBuilderSettingsModalProp
   onClose,
   userEmail: propUserEmail,
   userName: propUserName,
+  userCredits,
+  userPlan,
+  isAdmin: propIsAdmin,
+  initialTab = "perfil",
   onOpenCredits,
   onOpenAdmin,
+  onOpenReport,
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<"perfil" | "plano" | "uso" | "documentacao">("perfil");
+  const [activeSubTab, setActiveSubTab] = useState<"perfil" | "plano" | "uso" | "documentacao">(initialTab);
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveSubTab(initialTab);
+    }
+  }, [initialTab, isOpen]);
 
   const [name, setName] = useState<string>(() => {
     if (propUserName) return propUserName;
