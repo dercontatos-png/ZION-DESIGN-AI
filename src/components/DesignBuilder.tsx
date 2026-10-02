@@ -186,7 +186,28 @@ export default function DesignBuilder({
 
   // Navegação suave e precisa entre seções/categorias do formulário no celular
   const handleSelectMobileCategory = useCallback((cat: string) => {
-    setMobileActiveCategory(cat);
+    let willOpen = true;
+    setMobileActiveCategory((prev) => {
+      const isCurrentActive =
+        prev === cat ||
+        (cat === "principal" && (prev === "principal" || prev === "sujeito")) ||
+        (cat === "sujeito" && (prev === "principal" || prev === "sujeito")) ||
+        (cat === "marca" && (prev === "marca" || prev === "marca_estilo" || prev === "cores")) ||
+        (cat === "cenario" && (prev === "cenario" || prev === "contexto")) ||
+        (cat === "ajustes" && (prev === "ajustes" || prev === "composicao")) ||
+        (cat === "configuracoes" && (prev === "configuracoes" || prev === "config" || prev === "prompt"));
+
+      if (isCurrentActive) {
+        willOpen = false;
+        return null;
+      }
+      return cat;
+    });
+
+    if (!willOpen) {
+      return;
+    }
+
     setStudioPalcoTab("builder");
     setIsMobileHistoryOpen(false);
 
@@ -1279,9 +1300,12 @@ export default function DesignBuilder({
           </div>
         ) : (
           /* STUDIO MODE: DESIGN BUILDER 1.2 & ÓRION PRO */
+          <>
           <main
             data-builder-workspace-shell=""
-            className="relative flex h-full min-h-0 overflow-hidden bg-black lg:flex-row max-lg:flex-col flex-1"
+            className={`relative flex h-full min-h-0 overflow-hidden bg-black lg:flex-row max-lg:grid max-lg:overflow-hidden max-lg:transition-[grid-template-rows] max-lg:duration-300 max-lg:ease-in-out flex-1 ${
+              (mobileActiveCategory && !isGenerating) ? "max-lg:grid-rows-[0fr_1fr]" : "max-lg:grid-rows-[1fr_0fr]"
+            }`}
           >
             {/* ── COLUNA ESQUERDA: FORMULÁRIO DO AGENTE (420px) ── */}
             {isOrion ? (
@@ -1289,7 +1313,7 @@ export default function DesignBuilder({
                 data-aside-form-col=""
                 data-tour="form"
                 className={`agent-form-col relative z-10 shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-white/5 scrollbar-hide px-1.5 py-3 lg:p-6 transition-[filter,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] w-full lg:h-full lg:w-[var(--agent-form-col-w,420px)] lg:min-w-[280px] lg:max-w-[700px] lg:flex-shrink-0 flex max-lg:order-last max-lg:min-h-0 lg:flex ${
-                  studioPalcoTab !== "builder" ? "max-lg:hidden" : "max-lg:flex-1"
+                  studioPalcoTab !== "builder" ? "max-lg:hidden" : ""
                 }`}
                 style={{ "--agent-form-col-w": "420px", "--agent-color": "#ffd500" } as any}
               >
@@ -1311,6 +1335,7 @@ export default function DesignBuilder({
                   showToast={showToast}
                   isGenerating={isGenerating}
                   generatePremiumImage={generatePremiumImage}
+                  onCloseMobileCategory={() => setMobileActiveCategory(null)}
                 />
               </aside>
             ) : (
@@ -1340,21 +1365,26 @@ export default function DesignBuilder({
 
             {/* ── COLUNA DIREITA: PALCO CENTRAL & HISTÓRICO ── */}
             <section
-              className={`palco-central relative flex flex-col overflow-hidden max-lg:order-first max-lg:min-h-0 lg:h-full lg:flex-1 ${
-                studioPalcoTab === "builder" ? "max-lg:shrink-0" : "max-lg:flex-1"
-              }`}
+              className="palco-central relative flex flex-col overflow-hidden max-lg:order-first max-lg:min-h-0 max-lg:overflow-hidden max-lg:pt-[env(safe-area-inset-top)] lg:h-full lg:flex-1"
               style={{ minWidth: "0px" }}
             >
               {/* Botão Minimizar filtros no Mobile */}
               <button
                 type="button"
-                aria-label={isMobileNavCollapsed ? "Expandir filtros" : "Minimizar filtros"}
-                onClick={() => setIsMobileNavCollapsed(!isMobileNavCollapsed)}
+                aria-label={mobileActiveCategory ? "Minimizar filtros" : "Expandir filtros"}
+                onClick={() => {
+                  if (mobileActiveCategory) {
+                    setMobileActiveCategory(null);
+                  } else {
+                    handleSelectMobileCategory(isOrion ? "principal" : "sujeito");
+                  }
+                  setIsMobileNavCollapsed(!isMobileNavCollapsed);
+                }}
                 className="lg:hidden flex w-full shrink-0 items-center justify-center py-0.5 text-zinc-500 transition-colors active:text-white cursor-pointer"
               >
                 <ChevronUp
                   className={`h-5 w-5 transition-transform duration-200 ${
-                    isMobileNavCollapsed ? "rotate-180" : ""
+                    mobileActiveCategory ? "" : "rotate-180"
                   }`}
                   aria-hidden="true"
                 />
@@ -2168,13 +2198,14 @@ export default function DesignBuilder({
         </div>
 
             </section>
+          </main>
 
-            {/* ── BARRA INFERIOR MOBILE OFICIAL (1:1 COM DESIGN BUILDER ORIGINAL) ── */}
-            <nav
-              aria-label="Categorias e ações de construção"
-              className="fixed inset-x-0 bottom-0 z-40 overflow-x-hidden border-t border-white/[0.08] backdrop-blur-xl pb-safe shadow-[0_-8px_24px_rgba(0,0,0,0.45)] lg:hidden"
-              style={{ background: "rgba(10, 7, 25, 0.96)" }}
-            >
+          {/* ── BARRA INFERIOR MOBILE OFICIAL (1:1 COM DESIGN BUILDER ORIGINAL) ── */}
+          <nav
+            aria-label="Categorias e ações de construção"
+            className="relative shrink-0 overflow-x-hidden border-t border-white/[0.08] backdrop-blur-xl pb-safe shadow-[0_-8px_24px_rgba(0,0,0,0.35)] lg:hidden"
+            style={{ background: "rgba(10, 7, 25, 0.92)" }}
+          >
               <div
                 role="tablist"
                 aria-label="Categorias do agente"
@@ -2184,7 +2215,10 @@ export default function DesignBuilder({
                 <button
                   type="button"
                   aria-label="Sair para o início"
-                  onClick={handleGoHome}
+                  onClick={() => {
+                    setMobileActiveCategory(null);
+                    handleGoHome();
+                  }}
                   className="group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 text-zinc-300 cursor-pointer"
                 >
                   <span className="flex h-7 w-12 items-center justify-center rounded-full transition-colors bg-white/[0.05] ring-1 ring-white/15 group-hover:bg-white/[0.10]">
@@ -2202,7 +2236,7 @@ export default function DesignBuilder({
                   <>
                     {/* Principal */}
                     {(() => {
-                      const isActive = (mobileActiveCategory || "principal") === "principal" || mobileActiveCategory === "sujeito";
+                      const isActive = mobileActiveCategory === "principal" || mobileActiveCategory === "sujeito";
                       return (
                         <button
                           type="button"
@@ -2487,7 +2521,7 @@ export default function DesignBuilder({
                   <>
                     {/* Sujeito */}
                     {(() => {
-                      const isActive = (mobileActiveCategory || "sujeito") === "sujeito";
+                      const isActive = mobileActiveCategory === "sujeito" || mobileActiveCategory === "principal";
                       return (
                         <button
                           type="button"
@@ -2795,7 +2829,7 @@ export default function DesignBuilder({
                 </button>
               </div>
             </nav>
-          </main>
+          </>
         )}
       </div>
 

@@ -54,6 +54,7 @@ interface OrionProBuilderProps {
   setGeneratePromptOnly?: (val: boolean) => void;
   handleGenerateMasterPrompt?: () => Promise<void>;
   isGeneratingPrompt?: boolean;
+  onCloseMobileCategory?: () => void;
 }
 
 export interface TextBlockItem {
@@ -86,7 +87,8 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
   generatePremiumImage,
   generatePromptOnly = false,
   handleGenerateMasterPrompt,
-  isGeneratingPrompt = false
+  isGeneratingPrompt = false,
+  onCloseMobileCategory
 }) => {
   const store = useProjectStore();
 
@@ -101,7 +103,13 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
   });
 
   const toggleSection = (id: string) => {
-    setOpenSections((prev) => ({ ...prev, [id]: !prev[id] }));
+    setOpenSections((prev) => {
+      const willBeOpen = !prev[id];
+      if (!willBeOpen && typeof window !== "undefined" && window.innerWidth < 1024) {
+        onCloseMobileCategory?.();
+      }
+      return { ...prev, [id]: willBeOpen };
+    });
   };
 
     // Guard refs against initial mount overwriting persisted store and tab switching cross-pollution
