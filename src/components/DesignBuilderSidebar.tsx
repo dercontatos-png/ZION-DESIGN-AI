@@ -663,10 +663,15 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
               </button>
 
               {isProfileMenuOpen && (
-                <div
-                  role="menu"
-                  className="absolute bottom-full left-0 mb-3 w-60 rounded-2xl border border-white/10 bg-black/90 backdrop-blur-2xl shadow-2xl p-2 z-50"
-                >
+                <>
+                  <div
+                    className="fixed inset-0 z-40 cursor-default"
+                    onClick={() => setIsProfileMenuOpen(false)}
+                  />
+                  <div
+                    role="menu"
+                    className="absolute bottom-full left-0 mb-3 w-60 rounded-2xl border border-white/10 bg-black/90 backdrop-blur-2xl shadow-2xl p-2 z-50"
+                  >
                   <div className="px-3 py-2 border-b border-white/10 mb-1">
                     <p className="text-sm font-semibold text-white truncate">{userName}</p>
                     <p className="text-xs text-zinc-400 truncate">{cleanEmail}</p>
@@ -885,10 +890,15 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
 
               {/* Menu do Usuário Flutuante 1:1 Oficial */}
               {isProfileMenuOpen && (
-                <div
-                  role="menu"
-                  className="absolute left-full z-50 ml-3 w-64 top-0 rounded-2xl border border-white/10 bg-black/85 backdrop-blur-2xl shadow-[0_25px_80px_-15px_rgba(0,0,0,0.7),0_0_60px_-15px_rgba(139,92,246,0.25)] overflow-hidden animate-in fade-in-0 zoom-in-95 slide-in-from-left-2 duration-150"
-                >
+                <>
+                  <div
+                    className="fixed inset-0 z-40 cursor-default"
+                    onClick={() => setIsProfileMenuOpen(false)}
+                  />
+                  <div
+                    role="menu"
+                    className="absolute left-full z-50 ml-3 w-64 top-0 rounded-2xl border border-white/10 bg-black/85 backdrop-blur-2xl shadow-[0_25px_80px_-15px_rgba(0,0,0,0.7),0_0_60px_-15px_rgba(139,92,246,0.25)] overflow-hidden animate-in fade-in-0 zoom-in-95 slide-in-from-left-2 duration-150"
+                  >
                   <div className="flex items-center gap-3 border-b border-white/10 px-4 py-3.5">
                     <div className="h-9 w-9 flex-shrink-0 overflow-hidden rounded-full ring-2 ring-violet-500/30">
                       <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-violet-500 to-fuchsia-500 text-sm font-semibold text-white">
@@ -951,6 +961,7 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                     </button>
                   </div>
                 </div>
+                </>
               )}
             </div>
           </div>
@@ -1121,7 +1132,12 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                   </button>
 
                   {isLinksMenuOpen && (
-                    <div className="absolute left-full ml-3 bottom-0 z-50 w-80 rounded-xl border border-white/10 bg-zinc-950/95 p-2 shadow-2xl backdrop-blur-xl animate-in fade-in-0 zoom-in-95 slide-in-from-left-2 duration-150">
+                    <>
+                      <div
+                        className="fixed inset-0 z-40 cursor-default"
+                        onClick={() => setIsLinksMenuOpen(false)}
+                      />
+                      <div className="absolute left-full ml-3 bottom-0 z-50 w-80 rounded-xl border border-white/10 bg-zinc-950/95 p-2 shadow-2xl backdrop-blur-xl animate-in fade-in-0 zoom-in-95 slide-in-from-left-2 duration-150">
                       <button
                         type="button"
                         role="menuitem"
