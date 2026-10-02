@@ -1540,11 +1540,7 @@ export default function DesignBuilder({
               </div>
 
               {/* ── ÁREA DO PALCO DA ARTE / CANVAS ── */}
-              <div
-                className={`relative flex flex-1 min-h-0 flex-row overflow-hidden ${
-                  studioPalcoTab === "builder" ? "max-lg:hidden" : "max-lg:flex"
-                }`}
-              >
+              <div className="relative flex flex-1 min-h-0 flex-row overflow-hidden">
           <div className="palco-da-arte relative flex h-full min-h-0 flex-1 min-w-0 overflow-hidden items-center justify-center p-4">
             {studioPalcoTab === "pinterest" ? (
               /* MODO PINTEREST INTEGRADO NO PALCO */
