@@ -28,7 +28,10 @@ import {
   AlertTriangle,
   FolderPlus,
   MoreHorizontal,
-  Folder
+  Folder,
+  Home,
+  ChevronDown,
+  Image as ImageIcon
 } from "lucide-react";
 import { HYDRA_CATEGORIES, HYDRA_STYLE_CARDS, HydraStyleCard } from "../data/hydraData";
 import { GenerationLoadingCanvas } from "./GenerationLoadingCanvas";
@@ -123,6 +126,36 @@ export const HydraBuilder: React.FC<HydraBuilderProps> = ({
   });
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
   const [editingTabTitle, setEditingTabTitle] = useState<string>("");
+  const [mobileActiveCategory, setMobileActiveCategory] = useState<string>("produto");
+
+  // Navegação suave entre seções no celular para o Hydra
+  const handleSelectMobileSection = (section: string) => {
+    setMobileActiveCategory(section);
+    setMobileView("form");
+    setIsMobileHistoryOpen(false);
+
+    const targetId = section === "produto" ? "section-produto" : section === "inspiracoes" ? "section-inspiracoes" : "section-config";
+
+    const performScroll = () => {
+      const el = document.getElementById(targetId);
+      if (el) {
+        const aside = document.querySelector('.agent-form-col') || document.querySelector('[data-aside-form-col]');
+        if (aside) {
+          const asideRect = aside.getBoundingClientRect();
+          const targetRect = el.getBoundingClientRect();
+          const offsetTop = targetRect.top - asideRect.top + aside.scrollTop - 14;
+          aside.scrollTo({ top: Math.max(0, offsetTop), behavior: "smooth" });
+        } else {
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }
+    };
+
+    requestAnimationFrame(performScroll);
+    setTimeout(performScroll, 60);
+    setTimeout(performScroll, 180);
+    setTimeout(performScroll, 320);
+  };
 
   // Persist tabs and activeTabId to LocalStorage and IndexedDB
   useEffect(() => {
@@ -625,11 +658,11 @@ export const HydraBuilder: React.FC<HydraBuilderProps> = ({
       <aside
         data-aside-form-col=""
         data-tour="form"
-        className="agent-form-col relative z-10 flex shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-white/5 scrollbar-hide px-2 py-3 lg:px-4 lg:py-5 lg:pb-5 transition-[filter,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] lg:sticky lg:top-0 lg:h-full max-lg:order-2 w-full lg:w-[320px] max-lg:min-h-0 bg-black"
+        className="agent-form-col relative z-10 flex shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-white/5 scrollbar-hide scroll-smooth px-2 py-3 lg:px-4 lg:py-5 lg:pb-5 transition-[filter,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] lg:sticky lg:top-0 lg:h-full max-lg:order-2 w-full lg:w-[320px] max-lg:min-h-0 bg-black"
       >
-        <div className="flex flex-col gap-5 flex-1 min-h-max">
+        <div className="flex flex-col gap-5 flex-1 min-h-max pb-16">
           {/* 1. Upload de Imagem */}
-          <div data-tour="form-sec-pf-produto" className="campo-com-info flex flex-col gap-1.5">
+          <div id="section-produto" data-tour="form-sec-pf-produto" className="campo-com-info flex flex-col gap-1.5 scroll-mt-14">
             <div className="flex items-center gap-1.5">
               <label className="text-sm font-semibold text-white">Upload de Imagem</label>
               <button
@@ -688,7 +721,7 @@ export const HydraBuilder: React.FC<HydraBuilderProps> = ({
           </div>
 
           {/* 2. Inspirações selecionadas */}
-          <div data-tour="form-sec-pf-refs" className="campo-com-info flex flex-col gap-2">
+          <div id="section-inspiracoes" data-tour="form-sec-pf-refs" className="campo-com-info flex flex-col gap-2 scroll-mt-14">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <label className="text-sm font-semibold text-white">Inspirações selecionadas</label>
@@ -758,7 +791,7 @@ export const HydraBuilder: React.FC<HydraBuilderProps> = ({
           <div className="h-px bg-white/5 my-1" />
 
           {/* 3. Dimensões */}
-          <div data-tour="form-sec-pf-config" className="flex flex-col gap-6">
+          <div id="section-config" data-tour="form-sec-pf-config" className="flex flex-col gap-6 scroll-mt-14">
             <div className="flex flex-col gap-2.5">
               <div className="flex items-center gap-1.5">
                 <span className="font-semibold text-white text-sm">Dimensões</span>
@@ -2115,7 +2148,114 @@ export const HydraBuilder: React.FC<HydraBuilderProps> = ({
           </div>
         </div>
       )}
-      {/* Barra de controle inferior mobile removida pois já existe no header superior e estava sobrepondo o botão Construir */}
+      {/* ── BARRA INFERIOR MOBILE OFICIAL HYDRA (1:1) ── */}
+      <nav
+        aria-label="Categorias e ações de construção"
+        className="fixed inset-x-0 bottom-0 z-40 overflow-x-hidden border-t border-white/[0.08] backdrop-blur-xl pb-safe shadow-[0_-8px_24px_rgba(0,0,0,0.45)] lg:hidden"
+        style={{ background: "rgba(10, 7, 25, 0.96)" }}
+      >
+        <div className="flex items-stretch gap-0.5 overflow-x-auto scrollbar-hide px-2 py-1.5 justify-center">
+          {/* Início */}
+          <button
+            type="button"
+            aria-label="Sair para o início"
+            onClick={onOpenVitrine}
+            className="group flex min-h-[50px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 text-zinc-300 cursor-pointer"
+          >
+            <span className="flex h-7 w-11 items-center justify-center rounded-full transition-colors bg-white/[0.05] ring-1 ring-white/15 group-hover:bg-white/[0.10]">
+              <Home className="h-[18px] w-[18px]" />
+            </span>
+            <span className="whitespace-nowrap text-[10px] leading-none font-semibold">Início</span>
+          </button>
+
+          <span aria-hidden="true" className="mx-0.5 my-2 w-px shrink-0 self-stretch bg-white/10" />
+
+          {/* Produto */}
+          <button
+            type="button"
+            onClick={() => handleSelectMobileSection("produto")}
+            className={`group flex min-h-[50px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
+              mobileActiveCategory === "produto" ? "text-violet-400" : "text-zinc-500 hover:text-zinc-300"
+            }`}
+          >
+            <span className={`flex h-7 w-11 items-center justify-center rounded-full transition-colors ${
+              mobileActiveCategory === "produto" ? "bg-violet-500/20 ring-1 ring-violet-500/40" : "group-hover:bg-white/[0.06]"
+            }`}>
+              <ImageIcon className="h-[18px] w-[18px]" />
+            </span>
+            <span className="whitespace-nowrap text-[10px] font-medium leading-none">Produto</span>
+          </button>
+
+          {/* Inspirações */}
+          <button
+            type="button"
+            onClick={() => handleSelectMobileSection("inspiracoes")}
+            className={`group flex min-h-[50px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
+              mobileActiveCategory === "inspiracoes" ? "text-violet-400" : "text-zinc-500 hover:text-zinc-300"
+            }`}
+          >
+            <span className={`flex h-7 w-11 items-center justify-center rounded-full transition-colors ${
+              mobileActiveCategory === "inspiracoes" ? "bg-violet-500/20 ring-1 ring-violet-500/40" : "group-hover:bg-white/[0.06]"
+            }`}>
+              <Sparkles className="h-[18px] w-[18px]" />
+            </span>
+            <span className="whitespace-nowrap text-[10px] font-medium leading-none">Inspirações</span>
+          </button>
+
+          {/* Configurações */}
+          <button
+            type="button"
+            onClick={() => handleSelectMobileSection("config")}
+            className={`group flex min-h-[50px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
+              mobileActiveCategory === "config" ? "text-violet-400" : "text-zinc-500 hover:text-zinc-300"
+            }`}
+          >
+            <span className={`flex h-7 w-11 items-center justify-center rounded-full transition-colors ${
+              mobileActiveCategory === "config" ? "bg-violet-500/20 ring-1 ring-violet-500/40" : "group-hover:bg-white/[0.06]"
+            }`}>
+              <SlidersHorizontal className="h-[18px] w-[18px]" />
+            </span>
+            <span className="whitespace-nowrap text-[10px] font-medium leading-none">Config</span>
+          </button>
+
+          {/* Histórico */}
+          <button
+            type="button"
+            onClick={() => setIsMobileHistoryOpen(!isMobileHistoryOpen)}
+            className={`group flex min-h-[50px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
+              isMobileHistoryOpen ? "text-violet-400" : "text-zinc-500 hover:text-zinc-300"
+            }`}
+          >
+            <span className={`flex h-7 w-11 items-center justify-center rounded-full transition-colors ${
+              isMobileHistoryOpen ? "bg-violet-500/20 ring-1 ring-violet-500/40" : "group-hover:bg-white/[0.06]"
+            }`}>
+              <Clock className="h-[18px] w-[18px]" />
+            </span>
+            <span className="whitespace-nowrap text-[10px] font-medium leading-none">Histórico</span>
+          </button>
+
+          <span aria-hidden="true" className="mx-0.5 my-2 w-px shrink-0 self-stretch bg-white/10" />
+
+          {/* Botão Construir */}
+          <button
+            type="button"
+            disabled={isGenerating || !currentTab.productImage}
+            onClick={() => {
+              setMobileView("palco");
+              handleGenerateImage();
+            }}
+            className="group ml-0.5 flex min-h-[46px] min-w-[70px] shrink-0 snap-start flex-col items-center justify-center gap-1 rounded-xl px-2.5 text-white transition-transform duration-100 ease-out active:scale-95 disabled:opacity-60 cursor-pointer shadow-lg shadow-violet-600/30"
+            style={{
+              background: "linear-gradient(135deg, rgb(139, 92, 246), rgba(139, 92, 246, 0.8))",
+              color: "#ffffff"
+            }}
+          >
+            <span className="whitespace-nowrap text-xs font-extrabold leading-tight">
+              {isGenerating ? "Criando..." : "Construir"}
+            </span>
+          </button>
+        </div>
+      </nav>
       </div>
     </div>
   );

@@ -486,7 +486,7 @@ export const ComunidadeManager: React.FC<ComunidadeManagerProps> = ({
       </div>
 
       {/* Media Masonry contínuo sem espaçamento (gap: 0px) Oficial 1:1 */}
-      <main className="w-full flex-1 overflow-y-auto overscroll-contain pb-12 custom-scrollbar pl-0 lg:pl-[60px]">
+      <main className="w-full flex-1 overflow-y-auto overscroll-contain pb-28 lg:pb-12 custom-scrollbar pl-0 lg:pl-[60px]">
         <div data-media-masonry="true" className="flex w-full pb-12" style={{ gap: "0px" }}>
           {masonryColumns.map((columnCards, colIdx) => (
             <div

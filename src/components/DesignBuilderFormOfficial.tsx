@@ -565,7 +565,7 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
       ref={asideRef}
       data-aside-form-col=""
       data-tour="form"
-      className={`agent-form-col relative z-10 shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-white/5 scrollbar-hide px-1.5 py-3 lg:p-6 transition-[filter,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] w-full lg:h-full lg:w-[var(--agent-form-col-w,420px)] lg:min-w-[280px] lg:max-w-[700px] lg:flex-shrink-0 ${
+      className={`agent-form-col relative z-10 shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-white/5 scrollbar-hide scroll-smooth px-1.5 py-3 lg:p-6 transition-[filter,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] w-full lg:h-full lg:w-[var(--agent-form-col-w,420px)] lg:min-w-[280px] lg:max-w-[700px] lg:flex-shrink-0 ${
         activePalcoMode && activePalcoMode !== "builder" ? "hidden" : "flex max-lg:order-last max-lg:min-h-0 lg:flex"
       }`}
       style={{
@@ -581,7 +581,7 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
         className="flex flex-col gap-4 lg:gap-5 pb-16"
       >
         {/* ── 1. SUJEITO / PRODUTO ── */}
-        <div data-tour="form-sec-subject">
+        <div id="section-sujeito" data-tour="form-sec-subject" className="scroll-mt-14">
           <div className="flex flex-col gap-6 lg:gap-12">
             
             {/* Fotos do Sujeito / Produto */}
@@ -1242,7 +1242,7 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
         </div>
 
         {/* ── 2. CENÁRIO / CONTEXTO ── */}
-        <div data-tour="form-sec-context">
+        <div id="section-cenario" data-section-alias="contexto" data-tour="form-sec-context" className="scroll-mt-14">
           <div className="flex flex-col gap-6 lg:gap-12">
             
             {/* Nicho/Projeto */}
@@ -1449,7 +1449,7 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
         </div>
 
         {/* ── 3. TEXTOS DA IMAGEM ── */}
-        <div data-tour="form-sec-step_1773771934403_6">
+        <div id="section-texto" data-tour="form-sec-step_1773771934403_6" className="scroll-mt-14">
           <div className="flex flex-col gap-6 lg:gap-12">
             
             {/* Textos da Imagem */}
@@ -1817,7 +1817,7 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
         </div>
 
         {/* ── 4. PALETA DE CORES ── */}
-        <div data-tour="form-sec-advanced">
+        <div id="section-cores" data-tour="form-sec-advanced" className="scroll-mt-14">
           <div className="flex flex-col gap-6 lg:gap-12">
             <div data-field-id="color_palette" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
               <div className="flex flex-col gap-3">
@@ -2034,7 +2034,7 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
         </div>
 
         {/* ── 5. COMPOSIÇÃO E ESTILO ── */}
-        <div data-tour="form-sec-style">
+        <div id="section-composicao" data-tour="form-sec-style" className="scroll-mt-14">
           <div className="flex flex-col gap-6 lg:gap-12">
             
             {/* Plano */}
@@ -2464,7 +2464,7 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
         </div>
 
         {/* ── 6. PROMPT ADICIONAL ── */}
-        <div data-tour="form-sec-step_1773770939424_4">
+        <div id="section-prompt" data-tour="form-sec-step_1773770939424_4" className="scroll-mt-14">
           <div className="flex flex-col gap-6 lg:gap-12">
             <div data-field-id="prompt_adicional" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
               <div className="flex flex-col gap-2">
@@ -2531,6 +2531,33 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
               <span>{isGenerating ? "Construindo..." : "Construir"}</span>
               <span className="ml-1.5 rounded-lg bg-white/15 px-2 py-0.5 text-xs font-medium">1 crédito</span>
             </button>
+            <div className="mt-2 flex items-center justify-center gap-3 text-[11px] text-[#9d94bb]">
+              <button
+                type="button"
+                onClick={() => {
+                  store.createProject();
+                  showToast("Configurações duplicadas em uma nova aba!", "success");
+                }}
+                title="Duplicar configurações para uma nova aba"
+                className="inline-flex items-center gap-1 transition-colors hover:text-[#f0ecff] cursor-pointer"
+              >
+                <Copy className="h-3 w-3" />
+                <span>Duplicar</span>
+              </button>
+              <span aria-hidden="true" className="text-white/15">·</span>
+              <button
+                type="button"
+                onClick={() => {
+                  store.resetConfig();
+                  showToast("Configurações resetadas!", "info");
+                }}
+                title="Resetar todas as configurações do formulário"
+                className="inline-flex items-center gap-1 transition-colors hover:text-[#f0ecff] cursor-pointer"
+              >
+                <RotateCcw className="h-3 w-3" />
+                <span>Resetar</span>
+              </button>
+            </div>
           </div>
         </div>
 

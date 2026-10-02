@@ -4564,19 +4564,11 @@ ${textContent}`
         style={{ animationDuration: "8s" }}
       />
 
-      {/* Botão de Menu Flutuante para 100% de aproveitamento de espaço vertical (oculto no Design Builder) */}
-      {activeTab !== "ai-tools" && (
+      {/* Botão de Menu Flutuante para 100% de aproveitamento de espaço vertical (somente desktop quando fechado) */}
+      {activeTab !== "ai-tools" && !isDesktopSidebarOpen && (
         <button
-          onClick={() => {
-            if (window.innerWidth >= 1024) {
-              setIsDesktopSidebarOpen(!isDesktopSidebarOpen);
-            } else {
-              setIsMobileSidebarOpen(true);
-            }
-          }}
-          className={`fixed top-3 left-3 z-40 text-zinc-400 hover:text-white p-2.5 bg-[#090611]/90 backdrop-blur-md border border-white/5 hover:border-violet-500/30 rounded-xl transition-all flex items-center justify-center shadow-lg cursor-pointer ${
-            isDesktopSidebarOpen ? "lg:hidden" : "flex"
-          }`}
+          onClick={() => setIsDesktopSidebarOpen(true)}
+          className="fixed top-3 left-3 z-40 text-zinc-400 hover:text-white p-2.5 bg-[#090611]/90 backdrop-blur-md border border-white/5 hover:border-violet-500/30 rounded-xl transition-all hidden lg:flex items-center justify-center shadow-lg cursor-pointer"
           aria-label="Abrir menu"
         >
           <Menu size={18} />
@@ -4586,9 +4578,9 @@ ${textContent}`
       {/* Conteúdo Principal + Barra Lateral */}
       <div className="flex h-screen mt-0 overflow-hidden relative w-full">
         
-        {/* Menu Lateral Unificado Oficial: Design Builder Vitrine */}
+        {/* Menu Lateral Unificado Oficial: Design Builder Vitrine & Mobile Nav */}
         {activeTab !== "ai-tools" && (
-          <div className={`${isDesktopSidebarOpen ? 'lg:flex' : 'lg:hidden'} hidden h-full shrink-0 z-30 p-3`}>
+          <div className={`${isDesktopSidebarOpen ? 'lg:flex' : 'lg:hidden'} lg:h-full shrink-0 z-30 lg:p-3`}>
             <DesignBuilderSidebar
               activeTab={activeTab}
               onNavigateTab={(tab: string) => setActiveTab(tab)}
@@ -4620,91 +4612,6 @@ ${textContent}`
             />
           </div>
         )}
-
-      {/* Mobile Sidebar overlay */}
-      <AnimatePresence>
-        {isMobileSidebarOpen && activeTab !== "ai-tools" && (
-          <>
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsMobileSidebarOpen(false)}
-              className="fixed inset-0 bg-black/60 z-50 lg:hidden backdrop-blur-sm"
-            />
-            {/* Sidebar Sheet */}
-            <motion.aside
-              initial={{ x: "-100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "-100%" }}
-              transition={{ type: "tween", duration: 0.25 }}
-              className="fixed top-0 left-0 h-full w-72 bg-[#06040a] border-r border-white/[0.06] z-50 flex flex-col lg:hidden overflow-hidden"
-            >
-              <div className="absolute top-3 right-3 z-50">
-                <button
-                  onClick={() => setIsMobileSidebarOpen(false)}
-                  className="text-zinc-400 hover:text-white p-2 hover:bg-white/5 rounded-xl transition-all cursor-pointer"
-                  aria-label="Fechar menu"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-              <DesignBuilderSidebar
-                isMobile={true}
-                activeTab={activeTab}
-                onNavigateTab={(tab: string) => {
-                  setActiveTab(tab);
-                  setIsMobileSidebarOpen(false);
-                }}
-                onOpenGallery={() => {
-                  setActiveTab("gallery");
-                  setIsMobileSidebarOpen(false);
-                }}
-                onOpenCommunity={() => {
-                  setActiveTab("ai-tools");
-                  setIsMobileSidebarOpen(false);
-                  setTimeout(() => {
-                    window.dispatchEvent(new CustomEvent("db:open_community"));
-                  }, 50);
-                }}
-                onSelectAgent={(slug: string) => {
-                  setActiveTab("ai-tools");
-                  setIsMobileSidebarOpen(false);
-                  setTimeout(() => {
-                    window.dispatchEvent(new CustomEvent("db:open_studio", { detail: { agent: slug } }));
-                  }, 50);
-                }}
-                onOpenCreditsModal={() => {
-                  setIsCreditsModalOpen(true);
-                  setIsMobileSidebarOpen(false);
-                }}
-                onOpenAdmin={() => {
-                  setIsAdminSubscribersModalOpen(true);
-                  setIsMobileSidebarOpen(false);
-                }}
-                currentLang={currentLang}
-                setLanguage={setLanguage}
-                userInitials={(myProfile?.name || currentUser?.email || "EQ").substring(0, 2).toUpperCase()}
-                userName={myProfile?.name || "Equipe Zion"}
-                userEmail={currentUser?.email || ""}
-                userCredits={typeof subscriberStatus.credits === "number" && subscriberStatus.credits !== 45 ? subscriberStatus.credits : 6612}
-                isUnlimited={false}
-                userPlan={subscriberStatus.plan || "Profissional (Vertex AI)"}
-                onOpenProfile={() => {
-                  setActiveTab("profile");
-                  setIsMobileSidebarOpen(false);
-                }}
-                onSignOut={() => {
-                  handleSignOut();
-                  setIsMobileSidebarOpen(false);
-                }}
-                onCloseMobile={() => setIsMobileSidebarOpen(false)}
-              />
-            </motion.aside>
-          </>
-        )}
-      </AnimatePresence>
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-full overflow-hidden bg-black">

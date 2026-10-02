@@ -13,7 +13,6 @@ import {
 import { DesignBuilderSidebar } from "./DesignBuilderSidebar";
 import { CosmicBackground } from "./CosmicBackground";
 import { DesignBuilderAssistant } from "./DesignBuilderAssistant";
-import { DesignBuilderMobileNav } from "./DesignBuilderMobileNav";
 
 interface DesignBuilderHomeProps {
   onOpenStudio: (agentSlug?: string) => void;
@@ -466,7 +465,7 @@ export const DesignBuilderHome: React.FC<DesignBuilderHomeProps> = ({
                       type="button"
                       aria-label="Ver mais"
                       onClick={scrollCommunityRight}
-                      className="absolute top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/70 text-white opacity-0 ring-1 ring-white/15 backdrop-blur-sm transition-[opacity,background-color] duration-200 hover:bg-black/90 focus-visible:opacity-100 group-hover/comunidade:opacity-100 right-2 cursor-pointer"
+                      className="absolute top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/70 text-white opacity-100 sm:opacity-0 ring-1 ring-white/15 backdrop-blur-sm transition-[opacity,background-color] duration-200 hover:bg-black/90 focus-visible:opacity-100 sm:group-hover/comunidade:opacity-100 right-2 cursor-pointer"
                     >
                       <ChevronRight className="h-5 w-5" aria-hidden="true" />
                     </button>
@@ -1006,36 +1005,6 @@ export const DesignBuilderHome: React.FC<DesignBuilderHomeProps> = ({
           </div>
         </main>
       </div>
-
-      {/* ── Mobile Bottom Navigation (Matching Home.html lines 175-233) ── */}
-      <DesignBuilderMobileNav
-        activeTab="home"
-        onNavigateHome={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-        onNavigateProjects={() => {
-          if (onOpenProjects) onOpenProjects();
-          else if (onNavigateTab) onNavigateTab("projetos");
-        }}
-        onNavigateGallery={() => {
-          if (onOpenGallery) onOpenGallery();
-          else if (onNavigateTab) onNavigateTab("gallery");
-        }}
-        onNavigateCommunity={() => {
-          if (onOpenCommunity) onOpenCommunity();
-          else if (onNavigateTab) onNavigateTab("community");
-        }}
-        onOpenAccount={() => {
-          window.dispatchEvent(new CustomEvent("open-auth-modal"));
-        }}
-        onOpenAdmin={onOpenAdmin}
-        onOpenCredits={() => {
-          if (onOpenCreditsModal) onOpenCreditsModal();
-          else window.dispatchEvent(new CustomEvent("open-credits-modal"));
-        }}
-        userEmail={userEmail}
-        userName={userName}
-        isAdmin={userEmail?.toLowerCase()?.trim() === "der.contatos@gmail.com"}
-        userInitial={userEmail ? (userName ? userName[0].toUpperCase() : userEmail[0].toUpperCase()) : "R"}
-      />
 
       {/* ── Assistente IA Flutuante Oficial (Matching Home.html lines 1176-1305) ── */}
       <DesignBuilderAssistant />

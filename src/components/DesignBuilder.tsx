@@ -34,8 +34,8 @@ import ComunidadeDetailModal from "./ComunidadeDetailModal";
 import GaleriaManager from "./GaleriaManager";
 import ComunidadeManager from "./ComunidadeManager";
 import { MagicRefineBar } from "./MagicRefineBar";
-import { DesignBuilderMobileNav } from "./DesignBuilderMobileNav";
 import { AdminSubscribersModal } from "./AdminSubscribersModal";
+import { DesignBuilderSidebar } from "./DesignBuilderSidebar";
 
 import {
   Search,
@@ -76,7 +76,9 @@ import {
   FileText,
   Type,
   Palette,
-  Clock
+  Clock,
+  Mountain,
+  Settings
 } from "lucide-react";
 
 interface DesignBuilderProps {
@@ -180,6 +182,121 @@ export default function DesignBuilder({
   const [isSavedRecently, setIsSavedRecently] = useState<boolean>(false);
   const [mobileActiveCategory, setMobileActiveCategory] = useState<string | null>(null);
   const [isMobileHistoryOpen, setIsMobileHistoryOpen] = useState<boolean>(false);
+  const [isMobileNavCollapsed, setIsMobileNavCollapsed] = useState<boolean>(false);
+
+  // Navegação suave e precisa entre seções/categorias do formulário no celular
+  const handleSelectMobileCategory = useCallback((cat: string) => {
+    setMobileActiveCategory(cat);
+    setStudioPalcoTab("builder");
+    setIsMobileHistoryOpen(false);
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("agent:category_jump", { detail: { category: cat } }));
+    }
+
+    const candidateIds = [
+      `section-${cat}`,
+      cat === "marca" ? "section-marca_estilo" : "",
+      cat === "marca" ? "section-cores" : "",
+      cat === "marca_estilo" ? "section-marca" : "",
+      cat === "cores" ? "section-marca" : "",
+      cat === "cores" ? "section-marca_estilo" : "",
+      cat === "cenario" ? "section-contexto" : "",
+      cat === "contexto" ? "section-cenario" : "",
+      cat === "principal" ? "section-sujeito" : "",
+      cat === "sujeito" ? "section-principal" : "",
+      cat === "texto" ? "section-texto_imagem" : "",
+      cat === "texto_imagem" ? "section-texto" : "",
+      cat === "ajustes" ? "section-composicao" : "",
+      cat === "composicao" ? "section-ajustes" : "",
+      cat === "configuracoes" ? "section-prompt" : "",
+      cat === "config" ? "section-configuracoes" : "",
+      cat === "prompt" ? "section-configuracoes" : ""
+    ].filter(Boolean);
+
+    const performScroll = () => {
+      let targetEl: HTMLElement | null = null;
+      for (const id of candidateIds) {
+        const found = document.getElementById(id);
+        if (found) {
+          targetEl = found;
+          break;
+        }
+      }
+      if (!targetEl) {
+        const aliasMap: Record<string, string> = {
+          principal: "principal",
+          sujeito: "principal",
+          marca: "marca_estilo",
+          marca_estilo: "marca_estilo",
+          cores: "marca_estilo",
+          cenario: "cenario",
+          contexto: "contexto",
+          texto: "texto_imagem",
+          texto_imagem: "texto_imagem",
+          ajustes: "ajustes",
+          composicao: "ajustes",
+          configuracoes: "configuracoes",
+          config: "configuracoes",
+          prompt: "configuracoes"
+        };
+        const alias = aliasMap[cat];
+        if (alias) {
+          targetEl = document.querySelector(`[data-section-alias="${alias}"]`) as HTMLElement;
+        }
+      }
+      if (!targetEl) {
+        const tourMap: Record<string, string> = {
+          sujeito: "form-sec-subject",
+          principal: "form-sec-principal",
+          marca: "form-sec-marca_estilo",
+          cenario: "form-sec-cenario",
+          contexto: "form-sec-context",
+          texto: "form-sec-texto_imagem",
+          cores: "form-sec-advanced",
+          ajustes: "form-sec-ajustes",
+          composicao: "form-sec-style",
+          configuracoes: "form-sec-configuracoes",
+          prompt: "form-sec-step_1773770939424_4"
+        };
+        const tour = tourMap[cat];
+        if (tour) {
+          targetEl = document.querySelector(`[data-tour="${tour}"]`) as HTMLElement;
+        }
+      }
+
+      if (targetEl) {
+        const aside = document.querySelector('.agent-form-col') || document.querySelector('[data-aside-form-col]') || targetEl.closest('aside') || targetEl.closest('form');
+        if (aside && aside.scrollHeight > aside.clientHeight) {
+          const asideRect = aside.getBoundingClientRect();
+          const targetRect = targetEl.getBoundingClientRect();
+          const offsetTop = targetRect.top - asideRect.top + aside.scrollTop - 14;
+          aside.scrollTo({ top: Math.max(0, offsetTop), behavior: "smooth" });
+        } else {
+          targetEl.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }
+    };
+
+    // Chamadas em múltiplos frames para acompanhar a expansão CSS do grid no celular
+    requestAnimationFrame(performScroll);
+    setTimeout(performScroll, 60);
+    setTimeout(performScroll, 180);
+    setTimeout(performScroll, 320);
+  }, []);
+
+  // Listener para alternar entre Palco e Formulário via eventos de cabeçalho
+  useEffect(() => {
+    const handleToggleMobileView = (e: any) => {
+      if (e.detail?.view === "palco") {
+        setMobileActiveCategory(null);
+      } else if (e.detail?.view === "form") {
+        handleSelectMobileCategory("sujeito");
+      }
+    };
+    window.addEventListener("agent:toggle_mobile_view", handleToggleMobileView);
+    return () => window.removeEventListener("agent:toggle_mobile_view", handleToggleMobileView);
+  }, [handleSelectMobileCategory]);
 
   // Toast feedback state
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "warning" | "info" } | null>(null);
@@ -967,456 +1084,57 @@ export default function DesignBuilder({
         </div>
       )}
 
-      {/* ── BARRA LATERAL ESQUERDA PERSISTENTE (DOCK OFICIAL ZION) ── */}
-      <nav data-tour="menu" className="barra-lateral fixed left-3 top-1/2 z-50 hidden -translate-y-1/2 lg:block">
-        <div className="flex flex-col items-center gap-1.5 rounded-2xl bg-zinc-950 px-2 py-3 shadow-2xl shadow-black/40 ring-1 ring-white/[0.06]">
-          {/* Créditos */}
-          <div
-            title={`${realCredits} créditos`}
-            onClick={() => setIsCreditsModalOpen(true)}
-            className="group relative flex flex-col items-center gap-0.5 mb-0.5 cursor-pointer"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="lucide lucide-sparkles lucide-stars h-3.5 w-3.5 text-amber-400"
-              aria-hidden="true"
-            >
-              <path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"></path>
-              <path d="M20 2v4"></path>
-              <path d="M22 4h-4"></path>
-              <circle cx="4" cy="20" r="2"></circle>
-            </svg>
-            <span className="text-[10px] font-bold tabular-nums leading-none text-amber-400">
-              {realCredits}
-            </span>
-            <span className="pointer-events-none absolute left-full ml-3 whitespace-nowrap rounded-lg bg-zinc-800 px-2.5 py-1 text-xs font-medium text-zinc-200 opacity-0 shadow-lg ring-1 ring-white/10 transition-opacity group-hover:opacity-100 z-50">
-              {realCredits} créditos
-            </span>
-          </div>
-
-          {/* Perfil / Avatar */}
-          <div className="mb-1">
-            <div className="relative">
-              <button
-                type="button"
-                aria-label="Abrir menu do usuário"
-                aria-expanded={isUserMenuOpen}
-                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                className="h-7 w-7 overflow-hidden rounded-full ring-2 transition-all focus:outline-none focus-visible:ring-violet-400 ring-violet-500/20 hover:ring-violet-400/50 cursor-pointer"
-              >
-                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-violet-500 to-fuchsia-500 text-[11px] font-semibold text-white">
-                  RI
-                </div>
-              </button>
-              {isUserMenuOpen && (
-                <div className="absolute left-full ml-3 top-0 z-50 w-52 rounded-xl border border-white/10 bg-zinc-950/95 p-2 shadow-2xl backdrop-blur-xl animate-in fade-in duration-150">
-                  <p className="px-2 py-1 text-xs font-bold text-white truncate">{userName}</p>
-                  <p className="px-2 pb-2 text-[10px] text-zinc-500 truncate">{userEmail}</p>
-                  <div className="h-px bg-white/10 my-1" />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsUserMenuOpen(false);
-                      handleOpenApps();
-                    }}
-                    className="w-full text-left px-2 py-1.5 text-xs text-zinc-300 hover:bg-white/5 hover:text-white rounded-lg transition-colors cursor-pointer"
-                  >
-                    Todos os apps
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsUserMenuOpen(false);
-                      setIsCreditsModalOpen(true);
-                    }}
-                    className="w-full text-left px-2 py-1.5 text-xs text-amber-300 hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
-                  >
-                    Adquirir Créditos
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="mx-auto h-px w-5 bg-white/10" />
-
-          {/* Início / Apps */}
-          <div className="group/home relative">
-            <a
-              title="Início"
-              className={`flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200 cursor-pointer ${
-                activePalcoMode === "builder" && selectedAgent === "design-builder1-2"
-                  ? "bg-violet-500/20 text-violet-400"
-                  : "text-zinc-400 hover:bg-white/10 hover:text-white"
-              }`}
-              href="/"
-              onClick={(e) => {
-                e.preventDefault();
-                handleGoHome();
-              }}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="lucide lucide-house lucide-home h-[18px] w-[18px]"
-                aria-hidden="true"
-              >
-                <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"></path>
-                <path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-              </svg>
-            </a>
-            <div className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 pl-3 opacity-0 transition-all duration-200 group-hover/home:pointer-events-auto group-hover/home:opacity-100 z-50">
-              <div className="flex flex-col gap-0.5 rounded-xl bg-zinc-900 p-1.5 shadow-2xl shadow-black/60 ring-1 ring-white/[0.08] min-w-[200px]">
-                <a
-                  className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] bg-violet-500/15 text-violet-300 font-medium hover:bg-violet-500/25 transition-colors cursor-pointer"
-                  href="/apps"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleOpenApps();
-                  }}
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="lucide lucide-layout-grid h-3.5 w-3.5 shrink-0"
-                    aria-hidden="true"
-                  >
-                    <rect width="7" height="7" x="3" y="3" rx="1"></rect>
-                    <rect width="7" height="7" x="14" y="3" rx="1"></rect>
-                    <rect width="7" height="7" x="14" y="14" rx="1"></rect>
-                    <rect width="7" height="7" x="3" y="14" rx="1"></rect>
-                  </svg>
-                  <span className="truncate">Todos os apps</span>
-                </a>
-                <div className="my-0.5 h-px bg-white/[0.06]" />
-                <a
-                  className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition-colors cursor-pointer ${
-                    selectedAgent === "ref" ? "text-white bg-white/[0.08]" : "text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100"
-                  }`}
-                  href="/agent/ref"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleSwitchAgent("ref");
-                  }}
-                >
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md" style={{ backgroundColor: "rgba(139, 92, 246, 0.133)" }}>
-                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "rgb(139, 92, 246)" }}></span>
-                  </span>
-                  <span className="truncate">REF</span>
-                </a>
-                <a
-                  className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition-colors cursor-pointer ${
-                    selectedAgent === "hydra" ? "text-white bg-white/[0.08]" : "text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100"
-                  }`}
-                  href="/hydra"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleSwitchAgent("hydra");
-                  }}
-                >
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md" style={{ backgroundColor: "rgba(139, 92, 246, 0.133)" }}>
-                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "rgb(139, 92, 246)" }}></span>
-                  </span>
-                  <span className="truncate">Hydra</span>
-                </a>
-                <a
-                  className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition-colors cursor-pointer ${
-                    selectedAgent === "enhance-builder" || selectedAgent === "enhance" ? "text-white bg-white/[0.08]" : "text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100"
-                  }`}
-                  href="/enhance-builder"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleSwitchAgent("enhance-builder");
-                  }}
-                >
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md" style={{ backgroundColor: "rgba(124, 58, 237, 0.133)" }}>
-                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "rgb(124, 58, 237)" }}></span>
-                  </span>
-                  <span className="truncate">Enhance</span>
-                </a>
-                <a
-                  className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition-colors cursor-pointer ${
-                    selectedAgent === "design-builder1-2" ? "text-white bg-white/[0.08]" : "text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100"
-                  }`}
-                  href="/agent/design-builder1-2"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleSwitchAgent("design-builder1-2");
-                  }}
-                >
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md" style={{ backgroundColor: "rgba(124, 58, 237, 0.133)" }}>
-                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "rgb(124, 58, 237)" }}></span>
-                  </span>
-                  <span className="truncate">Zion Design</span>
-                </a>
-                <a
-                  className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition-colors cursor-pointer ${
-                    selectedAgent === "orion-pro" ? "text-white bg-white/[0.08]" : "text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100"
-                  }`}
-                  href="/orion-pro"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleSwitchAgent("orion-pro");
-                  }}
-                >
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md" style={{ backgroundColor: "rgba(255, 213, 0, 0.133)" }}>
-                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "rgb(255, 213, 0)" }}></span>
-                  </span>
-                  <span className="truncate">Órion Pro</span>
-                </a>
-                <a
-                  className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition-colors cursor-pointer ${
-                    selectedAgent === "altera-facil" ? "text-white bg-white/[0.08]" : "text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100"
-                  }`}
-                  href="/altera-facil"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleSwitchAgent("altera-facil");
-                  }}
-                >
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md" style={{ backgroundColor: "rgba(168, 85, 247, 0.133)" }}>
-                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "rgb(168, 85, 247)" }}></span>
-                  </span>
-                  <span className="truncate">Altera Fácil</span>
-                </a>
-              </div>
-            </div>
-          </div>
-
-          {/* Projetos */}
-          <a
-            title="Projetos"
-            className={`group relative flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200 cursor-pointer ${
-              activePalcoMode === "projetos"
-                ? "bg-white/10 text-white"
-                : "text-zinc-400 hover:bg-white/10 hover:text-white"
-            }`}
-            href="/projetos"
-            onClick={(e) => {
-              e.preventDefault();
-              setActivePalcoMode("projetos");
-              if (typeof window !== "undefined") window.history.pushState({ path: "/projetos" }, "", "/projetos");
-            }}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="lucide lucide-briefcase h-[18px] w-[18px]"
-              aria-hidden="true"
-            >
-              <path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
-              <rect width="20" height="14" x="2" y="6" rx="2"></rect>
-            </svg>
-            <span className="pointer-events-none absolute left-full ml-3 whitespace-nowrap rounded-lg bg-zinc-800 px-2.5 py-1 text-xs font-medium text-zinc-200 opacity-0 shadow-lg ring-1 ring-white/10 transition-opacity group-hover:opacity-100 z-50">
-              Projetos
-            </span>
-          </a>
-
-          {/* Galeria */}
-          <a
-            title="Galeria"
-            className={`group relative flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200 cursor-pointer ${
-              activePalcoMode === "galeria"
-                ? "bg-violet-500/20 text-violet-400"
-                : "text-zinc-400 hover:bg-white/10 hover:text-white"
-            }`}
-            href="/gallery"
-            onClick={(e) => {
-              e.preventDefault();
-              setActivePalcoMode("galeria");
-              if (typeof window !== "undefined") window.history.pushState({ path: "/gallery" }, "", "/gallery");
-            }}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="lucide lucide-images h-[18px] w-[18px]"
-              aria-hidden="true"
-            >
-              <path d="m22 11-1.296-1.296a2.4 2.4 0 0 0-3.408 0L11 16"></path>
-              <path d="M4 8a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2"></path>
-              <circle cx="13" cy="7" r="1" fill="currentColor"></circle>
-              <rect x="8" y="2" width="14" height="14" rx="2"></rect>
-            </svg>
-            <span className="pointer-events-none absolute left-full ml-3 whitespace-nowrap rounded-lg bg-zinc-800 px-2.5 py-1 text-xs font-medium text-zinc-200 opacity-0 shadow-lg ring-1 ring-white/10 transition-opacity group-hover:opacity-100 z-50">
-              Galeria
-            </span>
-          </a>
-
-          {/* Comunidade */}
-          <a
-            title="Comunidade"
-            className={`group relative flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200 cursor-pointer ${
-              activePalcoMode === "comunidade"
-                ? "bg-violet-500/20 text-violet-400"
-                : "text-zinc-400 hover:bg-white/10 hover:text-white"
-            }`}
-            href="/community"
-            onClick={(e) => {
-              e.preventDefault();
-              setActivePalcoMode("comunidade");
-              if (typeof window !== "undefined") window.history.pushState({ path: "/community" }, "", "/community");
-            }}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="lucide lucide-globe h-[18px] w-[18px]"
-              aria-hidden="true"
-            >
-              <circle cx="12" cy="12" r="10"></circle>
-              <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path>
-              <path d="M2 12h20"></path>
-            </svg>
-            <span className="pointer-events-none absolute left-full ml-3 whitespace-nowrap rounded-lg bg-zinc-800 px-2.5 py-1 text-xs font-medium text-zinc-200 opacity-0 shadow-lg ring-1 ring-white/10 transition-opacity group-hover:opacity-100 z-50">
-              Comunidade
-            </span>
-          </a>
-
-          {/* Rodapé da Sidebar */}
-          <div className="rodape-da-sidebar">
-            <div className="min-h-0 overflow-hidden">
-              <div className="mx-auto my-1.5 h-px w-5 bg-white/10" />
-              <div className="flex flex-col items-center gap-1.5">
-                {/* Avisos */}
-                <div className="relative">
-                  <button
-                    type="button"
-                    aria-label="Avisos"
-                    aria-haspopup="dialog"
-                    aria-expanded={isAvisosOpen}
-                    onClick={() => setIsAvisosOpen(true)}
-                    className="relative flex h-10 w-10 items-center justify-center rounded-xl text-zinc-500 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="24"
-                      height="24"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="lucide lucide-bell h-[18px] w-[18px]"
-                      aria-hidden="true"
-                    >
-                      <path d="M10.268 21a2 2 0 0 0 3.464 0"></path>
-                      <path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"></path>
-                    </svg>
-                  </button>
-                </div>
-
-                {/* Reportar */}
-                <button
-                  type="button"
-                  data-tour="report"
-                  title="Reportar erro ou sugestão"
-                  onClick={() => setIsReportModalOpen(true)}
-                  className="group relative flex h-10 w-10 items-center justify-center rounded-xl text-red-400 transition-all duration-200 hover:bg-red-500/15 hover:text-red-300 cursor-pointer"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="lucide lucide-triangle-alert lucide-alert-triangle h-[18px] w-[18px]"
-                    aria-hidden="true"
-                  >
-                    <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path>
-                    <path d="M12 9v4"></path>
-                    <path d="M12 17h.01"></path>
-                  </svg>
-                  <span className="pointer-events-none absolute left-full ml-3 whitespace-nowrap rounded-lg bg-zinc-800 px-2.5 py-1 text-xs font-medium text-zinc-200 opacity-0 shadow-lg ring-1 ring-white/10 transition-opacity group-hover:opacity-100 z-50">
-                    Reportar
-                  </span>
-                </button>
-
-                {/* Links úteis */}
-                <div className="relative">
-                  <button
-                    type="button"
-                    className="group relative flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200 text-zinc-500 hover:bg-white/10 hover:text-white cursor-pointer"
-                    aria-label="Links úteis"
-                    aria-haspopup="menu"
-                    aria-expanded="false"
-                    onClick={() => setIsGuiaModalOpen(true)}
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="24"
-                      height="24"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="lucide lucide-ellipsis lucide-more-horizontal h-[18px] w-[18px]"
-                      aria-hidden="true"
-                    >
-                      <circle cx="12" cy="12" r="1"></circle>
-                      <circle cx="19" cy="12" r="1"></circle>
-                      <circle cx="5" cy="12" r="1"></circle>
-                    </svg>
-                    <span className="pointer-events-none absolute left-full ml-3 whitespace-nowrap rounded-lg bg-zinc-800 px-2.5 py-1 text-xs font-medium text-zinc-200 opacity-0 shadow-lg ring-1 ring-white/10 transition-opacity group-hover:opacity-100 z-50">
-                      Links úteis
-                    </span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </nav>
+      {/* ── BARRA LATERAL UNIFICADA OFICIAL (DESKTOP DOCK + MOBILE BAR 1:1) ── */}
+      <DesignBuilderSidebar
+        variant="dock"
+        activeTab={
+          activePalcoMode === "projetos"
+            ? "projetos"
+            : activePalcoMode === "galeria"
+            ? "gallery"
+            : activePalcoMode === "comunidade"
+            ? "community"
+            : activePalcoMode === "apps"
+            ? "apps"
+            : "ai-tools"
+        }
+        hideMobileNav={activePalcoMode === "builder"}
+        onNavigateTab={(tab) => {
+          if (tab === "projetos" || tab === "projects") {
+            setActivePalcoMode("projetos");
+          } else if (tab === "gallery" || tab === "galeria") {
+            setActivePalcoMode("galeria");
+          } else if (tab === "community" || tab === "comunidade") {
+            setActivePalcoMode("comunidade");
+          } else {
+            handleGoHome();
+          }
+        }}
+        onOpenProjects={() => {
+          setActivePalcoMode("projetos");
+          if (typeof window !== "undefined") window.history.pushState({ path: "/projetos" }, "", "/projetos");
+        }}
+        onOpenGallery={() => {
+          setActivePalcoMode("galeria");
+          if (typeof window !== "undefined") window.history.pushState({ path: "/gallery" }, "", "/gallery");
+        }}
+        onOpenCommunity={() => {
+          setActivePalcoMode("comunidade");
+          if (typeof window !== "undefined") window.history.pushState({ path: "/community" }, "", "/community");
+        }}
+        onOpenAdmin={() => {
+          setIsAdminSubscribersOpen(true);
+        }}
+        onOpenAgentes={handleOpenApps}
+        onSelectAgent={(slug) => handleSwitchAgent(slug)}
+        onOpenCreditsModal={() => setIsCreditsModalOpen(true)}
+        selectedAgent={selectedAgent}
+        userEmail={userEmail}
+        userName={userName}
+        userCredits={realCredits}
+        isUnlimited={false}
+        userPlan="Profissional (Vertex AI)"
+      />
 
       {/* ── ÁREA PRINCIPAL DE CONTEÚDO (COM PADDING PARA O DOCK) ── */}
       <div className="flex h-[100dvh] flex-col overflow-hidden relative z-[2] lg:pl-[60px] flex-1 bg-black">
@@ -1563,16 +1281,16 @@ export default function DesignBuilder({
           /* STUDIO MODE: DESIGN BUILDER 1.2 & ÓRION PRO */
           <main
             data-builder-workspace-shell=""
-            className={`relative flex h-full min-h-0 overflow-hidden bg-black lg:flex-row max-lg:grid max-lg:overflow-hidden max-lg:transition-[grid-template-rows] max-lg:duration-300 max-lg:ease-in-out flex-1 ${
-              (mobileActiveCategory && !isGenerating && !store.isGenerating) ? "max-lg:grid-rows-[0fr_1fr]" : "max-lg:grid-rows-[1fr_0fr]"
-            }`}
+            className="relative flex h-full min-h-0 overflow-hidden bg-black lg:flex-row max-lg:flex-col flex-1"
           >
             {/* ── COLUNA ESQUERDA: FORMULÁRIO DO AGENTE (420px) ── */}
             {isOrion ? (
               <aside
                 data-aside-form-col=""
                 data-tour="form"
-                className="agent-form-col relative z-10 shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-white/5 scrollbar-hide px-2 py-3 lg:p-6 w-full lg:h-full lg:w-[var(--agent-form-col-w,420px)] lg:min-w-[280px] lg:max-w-[700px] bg-[#0c0a15]/90 backdrop-blur-md flex transition-[filter,opacity] duration-500 max-lg:order-last max-lg:min-h-0"
+                className={`agent-form-col relative z-10 shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-white/5 scrollbar-hide px-1.5 py-3 lg:p-6 transition-[filter,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] w-full lg:h-full lg:w-[var(--agent-form-col-w,420px)] lg:min-w-[280px] lg:max-w-[700px] lg:flex-shrink-0 flex max-lg:order-last max-lg:min-h-0 lg:flex ${
+                  studioPalcoTab !== "builder" ? "max-lg:hidden" : "max-lg:flex-1"
+                }`}
                 style={{ "--agent-form-col-w": "420px", "--agent-color": "#ffd500" } as any}
               >
                 <OrionProBuilder
@@ -1580,10 +1298,12 @@ export default function DesignBuilder({
                   onOpenVitrine={handleGoHome}
                   onOpenGallery={() => {
                     setActivePalcoMode("galeria");
+                    setStudioPalcoTab("galeria");
                     if (typeof window !== "undefined") window.history.pushState({ path: "/gallery" }, "", "/gallery");
                   }}
                   onOpenCommunity={() => {
                     setActivePalcoMode("comunidade");
+                    setStudioPalcoTab("comunidade");
                     if (typeof window !== "undefined") window.history.pushState({ path: "/community" }, "", "/community");
                   }}
                   onOpenChat={() => setIsAssistantOpen(true)}
@@ -1619,180 +1339,182 @@ export default function DesignBuilder({
             </div>
 
             {/* ── COLUNA DIREITA: PALCO CENTRAL & HISTÓRICO ── */}
-            <section className="palco-central relative flex flex-col overflow-hidden max-lg:order-first max-lg:min-h-0 lg:h-full lg:flex-1" style={{ minWidth: "0px" }}>
-              {/* Header Mobile com Voltar, Agente e Alternar Ajustes/Palco */}
-              <div className="lg:hidden flex items-center justify-between px-3 py-2 bg-[#0c0a15] border-b border-white/[0.08] z-30 shrink-0">
-                <button
-                  type="button"
-                  onClick={handleGoHome}
-                  className="flex items-center gap-1 text-xs font-semibold text-zinc-300 hover:text-white px-2 py-1 rounded-lg bg-white/[0.04] border border-white/5 active:scale-95 transition-all cursor-pointer"
-                >
-                  <ChevronLeft className="h-3.5 w-3.5" />
-                  <span>Início</span>
-                </button>
-                <div className="flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: isOrion ? "#ffd500" : "#7c3aed" }} />
-                  <span className="text-xs font-bold text-white">{isOrion ? "Órion Pro" : "Design Builder 1.2"}</span>
-                </div>
-                <div className="flex items-center rounded-full bg-white/[0.06] p-0.5 border border-white/10">
-                  <button
-                    type="button"
-                    onClick={() => setMobileActiveCategory("sujeito")}
-                    className={`px-2.5 py-1 text-[11px] font-semibold rounded-full transition-all cursor-pointer ${
-                      mobileActiveCategory ? "bg-violet-600 text-white shadow-sm" : "text-zinc-400 hover:text-white"
-                    }`}
-                  >
-                    Ajustes
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMobileActiveCategory(null)}
-                    className={`px-2.5 py-1 text-[11px] font-semibold rounded-full transition-all cursor-pointer ${
-                      !mobileActiveCategory ? "bg-violet-600 text-white shadow-sm" : "text-zinc-400 hover:text-white"
-                    }`}
-                  >
-                    Palco
-                  </button>
-                </div>
-              </div>
-        {/* BARRA DE NAVEGAÇÃO PERSISTENTE (IDÊNTICO AO DESIGN BUILDER ORIGINAL) */}
-        <div className="barra-de-navegacao navegacao-persistente relative flex w-full items-center justify-start gap-2 py-3 pl-3 pr-14 shrink-0 scrollbar-hide max-lg:flex-col max-lg:items-stretch max-lg:gap-1.5 max-lg:px-2 max-lg:py-1.5 max-lg:sticky max-lg:top-0 max-lg:z-20 max-lg:border-b max-lg:border-white/[0.06] max-lg:bg-[#0c0a15]/85 max-lg:backdrop-blur-sm lg:z-30 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:gap-0 lg:overflow-visible lg:pl-0 lg:pr-0">
-          
-          {/* Coluna 1: Abas de Geração do Projeto + Botão Salvar */}
-          <div className="pointer-events-auto flex min-w-0 items-center gap-2 max-lg:order-2 max-lg:w-full max-lg:justify-center lg:w-full lg:pl-4">
-            <div className="hidden min-w-0 flex-1 lg:flex items-center gap-2">
-              <div data-tour="tabs" role="tablist" aria-label="Abas de geração" className="pointer-events-auto flex min-w-0 flex-row items-center gap-1 overflow-x-auto scrollbar-hide w-full max-w-full">
-                {store.projectsList.map((proj, idx) => {
-                  const isActive = proj.id === store.activeProjectId;
-                  return (
-                    <div key={proj.id} className="group relative flex w-fit shrink-0 items-center">
-                      <button
-                        type="button"
-                        role="tab"
-                        aria-selected={isActive}
-                        onClick={() => store.loadProjectById(proj.id)}
-                        className={`inline-flex h-7 max-w-[12rem] flex-none items-center justify-center gap-1.5 rounded-lg border px-2.5 text-[11px] font-semibold uppercase tracking-wide transition-colors duration-200 outline-none focus-visible:ring-2 focus-visible:ring-white/30 pr-5 cursor-pointer ${
-                          isActive ? "text-white" : "hover:bg-white/[0.06]"
-                        }`}
-                        style={
-                          isActive
-                            ? {
-                                background: isOrion
-                                  ? "linear-gradient(135deg, rgb(255, 213, 0), rgba(255, 213, 0, 0.8))"
-                                  : "linear-gradient(135deg, rgb(124, 58, 237), rgba(124, 58, 237, 0.8))",
-                                borderColor: isOrion ? "rgb(255, 213, 0)" : "rgb(124, 58, 237)",
-                                color: isOrion ? "#000000" : "#ffffff"
-                              }
-                            : {
-                                color: isOrion ? "rgb(255, 213, 0)" : "rgb(124, 58, 237)",
-                                borderColor: isOrion ? "rgba(255, 213, 0, 0.333)" : "rgba(124, 58, 237, 0.333)"
-                              }
-                        }
-                      >
-                        {!isActive && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />}
-                        <span className="truncate" title="Aba de projeto">
-                          {proj.name && proj.name.startsWith("Aba ") ? proj.name : `Aba ${idx + 1}`}
-                        </span>
-                      </button>
+            <section
+              className={`palco-central relative flex flex-col overflow-hidden max-lg:order-first max-lg:min-h-0 lg:h-full lg:flex-1 ${
+                studioPalcoTab === "builder" ? "max-lg:shrink-0" : "max-lg:flex-1"
+              }`}
+              style={{ minWidth: "0px" }}
+            >
+              {/* Botão Minimizar filtros no Mobile */}
+              <button
+                type="button"
+                aria-label={isMobileNavCollapsed ? "Expandir filtros" : "Minimizar filtros"}
+                onClick={() => setIsMobileNavCollapsed(!isMobileNavCollapsed)}
+                className="lg:hidden flex w-full shrink-0 items-center justify-center py-0.5 text-zinc-500 transition-colors active:text-white cursor-pointer"
+              >
+                <ChevronUp
+                  className={`h-5 w-5 transition-transform duration-200 ${
+                    isMobileNavCollapsed ? "rotate-180" : ""
+                  }`}
+                  aria-hidden="true"
+                />
+              </button>
 
-                      {store.projectsList.length > 1 && (
+              {/* BARRA DE NAVEGAÇÃO PERSISTENTE (IDÊNTICO AO DESIGN BUILDER ORIGINAL) */}
+              <div
+                className={`barra-de-navegacao navegacao-persistente relative flex w-full items-center justify-start gap-2 py-3 pl-3 pr-14 shrink-0 scrollbar-hide max-lg:flex-col max-lg:items-stretch max-lg:gap-1.5 max-lg:px-2 max-lg:py-1.5 max-lg:sticky max-lg:top-0 max-lg:z-20 max-lg:border-b max-lg:border-white/[0.06] max-lg:bg-[#0c0a15]/85 max-lg:backdrop-blur-sm lg:z-30 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:gap-0 lg:overflow-visible lg:pl-0 lg:pr-0 max-lg:overflow-hidden max-lg:transition-all max-lg:duration-300 max-lg:ease-out ${
+                  isMobileNavCollapsed ? "max-lg:max-h-0 max-lg:py-0 max-lg:border-none" : "max-lg:max-h-48"
+                }`}
+              >
+                {/* Coluna 1: Abas de Geração do Projeto + Botão Nova Aba */}
+                <div className="pointer-events-auto flex min-w-0 items-start gap-2 max-lg:order-2 max-lg:w-full max-lg:justify-center lg:w-full lg:pl-4">
+                  <div className="hidden min-w-0 flex-1 lg:flex items-center gap-2">
+                    <div
+                      data-tour="tabs"
+                      role="tablist"
+                      aria-label="Abas de geração"
+                      className="pointer-events-auto flex min-w-0 flex-row items-center gap-1 overflow-x-auto scrollbar-hide w-full max-w-full"
+                    >
+                      {store.projectsList.map((proj, idx) => {
+                        const isActive = proj.id === store.activeProjectId;
+                        return (
+                          <div key={proj.id} className="group relative flex w-fit shrink-0 items-center">
+                            <button
+                              type="button"
+                              role="tab"
+                              aria-selected={isActive}
+                              onClick={() => store.loadProjectById(proj.id)}
+                              className={`inline-flex h-7 max-w-[12rem] flex-none items-center justify-center gap-1.5 rounded-lg border px-2.5 text-[11px] font-semibold uppercase tracking-wide transition-colors duration-200 outline-none focus-visible:ring-2 focus-visible:ring-white/30 pr-5 cursor-pointer ${
+                                isActive ? "text-white" : "hover:bg-white/[0.06]"
+                              }`}
+                              style={
+                                isActive
+                                  ? {
+                                      background: isOrion
+                                        ? "linear-gradient(135deg, rgb(255, 213, 0), rgba(255, 213, 0, 0.8))"
+                                        : "linear-gradient(135deg, rgb(124, 58, 237), rgba(124, 58, 237, 0.8))",
+                                      borderColor: isOrion ? "rgb(255, 213, 0)" : "rgb(124, 58, 237)",
+                                      color: isOrion ? "#000000" : "#ffffff"
+                                    }
+                                  : {
+                                      color: isOrion ? "rgb(255, 213, 0)" : "rgb(124, 58, 237)",
+                                      borderColor: isOrion ? "rgba(255, 213, 0, 0.333)" : "rgba(124, 58, 237, 0.333)"
+                                    }
+                              }
+                            >
+                              {!isActive && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />}
+                              <span className="truncate" title="Aba de projeto">
+                                {proj.name && proj.name.startsWith("Aba ") ? proj.name : `Aba ${idx + 1}`}
+                              </span>
+                            </button>
+
+                            {store.projectsList.length > 1 && (
+                              <button
+                                type="button"
+                                aria-label="Fechar aba"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  store.deleteProject(proj.id);
+                                }}
+                                className={`absolute right-0.5 top-1/2 -translate-y-1/2 rounded-full p-0.5 transition-colors opacity-100 lg:opacity-0 lg:group-hover:opacity-100 hover:bg-white/10 cursor-pointer ${
+                                  isActive ? "text-white hover:text-white" : "text-zinc-500 hover:text-red-400"
+                                }`}
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+
+                      {store.projectsList.length < 3 && (
                         <button
                           type="button"
-                          aria-label="Fechar aba"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            store.deleteProject(proj.id);
+                          aria-label="Nova aba"
+                          onClick={() => {
+                            store.createProject();
+                            showToast("Nova aba aberta!", "success");
                           }}
-                          className={`absolute right-0.5 top-1/2 -translate-y-1/2 rounded-full p-0.5 transition-colors opacity-100 lg:opacity-0 lg:group-hover:opacity-100 hover:bg-white/10 cursor-pointer ${
-                            isActive ? "text-white hover:text-white" : "text-zinc-500 hover:text-red-400"
-                          }`}
+                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-white/[0.06] hover:text-zinc-300 cursor-pointer"
+                          title="Nova aba"
                         >
-                          <X className="h-3 w-3" />
+                          <Plus className="h-3.5 w-3.5" />
                         </button>
                       )}
                     </div>
-                  );
-                })}
+                  </div>
+                </div>
 
-                {store.projectsList.length < 3 && (
-                  <button
-                    type="button"
-                    aria-label="Nova aba"
-                    onClick={() => {
-                      store.createProject();
-                      showToast("Nova aba aberta!", "success");
-                    }}
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-white/[0.06] hover:text-zinc-300 cursor-pointer"
-                    title="Nova aba"
+                {/* Coluna 2 & 3: Modos do Palco + Guia (wrap idêntico ao original: flex shrink-0 items-center gap-2 max-lg:order-1 max-lg:w-full lg:contents) */}
+                <div className="flex shrink-0 items-center gap-2 max-lg:order-1 max-lg:w-full lg:contents">
+                  <div
+                    role="tablist"
+                    aria-label="Modo de visualização"
+                    data-tour="gallery"
+                    className="flex shrink-0 items-center rounded-full border border-white/[0.06] bg-[rgba(10,7,25,0.70)] p-1 max-lg:min-w-0 max-lg:flex-1"
                   >
-                    <Plus className="h-3.5 w-3.5" />
-                  </button>
-                )}
-
-
-              </div>
-            </div>
-          </div>
-
-          {/* Coluna 2: Modos do Palco (Builder, Pinterest, Comunidade, Galeria) */}
-          <div className="flex shrink-0 items-center justify-center gap-2 max-lg:order-1 max-lg:w-full">
-            <div role="tablist" aria-label="Modo de visualização" className="flex shrink-0 items-center rounded-full border border-white/[0.06] bg-[rgba(10,7,25,0.70)] p-1 max-lg:min-w-0 max-lg:flex-1">
-              {[
-                { key: "builder", label: "Builder" },
-                { key: "pinterest", label: "Pinterest" },
-                { key: "comunidade", label: "Comunidade" },
-                { key: "galeria", label: "Galeria" }
-              ].map((item) => {
-                const isSelected = studioPalcoTab === item.key;
-                return (
-                  <button
-                    key={item.key}
-                    type="button"
-                    role="tab"
-                    onClick={() => {
-                      setStudioPalcoTab(item.key as any);
-                    }}
-                    aria-selected={isSelected}
-                    className={`relative rounded-full px-5 py-2 text-xs font-semibold uppercase tracking-wider transition-all duration-200 max-lg:min-w-0 max-lg:flex-1 max-lg:truncate max-lg:px-1 max-lg:text-[10px] max-lg:tracking-normal cursor-pointer ${
-                      isSelected ? "text-white shadow-lg" : "text-zinc-500 hover:text-zinc-300"
-                    }`}
-                    style={
-                      isSelected
-                        ? {
-                            background: isOrion
-                              ? "linear-gradient(135deg, rgb(255, 213, 0), rgba(255, 213, 0, 0.8))"
-                              : "linear-gradient(135deg, rgb(124, 58, 237), rgba(124, 58, 237, 0.8))",
-                            color: isOrion ? "#000000" : "#ffffff"
+                    {[
+                      { key: "builder", label: "Builder" },
+                      { key: "pinterest", label: "Pinterest" },
+                      { key: "comunidade", label: "Comunidade" },
+                      { key: "galeria", label: "Galeria" }
+                    ].map((item) => {
+                      const isSelected = studioPalcoTab === item.key;
+                      return (
+                        <button
+                          key={item.key}
+                          type="button"
+                          role="tab"
+                          aria-selected={isSelected}
+                          onClick={() => {
+                            setStudioPalcoTab(item.key as any);
+                          }}
+                          className={`relative rounded-full px-5 py-2 text-xs font-semibold uppercase tracking-wider transition-all duration-200 max-lg:min-w-0 max-lg:flex-1 max-lg:truncate max-lg:px-1 max-lg:text-[10px] max-lg:tracking-normal cursor-pointer ${
+                            isSelected ? "text-white shadow-lg" : "text-zinc-500 hover:text-zinc-300"
+                          }`}
+                          style={
+                            isSelected
+                              ? {
+                                  background: isOrion
+                                    ? "linear-gradient(135deg, rgb(255, 213, 0), rgba(255, 213, 0, 0.8))"
+                                    : "linear-gradient(135deg, rgb(124, 58, 237), rgba(124, 58, 237, 0.8))",
+                                  color: isOrion ? "#000000" : "#ffffff"
+                                }
+                              : {}
                           }
-                        : {}
-                    }
+                        >
+                          {item.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <button
+                    type="button"
+                    data-tour="header-actions"
+                    aria-haspopup="menu"
+                    aria-expanded="false"
+                    aria-label="Guia"
+                    onClick={() => setIsGuiaModalOpen(true)}
+                    className="flex shrink-0 items-center gap-1.5 rounded-full py-2 text-xs font-semibold transition-colors hover:bg-white/[0.06] max-lg:px-2.5 h-10 px-5 uppercase tracking-wider lg:mr-4 lg:justify-self-end cursor-pointer"
+                    style={{
+                      color: isOrion ? "rgb(255, 213, 0)" : "rgb(124, 58, 237)",
+                      border: isOrion ? "1px solid rgba(255, 213, 0, 0.2)" : "1px solid rgba(124, 58, 237, 0.2)"
+                    }}
                   >
-                    {item.label}
+                    <BookOpen className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                    <span className="max-lg:hidden">Guia</span>
+                    <ChevronDown className="h-3 w-3 shrink-0 transition-transform duration-200 max-lg:hidden" aria-hidden="true" />
                   </button>
-                );
-              })}
-            </div>
-          </div>
+                </div>
+              </div>
 
-          {/* Coluna 3: Guia e Ações Rápidas */}
-          <div className="flex shrink-0 items-center justify-end gap-2 pr-4 max-lg:hidden">
-            <button
-              type="button"
-              onClick={() => setIsGuiaModalOpen(true)}
-              className="flex shrink-0 items-center gap-1.5 rounded-full py-2 text-xs font-semibold transition-colors hover:bg-white/[0.06] h-10 px-5 uppercase tracking-wider cursor-pointer"
-              style={{
-                color: isOrion ? "rgb(255, 213, 0)" : "rgb(124, 58, 237)",
-                border: isOrion ? "1px solid rgba(255, 213, 0, 0.2)" : "1px solid rgba(124, 58, 237, 0.2)"
-              }}
-            >
-              <BookOpen className="h-3.5 w-3.5 shrink-0" />
-              <span>Guia</span>
-            </button>
-          </div>
-        </div>
-
-        {/* ── ÁREA DO PALCO DA ARTE / CANVAS ── */}
-        <div className="relative flex flex-1 min-h-0 flex-row overflow-hidden">
+              {/* ── ÁREA DO PALCO DA ARTE / CANVAS ── */}
+              <div
+                className={`relative flex flex-1 min-h-0 flex-row overflow-hidden ${
+                  studioPalcoTab === "builder" ? "max-lg:hidden" : "max-lg:flex"
+                }`}
+              >
           <div className="palco-da-arte relative flex h-full min-h-0 flex-1 min-w-0 overflow-hidden items-center justify-center p-4">
             {studioPalcoTab === "pinterest" ? (
               /* MODO PINTEREST INTEGRADO NO PALCO */
@@ -2453,165 +2175,621 @@ export default function DesignBuilder({
               className="fixed inset-x-0 bottom-0 z-40 overflow-x-hidden border-t border-white/[0.08] backdrop-blur-xl pb-safe shadow-[0_-8px_24px_rgba(0,0,0,0.45)] lg:hidden"
               style={{ background: "rgba(10, 7, 25, 0.96)" }}
             >
-              <div className="flex items-stretch gap-0.5 overflow-x-auto scrollbar-hide px-2 py-1.5 justify-center">
+              <div
+                role="tablist"
+                aria-label="Categorias do agente"
+                className="flex items-stretch gap-0.5 overflow-x-auto scrollbar-hide px-2 py-1.5 [scroll-snap-type:x_proximity]"
+              >
                 {/* Início */}
                 <button
                   type="button"
                   aria-label="Sair para o início"
                   onClick={handleGoHome}
-                  className="group flex min-h-[50px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 text-zinc-300 cursor-pointer"
+                  className="group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 text-zinc-300 cursor-pointer"
                 >
-                  <span className="flex h-7 w-11 items-center justify-center rounded-full transition-colors bg-white/[0.05] ring-1 ring-white/15 group-hover:bg-white/[0.10]">
-                    <Home className="h-[18px] w-[18px]" />
+                  <span className="flex h-7 w-12 items-center justify-center rounded-full transition-colors bg-white/[0.05] ring-1 ring-white/15 group-hover:bg-white/[0.10]">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-house lucide-home h-[22px] w-[22px]" aria-hidden="true">
+                      <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" />
+                      <path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                    </svg>
                   </span>
                   <span className="whitespace-nowrap text-[10px] leading-none font-semibold">Início</span>
                 </button>
 
-                <span aria-hidden="true" className="mx-0.5 my-2 w-px shrink-0 self-stretch bg-white/10" />
+                <span aria-hidden="true" className="mx-1 my-2 w-px shrink-0 self-stretch bg-white/10" />
 
-                {/* Sujeito / Produto */}
+                {isOrion ? (
+                  <>
+                    {/* Principal */}
+                    {(() => {
+                      const isActive = (mobileActiveCategory || "principal") === "principal" || mobileActiveCategory === "sujeito";
+                      return (
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={isActive}
+                          aria-current={isActive ? "true" : undefined}
+                          onClick={() => handleSelectMobileCategory("principal")}
+                          className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
+                            isActive ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+                          }`}
+                        >
+                          <span
+                            className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
+                              isActive ? "" : "group-hover:bg-white/[0.06]"
+                            }`}
+                            style={isActive ? { backgroundColor: "rgba(255, 213, 0, 0.15)" } : undefined}
+                          >
+                            <span className="relative">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="24"
+                                height="24"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="lucide lucide-image h-[22px] w-[22px]"
+                                aria-hidden="true"
+                                style={isActive ? { color: "rgb(255, 213, 0)" } : undefined}
+                              >
+                                <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+                                <circle cx="9" cy="9" r="2" />
+                                <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+                              </svg>
+                            </span>
+                          </span>
+                          <span className="whitespace-nowrap text-[10px] font-medium leading-none">Principal</span>
+                        </button>
+                      );
+                    })()}
+
+                    {/* Marca e estilo */}
+                    {(() => {
+                      const isActive = mobileActiveCategory === "marca" || mobileActiveCategory === "marca_estilo" || mobileActiveCategory === "cores";
+                      return (
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={isActive}
+                          aria-current={isActive ? "true" : undefined}
+                          onClick={() => handleSelectMobileCategory("marca")}
+                          className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
+                            isActive ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+                          }`}
+                        >
+                          <span
+                            className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
+                              isActive ? "" : "group-hover:bg-white/[0.06]"
+                            }`}
+                            style={isActive ? { backgroundColor: "rgba(255, 213, 0, 0.15)" } : undefined}
+                          >
+                            <span className="relative">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="24"
+                                height="24"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="lucide lucide-palette h-[22px] w-[22px]"
+                                aria-hidden="true"
+                                style={isActive ? { color: "rgb(255, 213, 0)" } : undefined}
+                              >
+                                <path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z" />
+                                <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
+                                <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
+                                <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
+                                <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
+                              </svg>
+                            </span>
+                          </span>
+                          <span className="whitespace-nowrap text-[10px] font-medium leading-none">Marca e estilo</span>
+                        </button>
+                      );
+                    })()}
+
+                    {/* Cenário */}
+                    {(() => {
+                      const isActive = mobileActiveCategory === "cenario" || mobileActiveCategory === "contexto";
+                      return (
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={isActive}
+                          aria-current={isActive ? "true" : undefined}
+                          onClick={() => handleSelectMobileCategory("cenario")}
+                          className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
+                            isActive ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+                          }`}
+                        >
+                          <span
+                            className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
+                              isActive ? "" : "group-hover:bg-white/[0.06]"
+                            }`}
+                            style={isActive ? { backgroundColor: "rgba(255, 213, 0, 0.15)" } : undefined}
+                          >
+                            <span className="relative">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="24"
+                                height="24"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="lucide lucide-mountain h-[22px] w-[22px]"
+                                aria-hidden="true"
+                                style={isActive ? { color: "rgb(255, 213, 0)" } : undefined}
+                              >
+                                <path d="m8 3 4 8 5-5 5 15H2L8 3z" />
+                              </svg>
+                            </span>
+                          </span>
+                          <span className="whitespace-nowrap text-[10px] font-medium leading-none">Cenário</span>
+                        </button>
+                      );
+                    })()}
+
+                    {/* Texto na imagem */}
+                    {(() => {
+                      const isActive = mobileActiveCategory === "texto" || mobileActiveCategory === "texto_imagem";
+                      return (
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={isActive}
+                          aria-current={isActive ? "true" : undefined}
+                          onClick={() => handleSelectMobileCategory("texto")}
+                          className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
+                            isActive ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+                          }`}
+                        >
+                          <span
+                            className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
+                              isActive ? "" : "group-hover:bg-white/[0.06]"
+                            }`}
+                            style={isActive ? { backgroundColor: "rgba(255, 213, 0, 0.15)" } : undefined}
+                          >
+                            <span className="relative">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="24"
+                                height="24"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="lucide lucide-text-initial lucide-letter-text h-[22px] w-[22px]"
+                                aria-hidden="true"
+                                style={isActive ? { color: "rgb(255, 213, 0)" } : undefined}
+                              >
+                                <path d="M15 5h6" />
+                                <path d="M15 12h6" />
+                                <path d="M3 19h18" />
+                                <path d="m3 12 3.553-7.724a.5.5 0 0 1 .894 0L11 12" />
+                                <path d="M3.92 10h6.16" />
+                              </svg>
+                            </span>
+                          </span>
+                          <span className="whitespace-nowrap text-[10px] font-medium leading-none">Texto na imagem</span>
+                        </button>
+                      );
+                    })()}
+
+                    {/* Ajustes */}
+                    {(() => {
+                      const isActive = mobileActiveCategory === "ajustes" || mobileActiveCategory === "composicao";
+                      return (
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={isActive}
+                          aria-current={isActive ? "true" : undefined}
+                          onClick={() => handleSelectMobileCategory("ajustes")}
+                          className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
+                            isActive ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+                          }`}
+                        >
+                          <span
+                            className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
+                              isActive ? "" : "group-hover:bg-white/[0.06]"
+                            }`}
+                            style={isActive ? { backgroundColor: "rgba(255, 213, 0, 0.15)" } : undefined}
+                          >
+                            <span className="relative">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="24"
+                                height="24"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="lucide lucide-settings h-[22px] w-[22px]"
+                                aria-hidden="true"
+                                style={isActive ? { color: "rgb(255, 213, 0)" } : undefined}
+                              >
+                                <path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915" />
+                                <circle cx="12" cy="12" r="3" />
+                              </svg>
+                            </span>
+                          </span>
+                          <span className="whitespace-nowrap text-[10px] font-medium leading-none">Ajustes</span>
+                        </button>
+                      );
+                    })()}
+
+                    {/* Configurações */}
+                    {(() => {
+                      const isActive = mobileActiveCategory === "configuracoes" || mobileActiveCategory === "config" || mobileActiveCategory === "prompt";
+                      return (
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={isActive}
+                          aria-current={isActive ? "true" : undefined}
+                          onClick={() => handleSelectMobileCategory("configuracoes")}
+                          className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
+                            isActive ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+                          }`}
+                        >
+                          <span
+                            className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
+                              isActive ? "" : "group-hover:bg-white/[0.06]"
+                            }`}
+                            style={isActive ? { backgroundColor: "rgba(255, 213, 0, 0.15)" } : undefined}
+                          >
+                            <span className="relative">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="24"
+                                height="24"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="lucide lucide-sliders-horizontal h-[22px] w-[22px]"
+                                aria-hidden="true"
+                                style={isActive ? { color: "rgb(255, 213, 0)" } : undefined}
+                              >
+                                <path d="M10 5H3" />
+                                <path d="M12 19H3" />
+                                <path d="M14 3v4" />
+                                <path d="M16 17v4" />
+                                <path d="M21 12h-9" />
+                                <path d="M21 19h-5" />
+                                <path d="M21 5h-7" />
+                                <path d="M8 10v4" />
+                                <path d="M8 12H3" />
+                              </svg>
+                            </span>
+                          </span>
+                          <span className="whitespace-nowrap text-[10px] font-medium leading-none">Configurações</span>
+                        </button>
+                      );
+                    })()}
+                  </>
+                ) : (
+                  <>
+                    {/* Sujeito */}
+                    {(() => {
+                      const isActive = (mobileActiveCategory || "sujeito") === "sujeito";
+                      return (
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={isActive}
+                          aria-current={isActive ? "true" : undefined}
+                          onClick={() => handleSelectMobileCategory("sujeito")}
+                          className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
+                            isActive ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+                          }`}
+                        >
+                          <span
+                            className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
+                              isActive ? "" : "group-hover:bg-white/[0.06]"
+                            }`}
+                            style={isActive ? { backgroundColor: "rgba(124, 58, 237, 0.15)" } : undefined}
+                          >
+                            <span className="relative">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="24"
+                                height="24"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="lucide lucide-image h-[22px] w-[22px]"
+                                aria-hidden="true"
+                                style={isActive ? { color: "rgb(167, 139, 250)" } : undefined}
+                              >
+                                <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+                                <circle cx="9" cy="9" r="2" />
+                                <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+                              </svg>
+                            </span>
+                          </span>
+                          <span className="whitespace-nowrap text-[10px] font-medium leading-none">Sujeito</span>
+                        </button>
+                      );
+                    })()}
+
+                    {/* Contexto */}
+                    {(() => {
+                      const isActive = mobileActiveCategory === "contexto" || mobileActiveCategory === "cenario";
+                      return (
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={isActive}
+                          aria-current={isActive ? "true" : undefined}
+                          onClick={() => handleSelectMobileCategory("contexto")}
+                          className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
+                            isActive ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+                          }`}
+                        >
+                          <span
+                            className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
+                              isActive ? "" : "group-hover:bg-white/[0.06]"
+                            }`}
+                            style={isActive ? { backgroundColor: "rgba(124, 58, 237, 0.15)" } : undefined}
+                          >
+                            <span className="relative">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="24"
+                                height="24"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="lucide lucide-mountain h-[22px] w-[22px]"
+                                aria-hidden="true"
+                                style={isActive ? { color: "rgb(167, 139, 250)" } : undefined}
+                              >
+                                <path d="m8 3 4 8 5-5 5 15H2L8 3z" />
+                              </svg>
+                            </span>
+                          </span>
+                          <span className="whitespace-nowrap text-[10px] font-medium leading-none">Contexto</span>
+                        </button>
+                      );
+                    })()}
+
+                    {/* Texto */}
+                    {(() => {
+                      const isActive = mobileActiveCategory === "texto";
+                      return (
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={isActive}
+                          aria-current={isActive ? "true" : undefined}
+                          onClick={() => handleSelectMobileCategory("texto")}
+                          className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
+                            isActive ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+                          }`}
+                        >
+                          <span
+                            className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
+                              isActive ? "" : "group-hover:bg-white/[0.06]"
+                            }`}
+                            style={isActive ? { backgroundColor: "rgba(124, 58, 237, 0.15)" } : undefined}
+                          >
+                            <span className="relative">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="24"
+                                height="24"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="lucide lucide-text-initial lucide-letter-text h-[22px] w-[22px]"
+                                aria-hidden="true"
+                                style={isActive ? { color: "rgb(167, 139, 250)" } : undefined}
+                              >
+                                <path d="M15 5h6" />
+                                <path d="M15 12h6" />
+                                <path d="M3 19h18" />
+                                <path d="m3 12 3.553-7.724a.5.5 0 0 1 .894 0L11 12" />
+                                <path d="M3.92 10h6.16" />
+                              </svg>
+                            </span>
+                          </span>
+                          <span className="whitespace-nowrap text-[10px] font-medium leading-none">Texto</span>
+                        </button>
+                      );
+                    })()}
+
+                    {/* Cores */}
+                    {(() => {
+                      const isActive = mobileActiveCategory === "cores";
+                      return (
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={isActive}
+                          aria-current={isActive ? "true" : undefined}
+                          onClick={() => handleSelectMobileCategory("cores")}
+                          className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
+                            isActive ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+                          }`}
+                        >
+                          <span
+                            className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
+                              isActive ? "" : "group-hover:bg-white/[0.06]"
+                            }`}
+                            style={isActive ? { backgroundColor: "rgba(124, 58, 237, 0.15)" } : undefined}
+                          >
+                            <span className="relative">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="24"
+                                height="24"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="lucide lucide-palette h-[22px] w-[22px]"
+                                aria-hidden="true"
+                                style={isActive ? { color: "rgb(167, 139, 250)" } : undefined}
+                              >
+                                <path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z" />
+                                <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
+                                <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
+                                <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
+                                <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
+                              </svg>
+                            </span>
+                          </span>
+                          <span className="whitespace-nowrap text-[10px] font-medium leading-none">Cores</span>
+                        </button>
+                      );
+                    })()}
+
+                    {/* Composição */}
+                    {(() => {
+                      const isActive = mobileActiveCategory === "composicao";
+                      return (
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={isActive}
+                          aria-current={isActive ? "true" : undefined}
+                          onClick={() => handleSelectMobileCategory("composicao")}
+                          className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
+                            isActive ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+                          }`}
+                        >
+                          <span
+                            className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
+                              isActive ? "" : "group-hover:bg-white/[0.06]"
+                            }`}
+                            style={isActive ? { backgroundColor: "rgba(124, 58, 237, 0.15)" } : undefined}
+                          >
+                            <span className="relative">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="24"
+                                height="24"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="lucide lucide-layers h-[22px] w-[22px]"
+                                aria-hidden="true"
+                                style={isActive ? { color: "rgb(167, 139, 250)" } : undefined}
+                              >
+                                <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                                <polyline points="2 17 12 22 22 17" />
+                                <polyline points="2 12 12 17 22 12" />
+                              </svg>
+                            </span>
+                          </span>
+                          <span className="whitespace-nowrap text-[10px] font-medium leading-none">Composição</span>
+                        </button>
+                      );
+                    })()}
+
+                    {/* Prompt */}
+                    {(() => {
+                      const isActive = mobileActiveCategory === "prompt";
+                      return (
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={isActive}
+                          aria-current={isActive ? "true" : undefined}
+                          onClick={() => handleSelectMobileCategory("prompt")}
+                          className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
+                            isActive ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+                          }`}
+                        >
+                          <span
+                            className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
+                              isActive ? "" : "group-hover:bg-white/[0.06]"
+                            }`}
+                            style={isActive ? { backgroundColor: "rgba(124, 58, 237, 0.15)" } : undefined}
+                          >
+                            <span className="relative">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="24"
+                                height="24"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="lucide lucide-sparkles h-[22px] w-[22px]"
+                                aria-hidden="true"
+                                style={isActive ? { color: "rgb(167, 139, 250)" } : undefined}
+                              >
+                                <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+                                <path d="M5 3v4" />
+                                <path d="M19 17v4" />
+                                <path d="M3 5h4" />
+                                <path d="M17 19h4" />
+                              </svg>
+                            </span>
+                          </span>
+                          <span className="whitespace-nowrap text-[10px] font-medium leading-none">Prompt</span>
+                        </button>
+                      );
+                    })()}
+                  </>
+                )}
+
+                <span aria-hidden="true" className="mx-1 my-2 w-px shrink-0 self-stretch bg-white/10" />
+
+                {/* Botão Construir (Idêntico ao original) */}
                 <button
                   type="button"
-                  onClick={() => {
-                    setMobileActiveCategory(mobileActiveCategory === "sujeito" ? null : "sujeito");
-                  }}
-                  className={`group flex min-h-[50px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
-                    mobileActiveCategory === "sujeito" ? "text-violet-400" : "text-zinc-500 hover:text-zinc-300"
-                  }`}
-                >
-                  <span className={`flex h-7 w-11 items-center justify-center rounded-full transition-colors ${
-                    mobileActiveCategory === "sujeito" ? "bg-violet-500/20 ring-1 ring-violet-500/40" : "group-hover:bg-white/[0.06]"
-                  }`}>
-                    <ImageIcon className="h-[18px] w-[18px]" />
-                  </span>
-                  <span className="whitespace-nowrap text-[10px] font-medium leading-none">Sujeito</span>
-                </button>
-
-                {/* Contexto */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMobileActiveCategory(mobileActiveCategory === "contexto" ? null : "contexto");
-                  }}
-                  className={`group flex min-h-[50px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
-                    mobileActiveCategory === "contexto" ? "text-violet-400" : "text-zinc-500 hover:text-zinc-300"
-                  }`}
-                >
-                  <span className={`flex h-7 w-11 items-center justify-center rounded-full transition-colors ${
-                    mobileActiveCategory === "contexto" ? "bg-violet-500/20 ring-1 ring-violet-500/40" : "group-hover:bg-white/[0.06]"
-                  }`}>
-                    <FileText className="h-[18px] w-[18px]" />
-                  </span>
-                  <span className="whitespace-nowrap text-[10px] font-medium leading-none">Contexto</span>
-                </button>
-
-                {/* Texto */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMobileActiveCategory(mobileActiveCategory === "texto" ? null : "texto");
-                  }}
-                  className={`group flex min-h-[50px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
-                    mobileActiveCategory === "texto" ? "text-violet-400" : "text-zinc-500 hover:text-zinc-300"
-                  }`}
-                >
-                  <span className={`flex h-7 w-11 items-center justify-center rounded-full transition-colors ${
-                    mobileActiveCategory === "texto" ? "bg-violet-500/20 ring-1 ring-violet-500/40" : "group-hover:bg-white/[0.06]"
-                  }`}>
-                    <Type className="h-[18px] w-[18px]" />
-                  </span>
-                  <span className="whitespace-nowrap text-[10px] font-medium leading-none">Texto</span>
-                </button>
-
-                {/* Cores */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMobileActiveCategory(mobileActiveCategory === "cores" ? null : "cores");
-                  }}
-                  className={`group flex min-h-[50px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
-                    mobileActiveCategory === "cores" ? "text-violet-400" : "text-zinc-500 hover:text-zinc-300"
-                  }`}
-                >
-                  <span className={`flex h-7 w-11 items-center justify-center rounded-full transition-colors ${
-                    mobileActiveCategory === "cores" ? "bg-violet-500/20 ring-1 ring-violet-500/40" : "group-hover:bg-white/[0.06]"
-                  }`}>
-                    <Palette className="h-[18px] w-[18px]" />
-                  </span>
-                  <span className="whitespace-nowrap text-[10px] font-medium leading-none">Cores</span>
-                </button>
-
-                {/* Composição */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMobileActiveCategory(mobileActiveCategory === "composicao" ? null : "composicao");
-                  }}
-                  className={`group flex min-h-[50px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
-                    mobileActiveCategory === "composicao" ? "text-violet-400" : "text-zinc-500 hover:text-zinc-300"
-                  }`}
-                >
-                  <span className={`flex h-7 w-11 items-center justify-center rounded-full transition-colors ${
-                    mobileActiveCategory === "composicao" ? "bg-violet-500/20 ring-1 ring-violet-500/40" : "group-hover:bg-white/[0.06]"
-                  }`}>
-                    <Layers className="h-[18px] w-[18px]" />
-                  </span>
-                  <span className="whitespace-nowrap text-[10px] font-medium leading-none">Composição</span>
-                </button>
-
-                {/* Prompt */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMobileActiveCategory(mobileActiveCategory === "prompt" ? null : "prompt");
-                  }}
-                  className={`group flex min-h-[50px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
-                    mobileActiveCategory === "prompt" ? "text-violet-400" : "text-zinc-500 hover:text-zinc-300"
-                  }`}
-                >
-                  <span className={`flex h-7 w-11 items-center justify-center rounded-full transition-colors ${
-                    mobileActiveCategory === "prompt" ? "bg-violet-500/20 ring-1 ring-violet-500/40" : "group-hover:bg-white/[0.06]"
-                  }`}>
-                    <Sparkles className="h-[18px] w-[18px]" />
-                  </span>
-                  <span className="whitespace-nowrap text-[10px] font-medium leading-none">Prompt</span>
-                </button>
-
-                {/* Histórico Mobile */}
-                <button
-                  type="button"
-                  onClick={() => setIsMobileHistoryOpen(!isMobileHistoryOpen)}
-                  className={`group flex min-h-[50px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
-                    isMobileHistoryOpen ? "text-violet-400" : "text-zinc-500 hover:text-zinc-300"
-                  }`}
-                >
-                  <span className={`flex h-7 w-11 items-center justify-center rounded-full transition-colors ${
-                    isMobileHistoryOpen ? "bg-violet-500/20 ring-1 ring-violet-500/40" : "group-hover:bg-white/[0.06]"
-                  }`}>
-                    <Clock className="h-[18px] w-[18px]" />
-                  </span>
-                  <span className="whitespace-nowrap text-[10px] font-medium leading-none">Histórico</span>
-                </button>
-
-                <span aria-hidden="true" className="mx-0.5 my-2 w-px shrink-0 self-stretch bg-white/10" />
-
-                {/* Botão Construir */}
-                <button
-                  type="button"
+                  aria-label="Construir"
                   disabled={isGenerating}
                   onClick={() => {
                     setMobileActiveCategory(null);
                     generatePremiumImage();
                   }}
-                  className="group ml-0.5 flex min-h-[46px] min-w-[70px] shrink-0 snap-start flex-col items-center justify-center gap-1 rounded-xl px-2.5 text-white transition-transform duration-100 ease-out active:scale-95 disabled:opacity-60 cursor-pointer shadow-lg shadow-violet-600/30"
+                  className="group ml-0.5 flex min-h-[52px] min-w-[78px] shrink-0 snap-start flex-col items-center justify-center gap-1 rounded-2xl px-3 text-white transition-transform duration-100 ease-out active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
                   style={{
+                    color: "rgb(255, 255, 255)",
                     background: isOrion
-                      ? "linear-gradient(135deg, rgb(255, 213, 0), rgba(255, 213, 0, 0.8))"
-                      : "linear-gradient(135deg, rgb(124, 58, 237), rgba(124, 58, 237, 0.8))",
-                    color: isOrion ? "#000000" : "#ffffff"
+                      ? "linear-gradient(to right, rgb(255, 213, 0), rgba(255, 213, 0, 0.8))"
+                      : "linear-gradient(to right, rgb(124, 58, 237), rgba(124, 58, 237, 0.8))",
+                    boxShadow: isOrion
+                      ? "rgba(255, 213, 0, 0.35) 0px 4px 16px"
+                      : "rgba(124, 58, 237, 0.35) 0px 4px 16px"
                   }}
                 >
-                  <span className="whitespace-nowrap text-xs font-extrabold leading-tight">
+                  <span className="whitespace-nowrap text-sm font-extrabold leading-tight">
                     {isGenerating ? "Criando..." : "Construir"}
                   </span>
                 </button>
@@ -2620,48 +2798,6 @@ export default function DesignBuilder({
           </main>
         )}
       </div>
-
-      {/* ── BARRA DE NAVEGAÇÃO MOBILE PERSISTENTE (Oculta dentro dos builders para não colidir com os controles de criação) ── */}
-      {activePalcoMode !== "builder" && (
-        <DesignBuilderMobileNav
-          activeTab={
-            activePalcoMode === "projetos"
-              ? "projetos"
-              : activePalcoMode === "galeria"
-              ? "gallery"
-              : activePalcoMode === "comunidade"
-              ? "community"
-              : "home"
-          }
-          onNavigateHome={() => {
-            handleGoHome();
-          }}
-          onNavigateProjects={() => {
-            setIsVitrineOpen(false);
-            setActivePalcoMode("projetos");
-            if (typeof window !== "undefined") window.history.pushState({ path: "/projetos" }, "", "/projetos");
-          }}
-          onNavigateGallery={() => {
-            setIsVitrineOpen(false);
-            setActivePalcoMode("galeria");
-            if (typeof window !== "undefined") window.history.pushState({ path: "/gallery" }, "", "/gallery");
-          }}
-          onNavigateCommunity={() => {
-            setIsVitrineOpen(false);
-            setActivePalcoMode("comunidade");
-            if (typeof window !== "undefined") window.history.pushState({ path: "/community" }, "", "/community");
-          }}
-          onOpenAccount={() => {
-            window.dispatchEvent(new CustomEvent("open-auth-modal"));
-          }}
-          onOpenAdmin={() => setIsAdminSubscribersOpen(true)}
-          onOpenCredits={() => setIsCreditsModalOpen(true)}
-          userEmail={userEmail}
-          userName={userName}
-          isAdmin={userEmail?.toLowerCase()?.trim() === "der.contatos@gmail.com"}
-          userInitial={userEmail ? (userName ? userName[0].toUpperCase() : userEmail[0].toUpperCase()) : "R"}
-        />
-      )}
 
 {/* ── MODAIS INTEGRADOS ── */}
 

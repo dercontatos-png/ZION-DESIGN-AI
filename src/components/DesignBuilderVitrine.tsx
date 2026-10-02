@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import ReportModal from "./ReportModal";
 import { DesignBuilderSettingsModal } from "./DesignBuilderSettingsModal";
+import { DesignBuilderSidebar } from "./DesignBuilderSidebar";
 
 interface DesignBuilderVitrineProps {
   onGoHome?: () => void;
@@ -228,341 +229,36 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
         <div className="bg-orb bg-orb-3" />
       </div>
 
-      {/* ── DESKTOP FLOATING DOCK (Barra Lateral 1:1 Oficial) ── */}
-      <nav data-tour="menu" className="barra-lateral fixed left-3 top-1/2 z-50 hidden -translate-y-1/2 lg:block">
-        <div className="flex flex-col items-center gap-1.5 rounded-2xl bg-zinc-950 px-2 py-3 shadow-2xl shadow-black/40 ring-1 ring-white/[0.06]">
-          {/* Créditos */}
-          <div
-            title={`${realCredits.toLocaleString("pt-BR")} créditos`}
-            onClick={() => onOpenCreditsModal?.()}
-            className="group relative flex flex-col items-center gap-0.5 mb-0.5 cursor-pointer"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="lucide lucide-coins h-4 w-4 text-amber-400"
-            >
-              <circle cx="8" cy="8" r="6" />
-              <path d="M18.09 10.37A6 6 0 1 1 10.34 18" />
-              <path d="M7 6h1v4" />
-              <path d="m16.71 13.88.7.71-2.82 2.82" />
-            </svg>
-            <span className="text-[10px] font-bold tabular-nums leading-none text-amber-400">
-              {realCredits > 9999 ? "99k+" : realCredits}
-            </span>
-            <span className="pointer-events-none absolute left-full ml-3 whitespace-nowrap rounded-lg bg-zinc-800 px-2.5 py-1 text-xs font-medium text-zinc-200 opacity-0 shadow-lg ring-1 ring-white/10 transition-opacity group-hover:opacity-100 z-50">
-              {realCredits.toLocaleString("pt-BR")} créditos
-            </span>
-          </div>
+      {/* ── BARRA LATERAL UNIFICADA OFICIAL (DESKTOP DOCK + MOBILE BAR 1:1) ── */}
+      <DesignBuilderSidebar
+        variant="dock"
+        activeTab="apps"
+        onNavigateTab={(tab) => {
+          if (tab === "home" || tab === "ai-tools") {
+            if (onGoHome) onGoHome();
+            else if (typeof window !== "undefined") {
+              window.history.pushState({ path: "/" }, "", "/");
+              window.dispatchEvent(new CustomEvent("db:go_home"));
+            }
+          } else if (onNavigateTab) {
+            onNavigateTab(tab);
+          }
+        }}
+        onOpenProjects={onOpenProjects}
+        onOpenGallery={onOpenGallery}
+        onOpenCommunity={onOpenCommunity}
+        onOpenAdmin={onOpenAdmin}
+        onOpenAgentes={onOpenAgentes}
+        onSelectAgent={(slug) => onOpenStudio(slug)}
+        onOpenCreditsModal={onOpenCreditsModal}
+        userEmail={userEmail}
+        userName={userName}
+        userCredits={realCredits}
+        isUnlimited={false}
+        userPlan="Profissional (Vertex AI)"
+      />
 
-          {/* User Profile Avatar */}
-          <div className="mb-1">
-            <div className="relative">
-              <button
-                type="button"
-                aria-label="Abrir menu do usuário"
-                aria-expanded={isProfileMenuOpen}
-                onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                className="h-7 w-7 overflow-hidden rounded-full ring-2 transition-all focus:outline-none ring-violet-500/20 hover:ring-violet-400/50 cursor-pointer"
-              >
-                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-violet-500 to-fuchsia-500 text-[11px] font-semibold text-white">
-                  {userInitials}
-                </div>
-              </button>
 
-              {/* Profile Popover Menu */}
-              {isProfileMenuOpen && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setIsProfileMenuOpen(false)} />
-                  <div className="absolute left-full top-0 ml-3 z-50 w-56 rounded-2xl bg-zinc-950 p-2 shadow-2xl ring-1 ring-white/10 text-white animate-in fade-in zoom-in-95 duration-150">
-                    <div className="px-3 py-2 border-b border-white/5">
-                      <p className="text-xs font-bold text-white truncate">{userName}</p>
-                      <p className="text-[10px] text-zinc-500 truncate">{userEmail}</p>
-                    </div>
-                    <div className="py-1">
-                      <button
-                        onClick={() => {
-                          setIsProfileMenuOpen(false);
-                          setIsSettingsModalOpen(true);
-                        }}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-zinc-300 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
-                      >
-                        <Settings size={14} className="text-violet-400" />
-                        <span>Configurações</span>
-                      </button>
-                      <button
-                        onClick={() => {
-                          setIsProfileMenuOpen(false);
-                          onOpenAdmin?.();
-                        }}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-zinc-300 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
-                      >
-                        <Shield size={14} className="text-amber-400" />
-                        <span>Painel do Assinante</span>
-                      </button>
-                      <button
-                        onClick={() => {
-                          setIsProfileMenuOpen(false);
-                          onOpenCreditsModal?.();
-                        }}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-zinc-300 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
-                      >
-                        <CreditCard size={14} className="text-emerald-400" />
-                        <span>Recarregar Créditos</span>
-                      </button>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-
-          <div className="mx-auto h-px w-5 bg-white/10" />
-
-          {/* Apps / Home with Flyout Menu */}
-          <div className="group/home relative">
-            <a
-              title="Início"
-              href="/"
-              onClick={(e) => {
-                e.preventDefault();
-                if (typeof window !== "undefined") {
-                  window.history.pushState({ path: "/" }, "", "/");
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                }
-                if (onGoHome) onGoHome();
-                else if (typeof window !== "undefined") {
-                  window.dispatchEvent(new CustomEvent("db:go_home"));
-                }
-              }}
-              className="flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200 text-zinc-400 hover:bg-white/10 hover:text-white cursor-pointer"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="lucide lucide-house lucide-home h-[18px] w-[18px]"
-                aria-hidden="true"
-              >
-                <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" />
-                <path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-              </svg>
-            </a>
-            <div className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 pl-3 opacity-0 transition-all duration-200 group-hover/home:pointer-events-auto group-hover/home:opacity-100 z-50">
-              <div className="flex flex-col gap-0.5 rounded-xl bg-zinc-900 p-1.5 shadow-2xl shadow-black/60 ring-1 ring-white/[0.08] min-w-[200px]">
-                <div className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] bg-violet-500/15 text-violet-300 font-medium">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
-                  <span className="truncate">Todos os apps</span>
-                </div>
-                <div className="my-0.5 h-px bg-white/[0.06]" />
-                {AGENTS_LIST.map((a) => (
-                  <button
-                    key={a.id}
-                    onClick={() => handleLaunchAgent(a.id)}
-                    className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition-colors text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100 text-left cursor-pointer"
-                  >
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md" style={{ backgroundColor: `${a.color}22` }}>
-                      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: a.color }} />
-                    </span>
-                    <span className="truncate">{a.name}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Projetos */}
-          <button
-            title="Projetos"
-            type="button"
-            onClick={() => onOpenProjects?.()}
-            className="group relative flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200 text-zinc-400 hover:bg-white/10 hover:text-white cursor-pointer"
-          >
-            <Briefcase size={20} />
-            <span className="pointer-events-none absolute left-full ml-3 whitespace-nowrap rounded-lg bg-zinc-800 px-2.5 py-1 text-xs font-medium text-zinc-200 opacity-0 shadow-lg ring-1 ring-white/10 transition-opacity group-hover:opacity-100 z-50">
-              Projetos
-            </span>
-          </button>
-
-          {/* Galeria */}
-          <button
-            title="Galeria"
-            type="button"
-            onClick={() => onOpenGallery?.()}
-            className="group relative flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200 text-zinc-400 hover:bg-white/10 hover:text-white cursor-pointer"
-          >
-            <Images size={20} />
-            <span className="pointer-events-none absolute left-full ml-3 whitespace-nowrap rounded-lg bg-zinc-800 px-2.5 py-1 text-xs font-medium text-zinc-200 opacity-0 shadow-lg ring-1 ring-white/10 transition-opacity group-hover:opacity-100 z-50">
-              Galeria
-            </span>
-          </button>
-
-          {/* Comunidade */}
-          <button
-            title="Comunidade"
-            type="button"
-            onClick={() => onOpenCommunity?.()}
-            className="group relative flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200 text-zinc-400 hover:bg-white/10 hover:text-white cursor-pointer"
-          >
-            <Globe size={20} />
-            <span className="pointer-events-none absolute left-full ml-3 whitespace-nowrap rounded-lg bg-zinc-800 px-2.5 py-1 text-xs font-medium text-zinc-200 opacity-0 shadow-lg ring-1 ring-white/10 transition-opacity group-hover:opacity-100 z-50">
-              Comunidade
-            </span>
-          </button>
-
-          {/* Rodapé da Sidebar */}
-          <div className="rodape-da-sidebar">
-            <div className="min-h-0 overflow-visible">
-              <div className="mx-auto my-1.5 h-px w-5 bg-white/10" />
-              <div className="flex flex-col items-center gap-1.5">
-                {/* Reportar */}
-                <button
-                  type="button"
-                  title="Reportar erro ou sugestão"
-                  onClick={() => setIsReportModalOpen(true)}
-                  className="group relative flex h-10 w-10 items-center justify-center rounded-xl text-red-400 transition-all duration-200 hover:bg-red-500/15 hover:text-red-300 cursor-pointer"
-                >
-                  <Flag size={18} />
-                  <span className="pointer-events-none absolute left-full ml-3 whitespace-nowrap rounded-lg bg-zinc-800 px-2.5 py-1 text-xs font-medium text-zinc-200 opacity-0 shadow-lg ring-1 ring-white/10 transition-opacity group-hover:opacity-100 z-50">
-                    Reportar
-                  </span>
-                </button>
-
-                {/* Links Úteis */}
-                <div className="relative">
-                  <button
-                    type="button"
-                    title="Links úteis"
-                    onClick={() => setIsLinksMenuOpen(!isLinksMenuOpen)}
-                    className="group relative flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200 text-zinc-500 hover:bg-white/10 hover:text-white cursor-pointer"
-                  >
-                    <MoreHorizontal size={20} />
-                    <span className="pointer-events-none absolute left-full ml-3 whitespace-nowrap rounded-lg bg-zinc-800 px-2.5 py-1 text-xs font-medium text-zinc-200 opacity-0 shadow-lg ring-1 ring-white/10 transition-opacity group-hover:opacity-100 z-50">
-                      Links úteis
-                    </span>
-                  </button>
-
-                  {isLinksMenuOpen && (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={() => setIsLinksMenuOpen(false)} />
-                      <div className="absolute left-full bottom-0 ml-3 z-50 w-56 rounded-2xl bg-zinc-950 p-2 shadow-2xl ring-1 ring-white/10 text-white animate-in fade-in zoom-in-95 duration-150">
-                        <div className="py-1">
-                          <a
-                            href="https://wa.me/5577998317804"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-zinc-300 hover:text-white hover:bg-white/5 transition-colors"
-                          >
-                            <Headphones size={14} className="text-emerald-400" />
-                            <span>Suporte WhatsApp</span>
-                          </a>
-                          <a
-                            href="https://app.designbuilder.co/docs"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-zinc-300 hover:text-white hover:bg-white/5 transition-colors"
-                          >
-                            <BookOpen size={14} className="text-violet-400" />
-                            <span>Guia de Prompts</span>
-                          </a>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      {/* ── MOBILE BOTTOM NAVIGATION BAR (1:1 Oficial) ── */}
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] lg:hidden">
-        <nav aria-label="Navegação principal" className="pointer-events-auto flex h-16 items-center rounded-[28px] bg-zinc-950/95 px-2 shadow-[0_8px_28px_rgba(0,0,0,0.5)] ring-1 ring-white/10 backdrop-blur-xl w-full max-w-md justify-around gap-1">
-          <button
-            type="button"
-            aria-label="Início"
-            onClick={() => {
-              if (typeof window !== "undefined") {
-                window.history.pushState({ path: "/" }, "", "/");
-                window.scrollTo({ top: 0, behavior: "smooth" });
-              }
-              if (onGoHome) onGoHome();
-              else if (typeof window !== "undefined") {
-                window.dispatchEvent(new CustomEvent("db:go_home"));
-              }
-            }}
-            className="group relative flex h-12 min-w-[48px] flex-col items-center justify-center gap-0.5 rounded-2xl outline-none active:scale-95 flex-1 text-zinc-400 hover:text-white cursor-pointer"
-          >
-            <span className="flex h-6 w-9 items-center justify-center rounded-full group-hover:bg-white/[0.06]">
-              <Home size={16} />
-            </span>
-            <span className="max-w-full truncate text-[9px] font-medium leading-none tracking-tight">Início</span>
-          </button>
-
-          <button
-            type="button"
-            aria-label="Projetos"
-            onClick={() => onOpenProjects?.()}
-            className="group relative flex h-12 min-w-[48px] flex-col items-center justify-center gap-0.5 rounded-2xl outline-none active:scale-95 flex-1 text-zinc-400 hover:text-white"
-          >
-            <span className="flex h-6 w-9 items-center justify-center rounded-full">
-              <Briefcase size={16} />
-            </span>
-            <span className="max-w-full truncate text-[9px] font-medium leading-none tracking-tight">Projetos</span>
-          </button>
-
-          <button
-            type="button"
-            aria-label="Galeria"
-            onClick={() => onOpenGallery?.()}
-            className="group relative flex h-12 min-w-[48px] flex-col items-center justify-center gap-0.5 rounded-2xl outline-none active:scale-95 flex-1 text-zinc-400 hover:text-white"
-          >
-            <span className="flex h-6 w-9 items-center justify-center rounded-full">
-              <Images size={16} />
-            </span>
-            <span className="max-w-full truncate text-[9px] font-medium leading-none tracking-tight">Galeria</span>
-          </button>
-
-          <button
-            type="button"
-            aria-label="Comunidade"
-            onClick={() => onOpenCommunity?.()}
-            className="group relative flex h-12 min-w-[48px] flex-col items-center justify-center gap-0.5 rounded-2xl outline-none active:scale-95 flex-1 text-zinc-400 hover:text-white"
-          >
-            <span className="flex h-6 w-9 items-center justify-center rounded-full">
-              <Globe size={16} />
-            </span>
-            <span className="max-w-full truncate text-[9px] font-medium leading-none tracking-tight">Comunidade</span>
-          </button>
-
-          <button
-            type="button"
-            aria-label="Abrir conta"
-            onClick={() => setIsSettingsModalOpen(true)}
-            className="group relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full outline-none active:scale-95"
-          >
-            <span className="h-10 w-10 overflow-hidden rounded-full ring-2 ring-violet-500/30">
-              <span className="flex h-full w-full items-center justify-center bg-gradient-to-br from-violet-500 to-fuchsia-500 text-sm font-semibold text-white">
-                {userInitials.substring(0, 1)}
-              </span>
-            </span>
-          </button>
-        </nav>
-      </div>
 
       {/* ── ÁREA PRINCIPAL COM SCROLL & CARDS (1:1 Oficial de Design Builder.html) ── */}
       <div className="flex h-[100dvh] flex-col overflow-hidden relative z-[2] lg:pl-[60px]">

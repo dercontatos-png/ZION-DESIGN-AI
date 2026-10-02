@@ -20,7 +20,8 @@ import {
   ArrowRight,
   Headphones,
   BookOpen,
-  Bot
+  Bot,
+  ChevronRight
 } from "lucide-react";
 import { DesignBuilderSettingsModal } from "./DesignBuilderSettingsModal";
 
@@ -57,6 +58,7 @@ export interface DesignBuilderSidebarProps {
   userCredits?: number | string;
   isUnlimited?: boolean;
   userPlan?: string;
+  hideMobileNav?: boolean;
 }
 
 export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
@@ -81,9 +83,11 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
   userCredits: propUserCredits,
   isUnlimited: propIsUnlimited,
   userPlan: propUserPlan,
+  hideMobileNav = false,
 }) => {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isLinksMenuOpen, setIsLinksMenuOpen] = useState(false);
+  const [isMobileAccountOpen, setIsMobileAccountOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [settingsInitialTab, setSettingsInitialTab] = useState<"perfil" | "plano" | "uso" | "documentacao">("perfil");
   const [isReportOpen, setIsReportOpen] = useState(false);
@@ -143,108 +147,337 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
   const isGalleryActive = activeTab === "gallery" || activeTab === "galeria";
   const isCommunityActive = activeTab === "community" || activeTab === "comunidade";
 
-  // Mobile drawer mode if explicitly requested
-  if (isMobile) {
+  const renderMobileNavigation = () => {
     return (
-      <div className="fixed inset-0 z-[9999] flex flex-col bg-zinc-950 p-6 text-white animate-in slide-in-from-left duration-200">
-        <div className="flex items-center justify-between pb-6 border-b border-white/10">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center font-bold text-sm">
-              {userInitials}
-            </div>
-            <div>
-              <p className="text-sm font-bold text-white">{userName}</p>
-              <p className="text-xs text-zinc-400">{userEmail}</p>
-            </div>
-          </div>
-          <button
-            onClick={onCloseMobile}
-            className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white"
+      <>
+        {/* Barra Flutuante de Navegação Inferior 1:1 Oficial do Design Builder */}
+        {!hideMobileNav && (
+          <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] lg:hidden">
+          <nav
+            aria-label="Navegação principal"
+            className="pointer-events-auto flex h-16 items-center rounded-[28px] bg-zinc-950/95 px-2 shadow-[0_8px_28px_rgba(0,0,0,0.5)] ring-1 ring-white/10 backdrop-blur-xl w-full max-w-md justify-around gap-1 select-none"
           >
-            <X size={20} />
-          </button>
+            {/* 1. Início */}
+            <a
+              aria-label="Início"
+              aria-current={isHomeActive ? "page" : undefined}
+              href="/"
+              onClick={(e) => {
+                e.preventDefault();
+                handleHomeClick();
+              }}
+              className={`group relative flex h-12 min-w-[48px] flex-col items-center justify-center gap-0.5 rounded-2xl outline-none transition-[transform,background-color] focus-visible:ring-2 focus-visible:ring-violet-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 active:scale-95 flex-1 cursor-pointer ${
+                isHomeActive ? "text-violet-400" : "text-zinc-400"
+              }`}
+            >
+              <span
+                className={`flex h-6 w-9 items-center justify-center rounded-full transition-colors ${
+                  isHomeActive ? "bg-violet-500/15" : "group-hover:bg-white/[0.06]"
+                }`}
+              >
+                <Home className="h-[22px] w-[22px]" />
+              </span>
+              <span className="max-w-full truncate text-[9px] font-medium leading-none tracking-tight">
+                Início
+              </span>
+            </a>
+
+            {/* 2. Projetos */}
+            <a
+              aria-label="Projetos"
+              aria-current={isProjectsActive ? "page" : undefined}
+              href="/projetos"
+              onClick={(e) => {
+                e.preventDefault();
+                if (typeof window !== "undefined") {
+                  window.history.pushState({ path: "/projetos" }, "", "/projetos");
+                }
+                if (onOpenProjects) onOpenProjects();
+                else onNavigateTab("projetos");
+                onCloseMobile?.();
+              }}
+              className={`group relative flex h-12 min-w-[48px] flex-col items-center justify-center gap-0.5 rounded-2xl outline-none transition-[transform,background-color] focus-visible:ring-2 focus-visible:ring-violet-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 active:scale-95 flex-1 cursor-pointer ${
+                isProjectsActive ? "text-violet-400" : "text-zinc-400"
+              }`}
+            >
+              <span
+                className={`flex h-6 w-9 items-center justify-center rounded-full transition-colors ${
+                  isProjectsActive ? "bg-violet-500/15" : "group-hover:bg-white/[0.06]"
+                }`}
+              >
+                <Briefcase className="h-[22px] w-[22px]" />
+              </span>
+              <span className="max-w-full truncate text-[9px] font-medium leading-none tracking-tight">
+                Projetos
+              </span>
+            </a>
+
+            {/* 3. Galeria */}
+            <a
+              aria-label="Galeria"
+              aria-current={isGalleryActive ? "page" : undefined}
+              href="/gallery"
+              onClick={(e) => {
+                e.preventDefault();
+                if (typeof window !== "undefined") {
+                  window.history.pushState({ path: "/gallery" }, "", "/gallery");
+                }
+                if (onOpenGallery) onOpenGallery();
+                else onNavigateTab("gallery");
+                onCloseMobile?.();
+              }}
+              className={`group relative flex h-12 min-w-[48px] flex-col items-center justify-center gap-0.5 rounded-2xl outline-none transition-[transform,background-color] focus-visible:ring-2 focus-visible:ring-violet-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 active:scale-95 flex-1 cursor-pointer ${
+                isGalleryActive ? "text-violet-400" : "text-zinc-400"
+              }`}
+            >
+              <span
+                className={`flex h-6 w-9 items-center justify-center rounded-full transition-colors ${
+                  isGalleryActive ? "bg-violet-500/15" : "group-hover:bg-white/[0.06]"
+                }`}
+              >
+                <Images className="h-[22px] w-[22px]" />
+              </span>
+              <span className="max-w-full truncate text-[9px] font-medium leading-none tracking-tight">
+                Galeria
+              </span>
+            </a>
+
+            {/* 4. Comunidade */}
+            <a
+              aria-label="Comunidade"
+              aria-current={isCommunityActive ? "page" : undefined}
+              href="/community"
+              onClick={(e) => {
+                e.preventDefault();
+                if (typeof window !== "undefined") {
+                  window.history.pushState({ path: "/community" }, "", "/community");
+                }
+                if (onOpenCommunity) onOpenCommunity();
+                else onNavigateTab("community");
+                onCloseMobile?.();
+              }}
+              className={`group relative flex h-12 min-w-[48px] flex-col items-center justify-center gap-0.5 rounded-2xl outline-none transition-[transform,background-color] focus-visible:ring-2 focus-visible:ring-violet-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 active:scale-95 flex-1 cursor-pointer ${
+                isCommunityActive ? "text-violet-400" : "text-zinc-400"
+              }`}
+            >
+              <span
+                className={`flex h-6 w-9 items-center justify-center rounded-full transition-colors ${
+                  isCommunityActive ? "bg-violet-500/15" : "group-hover:bg-white/[0.06]"
+                }`}
+              >
+                <Globe className="h-[22px] w-[22px]" />
+              </span>
+              <span className="max-w-full truncate text-[9px] font-medium leading-none tracking-tight">
+                Comunidade
+              </span>
+            </a>
+
+            {/* 5. Avatar do Usuário */}
+            <button
+              type="button"
+              aria-label="Abrir conta e notificações"
+              aria-haspopup="dialog"
+              aria-expanded={isMobileAccountOpen}
+              onClick={() => setIsMobileAccountOpen(true)}
+              className="group relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full outline-none transition-transform focus-visible:ring-2 focus-visible:ring-violet-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 active:scale-95 cursor-pointer"
+            >
+              <span className="h-10 w-10 overflow-hidden rounded-full ring-2 transition-[box-shadow] ring-violet-500/30">
+                <span className="flex h-full w-full items-center justify-center bg-gradient-to-br from-violet-500 to-fuchsia-500 text-sm font-semibold text-white">
+                  {userInitials}
+                </span>
+              </span>
+            </button>
+          </nav>
         </div>
+        )}
 
-        <div className="py-4 space-y-2">
-          <div
-            onClick={() => {
-              onOpenCreditsModal?.();
-              onCloseMobile?.();
-            }}
-            className="flex items-center justify-between p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 cursor-pointer"
-          >
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4" />
-              <span className="text-xs font-bold">{effectiveCredits.toLocaleString("pt-BR")} créditos disponíveis</span>
+        {/* Drawer Inferior de Conta (Mobile Bottom Sheet 1:1 Oficial) */}
+        {isMobileAccountOpen && (
+          <div className="fixed inset-0 z-[60] lg:hidden">
+            {/* Backdrop escurecido */}
+            <div
+              className="fixed inset-0 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+              onClick={() => setIsMobileAccountOpen(false)}
+            />
+
+            {/* Sheet deslizante de baixo para cima */}
+            <div className="fixed inset-x-0 bottom-0 z-[61] max-h-[92vh] overflow-y-auto rounded-t-[32px] border-t border-white/10 bg-[#0d091a]/98 p-6 shadow-2xl backdrop-blur-2xl animate-in slide-in-from-bottom duration-200">
+              
+              {/* Grab Handle */}
+              <div className="mx-auto mb-4 h-1 w-12 rounded-full bg-white/20" />
+
+              {/* Cabeçalho */}
+              <div className="flex items-center justify-between pb-5">
+                <h2 className="text-base font-bold text-white tracking-tight">Conta</h2>
+                <button
+                  type="button"
+                  aria-label="Fechar"
+                  onClick={() => setIsMobileAccountOpen(false)}
+                  className="rounded-full p-1.5 text-zinc-400 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Info do Usuário */}
+              <div className="flex items-center gap-3.5 pb-5">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 text-base font-bold text-white shadow-lg">
+                  {userInitials}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-base font-bold text-white leading-snug">{userName}</p>
+                  <p className="truncate text-xs text-zinc-400">{cleanEmail}</p>
+                  <div className="mt-1">
+                    <span className="inline-flex items-center rounded-full bg-violet-500/20 px-2.5 py-0.5 text-[11px] font-medium text-violet-300">
+                      Operação Design Builder
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card de Créditos */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileAccountOpen(false);
+                  onOpenCreditsModal?.();
+                }}
+                className="mb-4 flex w-full items-center justify-between rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3.5 text-left transition-all hover:bg-amber-500/15 cursor-pointer shadow-sm"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Sparkles className="h-5 w-5 text-amber-400 shrink-0" />
+                  <span className="text-sm font-semibold text-white">Créditos</span>
+                </div>
+                <span className="text-base font-bold tabular-nums text-amber-400">
+                  {effectiveCredits > 999 ? effectiveCredits.toLocaleString("pt-BR") : effectiveCredits}
+                </span>
+              </button>
+
+              {/* Linha de Configurações */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileAccountOpen(false);
+                  setSettingsInitialTab("perfil");
+                  setIsSettingsModalOpen(true);
+                }}
+                className="mb-3 flex w-full items-center justify-between rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-3.5 text-left transition-all hover:bg-white/[0.08] cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <Settings className="h-5 w-5 text-zinc-300 shrink-0" />
+                  <span className="text-sm font-medium text-white">Configurações</span>
+                </div>
+                <ChevronRight className="h-4 w-4 text-zinc-500" />
+              </button>
+
+              {/* Linha de Painel Admin (para administradores) */}
+              {isCleanAdmin && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileAccountOpen(false);
+                    if (onOpenAdmin) onOpenAdmin();
+                    else {
+                      window.dispatchEvent(new CustomEvent("open-admin-subscribers"));
+                      window.dispatchEvent(new CustomEvent("db:open_admin"));
+                    }
+                  }}
+                  className="mb-6 flex w-full items-center justify-between rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3.5 text-left transition-all hover:bg-amber-500/20 cursor-pointer"
+                >
+                  <div className="flex items-center gap-3">
+                    <Shield className="h-5 w-5 text-amber-400 shrink-0" />
+                    <span className="text-sm font-bold text-amber-400">Painel Admin</span>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-amber-500/70" />
+                </button>
+              )}
+
+              {/* Links Úteis */}
+              <div className="mb-6">
+                <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                  Links Úteis
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <a
+                    href="https://discord.gg/easybuilder"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3.5 py-1.5 text-xs font-medium text-zinc-200 transition-colors hover:bg-white/[0.12] cursor-pointer"
+                  >
+                    <span>Discord</span>
+                    <ExternalLink className="h-3 w-3 text-zinc-400" />
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileAccountOpen(false);
+                      if (onOpenCommunity) onOpenCommunity();
+                      else onNavigateTab("community");
+                    }}
+                    className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3.5 py-1.5 text-xs font-medium text-zinc-200 transition-colors hover:bg-white/[0.12] cursor-pointer"
+                  >
+                    <span>Comunidade</span>
+                    <ExternalLink className="h-3 w-3 text-zinc-400" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileAccountOpen(false);
+                      setSettingsInitialTab("documentacao");
+                      setIsSettingsModalOpen(true);
+                    }}
+                    className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3.5 py-1.5 text-xs font-medium text-zinc-200 transition-colors hover:bg-white/[0.12] cursor-pointer"
+                  >
+                    <span>Documentação</span>
+                    <ExternalLink className="h-3 w-3 text-zinc-400" />
+                  </button>
+                  <a
+                    href="https://link.easybuilder.com.br/fale-com-o-suporte"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3.5 py-1.5 text-xs font-medium text-zinc-200 transition-colors hover:bg-white/[0.12] cursor-pointer"
+                  >
+                    <span>Suporte</span>
+                    <ExternalLink className="h-3 w-3 text-zinc-400" />
+                  </a>
+                  <a
+                    href="https://link.easybuilder.com.br/fale-com-luiz"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3.5 py-1.5 text-xs font-medium text-zinc-200 transition-colors hover:bg-white/[0.12] cursor-pointer"
+                  >
+                    <span>Comercial</span>
+                    <ExternalLink className="h-3 w-3 text-zinc-400" />
+                  </a>
+                </div>
+              </div>
+
+              {/* Sair */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileAccountOpen(false);
+                  if (onSignOut) {
+                    onSignOut();
+                  } else {
+                    localStorage.removeItem("zion_auth_user");
+                    localStorage.removeItem("zion_current_user");
+                    localStorage.removeItem("currentUser");
+                    window.location.reload();
+                  }
+                }}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.06] py-3.5 text-sm font-medium text-white transition-all hover:bg-white/10 cursor-pointer"
+              >
+                <LogOut className="h-4 w-4 text-zinc-400" />
+                <span>Sair</span>
+              </button>
+
             </div>
           </div>
-
-          <a
-            href="/"
-            onClick={(e) => { e.preventDefault(); handleHomeClick(); }}
-            className={`flex items-center gap-3 p-3 rounded-xl text-sm font-medium ${isHomeActive ? "bg-violet-600/20 text-white" : "text-zinc-400"}`}
-          >
-            <Home size={18} />
-            <span>Início / Apps</span>
-          </a>
-
-          <a
-            href="/projetos"
-            onClick={(e) => {
-              e.preventDefault();
-              if (onOpenProjects) onOpenProjects();
-              else onNavigateTab("projetos");
-              onCloseMobile?.();
-            }}
-            className={`flex items-center gap-3 p-3 rounded-xl text-sm font-medium ${isProjectsActive ? "bg-violet-600/20 text-white" : "text-zinc-400"}`}
-          >
-            <Briefcase size={18} />
-            <span>Projetos</span>
-          </a>
-
-          <a
-            href="/gallery"
-            onClick={(e) => {
-              e.preventDefault();
-              if (onOpenGallery) onOpenGallery();
-              else onNavigateTab("gallery");
-              onCloseMobile?.();
-            }}
-            className={`flex items-center gap-3 p-3 rounded-xl text-sm font-medium ${isGalleryActive ? "bg-violet-600/20 text-white" : "text-zinc-400"}`}
-          >
-            <Images size={18} />
-            <span>Galeria</span>
-          </a>
-
-          <a
-            href="/community"
-            onClick={(e) => {
-              e.preventDefault();
-              if (onOpenCommunity) onOpenCommunity();
-              else onNavigateTab("community");
-              onCloseMobile?.();
-            }}
-            className={`flex items-center gap-3 p-3 rounded-xl text-sm font-medium ${isCommunityActive ? "bg-violet-600/20 text-white" : "text-zinc-400"}`}
-          >
-            <Globe size={18} />
-            <span>Comunidade</span>
-          </a>
-
-          <div
-            title="Em breve"
-            aria-disabled="true"
-            className="flex items-center gap-3 p-3 rounded-xl text-sm font-medium text-zinc-600 cursor-not-allowed select-none"
-          >
-            <Bot size={18} />
-            <span>Agentes</span>
-            <span className="ml-auto rounded-full bg-white/[0.04] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-zinc-500">
-              Em breve
-            </span>
-          </div>
-        </div>
-      </div>
+        )}
+      </>
     );
-  }
+  };
 
   // Desktop Expanded Sidebar (Exact match to app.designbuilder.co Home page)
   if (variant === "expanded") {
@@ -572,6 +805,9 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
           </div>
         </div>
       </aside>
+
+      {/* Barra de Navegação Flutuante e Drawer Mobile 1:1 Oficial */}
+      {renderMobileNavigation()}
 
       {/* Modal de Configurações 1:1 Oficial */}
       <DesignBuilderSettingsModal
@@ -958,6 +1194,9 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
 
         </div>
       </nav>
+
+      {/* Barra de Navegação Flutuante e Drawer Mobile 1:1 Oficial */}
+      {renderMobileNavigation()}
 
       {/* Modal de Report */}
       <ReportModal isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} />

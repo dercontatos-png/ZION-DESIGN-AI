@@ -656,7 +656,7 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
       <div className="absolute top-0 left-[30%] w-[500px] h-[500px] bg-brand-violet/10 blur-[120px] rounded-full pointer-events-none" />
 
       {/* Área Principal com Scroll */}
-      <main className="flex-1 overflow-y-auto z-10 relative custom-scrollbar">
+      <main className="flex-1 overflow-y-auto z-10 relative custom-scrollbar pb-28 lg:pb-8">
         {/* Sticky Header Oficial de Galeria (Chunk 856969) */}
         <div className="sticky top-0 z-20 border-b border-white/[0.03] bg-black/60 backdrop-blur-xl pl-4 lg:pl-[84px] pr-4 lg:pr-6 py-4 pt-[calc(env(safe-area-inset-top)+1rem)] lg:pt-4">
           {selectionMode ? (

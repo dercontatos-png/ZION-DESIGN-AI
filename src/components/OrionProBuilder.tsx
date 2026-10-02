@@ -115,6 +115,29 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
     };
   }, []);
 
+  // Listener para saltar de categoria no celular e abrir automaticamente a aba correspondente
+  useEffect(() => {
+    const handleCategoryJump = (e: any) => {
+      const cat = e.detail?.category;
+      if (!cat) return;
+      if (cat === "sujeito" || cat === "principal") {
+        setOpenSections(prev => ({ ...prev, principal: true }));
+      } else if (cat === "cenario" || cat === "contexto") {
+        setOpenSections(prev => ({ ...prev, cenario: true }));
+      } else if (cat === "texto") {
+        setOpenSections(prev => ({ ...prev, texto_imagem: true }));
+      } else if (cat === "cores" || cat === "marca") {
+        setOpenSections(prev => ({ ...prev, marca_estilo: true }));
+      } else if (cat === "composicao" || cat === "ajustes") {
+        setOpenSections(prev => ({ ...prev, ajustes: true }));
+      } else if (cat === "prompt" || cat === "configuracoes") {
+        setOpenSections(prev => ({ ...prev, configuracoes: true }));
+      }
+    };
+    window.addEventListener("agent:category_jump", handleCategoryJump);
+    return () => window.removeEventListener("agent:category_jump", handleCategoryJump);
+  }, []);
+
   // ── Section 1: Principal
   const [categoria, setCategoria] = useState<"Pessoa" | "Produto" | "Livre" | null>(() => (store as any).categoria || "Pessoa");
   const [quantidade, setQuantidade] = useState<string>(() => String(store.quantidade || "1"));
@@ -492,6 +515,26 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
     });
   }, [activeContentId, activeSlideIdx, activeClientId]);
 
+  // Listener para auto-abrir seções no salto de categorias mobile
+  useEffect(() => {
+    const handleCategoryJump = (e: any) => {
+      const cat = e?.detail?.category;
+      if (!cat) return;
+      setOpenSections(prev => {
+        const next = { ...prev };
+        if (cat === "principal" || cat === "sujeito") next.principal = true;
+        if (cat === "marca" || cat === "marca_estilo" || cat === "cores") next.marca_estilo = true;
+        if (cat === "cenario" || cat === "contexto") next.cenario = true;
+        if (cat === "texto" || cat === "texto_imagem") next.texto_imagem = true;
+        if (cat === "ajustes" || cat === "composicao") next.ajustes = true;
+        if (cat === "configuracoes" || cat === "config" || cat === "prompt") next.configuracoes = true;
+        return next;
+      });
+    };
+    window.addEventListener("agent:category_jump", handleCategoryJump);
+    return () => window.removeEventListener("agent:category_jump", handleCategoryJump);
+  }, []);
+
   // ── Modals & Dialogs State
   const [activeModalInfo, setActiveModalInfo] = useState<{ title: string; text: string } | null>(null);
   const [expandedEditor, setExpandedEditor] = useState<{
@@ -829,7 +872,13 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
   const resInfo = getResolutionInfo();
 
   return (
-    <div className="flex flex-col gap-4 lg:gap-5 w-full">
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        generatePremiumImage?.();
+      }}
+      className="flex flex-col gap-4 lg:gap-5 pb-16 w-full scroll-smooth"
+    >
       {/* ── MODO CONTEÚDO DE CLIENTE / CARROSSEL ── */}
       {activeContent && (
         <div className="rounded-2xl border border-yellow-500/30 bg-gradient-to-br from-yellow-500/10 via-zinc-900/90 to-purple-950/20 p-4 shadow-xl backdrop-blur-md flex flex-col gap-3">
@@ -919,7 +968,8 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
       {/* ═══════════════════════════════════════════════════════════════════ */}
       {/* 1. SEÇÃO PRINCIPAL (data-tour="form-sec-principal")                 */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      <div data-tour="form-sec-principal">
+      <div id="section-principal" data-section-alias="sujeito" data-tour="form-sec-principal" className="scroll-mt-14">
+        <div id="section-sujeito" className="scroll-mt-14" />
         <div
           data-state={openSections.principal ? "open" : "closed"}
           data-slot="collapsible"
@@ -950,7 +1000,7 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
             <div data-state="open" data-slot="collapsible-content" className="overflow-hidden">
               <div className="flex flex-col px-2 pb-5 pt-2 lg:px-4 lg:pb-6 lg:pt-3 gap-6 lg:gap-12">
                 {/* 1.1 Categoria */}
-                <div data-field-id="categoria" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
+                <div data-field-id="categoria" data-tour="form-field-categoria" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
                   <div className="flex flex-col gap-3">
                     <label className="flex items-center gap-1.5 text-sm font-semibold text-white">
                       <span>
@@ -1005,7 +1055,7 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
                 </div>
 
                 {/* 1.2 Fotos do Sujeito / Produto */}
-                <div data-field-id="fotos_do_sujeito_produto" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
+                <div data-field-id="fotos_do_sujeito_produto" data-tour="form-field-fotos_do_sujeito_produto" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
                   <div className="flex flex-col gap-3" data-image-field-id="fotos_do_sujeito_produto">
                     <div className="flex flex-col gap-2">
                       <div className="flex min-w-0 items-center justify-between gap-2">
@@ -1115,7 +1165,7 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
                 </div>
 
                 {/* 1.3 Quantidade */}
-                <div data-field-id="quantidade" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
+                <div data-field-id="quantidade" data-tour="form-field-quantidade" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
                   <div className="flex flex-col gap-3">
                     <label className="flex items-center gap-1.5 text-sm font-semibold text-white">
                       <span>Quantidade</span>
@@ -1163,7 +1213,7 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
                 </div>
 
                 {/* 1.4 Como o sujeito deve aparecer? */}
-                <div data-field-id="subject_description" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
+                <div data-field-id="subject_description" data-tour="form-field-subject_description" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
                   <div className="flex flex-col gap-2">
                     <label
                       htmlFor="subject_description"
@@ -1218,7 +1268,7 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
                 </div>
 
                 {/* 1.5 Posição do Sujeito */}
-                <div data-field-id="subject_position" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
+                <div data-field-id="subject_position" data-tour="form-field-subject_position" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
                   <div className="flex flex-col gap-3">
                     <label className="flex items-center gap-1.5 text-sm font-semibold text-white">
                       <span>Posição do Sujeito</span>
@@ -1271,7 +1321,7 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
                 </div>
 
                 {/* 1.6 Plano */}
-                <div data-field-id="plano" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
+                <div data-field-id="plano" data-tour="form-field-plano" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
                   <div className="flex flex-col gap-3">
                     <label className="flex items-center gap-1.5 text-sm font-semibold text-white">
                       <span>Plano</span>
@@ -1332,7 +1382,9 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
       {/* ═══════════════════════════════════════════════════════════════════ */}
       {/* 2. SEÇÃO MARCA E ESTILO (data-tour="form-sec-marca_estilo")         */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      <div data-tour="form-sec-marca_estilo">
+      <div id="section-marca" data-section-alias="marca_estilo" data-tour="form-sec-marca_estilo" className="scroll-mt-14">
+        <div id="section-cores" className="scroll-mt-14" />
+        <div id="section-marca_estilo" className="scroll-mt-14" />
         <div
           data-state={openSections.marca_estilo ? "open" : "closed"}
           data-slot="collapsible"
@@ -1679,7 +1731,8 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
       {/* ═══════════════════════════════════════════════════════════════════ */}
       {/* 3. SEÇÃO CENÁRIO (data-tour="form-sec-cenario")                     */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      <div data-tour="form-sec-cenario">
+      <div id="section-cenario" data-section-alias="contexto" data-tour="form-sec-cenario" className="scroll-mt-14">
+        <div id="section-contexto" className="scroll-mt-14" />
         <div
           data-state={openSections.cenario ? "open" : "closed"}
           data-slot="collapsible"
@@ -1944,7 +1997,8 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
       {/* ═══════════════════════════════════════════════════════════════════ */}
       {/* 4. SEÇÃO TEXTO NA IMAGEM (data-tour="form-sec-texto_imagem")         */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      <div data-tour="form-sec-texto_imagem">
+      <div id="section-texto" data-section-alias="texto_imagem" data-tour="form-sec-texto_imagem" className="scroll-mt-14">
+        <div id="section-texto_imagem" className="scroll-mt-14" />
         <div
           data-state={openSections.texto_imagem ? "open" : "closed"}
           data-slot="collapsible"
@@ -2407,7 +2461,8 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
       {/* ═══════════════════════════════════════════════════════════════════ */}
       {/* 5. SEÇÃO AJUSTES (data-tour="form-sec-ajustes")                     */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      <div data-tour="form-sec-ajustes">
+      <div id="section-ajustes" data-section-alias="composicao" data-tour="form-sec-ajustes" className="scroll-mt-14">
+        <div id="section-composicao" className="scroll-mt-14" />
         <div
           data-state={openSections.ajustes ? "open" : "closed"}
           data-slot="collapsible"
@@ -2819,7 +2874,9 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
       {/* ═══════════════════════════════════════════════════════════════════ */}
       {/* 6. SEÇÃO CONFIGURAÇÕES (data-tour="form-sec-configuracoes")          */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      <div data-tour="form-sec-configuracoes">
+      <div id="section-configuracoes" data-section-alias="config" data-tour="form-sec-configuracoes" className="scroll-mt-14">
+        <div id="section-config" className="scroll-mt-14" />
+        <div id="section-prompt" className="scroll-mt-14" />
         <div
           data-state={openSections.configuracoes ? "open" : "closed"}
           data-slot="collapsible"
@@ -3630,6 +3687,6 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
           </div>
         </div>
       )}
-    </div>
+    </form>
   );
 };
