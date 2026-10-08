@@ -1,0 +1,657 @@
+{
+  "strip": [
+    {
+      "id": "71IBD",
+      "alt": "[71IBD]",
+      "src": "/community_home/strip/strip_0_71IBD.avif"
+    },
+    {
+      "id": "1TGIF",
+      "alt": "[1TGIF]",
+      "src": "/community_home/strip/strip_1_1TGIF.avif"
+    },
+    {
+      "id": "QJPPM",
+      "alt": "[QJPPM]",
+      "src": "/community_home/strip/strip_2_QJPPM.avif"
+    },
+    {
+      "id": "C31EB",
+      "alt": "[C31EB]",
+      "src": "/community_home/strip/strip_3_C31EB.avif"
+    },
+    {
+      "id": "1A927",
+      "alt": "[1A927]",
+      "src": "/community_home/strip/strip_4_1A927.avif"
+    },
+    {
+      "id": "JR9LN",
+      "alt": "[JR9LN]",
+      "src": "/community_home/strip/strip_5_JR9LN.avif"
+    },
+    {
+      "id": "0X4UC",
+      "alt": "[0X4UC]",
+      "src": "/community_home/strip/strip_6_0X4UC.avif"
+    },
+    {
+      "id": "NYCW0",
+      "alt": "[NYCW0]",
+      "src": "/community_home/strip/strip_7_NYCW0.avif"
+    },
+    {
+      "id": "XRUE5",
+      "alt": "[XRUE5]",
+      "src": "/community_home/strip/strip_8_XRUE5.avif"
+    },
+    {
+      "id": "XU477",
+      "alt": "[XU477]",
+      "src": "/community_home/strip/strip_9_XU477.avif"
+    },
+    {
+      "id": "P0OTK",
+      "alt": "[P0OTK]",
+      "src": "/community_home/strip/strip_10_P0OTK.avif"
+    },
+    {
+      "id": "UCFLV",
+      "alt": "[UCFLV]",
+      "src": "/community_home/strip/strip_11_UCFLV.avif"
+    },
+    {
+      "id": "VKJ8Q",
+      "alt": "[VKJ8Q]",
+      "src": "/community_home/strip/strip_12_VKJ8Q.avif"
+    },
+    {
+      "id": "M2ZK3",
+      "alt": "[M2ZK3]",
+      "src": "/community_home/strip/strip_13_M2ZK3.avif"
+    },
+    {
+      "id": "4O8SC",
+      "alt": "[4O8SC]",
+      "src": "/community_home/strip/strip_14_4O8SC.avif"
+    },
+    {
+      "id": "BW4AD",
+      "alt": "[BW4AD]",
+      "src": "/community_home/strip/strip_15_BW4AD.avif"
+    },
+    {
+      "id": "WB9O4",
+      "alt": "[WB9O4]",
+      "src": "/community_home/strip/strip_16_WB9O4.avif"
+    },
+    {
+      "id": "N71OY",
+      "alt": "[N71OY]",
+      "src": "/community_home/strip/strip_17_N71OY.avif"
+    }
+  ],
+  "col1": [
+    {
+      "id": "O20N9",
+      "src": "/community_home/thumbnails/thumb_O20N9.avif",
+      "author": "Rafael Dias",
+      "initial": "R"
+    },
+    {
+      "id": "53F8D",
+      "src": "/community_home/thumbnails/thumb_53F8D.avif",
+      "author": "Rafael Dias",
+      "initial": "R"
+    },
+    {
+      "id": "Y7LL5",
+      "src": "/community_home/thumbnails/thumb_Y7LL5.avif",
+      "author": "Rafael Dias",
+      "initial": "R"
+    },
+    {
+      "id": "VPD6A",
+      "src": "/community_home/thumbnails/thumb_VPD6A.avif",
+      "author": "Francisco Serra",
+      "initial": "F",
+      "avatar": "/community_home/avatars/avatar_VPD6A.jpg"
+    },
+    {
+      "id": "W371Y",
+      "src": "/community_home/thumbnails/thumb_W371Y.avif",
+      "author": "Gabriel Tavares",
+      "initial": "G"
+    },
+    {
+      "id": "4844U",
+      "src": "/community_home/thumbnails/thumb_4844U.avif",
+      "author": "Rafael Dias",
+      "initial": "R"
+    },
+    {
+      "id": "SJ9VA",
+      "src": "/community_home/thumbnails/thumb_SJ9VA.avif",
+      "author": "Rafael Dias",
+      "initial": "R"
+    },
+    {
+      "id": "5RVE1",
+      "src": "/community_home/thumbnails/thumb_5RVE1.avif",
+      "author": "Rafael Dias",
+      "initial": "R"
+    },
+    {
+      "id": "F8ZH9",
+      "src": "/community_home/thumbnails/thumb_F8ZH9.avif",
+      "author": "Alan Rocha Pereira",
+      "initial": "A"
+    },
+    {
+      "id": "OR3XW",
+      "src": "/community_home/thumbnails/thumb_OR3XW.avif",
+      "author": "Augusto",
+      "initial": "A"
+    },
+    {
+      "id": "XWDHT",
+      "src": "/community_home/thumbnails/thumb_XWDHT.avif",
+      "author": "Leonardo Henrique",
+      "initial": "L"
+    },
+    {
+      "id": "GIL6T",
+      "src": "/community_home/thumbnails/thumb_GIL6T.avif",
+      "author": "Rafael Dias",
+      "initial": "R"
+    },
+    {
+      "id": "6J9M9",
+      "src": "/community_home/thumbnails/thumb_6J9M9.avif",
+      "author": "Pietro Della Giustina Gobbi",
+      "initial": "P"
+    },
+    {
+      "id": "42CKX",
+      "src": "/community_home/thumbnails/thumb_42CKX.avif",
+      "author": "Erick Lorenzi Vasconcelos",
+      "initial": "E",
+      "avatar": "/community_home/avatars/avatar_42CKX.jpg"
+    },
+    {
+      "id": "KSZ8I",
+      "src": "/community_home/thumbnails/thumb_KSZ8I.avif",
+      "author": "Rafael Dias",
+      "initial": "R"
+    },
+    {
+      "id": "KJLNX",
+      "src": "/community_home/thumbnails/thumb_KJLNX.avif",
+      "author": "Leonardo Henrique",
+      "initial": "L"
+    },
+    {
+      "id": "YKS9G",
+      "src": "/community_home/thumbnails/thumb_YKS9G.avif",
+      "author": "Thiago Garcez",
+      "initial": "T"
+    },
+    {
+      "id": "3CLOZ",
+      "src": "/community_home/thumbnails/thumb_3CLOZ.avif",
+      "author": "Eduardo Alves",
+      "initial": "E"
+    },
+    {
+      "id": "A2F3E",
+      "src": "/community_home/thumbnails/thumb_A2F3E.avif",
+      "author": "Thiago Vargas",
+      "initial": "T"
+    },
+    {
+      "id": "R71QN",
+      "src": "/community_home/thumbnails/thumb_R71QN.avif",
+      "author": "Radinho 24h",
+      "initial": "R"
+    },
+    {
+      "id": "X08N7",
+      "src": "/community_home/thumbnails/thumb_X08N7.avif",
+      "author": "Gustavo Bernardi",
+      "initial": "G"
+    },
+    {
+      "id": "7IFLN",
+      "src": "/community_home/thumbnails/thumb_7IFLN.avif",
+      "author": "Rafael Dias",
+      "initial": "R"
+    },
+    {
+      "id": "4BYQ2",
+      "src": "/community_home/thumbnails/thumb_4BYQ2.avif",
+      "author": "Rafael Dias",
+      "initial": "R"
+    },
+    {
+      "id": "5DTX2",
+      "src": "/community_home/thumbnails/thumb_5DTX2.avif",
+      "author": "CARLOS LOPES",
+      "initial": "C"
+    },
+    {
+      "id": "U72PM",
+      "src": "/community_home/thumbnails/thumb_U72PM.avif",
+      "author": "Ot\u00e1vio L.",
+      "initial": "O",
+      "avatar": "/community_home/avatars/avatar_U72PM.jpg"
+    },
+    {
+      "id": "GXWOC",
+      "src": "/community_home/thumbnails/thumb_GXWOC.avif",
+      "author": "Victor Brian",
+      "initial": "V",
+      "avatar": "/community_home/avatars/avatar_GXWOC.jpg"
+    },
+    {
+      "id": "6F501",
+      "src": "/community_home/thumbnails/thumb_6F501.avif",
+      "author": "Rafael Dias",
+      "initial": "R"
+    },
+    {
+      "id": "8FRO4",
+      "src": "/community_home/thumbnails/thumb_8FRO4.avif",
+      "author": "Erick Silva",
+      "initial": "E",
+      "avatar": "/community_home/avatars/avatar_8FRO4.jpg"
+    },
+    {
+      "id": "L5YU4",
+      "src": "/community_home/thumbnails/thumb_L5YU4.avif",
+      "author": "Erick Lorenzi Vasconcelos",
+      "initial": "E",
+      "avatar": "/community_home/avatars/avatar_L5YU4.jpg"
+    },
+    {
+      "id": "QLPLP",
+      "src": "/community_home/thumbnails/thumb_QLPLP.avif",
+      "author": "LUCAS MORI",
+      "initial": "L",
+      "avatar": "/community_home/avatars/avatar_QLPLP.jpg"
+    },
+    {
+      "id": "JT8VY",
+      "src": "/community_home/thumbnails/thumb_JT8VY.avif",
+      "author": "Radinho 24h",
+      "initial": "R"
+    },
+    {
+      "id": "F9GKB",
+      "src": "/community_home/thumbnails/thumb_F9GKB.avif",
+      "author": "Gregory Rodrigues",
+      "initial": "G"
+    },
+    {
+      "id": "NP3WP",
+      "src": "/community_home/thumbnails/thumb_NP3WP.avif",
+      "author": "Rafael Dias",
+      "initial": "R"
+    },
+    {
+      "id": "2L5I1",
+      "src": "/community_home/thumbnails/thumb_2L5I1.avif",
+      "author": "Joao Celistrino",
+      "initial": "J",
+      "avatar": "/community_home/avatars/avatar_2L5I1.jpg"
+    },
+    {
+      "id": "UHR0F",
+      "src": "/community_home/thumbnails/thumb_UHR0F.avif",
+      "author": "Rafael Dias",
+      "initial": "R"
+    },
+    {
+      "id": "VQ7YH",
+      "src": "/community_home/thumbnails/thumb_VQ7YH.avif",
+      "author": "Andr\u00e9 Lira",
+      "initial": "A"
+    },
+    {
+      "id": "6HJ71",
+      "src": "/community_home/thumbnails/thumb_6HJ71.avif",
+      "author": "CARLOS LOPES",
+      "initial": "C"
+    },
+    {
+      "id": "OP4G5",
+      "src": "/community_home/thumbnails/thumb_OP4G5.avif",
+      "author": "LAO Digital",
+      "initial": "L"
+    },
+    {
+      "id": "P374K",
+      "src": "/community_home/thumbnails/thumb_P374K.avif",
+      "author": "LAO Digital",
+      "initial": "L"
+    },
+    {
+      "id": "RZ81U",
+      "src": "/community_home/thumbnails/thumb_RZ81U.avif",
+      "author": "Thiago Vargas",
+      "initial": "T"
+    }
+  ],
+  "col2": [
+    {
+      "id": "31AUE",
+      "src": "/community_home/thumbnails/thumb_31AUE.avif",
+      "author": "Rafael Dias",
+      "initial": "R"
+    },
+    {
+      "id": "C80YD",
+      "src": "/community_home/thumbnails/thumb_C80YD.avif",
+      "author": "Rafael Dias",
+      "initial": "R"
+    },
+    {
+      "id": "IK4CM",
+      "src": "/community_home/thumbnails/thumb_IK4CM.avif",
+      "author": "Rafael Dias",
+      "initial": "R"
+    },
+    {
+      "id": "Q4GCJ",
+      "src": "/community_home/thumbnails/thumb_Q4GCJ.avif",
+      "author": "Thiago Garcez",
+      "initial": "T"
+    },
+    {
+      "id": "52CF5",
+      "src": "/community_home/thumbnails/thumb_52CF5.avif",
+      "author": "Gabriel Tavares",
+      "initial": "G"
+    },
+    {
+      "id": "WSVC7",
+      "src": "/community_home/thumbnails/thumb_WSVC7.avif",
+      "author": "Rafael Dias",
+      "initial": "R"
+    },
+    {
+      "id": "YV499",
+      "src": "/community_home/thumbnails/thumb_YV499.avif",
+      "author": "Rafael Dias",
+      "initial": "R"
+    },
+    {
+      "id": "YAVZ3",
+      "src": "/community_home/thumbnails/thumb_YAVZ3.avif",
+      "author": "Rafael Dias",
+      "initial": "R"
+    },
+    {
+      "id": "N3MIV",
+      "src": "/community_home/thumbnails/thumb_N3MIV.avif",
+      "author": "Alan Rocha Pereira",
+      "initial": "A"
+    },
+    {
+      "id": "YI258",
+      "src": "/community_home/thumbnails/thumb_YI258.avif",
+      "author": "Leonardo Henrique",
+      "initial": "L"
+    },
+    {
+      "id": "YNE4H",
+      "src": "/community_home/thumbnails/thumb_YNE4H.avif",
+      "author": "Rafael Dias",
+      "initial": "R"
+    },
+    {
+      "id": "P4WG0",
+      "src": "/community_home/thumbnails/thumb_P4WG0.avif",
+      "author": "Erick Lorenzi Vasconcelos",
+      "initial": "E",
+      "avatar": "/community_home/avatars/avatar_P4WG0.jpg"
+    },
+    {
+      "id": "1NG4F",
+      "src": "/community_home/thumbnails/thumb_1NG4F.avif",
+      "author": "Erick Lorenzi Vasconcelos",
+      "initial": "E",
+      "avatar": "/community_home/avatars/avatar_1NG4F.jpg"
+    },
+    {
+      "id": "7DB2Q",
+      "src": "/community_home/thumbnails/thumb_7DB2Q.avif",
+      "author": "Rafael Dias",
+      "initial": "R"
+    },
+    {
+      "id": "MQIIO",
+      "src": "/community_home/thumbnails/thumb_MQIIO.avif",
+      "author": "Rafael Dias",
+      "initial": "R"
+    },
+    {
+      "id": "OX3GA",
+      "src": "/community_home/thumbnails/thumb_OX3GA.avif",
+      "author": "Yan Le\u00e3o",
+      "initial": "Y"
+    },
+    {
+      "id": "5JF4P",
+      "src": "/community_home/thumbnails/thumb_5JF4P.avif",
+      "author": "Eduardo Alves",
+      "initial": "E"
+    },
+    {
+      "id": "7EZ0O",
+      "src": "/community_home/thumbnails/thumb_7EZ0O.avif",
+      "author": "Leonardo junior",
+      "initial": "L"
+    },
+    {
+      "id": "THVHH",
+      "src": "/community_home/thumbnails/thumb_THVHH.avif",
+      "author": "Thiago Vargas",
+      "initial": "T"
+    },
+    {
+      "id": "XZZ67",
+      "src": "/community_home/thumbnails/thumb_XZZ67.avif",
+      "author": "Luis Filipe",
+      "initial": "L"
+    }
+  ],
+  "col3": [
+    {
+      "id": "UEH7K",
+      "src": "/community_home/thumbnails/thumb_UEH7K.avif",
+      "author": "Rafael Dias",
+      "initial": "R"
+    },
+    {
+      "id": "ZZB35",
+      "src": "/community_home/thumbnails/thumb_ZZB35.avif",
+      "author": "Rafael Dias",
+      "initial": "R"
+    },
+    {
+      "id": "DW8VH",
+      "src": "/community_home/thumbnails/thumb_DW8VH.avif",
+      "author": "Rafael Dias",
+      "initial": "R"
+    },
+    {
+      "id": "C5K9F",
+      "src": "/community_home/thumbnails/thumb_C5K9F.avif",
+      "author": "Thiago Garcez",
+      "initial": "T"
+    },
+    {
+      "id": "ATGOM",
+      "src": "/community_home/thumbnails/thumb_ATGOM.avif",
+      "author": "Rafael seixas fran\u00e7a",
+      "initial": "R"
+    },
+    {
+      "id": "O0MI8",
+      "src": "/community_home/thumbnails/thumb_O0MI8.avif",
+      "author": "Rafael Dias",
+      "initial": "R"
+    },
+    {
+      "id": "L0M4C",
+      "src": "/community_home/thumbnails/thumb_L0M4C.avif",
+      "author": "Rafael Dias",
+      "initial": "R"
+    },
+    {
+      "id": "WPT7K",
+      "src": "/community_home/thumbnails/thumb_WPT7K.avif",
+      "author": "Rafael Dias",
+      "initial": "R"
+    },
+    {
+      "id": "O63EZ",
+      "src": "/community_home/thumbnails/thumb_O63EZ.avif",
+      "author": "Augusto",
+      "initial": "A"
+    },
+    {
+      "id": "TXXMG",
+      "src": "/community_home/thumbnails/thumb_TXXMG.avif",
+      "author": "Leonardo Henrique",
+      "initial": "L"
+    },
+    {
+      "id": "P22K9",
+      "src": "/community_home/thumbnails/thumb_P22K9.avif",
+      "author": "Rafael Dias",
+      "initial": "R"
+    },
+    {
+      "id": "C7240",
+      "src": "/community_home/thumbnails/thumb_C7240.avif",
+      "author": "Rafael Dias",
+      "initial": "R"
+    },
+    {
+      "id": "E5DPT",
+      "src": "/community_home/thumbnails/thumb_E5DPT.avif",
+      "author": "Erick Lorenzi Vasconcelos",
+      "initial": "E",
+      "avatar": "/community_home/avatars/avatar_E5DPT.jpg"
+    },
+    {
+      "id": "TQG86",
+      "src": "/community_home/thumbnails/thumb_TQG86.avif",
+      "author": "Rafael Dias",
+      "initial": "R"
+    },
+    {
+      "id": "AOWYL",
+      "src": "/community_home/thumbnails/thumb_AOWYL.avif",
+      "author": "Rafael Dias",
+      "initial": "R"
+    }
+  ],
+  "col4": [
+    {
+      "id": "G8MYA",
+      "src": "/community_home/thumbnails/thumb_G8MYA.avif",
+      "author": "Rafael Dias",
+      "initial": "R"
+    },
+    {
+      "id": "37GSI",
+      "src": "/community_home/thumbnails/thumb_37GSI.avif",
+      "author": "CARLOS LOPES",
+      "initial": "C"
+    },
+    {
+      "id": "VZDJI",
+      "src": "/community_home/thumbnails/thumb_VZDJI.avif",
+      "author": "CARLOS LOPES",
+      "initial": "C"
+    },
+    {
+      "id": "Q0XO9",
+      "src": "/community_home/thumbnails/thumb_Q0XO9.avif",
+      "author": "Joao Celistrino",
+      "initial": "J",
+      "avatar": "/community_home/avatars/avatar_Q0XO9.jpg"
+    },
+    {
+      "id": "JEG7F",
+      "src": "/community_home/thumbnails/thumb_JEG7F.avif",
+      "author": "LAO Digital",
+      "initial": "L"
+    },
+    {
+      "id": "6XH7T",
+      "src": "/community_home/thumbnails/thumb_6XH7T.avif",
+      "author": "Thiago Vargas",
+      "initial": "T"
+    },
+    {
+      "id": "CY3TE",
+      "src": "/community_home/thumbnails/thumb_CY3TE.avif",
+      "author": "Rafael Dias",
+      "initial": "R"
+    },
+    {
+      "id": "1S4J2",
+      "src": "/community_home/thumbnails/thumb_1S4J2.avif",
+      "author": "Rafael Dias",
+      "initial": "R"
+    },
+    {
+      "id": "MAGLQ",
+      "src": "/community_home/thumbnails/thumb_MAGLQ.avif",
+      "author": "DJ G7 da ZN",
+      "initial": "D"
+    },
+    {
+      "id": "7FLBS",
+      "src": "/community_home/thumbnails/thumb_7FLBS.avif",
+      "author": "Pedro Enrique",
+      "initial": "P"
+    },
+    {
+      "id": "9K46H",
+      "src": "/community_home/thumbnails/thumb_9K46H.avif",
+      "author": "Giohan farias",
+      "initial": "G"
+    },
+    {
+      "id": "HXS4Q",
+      "src": "/community_home/thumbnails/thumb_HXS4Q.avif",
+      "author": "Thiago Inacio",
+      "initial": "T",
+      "avatar": "/community_home/avatars/avatar_HXS4Q.jpg"
+    },
+    {
+      "id": "SQMCI",
+      "src": "/community_home/thumbnails/thumb_SQMCI.avif",
+      "author": "Thiago Inacio",
+      "initial": "T",
+      "avatar": "/community_home/avatars/avatar_SQMCI.jpg"
+    },
+    {
+      "id": "9COV7",
+      "src": "/community_home/thumbnails/thumb_9COV7.avif",
+      "author": "Thiago Inacio",
+      "initial": "T",
+      "avatar": "/community_home/avatars/avatar_9COV7.jpg"
+    },
+    {
+      "id": "TKZN7",
+      "src": "/community_home/thumbnails/thumb_TKZN7.avif",
+      "author": "Leonardo Del Mastro da Guia",
+      "initial": "L"
+    }
+  ]
+}
