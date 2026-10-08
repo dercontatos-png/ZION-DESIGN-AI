@@ -713,8 +713,9 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                     <span>Sair</span>
                   </button>
                 </div>
-              )}
-            </div>
+              </>
+            )}
+          </div>
 
             <div className="flex items-center gap-1">
               <button
@@ -1201,8 +1202,9 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                         <ExternalLink className="h-3.5 w-3.5 text-zinc-600 transition-colors group-hover/link:text-zinc-400" />
                       </a>
                     </div>
-                  )}
-                </div>
+                  </>
+                )}
+              </div>
 
               </div>
             </div>
