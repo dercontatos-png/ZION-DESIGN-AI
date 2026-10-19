@@ -1,5 +1,101 @@
 [
   {
+    "id": "1790979907582_vtrshyi",
+    "title": "foto",
+    "timestamp": "2026-10-02T22:25:30.513Z",
+    "created_at": "2026-10-02T22:25:30.513Z",
+    "imageUrl": "/designbuilder/results/1790979907582_vtrshyi/result.avif",
+    "result_url": "/designbuilder/results/1790979907582_vtrshyi/result.avif",
+    "thumbnail_url": "/designbuilder/thumbnails/1790979907582_vtrshyi/thumbnail.avif",
+    "pngUrl": "/designbuilder/results/1790979907582_vtrshyi/result.png",
+    "aspectRatio": "4:5",
+    "dimensions": "4:5",
+    "resolution": "1K",
+    "agent_slug": "orion-pro",
+    "prompt": "[Style]: ultra_realistic. [Framing]: medium. [Scene Background]: Nicho/Projeto: foto. Cenário: praia. [Main Subject]:  (male), positioned at center. [Floating Elements]: None. [Color Palette]: ambient_color: #1A1A2E, complementary_color: #E2E2E2, complementary_light: #FFD500. [Text Layout]: No text overlay at align-center (Gradient: true). [Output Specs]: Aspect Ratio 4:5, Quality: 1K, Variations: 1.",
+    "form_data": {
+      "plano": "medium",
+      "quality": "1K",
+      "dimensions": "4:5",
+      "quantidade": "1",
+      "genero": "male",
+      "subject_description": "",
+      "subject_position": "center",
+      "scene_description": "Nicho/Projeto: foto. Cenário: praia",
+      "estilo_visual": "ultra_realistic",
+      "nicho_projeto": "foto",
+      "prompt_adicional": "Categoria: Pessoa. Quantidade: 1. Modo Criativo: Builder",
+      "text_blocks": [],
+      "color_palette": {
+        "ambient_color": "#1A1A2E",
+        "complementary_color": "#E2E2E2",
+        "complementary_light": "#FFD500"
+      },
+      "degrade": "true",
+      "posicao_do_texto": "align-center",
+      "elementos_flutuantes": "",
+      "usar_desfoque_blur": "true",
+      "sobriedade_criatividade": "50",
+      "saved_files": {
+        "fotos_do_sujeito_produto": "inputs/1790979907582_vtrshyi/fotos_do_sujeito_produto/sujeito_0.jpg",
+        "brand_identity_images": null,
+        "referencias_de_ambiente": null,
+        "referencias_de_estilo": null
+      }
+    },
+    "input_image_urls": {
+      "fotos_do_sujeito_produto": [
+        "/designbuilder/inputs/1790979907582_vtrshyi/fotos_do_sujeito_produto/0.jpg"
+      ]
+    }
+  },
+  {
+    "id": "1790978920571_4o9zh4w",
+    "title": "Categoria: Livre",
+    "timestamp": "2026-10-02T22:09:06.269Z",
+    "created_at": "2026-10-02T22:09:06.269Z",
+    "imageUrl": "/designbuilder/results/1790978920571_4o9zh4w/result.avif",
+    "result_url": "/designbuilder/results/1790978920571_4o9zh4w/result.avif",
+    "thumbnail_url": "/designbuilder/thumbnails/1790978920571_4o9zh4w/thumbnail.avif",
+    "pngUrl": "/designbuilder/results/1790978920571_4o9zh4w/result.png",
+    "aspectRatio": "4:5",
+    "dimensions": "4:5",
+    "resolution": "1K",
+    "agent_slug": "orion-pro",
+    "prompt": "[Style]: ultra_realistic. [Framing]: medium. [Scene Background]: . [Main Subject]:  (male), positioned at right. [Floating Elements]: None. [Color Palette]: ambient_color: #1A1A2E, complementary_color: #E2E2E2, complementary_light: #FFD500. [Text Layout]: No text overlay at align-center (Gradient: true). [Output Specs]: Aspect Ratio 4:5, Quality: 1K, Variations: 1.",
+    "form_data": {
+      "plano": "medium",
+      "quality": "1K",
+      "dimensions": "4:5",
+      "quantidade": "1",
+      "genero": "male",
+      "subject_description": "",
+      "subject_position": "right",
+      "scene_description": "",
+      "estilo_visual": "ultra_realistic",
+      "nicho_projeto": "Categoria: Livre",
+      "prompt_adicional": "Categoria: Livre. Quantidade: 1. Modo Criativo: Builder",
+      "text_blocks": [],
+      "color_palette": {
+        "ambient_color": "#1A1A2E",
+        "complementary_color": "#E2E2E2",
+        "complementary_light": "#FFD500"
+      },
+      "degrade": "true",
+      "posicao_do_texto": "align-center",
+      "elementos_flutuantes": "",
+      "usar_desfoque_blur": "true",
+      "sobriedade_criatividade": "50",
+      "saved_files": {
+        "fotos_do_sujeito_produto": null,
+        "brand_identity_images": null,
+        "referencias_de_ambiente": null,
+        "referencias_de_estilo": null
+      }
+    },
+    "input_image_urls": {}
+  },
+  {
     "id": "1790489997993_t4bwi3w",
     "title": "Design Builder Arte",
     "timestamp": "2026-09-27T06:20:26.628Z",

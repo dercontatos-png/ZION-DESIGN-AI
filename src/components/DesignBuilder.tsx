@@ -12,7 +12,11 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useProjectStore } from "../store/useProjectStore";
 import { useGenerateImage } from "../hooks/useGenerateImage";
 import { downloadImage } from "../utils/downloadImage";
-import { checkAdminOrOpenPlan, getAuthHeaders, openPlanModal } from "../utils/userAuth";
+import { checkAdminOrOpenPlan, getAuthHeaders, openPlanModal, performSignOut, getCurrentUser, UserProfile, getCurrentUserEmail, isUserAdmin } from "../utils/userAuth";
+import { AuthModal } from "./AuthModal";
+import { PublicEntryModal } from "./PublicEntryModal";
+import { NoCreditsModal } from "./NoCreditsModal";
+import { WhatsAppSupportButton } from "./WhatsAppSupportButton";
 
 // Modular App Builders & Hubs
 import { DesignBuilderHome } from "./DesignBuilderHome";
@@ -33,6 +37,7 @@ import { CreditsModal } from "./CreditsModal";
 import ComunidadeDetailModal from "./ComunidadeDetailModal";
 import GaleriaManager from "./GaleriaManager";
 import ComunidadeManager from "./ComunidadeManager";
+import PromptsGallery from "./PromptsGallery";
 import { MagicRefineBar } from "./MagicRefineBar";
 import { AdminSubscribersModal } from "./AdminSubscribersModal";
 import { DesignBuilderSidebar } from "./DesignBuilderSidebar";
@@ -78,7 +83,11 @@ import {
   Palette,
   Clock,
   Mountain,
-  Settings
+  Settings,
+  Crop,
+  MoreHorizontal,
+  ZoomIn,
+  ZoomOut
 } from "lucide-react";
 
 interface DesignBuilderProps {
@@ -121,6 +130,10 @@ export default function DesignBuilder({
       if (p === "/ref" || p === "/agent/ref" || agentParam === "ref") return "ref";
       if (p === "/orion-pro" || p === "/orion" || p === "/agent/orion-pro" || p === "/agent/orion" || agentParam === "orion-pro" || agentParam === "orion") return "orion-pro";
       if (p === "/agent/design-builder1-2" || p === "/design-builder" || agentParam === "design-builder" || agentParam === "design-builder1-2") return "design-builder1-2";
+      try {
+        const saved = localStorage.getItem("zion_last_selected_agent");
+        if (saved) return saved;
+      } catch (_) {}
     }
     return "design-builder1-2";
   };
@@ -155,6 +168,80 @@ export default function DesignBuilder({
     return "builder";
   };
 
+  // Auth State & Public Entry Modal
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => getCurrentUser());
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  const [selectedAppUrl, setSelectedAppUrl] = useState<string>("/");
+  const [isPublicEntryModalOpen, setIsPublicEntryModalOpen] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      const p = window.location.pathname;
+      const search = new URLSearchParams(window.location.search);
+      if (
+        p === "/login" ||
+        search.get("login") === "true" ||
+        search.get("entry") === "true" ||
+        sessionStorage.getItem("db_explicitly_logged_out") === "true" ||
+        localStorage.getItem("zion_logged_out") === "true"
+      ) {
+        return true;
+      }
+    }
+    return false;
+  });
+
+  const [isNoCreditsModalOpen, setIsNoCreditsModalOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    const handleAuthChange = () => {
+      const u = getCurrentUser();
+      setCurrentUser(u);
+      if (!u) {
+        setIsPublicEntryModalOpen(true);
+      }
+    };
+    const handleOpenAuth = () => {
+      setIsAuthModalOpen(true);
+    };
+    const handleOpenEntry = (e?: any) => {
+      if (e?.detail?.redirectUrl) {
+        setSelectedAppUrl(e.detail.redirectUrl);
+      }
+      setIsPublicEntryModalOpen(true);
+    };
+    const handleNoCredits = () => {
+      setIsNoCreditsModalOpen(true);
+    };
+    window.addEventListener("zion:auth_changed", handleAuthChange);
+    window.addEventListener("open-auth-modal", handleOpenAuth);
+    window.addEventListener("open-entry-modal", handleOpenEntry);
+    window.addEventListener("open-public-entry-modal", handleOpenEntry);
+    window.addEventListener("zion:no_credits", handleNoCredits);
+    return () => {
+      window.removeEventListener("zion:auth_changed", handleAuthChange);
+      window.removeEventListener("open-auth-modal", handleOpenAuth);
+      window.removeEventListener("open-entry-modal", handleOpenEntry);
+      window.removeEventListener("open-public-entry-modal", handleOpenEntry);
+      window.removeEventListener("zion:no_credits", handleNoCredits);
+    };
+  }, []);
+
+  const handleSignOut = useCallback(() => {
+    performSignOut();
+    setCurrentUser(null);
+    setIsAuthModalOpen(false);
+    setSelectedAppUrl("/");
+    setIsPublicEntryModalOpen(true);
+    setIsHomeOpen(true);
+    setIsAppsOpen(false);
+    setActivePalcoMode("home");
+    if (typeof window !== "undefined") {
+      window.history.pushState({ path: "/" }, "", "/");
+    }
+    if (typeof showToast === "function") {
+      showToast("Você saiu da sua conta.", "info");
+    }
+  }, []);
+
   // Main UI routing states
   const [isHomeOpen, setIsHomeOpen] = useState<boolean>(detectIsHomeFromUrl);
   const [isAppsOpen, setIsAppsOpen] = useState<boolean>(detectIsAppsFromUrl);
@@ -166,6 +253,7 @@ export default function DesignBuilder({
 
   // Modals & Popovers
   const [isCropModalOpen, setIsCropModalOpen] = useState<boolean>(false);
+  const [previewZoomImage, setPreviewZoomImage] = useState<string | null>(null);
   const [cropImageSrc, setCropImageSrc] = useState<string>("");
   const [cropOnDone, setCropOnDone] = useState<((url: string) => void) | null>(null);
   const [isReportModalOpen, setIsReportModalOpen] = useState<boolean>(false);
@@ -177,12 +265,32 @@ export default function DesignBuilder({
   const [isUserMenuOpen, setIsUserMenuOpen] = useState<boolean>(false);
   const [isFormatDropdownOpen, setIsFormatDropdownOpen] = useState<boolean>(false);
   const [isExportDropdownOpen, setIsExportDropdownOpen] = useState<boolean>(false);
+  const [isMobileActionsOpen, setIsMobileActionsOpen] = useState<boolean>(false);
+  const [isFormatPopoverOpen, setIsFormatPopoverOpen] = useState<boolean>(false);
+  const [isFullscreenDetailsOpen, setIsFullscreenDetailsOpen] = useState<boolean>(false);
+  const [zoomLevel, setZoomLevel] = useState<number>(100);
   const [isLinksOpen, setIsLinksOpen] = useState<boolean>(false);
   const [isFavorited, setIsFavorited] = useState<boolean>(false);
   const [isSavedRecently, setIsSavedRecently] = useState<boolean>(false);
   const [mobileActiveCategory, setMobileActiveCategory] = useState<string | null>(null);
   const [isMobileHistoryOpen, setIsMobileHistoryOpen] = useState<boolean>(false);
   const [isMobileNavCollapsed, setIsMobileNavCollapsed] = useState<boolean>(false);
+
+  // Listener para sincronizar a categoria ativa quando o Órion Pro troca de seção internamente
+  useEffect(() => {
+    const handleOrionSection = (e: any) => {
+      const sec = e.detail?.section;
+      if (!sec) return;
+      setMobileActiveCategory(
+        sec === "marca_estilo" ? "marca" :
+        sec === "texto_imagem" ? "texto" :
+        sec === "configuracoes" ? "configuracoes" :
+        sec
+      );
+    };
+    window.addEventListener("orion:section_changed", handleOrionSection);
+    return () => window.removeEventListener("orion:section_changed", handleOrionSection);
+  }, []);
 
   // Navegação suave e precisa entre seções/categorias do formulário no celular
   const handleSelectMobileCategory = useCallback((cat: string) => {
@@ -193,13 +301,16 @@ export default function DesignBuilder({
         (cat === "principal" && (prev === "principal" || prev === "sujeito")) ||
         (cat === "sujeito" && (prev === "principal" || prev === "sujeito")) ||
         (cat === "marca" && (prev === "marca" || prev === "marca_estilo" || prev === "cores")) ||
+        (cat === "marca_estilo" && (prev === "marca" || prev === "marca_estilo" || prev === "cores")) ||
         (cat === "cenario" && (prev === "cenario" || prev === "contexto")) ||
+        (cat === "texto" && (prev === "texto" || prev === "texto_imagem")) ||
+        (cat === "texto_imagem" && (prev === "texto" || prev === "texto_imagem")) ||
         (cat === "ajustes" && (prev === "ajustes" || prev === "composicao")) ||
         (cat === "configuracoes" && (prev === "configuracoes" || prev === "config" || prev === "prompt"));
 
       if (isCurrentActive) {
         willOpen = false;
-        return null;
+        return null; // Tocou no botão já ativo: desmarca a categoria e mostra o Preview Canvas!
       }
       return cat;
     });
@@ -385,6 +496,11 @@ export default function DesignBuilder({
         setIsAppsOpen(false);
         setIsVitrineOpen(false);
         setActivePalcoMode("galeria");
+      } else if (p === "/prompts") {
+        setIsHomeOpen(false);
+        setIsAppsOpen(false);
+        setIsVitrineOpen(false);
+        setActivePalcoMode("prompts");
       } else if (p === "/pinterest") {
         setIsHomeOpen(false);
         setIsAppsOpen(false);
@@ -440,6 +556,13 @@ export default function DesignBuilder({
       setActivePalcoMode("galeria");
       if (typeof window !== "undefined") window.history.pushState({ path: "/gallery" }, "", "/gallery");
     };
+    const handleOpenPrompts = () => {
+      setIsHomeOpen(false);
+      setIsAppsOpen(false);
+      setIsVitrineOpen(false);
+      setActivePalcoMode("prompts");
+      if (typeof window !== "undefined") window.history.pushState({ path: "/prompts" }, "", "/prompts");
+    };
     const handleOpenCommunity = () => {
       setIsHomeOpen(false);
       setIsAppsOpen(false);
@@ -456,8 +579,8 @@ export default function DesignBuilder({
     };
 
     const handleOpenAdmin = () => {
-      const email = (userEmail || (typeof window !== "undefined" ? localStorage.getItem("zion_user_email") || "" : "")).toLowerCase().trim();
-      if (email === "der.contatos@gmail.com") {
+      const email = (currentUser?.email || userEmail || getCurrentUserEmail()).toLowerCase().trim();
+      if (email === "der.contatos@gmail.com" || email === "ricardo.jrsr.gov@gmail.com" || isUserAdmin()) {
         setIsAdminSubscribersOpen(true);
       }
     };
@@ -468,6 +591,7 @@ export default function DesignBuilder({
     window.addEventListener("db:open_apps", handleOpenApps);
     window.addEventListener("db:open_studio", handleOpenStudio);
     window.addEventListener("db:open_gallery", handleOpenGallery);
+    window.addEventListener("db:open_prompts", handleOpenPrompts);
     window.addEventListener("db:open_community", handleOpenCommunity);
     window.addEventListener("db:open_projects", handleOpenProjects);
     window.addEventListener("db:open_admin", handleOpenAdmin);
@@ -480,6 +604,7 @@ export default function DesignBuilder({
       window.removeEventListener("db:open_apps", handleOpenApps);
       window.removeEventListener("db:open_studio", handleOpenStudio);
       window.removeEventListener("db:open_gallery", handleOpenGallery);
+      window.removeEventListener("db:open_prompts", handleOpenPrompts);
       window.removeEventListener("db:open_community", handleOpenCommunity);
       window.removeEventListener("db:open_projects", handleOpenProjects);
       window.removeEventListener("db:open_admin", handleOpenAdmin);
@@ -825,12 +950,11 @@ export default function DesignBuilder({
       if (rawTypo.includes("left") || rawTypo.includes("esq")) typoPos = "Esquerda";
       else if (rawTypo.includes("right") || rawTypo.includes("dir")) typoPos = "Direita";
 
-      let pos = "Centro";
+      let pos = "";
       const rawPos = (fd.subject_position || "").toLowerCase();
       if (rawPos === "right" || rawPos === "direita") pos = "Direita";
       else if (rawPos === "left" || rawPos === "esquerda") pos = "Esquerda";
-      else if (typoPos === "Esquerda") pos = "Direita";
-      else if (typoPos === "Direita") pos = "Esquerda";
+      else if (rawPos === "center" || rawPos === "centro") pos = "Centro";
 
       const gen = fd.genero === "female" || fd.gender === "Feminino" ? "Feminino" : "Masculino";
 
@@ -857,7 +981,7 @@ export default function DesignBuilder({
         promptCenario: fd.scene_description || "",
         additionalPrompt: fd.prompt_adicional || "",
         nicho: fd.nicho_projeto || "",
-        composicao: fd.plano || "medium",
+        composicao: fd.plano || "",
         floatingElementsMode: fd.elementos_flutuantes ? "custom" : "off",
         floatingElementsCustom: typeof fd.elementos_flutuantes === "string" && fd.elementos_flutuantes !== "__enabled__" ? fd.elementos_flutuantes : "",
         elementosFlutuantes: !!fd.elementos_flutuantes,
@@ -869,16 +993,16 @@ export default function DesignBuilder({
         lastLoadedAt: Date.now()
       };
 
-      if (fd.color_palette) {
+      if (fd.color_palette && (fd.color_palette.ambient_color || fd.color_palette.complementary_light || fd.color_palette.complementary_color)) {
         updates.cores = {
-          ambiente: fd.color_palette.ambient_color || "#ca00e5",
-          complementar: fd.color_palette.complementary_light || "#e85700",
-          recorte: fd.color_palette.complementary_color || "#39ed53",
+          ambiente: fd.color_palette.ambient_color || "",
+          complementar: fd.color_palette.complementary_light || "",
+          recorte: fd.color_palette.complementary_color || "",
           paleta: [
-            fd.color_palette.ambient_color || "#ca00e5",
-            fd.color_palette.complementary_light || "#e85700",
-            fd.color_palette.complementary_color || "#39ed53"
-          ]
+            fd.color_palette.ambient_color,
+            fd.color_palette.complementary_light,
+            fd.color_palette.complementary_color
+          ].filter(Boolean)
         };
       }
 
@@ -951,11 +1075,25 @@ export default function DesignBuilder({
     if (clean === "product-builder-v2") clean = "hydra";
     if (clean === "ref-builder") clean = "ref";
 
+    if (!currentUser) {
+      const targetUrl = clean === "design-builder1-2" ? "/agent/design-builder1-2" : clean === "ref" ? "/agent/ref" : `/${clean}`;
+      setSelectedAppUrl(targetUrl);
+      setIsPublicEntryModalOpen(true);
+      return;
+    }
+
     setSelectedAgent(clean);
+    store.updateConfig({ activeAgentSlug: clean } as any);
     setIsVitrineOpen(false);
     setActivePalcoMode("builder");
+    if (clean === "orion-pro" || clean === "orion") {
+      setMobileActiveCategory("principal");
+    }
 
     if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("zion_last_selected_agent", clean);
+      } catch (_) {}
       const targetUrl = clean === "design-builder1-2" ? "/agent/design-builder1-2" : clean === "ref" ? "/agent/ref" : `/${clean}`;
       window.history.pushState({ path: targetUrl }, "", targetUrl);
     }
@@ -995,12 +1133,35 @@ export default function DesignBuilder({
   const handleOpenVitrine = handleGoHome;
 
   // Open Studio
-  const handleOpenStudio = (agentSlug?: string) => {
+  const handleOpenStudio = (agentSlug?: any) => {
+    let slug = "design-builder1-2";
+    if (typeof agentSlug === "string" && agentSlug) {
+      slug = agentSlug;
+    } else if (agentSlug && typeof agentSlug === "object") {
+      if (agentSlug.detail?.agent) {
+        slug = agentSlug.detail.agent;
+      } else if (typeof agentSlug.detail === "string" && agentSlug.detail) {
+        slug = agentSlug.detail;
+      }
+    }
+
+    if (!currentUser) {
+      let clean = slug;
+      if (clean === "design-builder") clean = "design-builder1-2";
+      if (clean === "enhance") clean = "enhance-builder";
+      if (clean === "product-builder-v2") clean = "hydra";
+      if (clean === "ref-builder") clean = "ref";
+      const targetUrl = clean === "design-builder1-2" ? "/agent/design-builder1-2" : clean === "ref" ? "/agent/ref" : `/${clean}`;
+      setSelectedAppUrl(targetUrl);
+      setIsPublicEntryModalOpen(true);
+      return;
+    }
+
     setIsHomeOpen(false);
     setIsAppsOpen(false);
     setIsVitrineOpen(false);
     setActivePalcoMode("builder");
-    handleSwitchAgent(agentSlug || "design-builder1-2");
+    handleSwitchAgent(slug);
   };
 
   // Crop modal callback
@@ -1013,73 +1174,208 @@ export default function DesignBuilder({
   // RENDER: HOME DASHBOARD (Exact match to app.designbuilder.co Home)
   if (isHomeOpen) {
     return (
-      <DesignBuilderHome
-        onOpenStudio={handleOpenStudio}
-        onOpenAgentes={handleOpenApps}
-        onOpenGallery={() => {
-          setIsHomeOpen(false);
-          setIsAppsOpen(false);
-          setActivePalcoMode("galeria");
-          window.history.pushState({ path: "/gallery" }, "", "/gallery");
-        }}
-        onOpenCommunity={() => {
-          setIsHomeOpen(false);
-          setIsAppsOpen(false);
-          setActivePalcoMode("comunidade");
-          window.history.pushState({ path: "/community" }, "", "/community");
-        }}
-        onOpenProjects={() => {
-          setIsHomeOpen(false);
-          setIsAppsOpen(false);
-          setActivePalcoMode("projetos");
-          window.history.pushState({ path: "/projetos" }, "", "/projetos");
-        }}
-        onOpenAdmin={() => {
-          setIsAdminSubscribersOpen(true);
-          if (onNavigateTab) onNavigateTab("admin");
-        }}
-        onOpenCreditsModal={() => setIsCreditsModalOpen(true)}
-        userTokens={realCredits}
-        userEmail={userEmail}
-        userName={userName}
-      />
+      <>
+        <DesignBuilderHome
+          onOpenStudio={handleOpenStudio}
+          onOpenAgentes={handleOpenApps}
+          onOpenGallery={() => {
+            setIsHomeOpen(false);
+            setIsAppsOpen(false);
+            setActivePalcoMode("galeria");
+            window.history.pushState({ path: "/gallery" }, "", "/gallery");
+          }}
+          onOpenCommunity={() => {
+            setIsHomeOpen(false);
+            setIsAppsOpen(false);
+            setActivePalcoMode("comunidade");
+            window.history.pushState({ path: "/community" }, "", "/community");
+          }}
+          onOpenProjects={() => {
+            setIsHomeOpen(false);
+            setIsAppsOpen(false);
+            setActivePalcoMode("projetos");
+            window.history.pushState({ path: "/projetos" }, "", "/projetos");
+          }}
+          onOpenAdmin={() => {
+            setIsAdminSubscribersOpen(true);
+            if (onNavigateTab) onNavigateTab("admin");
+          }}
+          onOpenCreditsModal={() => setIsCreditsModalOpen(true)}
+          onSignOut={handleSignOut}
+          isLoggedIn={Boolean(currentUser?.email)}
+          onOpenEntryModal={(url) => {
+            setSelectedAppUrl(url || "/");
+            setIsPublicEntryModalOpen(true);
+          }}
+          userTokens={realCredits}
+          userEmail={currentUser?.email || ""}
+          userName={currentUser?.name || "Visitante"}
+        />
+
+        {/* Modal de Entrada Pública Oficial Design Builder */}
+        <PublicEntryModal
+          isOpen={isPublicEntryModalOpen}
+          onClose={() => setIsPublicEntryModalOpen(false)}
+          redirectUrl={selectedAppUrl}
+          onOpenLogin={() => {
+            setIsPublicEntryModalOpen(false);
+            setIsAuthModalOpen(true);
+          }}
+        />
+
+        {/* Auth Modal para Login / Cadastro */}
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
+          onLoginSuccess={(u) => {
+            setCurrentUser(getCurrentUser());
+            setIsAuthModalOpen(false);
+            showToast(`Bem-vindo, ${u.name || u.email}!`, "success");
+            if (selectedAppUrl && selectedAppUrl !== "/" && selectedAppUrl !== "/home") {
+              const slug = selectedAppUrl.replace(/^\//, "").replace("agent/", "");
+              handleSwitchAgent(slug);
+            }
+          }}
+        />
+
+        {/* Admin Subscribers Modal */}
+        <AdminSubscribersModal
+          isOpen={isAdminSubscribersOpen}
+          onClose={() => setIsAdminSubscribersOpen(false)}
+          adminEmail={currentUser?.email || "der.contatos@gmail.com"}
+          showToast={showToast}
+        />
+
+        {/* Credits Modal */}
+        <CreditsModal
+          isOpen={isCreditsModalOpen}
+          onClose={() => setIsCreditsModalOpen(false)}
+          userEmail={currentUser?.email || ""}
+          userName={currentUser?.name || "Visitante"}
+          userInitials={currentUser?.initials || "VI"}
+          onSignOut={handleSignOut}
+        />
+
+        {/* Modal Sem Créditos Oficial Design Builder */}
+        <NoCreditsModal
+          isOpen={isNoCreditsModalOpen}
+          onClose={() => setIsNoCreditsModalOpen(false)}
+          planName="Operação Design Builder"
+          onViewCredits={() => {
+            setIsNoCreditsModalOpen(false);
+            setIsCreditsModalOpen(true);
+          }}
+          buyUrl="https://link.designbuilder.co/comprar"
+        />
+        <DesignBuilderAssistant onSelectAgent={(slug) => handleOpenStudio(slug)} />
+      </>
     );
   }
 
   // RENDER: TODOS OS APPS (6 Agentes Vitrine - /apps)
   if (isAppsOpen) {
     return (
-      <DesignBuilderVitrine
-        onGoHome={handleGoHome}
-        onOpenStudio={handleOpenStudio}
-        onOpenGallery={() => {
-          setIsHomeOpen(false);
-          setIsAppsOpen(false);
-          setActivePalcoMode("galeria");
-          window.history.pushState({ path: "/gallery" }, "", "/gallery");
-        }}
-        onOpenCommunity={() => {
-          setIsHomeOpen(false);
-          setIsAppsOpen(false);
-          setActivePalcoMode("comunidade");
-          window.history.pushState({ path: "/community" }, "", "/community");
-        }}
-        onOpenAgentes={handleOpenApps}
-        onOpenProjects={() => {
-          setIsHomeOpen(false);
-          setIsAppsOpen(false);
-          setActivePalcoMode("projetos");
-          window.history.pushState({ path: "/projetos" }, "", "/projetos");
-        }}
-        onOpenAdmin={() => {
-          setIsAdminSubscribersOpen(true);
-          if (onNavigateTab) onNavigateTab("admin");
-        }}
-        onOpenCreditsModal={() => setIsCreditsModalOpen(true)}
-        userTokens={realCredits}
-        userEmail={userEmail}
-        userName={userName}
-      />
+      <>
+        <DesignBuilderVitrine
+          onGoHome={handleGoHome}
+          onOpenStudio={handleOpenStudio}
+          onOpenGallery={() => {
+            setIsHomeOpen(false);
+            setIsAppsOpen(false);
+            setActivePalcoMode("galeria");
+            window.history.pushState({ path: "/gallery" }, "", "/gallery");
+          }}
+          onOpenCommunity={() => {
+            setIsHomeOpen(false);
+            setIsAppsOpen(false);
+            setActivePalcoMode("comunidade");
+            window.history.pushState({ path: "/community" }, "", "/community");
+          }}
+          onOpenAgentes={handleOpenApps}
+          onOpenProjects={() => {
+            setIsHomeOpen(false);
+            setIsAppsOpen(false);
+            setActivePalcoMode("projetos");
+            window.history.pushState({ path: "/projetos" }, "", "/projetos");
+          }}
+          onOpenMasterPrompts={() => {
+            setIsHomeOpen(false);
+            setIsAppsOpen(false);
+            setActivePalcoMode("prompts");
+            window.history.pushState({ path: "/prompts" }, "", "/prompts");
+          }}
+          onOpenAdmin={() => {
+            setIsAdminSubscribersOpen(true);
+            if (onNavigateTab) onNavigateTab("admin");
+          }}
+          onOpenCreditsModal={() => setIsCreditsModalOpen(true)}
+          onSignOut={handleSignOut}
+          isLoggedIn={Boolean(currentUser?.email)}
+          onOpenEntryModal={(url?: string) => {
+            setSelectedAppUrl(url || "/");
+            setIsPublicEntryModalOpen(true);
+          }}
+          userTokens={realCredits}
+          userEmail={currentUser?.email || ""}
+          userName={currentUser?.name || "Visitante"}
+        />
+
+        {/* Modal de Entrada Pública Oficial Design Builder */}
+        <PublicEntryModal
+          isOpen={isPublicEntryModalOpen}
+          onClose={() => setIsPublicEntryModalOpen(false)}
+          redirectUrl={selectedAppUrl}
+          onOpenLogin={() => {
+            setIsPublicEntryModalOpen(false);
+            setIsAuthModalOpen(true);
+          }}
+        />
+
+        {/* Auth Modal para Login / Cadastro */}
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
+          onLoginSuccess={(u) => {
+            setCurrentUser(getCurrentUser());
+            setIsAuthModalOpen(false);
+            showToast(`Bem-vindo, ${u.name || u.email}!`, "success");
+            if (selectedAppUrl && selectedAppUrl !== "/" && selectedAppUrl !== "/apps") {
+              const slug = selectedAppUrl.replace(/^\//, "").replace("agent/", "");
+              handleSwitchAgent(slug);
+            }
+          }}
+        />
+
+        {/* Admin Subscribers Modal */}
+        <AdminSubscribersModal
+          isOpen={isAdminSubscribersOpen}
+          onClose={() => setIsAdminSubscribersOpen(false)}
+          adminEmail={currentUser?.email || "der.contatos@gmail.com"}
+          showToast={showToast}
+        />
+
+        {/* Credits Modal */}
+        <CreditsModal
+          isOpen={isCreditsModalOpen}
+          onClose={() => setIsCreditsModalOpen(false)}
+          userEmail={currentUser?.email || ""}
+          userName={currentUser?.name || "Visitante"}
+          userInitials={currentUser?.initials || "VI"}
+          onSignOut={handleSignOut}
+        />
+
+        {/* Modal Sem Créditos Oficial Design Builder */}
+        <NoCreditsModal
+          isOpen={isNoCreditsModalOpen}
+          onClose={() => setIsNoCreditsModalOpen(false)}
+          planName="Operação Design Builder"
+          onViewCredits={() => {
+            setIsNoCreditsModalOpen(false);
+            setIsCreditsModalOpen(true);
+          }}
+          buyUrl="https://link.designbuilder.co/comprar"
+        />
+      </>
     );
   }
 
@@ -1107,12 +1403,14 @@ export default function DesignBuilder({
 
       {/* ── BARRA LATERAL UNIFICADA OFICIAL (DESKTOP DOCK + MOBILE BAR 1:1) ── */}
       <DesignBuilderSidebar
-        variant="dock"
+        variant={activePalcoMode === "galeria" || activePalcoMode === "apps" || activePalcoMode === "prompts" ? "expanded" : "dock"}
         activeTab={
           activePalcoMode === "projetos"
             ? "projetos"
             : activePalcoMode === "galeria"
             ? "gallery"
+            : activePalcoMode === "prompts"
+            ? "prompts"
             : activePalcoMode === "comunidade"
             ? "community"
             : activePalcoMode === "apps"
@@ -1125,6 +1423,8 @@ export default function DesignBuilder({
             setActivePalcoMode("projetos");
           } else if (tab === "gallery" || tab === "galeria") {
             setActivePalcoMode("galeria");
+          } else if (tab === "prompts") {
+            setActivePalcoMode("prompts");
           } else if (tab === "community" || tab === "comunidade") {
             setActivePalcoMode("comunidade");
           } else {
@@ -1139,6 +1439,10 @@ export default function DesignBuilder({
           setActivePalcoMode("galeria");
           if (typeof window !== "undefined") window.history.pushState({ path: "/gallery" }, "", "/gallery");
         }}
+        onOpenMasterPrompts={() => {
+          setActivePalcoMode("prompts");
+          if (typeof window !== "undefined") window.history.pushState({ path: "/prompts" }, "", "/prompts");
+        }}
         onOpenCommunity={() => {
           setActivePalcoMode("comunidade");
           if (typeof window !== "undefined") window.history.pushState({ path: "/community" }, "", "/community");
@@ -1149,16 +1453,20 @@ export default function DesignBuilder({
         onOpenAgentes={handleOpenApps}
         onSelectAgent={(slug) => handleSwitchAgent(slug)}
         onOpenCreditsModal={() => setIsCreditsModalOpen(true)}
+        onSignOut={handleSignOut}
         selectedAgent={selectedAgent}
-        userEmail={userEmail}
-        userName={userName}
+        userEmail={currentUser?.email || ""}
+        userName={currentUser?.name || "Visitante"}
+        userInitials={currentUser?.initials || "VI"}
         userCredits={realCredits}
         isUnlimited={false}
         userPlan="Profissional (Vertex AI)"
       />
 
-      {/* ── ÁREA PRINCIPAL DE CONTEÚDO (COM PADDING PARA O DOCK) ── */}
-      <div className="flex h-[100dvh] flex-col overflow-hidden relative z-[2] lg:pl-[60px] flex-1 bg-black">
+      {/* ── ÁREA PRINCIPAL DE CONTEÚDO (COM PADDING PARA O DOCK OU SIDEBAR) ── */}
+      <div className={`flex h-[100dvh] flex-col overflow-hidden relative z-[2] flex-1 bg-black ${
+        activePalcoMode === "galeria" || activePalcoMode === "apps" || activePalcoMode === "prompts" ? "lg:pl-72" : "lg:pl-[60px]"
+      }`}>
         {activePalcoMode === "apps" ? (
           <div className="flex-1 flex flex-col h-full overflow-hidden bg-black">
             <DesignBuilderAppsHub
@@ -1209,6 +1517,21 @@ export default function DesignBuilder({
                 if (typeof window !== "undefined") window.history.pushState({ path: "/community" }, "", "/community");
               }}
               showToast={showToast}
+            />
+          </div>
+        ) : activePalcoMode === "prompts" ? (
+          <div className="flex-1 flex flex-col h-full overflow-hidden bg-black">
+            <PromptsGallery
+              onGoHome={handleOpenVitrine}
+              onOpenStudio={(agentSlug, prompt) => {
+                if (agentSlug) handleSwitchAgent(agentSlug);
+                setActivePalcoMode("builder");
+                setStudioPalcoTab("builder");
+                if (prompt) {
+                  store.updateConfig({ additionalPrompt: prompt, lastLoadedAt: Date.now() });
+                  showToast("Prompt oficial carregado no estúdio!", "success");
+                }
+              }}
             />
           </div>
         ) : activePalcoMode === "comunidade" ? (
@@ -1312,7 +1635,7 @@ export default function DesignBuilder({
               <aside
                 data-aside-form-col=""
                 data-tour="form"
-                className={`agent-form-col relative z-10 shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-white/5 scrollbar-hide px-1.5 py-3 lg:p-6 transition-[filter,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] w-full lg:h-full lg:w-[var(--agent-form-col-w,420px)] lg:min-w-[280px] lg:max-w-[700px] lg:flex-shrink-0 flex max-lg:order-last max-lg:min-h-0 lg:flex ${
+                className={`agent-form-col relative z-10 shrink-0 flex-col overflow-hidden border-r border-white/5 p-0 transition-[filter,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] w-full lg:h-full lg:w-[var(--agent-form-col-w,420px)] lg:min-w-[280px] lg:max-w-[700px] lg:flex-shrink-0 flex max-lg:order-last max-lg:min-h-0 lg:flex ${
                   studioPalcoTab !== "builder" ? "max-lg:hidden" : ""
                 }`}
                 style={{ "--agent-form-col-w": "420px", "--agent-color": "#ffd500" } as any}
@@ -1428,7 +1751,8 @@ export default function DesignBuilder({
                                     }
                                   : {
                                       color: isOrion ? "rgb(255, 213, 0)" : "rgb(124, 58, 237)",
-                                      borderColor: isOrion ? "rgba(255, 213, 0, 0.333)" : "rgba(124, 58, 237, 0.333)"
+                                      borderColor: isOrion ? "rgba(255, 213, 0, 0.333)" : "rgba(124, 58, 237, 0.333)",
+                                      backgroundColor: "rgba(9, 9, 11, 0.65)"
                                     }
                               }
                             >
@@ -1529,7 +1853,8 @@ export default function DesignBuilder({
                     className="flex shrink-0 items-center gap-1.5 rounded-full py-2 text-xs font-semibold transition-colors hover:bg-white/[0.06] max-lg:px-2.5 h-10 px-5 uppercase tracking-wider lg:mr-4 lg:justify-self-end cursor-pointer"
                     style={{
                       color: isOrion ? "rgb(255, 213, 0)" : "rgb(124, 58, 237)",
-                      border: isOrion ? "1px solid rgba(255, 213, 0, 0.2)" : "1px solid rgba(124, 58, 237, 0.2)"
+                      border: isOrion ? "1px solid rgba(255, 213, 0, 0.2)" : "1px solid rgba(124, 58, 237, 0.2)",
+                      backgroundColor: "rgba(9, 9, 11, 0.65)"
                     }}
                   >
                     <BookOpen className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
@@ -1721,13 +2046,31 @@ export default function DesignBuilder({
               </div>
             ) : activeImage ? (
               /* ESTADO 2: IMAGEM GERADA ATIVA */
-              <div className="group/viewer relative flex h-full min-h-0 min-w-0 flex-1 overflow-hidden items-center justify-center p-2 pb-32 sm:pb-36">
-                <div className="relative flex h-full min-h-0 w-full min-w-0 items-center justify-center overflow-hidden">
+              <div className="group/viewer relative flex h-full min-h-0 min-w-0 flex-1 overflow-hidden items-center justify-center p-2 pb-20 sm:pb-24 lg:pb-28">
+                <div
+                  onClick={() => {
+                    setZoomLevel(100);
+                    setIsFullscreenDetailsOpen(true);
+                  }}
+                  className="relative flex h-full min-h-0 w-full min-w-0 items-center justify-center cursor-pointer"
+                >
                   <img
                     alt="Arte gerada pelo Zion Design"
                     src={activeImage}
-                    className="block h-auto w-auto max-h-full max-w-full shrink rounded-2xl object-contain shadow-2xl shadow-black/80"
+                    className="block max-h-full max-w-full h-auto w-auto shrink rounded-2xl object-contain object-center shadow-2xl shadow-black/80 hover:scale-[1.01] transition-transform"
                   />
+                  {/* Botão de Ações no Canto Superior Esquerdo da Arte (3 pontinhos no Mobile) */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsMobileActionsOpen(true);
+                    }}
+                    title="Ações da Arte"
+                    className="absolute top-3 left-3 z-30 flex h-10 w-10 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-md border border-white/10 hover:bg-black/80 transition-all cursor-pointer shadow-lg active:scale-95"
+                  >
+                    <MoreHorizontal className="h-5 w-5" />
+                  </button>
                 </div>
 
                 {/* Floating Glass Action Bar - Lado Esquerdo */}
@@ -1865,6 +2208,11 @@ export default function DesignBuilder({
                               key={item.ext}
                               type="button"
                               onClick={() => {
+                                if (!activeImage) {
+                                  showToast("Nenhuma arte disponível para baixar. Gere uma imagem primeiro!", "warning");
+                                  setIsExportDropdownOpen(false);
+                                  return;
+                                }
                                 const q = store.resolucao || store.qualidade || "4K";
                                 const isOriginal = item.ext === "AVIF" || item.ext === "PNG";
                                 downloadImage(activeImage, item.ext as any, undefined, undefined, undefined, q as any, {
@@ -1903,55 +2251,8 @@ export default function DesignBuilder({
                   </button>
                 </div>
 
-                {/* Mobile Floating Action Bar (Ações da Arte no Celular) */}
-                <div className="lg:hidden absolute bottom-24 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-black/85 backdrop-blur-md border border-white/10 shadow-2xl pointer-events-auto">
-                  <button
-                    type="button"
-                    onClick={() => handleReuseGeneration(activeImage)}
-                    title="Reutilizar"
-                    className="flex h-8 items-center gap-1 rounded-xl px-2.5 text-[11px] font-medium text-zinc-200 hover:text-white bg-white/5 active:bg-violet-600/30 cursor-pointer"
-                  >
-                    <RotateCcw className="h-3.5 w-3.5 text-violet-400" />
-                    <span>Reutilizar</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsFavorited(!isFavorited);
-                      showToast(isFavorited ? "Removido dos favoritos" : "Favoritado!", "info");
-                    }}
-                    title="Favoritar"
-                    className="flex h-8 w-8 items-center justify-center rounded-xl text-zinc-200 hover:text-white bg-white/5 cursor-pointer"
-                  >
-                    <Heart className={`h-3.5 w-3.5 ${isFavorited ? "fill-red-500 text-red-500" : ""}`} />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsExportDropdownOpen(!isExportDropdownOpen);
-                      setIsFormatDropdownOpen(false);
-                    }}
-                    title="Exportar"
-                    className="flex h-8 items-center gap-1 rounded-xl px-2.5 text-[11px] font-medium text-white bg-violet-600 active:bg-violet-500 shadow-md shadow-violet-600/30 cursor-pointer"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    <span>Exportar</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setPreviewZoomImage(activeImage)}
-                    title="Expandir"
-                    className="flex h-8 w-8 items-center justify-center rounded-xl text-zinc-200 hover:text-white bg-white/5 cursor-pointer"
-                  >
-                    <Maximize2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-
                 {/* Magic Refine Bar & Community Publish Card Oficial */}
-                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex w-[min(92vw,560px)] flex-col items-center gap-2 pointer-events-auto">
+                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex w-[min(92vw,560px)] flex-col items-center gap-1.5 pointer-events-auto">
                   <MagicRefineBar
                     activeImage={activeImage}
                     isProcessing={isRefining}
@@ -2128,7 +2429,7 @@ export default function DesignBuilder({
                           <img
                             alt="Geração"
                             src={imgUrl}
-                            className="block w-full bg-black object-cover cursor-grab active:cursor-grabbing"
+                            className="block w-full bg-zinc-950 object-contain cursor-grab active:cursor-grabbing"
                             loading="lazy"
                             decoding="async"
                             style={{
@@ -2241,14 +2542,13 @@ export default function DesignBuilder({
                           aria-current={isActive ? "true" : undefined}
                           onClick={() => handleSelectMobileCategory("principal")}
                           className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
-                            isActive ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+                            isActive ? "text-[#EAB308]" : "text-zinc-500 hover:text-zinc-300"
                           }`}
                         >
                           <span
                             className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
-                              isActive ? "" : "group-hover:bg-white/[0.06]"
+                              isActive ? "bg-[#2D2415] border border-[#EAB308]" : "group-hover:bg-white/[0.06]"
                             }`}
-                            style={isActive ? { backgroundColor: "rgba(255, 213, 0, 0.15)" } : undefined}
                           >
                             <span className="relative">
                               <svg
@@ -2263,7 +2563,7 @@ export default function DesignBuilder({
                                 strokeLinejoin="round"
                                 className="lucide lucide-image h-[22px] w-[22px]"
                                 aria-hidden="true"
-                                style={isActive ? { color: "rgb(255, 213, 0)" } : undefined}
+                                style={isActive ? { color: "rgb(234, 179, 8)" } : undefined}
                               >
                                 <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
                                 <circle cx="9" cy="9" r="2" />
@@ -2287,16 +2587,15 @@ export default function DesignBuilder({
                           aria-current={isActive ? "true" : undefined}
                           onClick={() => handleSelectMobileCategory("marca")}
                           className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
-                            isActive ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+                            isActive ? "text-[#EAB308]" : "text-zinc-500 hover:text-zinc-300"
                           }`}
                         >
                           <span
                             className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
-                              isActive ? "" : "group-hover:bg-white/[0.06]"
+                              isActive ? "bg-[#2D2415] border border-[#EAB308]" : "group-hover:bg-white/[0.06]"
                             }`}
-                            style={isActive ? { backgroundColor: "rgba(255, 213, 0, 0.15)" } : undefined}
                           >
-                            <span className="relative">
+                            <span className="relative flex items-center justify-center">
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
                                 width="24"
@@ -2309,7 +2608,7 @@ export default function DesignBuilder({
                                 strokeLinejoin="round"
                                 className="lucide lucide-palette h-[22px] w-[22px]"
                                 aria-hidden="true"
-                                style={isActive ? { color: "rgb(255, 213, 0)" } : undefined}
+                                style={isActive ? { color: "rgb(234, 179, 8)" } : undefined}
                               >
                                 <path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z" />
                                 <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
@@ -2317,6 +2616,7 @@ export default function DesignBuilder({
                                 <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
                                 <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
                               </svg>
+                              <span className="absolute -top-1 -right-1 h-1.5 w-1.5 rounded-full bg-[#EAB308]" />
                             </span>
                           </span>
                           <span className="whitespace-nowrap text-[10px] font-medium leading-none">Marca e estilo</span>
@@ -2335,16 +2635,15 @@ export default function DesignBuilder({
                           aria-current={isActive ? "true" : undefined}
                           onClick={() => handleSelectMobileCategory("cenario")}
                           className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
-                            isActive ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+                            isActive ? "text-[#EAB308]" : "text-zinc-500 hover:text-zinc-300"
                           }`}
                         >
                           <span
                             className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
-                              isActive ? "" : "group-hover:bg-white/[0.06]"
+                              isActive ? "bg-[#2D2415] border border-[#EAB308]" : "group-hover:bg-white/[0.06]"
                             }`}
-                            style={isActive ? { backgroundColor: "rgba(255, 213, 0, 0.15)" } : undefined}
                           >
-                            <span className="relative">
+                            <span className="relative flex items-center justify-center">
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
                                 width="24"
@@ -2357,10 +2656,11 @@ export default function DesignBuilder({
                                 strokeLinejoin="round"
                                 className="lucide lucide-mountain h-[22px] w-[22px]"
                                 aria-hidden="true"
-                                style={isActive ? { color: "rgb(255, 213, 0)" } : undefined}
+                                style={isActive ? { color: "rgb(234, 179, 8)" } : undefined}
                               >
                                 <path d="m8 3 4 8 5-5 5 15H2L8 3z" />
                               </svg>
+                              <span className="absolute -top-1 -right-1 h-1.5 w-1.5 rounded-full bg-[#EAB308]" />
                             </span>
                           </span>
                           <span className="whitespace-nowrap text-[10px] font-medium leading-none">Cenário</span>
@@ -2379,16 +2679,15 @@ export default function DesignBuilder({
                           aria-current={isActive ? "true" : undefined}
                           onClick={() => handleSelectMobileCategory("texto")}
                           className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
-                            isActive ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+                            isActive ? "text-[#EAB308]" : "text-zinc-500 hover:text-zinc-300"
                           }`}
                         >
                           <span
                             className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
-                              isActive ? "" : "group-hover:bg-white/[0.06]"
+                              isActive ? "bg-[#2D2415] border border-[#EAB308]" : "group-hover:bg-white/[0.06]"
                             }`}
-                            style={isActive ? { backgroundColor: "rgba(255, 213, 0, 0.15)" } : undefined}
                           >
-                            <span className="relative">
+                            <span className="relative flex items-center justify-center">
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
                                 width="24"
@@ -2401,7 +2700,7 @@ export default function DesignBuilder({
                                 strokeLinejoin="round"
                                 className="lucide lucide-text-initial lucide-letter-text h-[22px] w-[22px]"
                                 aria-hidden="true"
-                                style={isActive ? { color: "rgb(255, 213, 0)" } : undefined}
+                                style={isActive ? { color: "rgb(234, 179, 8)" } : undefined}
                               >
                                 <path d="M15 5h6" />
                                 <path d="M15 12h6" />
@@ -2409,6 +2708,7 @@ export default function DesignBuilder({
                                 <path d="m3 12 3.553-7.724a.5.5 0 0 1 .894 0L11 12" />
                                 <path d="M3.92 10h6.16" />
                               </svg>
+                              <span className="absolute -top-1 -right-1 h-1.5 w-1.5 rounded-full bg-[#EAB308]" />
                             </span>
                           </span>
                           <span className="whitespace-nowrap text-[10px] font-medium leading-none">Texto na imagem</span>
@@ -2427,16 +2727,15 @@ export default function DesignBuilder({
                           aria-current={isActive ? "true" : undefined}
                           onClick={() => handleSelectMobileCategory("ajustes")}
                           className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
-                            isActive ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+                            isActive ? "text-[#EAB308]" : "text-zinc-500 hover:text-zinc-300"
                           }`}
                         >
                           <span
                             className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
-                              isActive ? "" : "group-hover:bg-white/[0.06]"
+                              isActive ? "bg-[#2D2415] border border-[#EAB308]" : "group-hover:bg-white/[0.06]"
                             }`}
-                            style={isActive ? { backgroundColor: "rgba(255, 213, 0, 0.15)" } : undefined}
                           >
-                            <span className="relative">
+                            <span className="relative flex items-center justify-center">
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
                                 width="24"
@@ -2449,7 +2748,7 @@ export default function DesignBuilder({
                                 strokeLinejoin="round"
                                 className="lucide lucide-settings h-[22px] w-[22px]"
                                 aria-hidden="true"
-                                style={isActive ? { color: "rgb(255, 213, 0)" } : undefined}
+                                style={isActive ? { color: "rgb(234, 179, 8)" } : undefined}
                               >
                                 <path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915" />
                                 <circle cx="12" cy="12" r="3" />
@@ -2515,25 +2814,24 @@ export default function DesignBuilder({
                   </>
                 ) : (
                   <>
-                    {/* Sujeito */}
+                    {/* Foto */}
                     {(() => {
-                      const isActive = mobileActiveCategory === "sujeito" || mobileActiveCategory === "principal";
+                      const isActive = mobileActiveCategory === "foto" || mobileActiveCategory === "sujeito" || mobileActiveCategory === "principal";
                       return (
                         <button
                           type="button"
                           role="tab"
                           aria-selected={isActive}
                           aria-current={isActive ? "true" : undefined}
-                          onClick={() => handleSelectMobileCategory("sujeito")}
+                          onClick={() => handleSelectMobileCategory("foto")}
                           className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
                             isActive ? "text-white" : "text-zinc-500 hover:text-zinc-300"
                           }`}
                         >
                           <span
                             className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
-                              isActive ? "" : "group-hover:bg-white/[0.06]"
+                              isActive ? "bg-violet-600/30 border border-violet-500" : "group-hover:bg-white/[0.06]"
                             }`}
-                            style={isActive ? { backgroundColor: "rgba(124, 58, 237, 0.15)" } : undefined}
                           >
                             <span className="relative">
                               <svg
@@ -2548,7 +2846,7 @@ export default function DesignBuilder({
                                 strokeLinejoin="round"
                                 className="lucide lucide-image h-[22px] w-[22px]"
                                 aria-hidden="true"
-                                style={isActive ? { color: "rgb(167, 139, 250)" } : undefined}
+                                style={isActive ? { color: "rgb(192, 132, 252)" } : undefined}
                               >
                                 <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
                                 <circle cx="9" cy="9" r="2" />
@@ -2556,216 +2854,29 @@ export default function DesignBuilder({
                               </svg>
                             </span>
                           </span>
-                          <span className="whitespace-nowrap text-[10px] font-medium leading-none">Sujeito</span>
+                          <span className="whitespace-nowrap text-[10px] font-medium leading-none">Foto</span>
                         </button>
                       );
                     })()}
 
-                    {/* Contexto */}
+                    {/* Estilo */}
                     {(() => {
-                      const isActive = mobileActiveCategory === "contexto" || mobileActiveCategory === "cenario";
+                      const isActive = mobileActiveCategory === "estilo" || mobileActiveCategory === "cenario" || mobileActiveCategory === "contexto";
                       return (
                         <button
                           type="button"
                           role="tab"
                           aria-selected={isActive}
                           aria-current={isActive ? "true" : undefined}
-                          onClick={() => handleSelectMobileCategory("contexto")}
+                          onClick={() => handleSelectMobileCategory("estilo")}
                           className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
                             isActive ? "text-white" : "text-zinc-500 hover:text-zinc-300"
                           }`}
                         >
                           <span
                             className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
-                              isActive ? "" : "group-hover:bg-white/[0.06]"
+                              isActive ? "bg-violet-600/30 border border-violet-500" : "group-hover:bg-white/[0.06]"
                             }`}
-                            style={isActive ? { backgroundColor: "rgba(124, 58, 237, 0.15)" } : undefined}
-                          >
-                            <span className="relative">
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="24"
-                                height="24"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                className="lucide lucide-mountain h-[22px] w-[22px]"
-                                aria-hidden="true"
-                                style={isActive ? { color: "rgb(167, 139, 250)" } : undefined}
-                              >
-                                <path d="m8 3 4 8 5-5 5 15H2L8 3z" />
-                              </svg>
-                            </span>
-                          </span>
-                          <span className="whitespace-nowrap text-[10px] font-medium leading-none">Contexto</span>
-                        </button>
-                      );
-                    })()}
-
-                    {/* Texto */}
-                    {(() => {
-                      const isActive = mobileActiveCategory === "texto";
-                      return (
-                        <button
-                          type="button"
-                          role="tab"
-                          aria-selected={isActive}
-                          aria-current={isActive ? "true" : undefined}
-                          onClick={() => handleSelectMobileCategory("texto")}
-                          className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
-                            isActive ? "text-white" : "text-zinc-500 hover:text-zinc-300"
-                          }`}
-                        >
-                          <span
-                            className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
-                              isActive ? "" : "group-hover:bg-white/[0.06]"
-                            }`}
-                            style={isActive ? { backgroundColor: "rgba(124, 58, 237, 0.15)" } : undefined}
-                          >
-                            <span className="relative">
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="24"
-                                height="24"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                className="lucide lucide-text-initial lucide-letter-text h-[22px] w-[22px]"
-                                aria-hidden="true"
-                                style={isActive ? { color: "rgb(167, 139, 250)" } : undefined}
-                              >
-                                <path d="M15 5h6" />
-                                <path d="M15 12h6" />
-                                <path d="M3 19h18" />
-                                <path d="m3 12 3.553-7.724a.5.5 0 0 1 .894 0L11 12" />
-                                <path d="M3.92 10h6.16" />
-                              </svg>
-                            </span>
-                          </span>
-                          <span className="whitespace-nowrap text-[10px] font-medium leading-none">Texto</span>
-                        </button>
-                      );
-                    })()}
-
-                    {/* Cores */}
-                    {(() => {
-                      const isActive = mobileActiveCategory === "cores";
-                      return (
-                        <button
-                          type="button"
-                          role="tab"
-                          aria-selected={isActive}
-                          aria-current={isActive ? "true" : undefined}
-                          onClick={() => handleSelectMobileCategory("cores")}
-                          className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
-                            isActive ? "text-white" : "text-zinc-500 hover:text-zinc-300"
-                          }`}
-                        >
-                          <span
-                            className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
-                              isActive ? "" : "group-hover:bg-white/[0.06]"
-                            }`}
-                            style={isActive ? { backgroundColor: "rgba(124, 58, 237, 0.15)" } : undefined}
-                          >
-                            <span className="relative">
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="24"
-                                height="24"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                className="lucide lucide-palette h-[22px] w-[22px]"
-                                aria-hidden="true"
-                                style={isActive ? { color: "rgb(167, 139, 250)" } : undefined}
-                              >
-                                <path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z" />
-                                <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
-                                <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
-                                <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
-                                <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
-                              </svg>
-                            </span>
-                          </span>
-                          <span className="whitespace-nowrap text-[10px] font-medium leading-none">Cores</span>
-                        </button>
-                      );
-                    })()}
-
-                    {/* Composição */}
-                    {(() => {
-                      const isActive = mobileActiveCategory === "composicao";
-                      return (
-                        <button
-                          type="button"
-                          role="tab"
-                          aria-selected={isActive}
-                          aria-current={isActive ? "true" : undefined}
-                          onClick={() => handleSelectMobileCategory("composicao")}
-                          className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
-                            isActive ? "text-white" : "text-zinc-500 hover:text-zinc-300"
-                          }`}
-                        >
-                          <span
-                            className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
-                              isActive ? "" : "group-hover:bg-white/[0.06]"
-                            }`}
-                            style={isActive ? { backgroundColor: "rgba(124, 58, 237, 0.15)" } : undefined}
-                          >
-                            <span className="relative">
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="24"
-                                height="24"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                className="lucide lucide-layers h-[22px] w-[22px]"
-                                aria-hidden="true"
-                                style={isActive ? { color: "rgb(167, 139, 250)" } : undefined}
-                              >
-                                <polygon points="12 2 2 7 12 12 22 7 12 2" />
-                                <polyline points="2 17 12 22 22 17" />
-                                <polyline points="2 12 12 17 22 12" />
-                              </svg>
-                            </span>
-                          </span>
-                          <span className="whitespace-nowrap text-[10px] font-medium leading-none">Composição</span>
-                        </button>
-                      );
-                    })()}
-
-                    {/* Prompt */}
-                    {(() => {
-                      const isActive = mobileActiveCategory === "prompt";
-                      return (
-                        <button
-                          type="button"
-                          role="tab"
-                          aria-selected={isActive}
-                          aria-current={isActive ? "true" : undefined}
-                          onClick={() => handleSelectMobileCategory("prompt")}
-                          className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
-                            isActive ? "text-white" : "text-zinc-500 hover:text-zinc-300"
-                          }`}
-                        >
-                          <span
-                            className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
-                              isActive ? "" : "group-hover:bg-white/[0.06]"
-                            }`}
-                            style={isActive ? { backgroundColor: "rgba(124, 58, 237, 0.15)" } : undefined}
                           >
                             <span className="relative">
                               <svg
@@ -2780,7 +2891,7 @@ export default function DesignBuilder({
                                 strokeLinejoin="round"
                                 className="lucide lucide-sparkles h-[22px] w-[22px]"
                                 aria-hidden="true"
-                                style={isActive ? { color: "rgb(167, 139, 250)" } : undefined}
+                                style={isActive ? { color: "rgb(192, 132, 252)" } : undefined}
                               >
                                 <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
                                 <path d="M5 3v4" />
@@ -2790,7 +2901,58 @@ export default function DesignBuilder({
                               </svg>
                             </span>
                           </span>
-                          <span className="whitespace-nowrap text-[10px] font-medium leading-none">Prompt</span>
+                          <span className="whitespace-nowrap text-[10px] font-medium leading-none">Estilo</span>
+                        </button>
+                      );
+                    })()}
+
+                    {/* Saída */}
+                    {(() => {
+                      const isActive = mobileActiveCategory === "saida" || mobileActiveCategory === "config" || mobileActiveCategory === "prompt";
+                      return (
+                        <button
+                          type="button"
+                          role="tab"
+                          aria-selected={isActive}
+                          aria-current={isActive ? "true" : undefined}
+                          onClick={() => handleSelectMobileCategory("saida")}
+                          className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
+                            isActive ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+                          }`}
+                        >
+                          <span
+                            className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
+                              isActive ? "bg-violet-600/30 border border-violet-500" : "group-hover:bg-white/[0.06]"
+                            }`}
+                          >
+                            <span className="relative">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="24"
+                                height="24"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="lucide lucide-sliders-horizontal h-[22px] w-[22px]"
+                                aria-hidden="true"
+                                style={isActive ? { color: "rgb(192, 132, 252)" } : undefined}
+                              >
+                                <line x1="21" x2="14" y1="4" y2="4" />
+                                <line x1="10" x2="3" y1="4" y2="4" />
+                                <line x1="21" x2="12" y1="12" y2="12" />
+                                <line x1="8" x2="3" y1="12" y2="12" />
+                                <line x1="21" x2="16" y1="20" y2="20" />
+                                <line x1="12" x2="3" y1="20" y2="20" />
+                                <line x1="14" x2="14" y1="2" y2="6" />
+                                <line x1="8" x2="8" y1="10" y2="14" />
+                                <line x1="16" x2="16" y1="18" y2="22" />
+                              </svg>
+                            </span>
+                          </span>
+                          <span className="whitespace-nowrap text-[10px] font-medium leading-none">Saída</span>
                         </button>
                       );
                     })()}
@@ -2812,10 +2974,10 @@ export default function DesignBuilder({
                   style={{
                     color: "rgb(255, 255, 255)",
                     background: isOrion
-                      ? "linear-gradient(to right, rgb(255, 213, 0), rgba(255, 213, 0, 0.8))"
+                      ? "#EAB308"
                       : "linear-gradient(to right, rgb(124, 58, 237), rgba(124, 58, 237, 0.8))",
                     boxShadow: isOrion
-                      ? "rgba(255, 213, 0, 0.35) 0px 4px 16px"
+                      ? "rgba(234, 179, 8, 0.35) 0px 4px 16px"
                       : "rgba(124, 58, 237, 0.35) 0px 4px 16px"
                   }}
                 >
@@ -2851,13 +3013,36 @@ export default function DesignBuilder({
         showToast={showToast}
       />
 
+      {/* Modal de Zoom da Imagem */}
+      {previewZoomImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in"
+          onClick={() => setPreviewZoomImage(null)}
+        >
+          <div className="relative max-h-[90vh] max-w-[90vw] flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={previewZoomImage}
+              alt="Preview Zoom"
+              className="max-h-[85vh] max-w-[85vw] object-contain rounded-xl shadow-2xl border border-white/10"
+            />
+            <button
+              type="button"
+              onClick={() => setPreviewZoomImage(null)}
+              className="absolute -top-3 -right-3 rounded-full bg-black/80 text-white p-2 border border-white/20 hover:bg-white/10 cursor-pointer"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Modal de Créditos */}
       {isCreditsModalOpen && (
         <CreditsModal
           onClose={() => setIsCreditsModalOpen(false)}
           onOpenAdmin={() => setIsAdminSubscribersOpen(true)}
-          userEmail={userEmail}
-          userName={userName}
+          userEmail={currentUser?.email || userEmail}
+          userName={currentUser?.name || userName}
         />
       )}
 
@@ -2912,6 +3097,297 @@ export default function DesignBuilder({
           </div>
         </div>
       )}
+
+      {/* Modal Bottom Sheet "Ações" (1:1 com Screenshot 2 do app.designbuilder.co) */}
+      {isMobileActionsOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setIsMobileActionsOpen(false)}
+        >
+          <div
+            className="w-full max-w-lg rounded-t-3xl border-t border-white/10 bg-[#090710] p-5 shadow-2xl animate-in slide-in-from-bottom duration-300 max-h-[85vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-3">
+              <h3 className="text-base font-bold text-white">Ações</h3>
+              <button
+                type="button"
+                onClick={() => setIsMobileActionsOpen(false)}
+                className="rounded-full p-1.5 text-zinc-400 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Lista de Ações */}
+            <div className="flex flex-col gap-1 mb-5">
+              <button
+                type="button"
+                onClick={() => {
+                  handleReuseGeneration(activeImage);
+                  setIsMobileActionsOpen(false);
+                }}
+                className="flex items-center gap-3.5 px-3 py-3 rounded-2xl hover:bg-white/5 text-left text-sm font-semibold text-zinc-200 hover:text-white transition-colors cursor-pointer"
+              >
+                <RotateCcw className="h-5 w-5 text-zinc-400" />
+                <span>Reutilizar configurações</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (activeImage) {
+                    store.setSujeitoBase64(activeImage);
+                    store.setSujeitoBase64List([activeImage, ...(store.sujeitosBase64List || [])]);
+                  }
+                  setIsMobileActionsOpen(false);
+                  showToast("Imagem definida como referência do sujeito!", "success");
+                }}
+                className="flex items-center gap-3.5 px-3 py-3 rounded-2xl hover:bg-white/5 text-left text-sm font-semibold text-zinc-200 hover:text-white transition-colors cursor-pointer"
+              >
+                <Sparkles className="h-5 w-5 text-amber-400" />
+                <span>Usar como base</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsFavorited(!isFavorited);
+                  setIsMobileActionsOpen(false);
+                  showToast(isFavorited ? "Removido dos favoritos" : "Favoritado!", "info");
+                }}
+                className="flex items-center gap-3.5 px-3 py-3 rounded-2xl hover:bg-white/5 text-left text-sm font-semibold text-zinc-200 hover:text-white transition-colors cursor-pointer"
+              >
+                <Heart className={`h-5 w-5 ${isFavorited ? "fill-red-500 text-red-500" : "text-zinc-400"}`} />
+                <span>Favoritar</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setActivePalcoMode("comunidade");
+                  setIsMobileActionsOpen(false);
+                  showToast("Publicar na Comunidade aberto!", "info");
+                }}
+                className="flex items-center gap-3.5 px-3 py-3 rounded-2xl hover:bg-white/5 text-left text-sm font-semibold text-zinc-200 hover:text-white transition-colors cursor-pointer"
+              >
+                <Globe className="h-5 w-5 text-zinc-400" />
+                <span>Publicar na Comunidade</span>
+              </button>
+            </div>
+
+            {/* Seção FORMATO */}
+            <div className="mb-5 border-t border-white/10 pt-4">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-500 mb-3">FORMATO</h4>
+              <div className="grid grid-cols-3 gap-2.5">
+                {[
+                  { id: "16:9", label: "16:9", aspect: "w-6 h-3.5" },
+                  { id: "9:16", label: "9:16", aspect: "w-3.5 h-6" },
+                  { id: "1:1", label: "1:1", aspect: "w-5 h-5" },
+                  { id: "4:5", label: "4:5", aspect: "w-4 h-5" },
+                  { id: "3:4", label: "3:4", aspect: "w-4 h-5.5" },
+                  { id: "4:3", label: "4:3", aspect: "w-5.5 h-4" }
+                ].map((fmt) => (
+                  <button
+                    key={fmt.id}
+                    type="button"
+                    onClick={() => {
+                      store.updateConfig({ dimensao: fmt.id as any });
+                      showToast(`Formato alterado para ${fmt.id}`, "success");
+                    }}
+                    className={`flex flex-col items-center justify-center p-3 rounded-2xl transition-all cursor-pointer ${
+                      store.dimensao === fmt.id
+                        ? "bg-violet-600/30 text-white border border-violet-500/50"
+                        : "bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white border border-white/5"
+                    }`}
+                  >
+                    <div className={`rounded-sm border border-current mb-1.5 flex items-center justify-center ${fmt.aspect}`} />
+                    <span className="text-xs font-semibold">{fmt.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Seção EXPORTAR */}
+            <div className="border-t border-white/10 pt-4">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-500 mb-3">EXPORTAR</h4>
+              <div className="grid grid-cols-2 gap-2.5">
+                {[
+                  { ext: "AVIF", label: "AVIF", sub: "Original" },
+                  { ext: "PNG", label: "PNG", sub: "Sem perda" },
+                  { ext: "JPEG", label: "JPEG", sub: "Alta qualidade" },
+                  { ext: "WEBP", label: "WebP", sub: "Web otimizado" }
+                ].map((exp) => (
+                  <button
+                    key={exp.ext}
+                    type="button"
+                    onClick={() => {
+                      if (!activeImage) return;
+                      const q = store.resolucao || store.qualidade || "4K";
+                      downloadImage(activeImage, exp.ext as any, undefined, undefined, undefined, q as any, {
+                        title: store.projectsList.find((p) => p.id === store.activeProjectId)?.name || "arte"
+                      });
+                      setIsMobileActionsOpen(false);
+                      showToast(`Download ${exp.ext} iniciado!`, "success");
+                    }}
+                    className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-violet-500/30 transition-all text-left cursor-pointer"
+                  >
+                    <Download className="h-4 w-4 text-zinc-400 shrink-0" />
+                    <div>
+                      <p className="text-xs font-bold text-white">{exp.label}</p>
+                      <p className="text-[10px] text-zinc-500">{exp.sub}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Modal Fullscreen "Detalhes" (1:1 com Screenshot_20261009-143421_Chrome.jpg) */}
+      {isFullscreenDetailsOpen && activeImage && (
+        <div className="fixed inset-0 z-50 flex flex-col justify-between bg-black/90 backdrop-blur-xl animate-in fade-in duration-200 overflow-hidden">
+          {/* Top Right Close X Button (1:1 com a foto) */}
+          <button
+            type="button"
+            onClick={() => setIsFullscreenDetailsOpen(false)}
+            className="absolute top-4 right-4 z-50 flex h-10 w-10 items-center justify-center rounded-full bg-black/60 text-white border border-white/20 hover:bg-black transition-colors cursor-pointer shadow-lg active:scale-95"
+            title="Fechar"
+          >
+            <X className="h-5 w-5" />
+          </button>
+
+          {/* Upper Area: Full Uncropped Image Area (100% visível para qualquer proporção/tamanho) */}
+          <div className="relative flex-1 w-full flex items-center justify-center p-2 sm:p-4 overflow-hidden min-h-0">
+            <img
+              src={activeImage}
+              alt="Arte em detalhes"
+              className="max-h-full max-w-full h-auto w-auto object-contain rounded-xl transition-transform duration-200"
+              style={{ transform: `scale(${zoomLevel / 100})` }}
+            />
+          </div>
+
+          {/* Bottom Sheet "Detalhes" (Matching Screenshot_20261009-143421_Chrome.jpg) */}
+          <div className="w-full max-w-2xl mx-auto rounded-t-3xl border-t border-white/10 bg-[#0c0916] p-5 shadow-2xl animate-in slide-in-from-bottom duration-300 pointer-events-auto">
+            {/* Handle Bar */}
+            <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-4" />
+
+            {/* Header */}
+            <h3 className="text-base font-bold text-white mb-4">Detalhes</h3>
+
+            {/* EXPORTAR Section */}
+            <div className="mb-4">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-500 mb-3">EXPORTAR</h4>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { ext: "AVIF", label: "AVIF", sub: "Original" },
+                  { ext: "PNG", label: "PNG", sub: "Sem perda" },
+                  { ext: "JPEG", label: "JPEG", sub: "Alta qualidade" },
+                  { ext: "WEBP", label: "WebP", sub: "Web" }
+                ].map((exp) => (
+                  <button
+                    key={exp.ext}
+                    type="button"
+                    onClick={() => {
+                      const q = store.resolucao || store.qualidade || "4K";
+                      downloadImage(activeImage, exp.ext as any, undefined, undefined, undefined, q as any, {
+                        title: store.projectsList.find((p) => p.id === store.activeProjectId)?.name || "arte"
+                      });
+                      showToast(`Download ${exp.ext} iniciado!`, "success");
+                    }}
+                    className="flex items-center gap-3 p-3.5 rounded-2xl bg-white/[0.04] border border-white/10 hover:bg-white/[0.08] hover:border-violet-500/40 transition-all text-left cursor-pointer active:scale-98"
+                  >
+                    <Download className="h-4 w-4 text-zinc-400 shrink-0" />
+                    <div>
+                      <p className="text-xs font-bold text-white">{exp.label}</p>
+                      <p className="text-[10px] text-zinc-500">{exp.sub}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Zoom Control Bar */}
+            <div className="flex items-center justify-between rounded-2xl bg-white/[0.04] border border-white/10 px-4 py-2.5 mb-2">
+              <button
+                type="button"
+                onClick={() => setZoomLevel((z) => Math.max(50, z - 25))}
+                className="p-1.5 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                title="Diminuir zoom"
+              >
+                <ZoomOut className="h-4 w-4" />
+              </button>
+
+              <span className="text-xs font-mono text-zinc-300 font-semibold">{zoomLevel}%</span>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setZoomLevel((z) => Math.min(300, z + 25))}
+                  className="p-1.5 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                  title="Aumentar zoom"
+                >
+                  <ZoomIn className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setZoomLevel(100)}
+                  className="p-1.5 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                  title="Resetar zoom"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Caption Text */}
+            <p className="text-center text-[10px] text-zinc-500 font-medium">
+              Pinça para zoom · deslize para trocar · toque na foto para ampliar
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Entrada Pública Oficial Design Builder */}
+      <PublicEntryModal
+        isOpen={isPublicEntryModalOpen}
+        onClose={() => {
+          setIsPublicEntryModalOpen(false);
+        }}
+        redirectUrl={selectedAppUrl}
+        onOpenLogin={() => {
+          setIsPublicEntryModalOpen(false);
+          setIsAuthModalOpen(true);
+        }}
+      />
+
+      {/* Auth Modal para Login / Cadastro */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onLoginSuccess={(u) => {
+          setCurrentUser(getCurrentUser());
+          setIsAuthModalOpen(false);
+          showToast(`Bem-vindo, ${u.name || u.email}!`, "success");
+          if (selectedAppUrl && selectedAppUrl !== "/" && selectedAppUrl !== "/home") {
+            const slug = selectedAppUrl.replace(/^\//, "").replace("agent/", "");
+            handleSwitchAgent(slug);
+          }
+        }}
+      />
+
+      {/* Modal Sem Créditos Oficial Design Builder */}
+      <NoCreditsModal
+        isOpen={isNoCreditsModalOpen}
+        onClose={() => setIsNoCreditsModalOpen(false)}
+        planName="Operação Design Builder"
+        onViewCredits={() => {
+          setIsNoCreditsModalOpen(false);
+          setIsCreditsModalOpen(true);
+        }}
+        buyUrl="https://link.designbuilder.co/comprar"
+      />
     </div>
   );
 }

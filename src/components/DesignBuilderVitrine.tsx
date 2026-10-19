@@ -1,35 +1,21 @@
-import React, { useState, useRef, useEffect } from "react";
+﻿import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   Home,
   Briefcase,
   Images,
   Globe,
+  ArrowUpRight,
+  ChevronRight,
+  ImageOff,
   Sparkles,
-  ArrowRight,
-  Package,
-  Palette,
-  PenTool,
-  Wand2,
-  Image as ImageIcon,
-  MoreHorizontal,
-  Flag,
-  RotateCcw,
-  ExternalLink,
-  BookOpen,
-  Headphones,
-  Settings,
-  Shield,
-  CreditCard,
-  User,
-  LogOut,
-  X
+  LogIn
 } from "lucide-react";
-import ReportModal from "./ReportModal";
-import { DesignBuilderSettingsModal } from "./DesignBuilderSettingsModal";
 import { DesignBuilderSidebar } from "./DesignBuilderSidebar";
+import { CosmicBackground } from "./CosmicBackground";
+import { DesignBuilderAssistant } from "./DesignBuilderAssistant";
+import { DesignBuilderMobileNav } from "./DesignBuilderMobileNav";
 
 interface DesignBuilderVitrineProps {
-  onGoHome?: () => void;
   onOpenStudio: (agentSlug?: string) => void;
   onOpenGallery?: () => void;
   onOpenCommunity?: () => void;
@@ -43,113 +29,251 @@ interface DesignBuilderVitrineProps {
   userTokens?: number;
 }
 
-interface AgentCardDef {
-  id: string;
-  name: string;
-  subtitle?: string;
-  badge?: string;
-  badgeBg?: string;
-  badgeColor?: string;
-  desc: string;
-  color: string;
-  route: string;
-  videoUrl?: string;
-  bullets?: string[];
-  icon: "ref" | "hydra" | "enhance" | "db12" | "orion" | "altera";
-}
-
-const AGENTS_LIST: AgentCardDef[] = [
-  {
-    id: "ref",
-    name: "REF",
-    subtitle: "Builder",
-    badge: "Em alta · Top 1°",
-    badgeBg: "rgba(139, 92, 246, 0.125)",
-    badgeColor: "rgb(139, 92, 246)",
-    desc: "Repita o estilo visual de uma inspiração com fidelidade.",
-    color: "rgb(139, 92, 246)",
-    route: "/agent/ref",
-    videoUrl: "https://apidb20.designbuilder.co/api/agent-videos/ref-builder?v=4",
-    bullets: [
-      "Fácil de unir inspirações",
-      "Detalhe o que você quer de cada inspiração."
-    ],
-    icon: "ref"
-  },
-  {
-    id: "hydra",
-    name: "Hydra",
-    subtitle: "Builder",
-    desc: "Crie imagens de produto usando inspirações da galeria.",
-    color: "rgb(139, 92, 246)",
-    route: "/hydra",
-    videoUrl: "https://apidb20.designbuilder.co/api/agent-videos/product-builder-v2?v=4",
-    bullets: [
-      "Use nossa biblioteca de inspirações",
-      "Composição avançada com inspirações de estilo",
-      "Seja um Designer Sênior"
-    ],
-    icon: "hydra"
-  },
-  {
-    id: "enhance-builder",
-    name: "Enhance",
-    desc: "Melhore fotos borradas, antigas ou de baixa qualidade.",
-    color: "rgb(124, 58, 237)",
-    route: "/enhance-builder",
-    videoUrl: "https://apidb20.designbuilder.co/api/agent-videos/enhance-builder?v=4",
-    bullets: [
-      "Recupera fotos borradas e antigas",
-      "Hiper realismo + retoque de estúdio",
-      "Mantém identidade do sujeito"
-    ],
-    icon: "enhance"
-  },
-  {
-    id: "design-builder1-2",
-    name: "Design Builder 1.2",
-    badge: "Em alta · Top 3°",
-    badgeBg: "rgba(124, 58, 237, 0.125)",
-    badgeColor: "rgb(124, 58, 237)",
-    desc: "A primeira versão do DB, dinâmico para diversos nichos e desafios.",
-    color: "rgb(124, 58, 237)",
-    route: "/agent/design-builder1-2",
-    icon: "db12"
-  },
-  {
-    id: "orion-pro",
-    name: "Órion Pro",
-    subtitle: "Builder",
-    badge: "Em alta · Top 2°",
-    badgeBg: "rgba(255, 213, 0, 0.125)",
-    badgeColor: "rgb(255, 213, 0)",
-    desc: "Pipeline avançada para mais controle criativo.",
-    color: "rgb(255, 213, 0)",
-    route: "/orion-pro",
-    videoUrl: "https://apidb20.designbuilder.co/api/agent-videos/orion-pro?v=4",
-    bullets: [
-      "Construa qualquer estilo de design",
-      "Composições complexas com texto",
-      "Múltiplas inspirações de estilo"
-    ],
-    icon: "orion"
-  },
-  {
-    id: "altera-facil",
-    name: "Altera Fácil",
-    subtitle: "Builder",
-    badge: "Beta",
-    badgeBg: "rgba(168, 85, 247, 0.125)",
-    badgeColor: "rgb(168, 85, 247)",
-    desc: "Altere cenas, poses, luz e enquadramento sem perder a identidade.",
-    color: "rgb(168, 85, 247)",
-    route: "/altera-facil",
-    icon: "altera"
-  }
+/* ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ Comunidade Mini Preview Strip (18 Itens Oficiais) ÔöÇÔöÇÔöÇÔöÇÔöÇ */
+const COMUNIDADE_STRIP = [
+  { id: "HJETQ", alt: "[HJETQ]", src: "/Home_files/thumbnail.avif" },
+  { id: "0SH2K", alt: "[0SH2K]", src: "/Home_files/thumbnail(1).avif" },
+  { id: "9K46H", alt: "[9K46H]", src: "/Home_files/thumbnail(2).avif" },
+  { id: "C0O3C", alt: "[C0O3C]", src: "/Home_files/thumbnail(3).avif" },
+  { id: "OR1CT", alt: "[OR1CT]", src: "/Home_files/thumbnail(4).avif" },
+  { id: "JEG7F", alt: "[JEG7F]", src: "/Home_files/thumbnail(5).avif" },
+  { id: "ULP5G", alt: "[ULP5G]", src: "/Home_files/thumbnail(6).avif" },
+  { id: "LJRT0", alt: "[LJRT0]", src: "/Home_files/thumbnail(7).avif" },
+  { id: "3P2BN", alt: "[3P2BN]", src: "/Home_files/thumbnail(8).avif" },
+  { id: "NWL7W", alt: "[NWL7W]", src: "/Home_files/thumbnail(9).avif" },
+  { id: "XZ37U", alt: "[XZ37U]", src: "/Home_files/thumbnail(10).avif" },
+  { id: "45WTY", alt: "[45WTY] Capa Filme", src: "/Home_files/thumbnail(11).avif" },
+  { id: "6YL8S", alt: "[6YL8S]", src: "/Home_files/thumbnail(12).avif" },
+  { id: "WGTZG", alt: "[WGTZG]", src: "/Home_files/thumbnail(13).avif" },
+  { id: "1A927", alt: "[1A927]", src: "/Home_files/thumbnail(14).avif" },
+  { id: "PAVNB", alt: "[PAVNB]", src: "/Home_files/thumbnail(15).avif" },
+  { id: "WB9O4", alt: "[WB9O4]", src: "/Home_files/thumbnail(16).avif" },
+  { id: "XU66U", alt: "[XU66U]", src: "/Home_files/thumbnail(17).avif" },
 ];
 
+/* ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ Hydra 6 Fanned Cards ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ */
+const HYDRA_FANNED_CARDS = [
+  { img: "https://app.designbuilder.co/vitrine/hydra-faixa/hydra-2.avif", translate: "20px", rotate: "-7deg", scale: 1, brightness: 1, z: 60, delay: 125 },
+  { img: "https://app.designbuilder.co/vitrine/hydra-faixa/hydra-5.avif", translate: "-130px", rotate: "-12deg", scale: 0.93, brightness: 0.9, z: 50, delay: 100 },
+  { img: "https://app.designbuilder.co/vitrine/hydra-faixa/hydra-3.avif", translate: "-260px", rotate: "-17deg", scale: 0.86, brightness: 0.8, z: 40, delay: 75 },
+  { img: "https://app.designbuilder.co/vitrine/hydra-faixa/hydra-6.avif", translate: "-375px", rotate: "-22deg", scale: 0.79, brightness: 0.7, z: 30, delay: 50 },
+  { img: "https://app.designbuilder.co/vitrine/hydra-faixa/hydra-4.avif", translate: "-475px", rotate: "-27deg", scale: 0.72, brightness: 0.6, z: 20, delay: 25 },
+  { img: "https://app.designbuilder.co/vitrine/hydra-faixa/hydra-1.avif", translate: "-560px", rotate: "-32deg", scale: 0.66, brightness: 0.5, z: 10, delay: 0 },
+];
+
+/* ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ Community Feed 4 Colunas Oficiais (24 Cards) ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ */
+const COMMUNITY_COL_1 = [
+  { id: "EGCPV", src: "/Home_files/thumbnail(18).avif", author: "Joao Celistrino", avatar: "/Home_files/cb80a483e74e954f27902f85296e3d2c.jpg" },
+  { id: "UHR0F", src: "/Home_files/thumbnail(19).avif", author: "Rafael Dias", initial: "R" },
+  { id: "35SU4", src: "/Home_files/thumbnail(20).avif", author: "Andr├® Lira", initial: "A" },
+  { id: "Q0XO9", src: "/Home_files/thumbnail(21).avif", author: "Joao Celistrino", avatar: "/Home_files/cb80a483e74e954f27902f85296e3d2c.jpg" },
+  { id: "P374K", src: "/Home_files/thumbnail(22).avif", author: "LAO Digital", initial: "L" },
+  { id: "4O8SC", src: "/Home_files/thumbnail(23).avif", author: "Erick Lorenzi Vasconcelos", initial: "E" },
+];
+
+const COMMUNITY_COL_2 = [
+  { id: "ULP5G", src: "/Home_files/thumbnail(24).avif", author: "Lucas Albert", avatar: "/Home_files/47658fbc02ba49f99b54465a2574324e__06.PERFIL_LUCAS.png" },
+  { id: "OJ5OZ", src: "/Home_files/thumbnail(25).avif", author: "Rafael Dias", initial: "R" },
+  { id: "VZDJI", src: "/Home_files/thumbnail(26).avif", author: "CARLOS LOPES", initial: "C" },
+  { id: "OP4G5", src: "/Home_files/thumbnail(27).avif", author: "LAO Digital", initial: "L" },
+  { id: "AL2SC", src: "/Home_files/thumbnail(28).avif", author: "Mancio", initial: "M" },
+  { id: "CY3TE", src: "/Home_files/thumbnail(29).avif", author: "Rafael Dias", initial: "R" },
+];
+
+const COMMUNITY_COL_3 = [
+  { id: "NOCW9", src: "/Home_files/thumbnail(30).avif", author: "Lucas Albert", avatar: "/Home_files/47658fbc02ba49f99b54465a2574324e__06.PERFIL_LUCAS.png" },
+  { id: "37GSI", src: "/Home_files/thumbnail(31).avif", author: "CARLOS LOPES", initial: "C" },
+  { id: "6HJ71", src: "/Home_files/thumbnail(32).avif", author: "CARLOS LOPES", initial: "C" },
+  { id: "MQX0H", src: "/Home_files/thumbnail(33).avif", author: "LAO Digital", initial: "L" },
+  { id: "6XH7T", src: "/Home_files/thumbnail(34).avif", author: "Thiago Vargas", initial: "T" },
+  { id: "8C4FP", src: "/Home_files/thumbnail(35).avif", author: "Rafael Dias", initial: "R" },
+];
+
+const COMMUNITY_COL_4 = [
+  { id: "G8MYA", src: "/Home_files/thumbnail(36).avif", author: "Rafael Dias", initial: "R" },
+  { id: "VQ7YH", src: "/Home_files/thumbnail(37).avif", author: "Andr├® Lira", initial: "A" },
+  { id: "W0GVC", src: "/Home_files/thumbnail(38).avif", author: "Radinho 24h", initial: "R" },
+  { id: "JEG7F", src: "/Home_files/thumbnail(39).avif", author: "LAO Digital", initial: "L" },
+  { id: "RZ81U", src: "/Home_files/thumbnail(40).avif", author: "Thiago Vargas", initial: "T" },
+  { id: "2ZC0V", src: "/Home_files/thumbnail(41).avif", author: "Rafael Dias", initial: "R" },
+];
+
+/* ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ Ref Builder 5 Cards com Entradas Flutuantes ÔöÇÔöÇÔöÇ */
+const REF_FAIXA_CARDS = [
+  {
+    img: "https://app.designbuilder.co/vitrine/ref-faixa/ref-1.avif",
+    w: "20%",
+    ml: "0%",
+    ty: "14%",
+    rot: "-13deg",
+    z: 8,
+    inputs: [
+      { src: "https://app.designbuilder.co/vitrine/ref-faixa/entradas/1-1.avif", transform: "translate(-76%, 75%) rotate(-9deg) scale(0.85)", delay: 0 },
+      { src: "https://app.designbuilder.co/vitrine/ref-faixa/entradas/1-2.avif", transform: "translate(0%, 63%) rotate(0deg) scale(0.85)", delay: 55 },
+      { src: "https://app.designbuilder.co/vitrine/ref-faixa/entradas/1-3.avif", transform: "translate(76%, 75%) rotate(9deg) scale(0.85)", delay: 110 },
+    ],
+  },
+  {
+    img: "https://app.designbuilder.co/vitrine/ref-faixa/ref-2.avif",
+    w: "20%",
+    ml: "-1%",
+    ty: "4.5%",
+    rot: "-6deg",
+    z: 9,
+    inputs: [
+      { src: "https://app.designbuilder.co/vitrine/ref-faixa/entradas/2-1.avif", transform: "translate(-27.5%, 75%) rotate(-4.5deg) scale(0.85)", delay: 0 },
+      { src: "https://app.designbuilder.co/vitrine/ref-faixa/entradas/2-2.avif", transform: "translate(27.5%, 75%) rotate(4.5deg) scale(0.85)", delay: 55 },
+    ],
+  },
+  {
+    img: "https://app.designbuilder.co/vitrine/ref-faixa/ref-3.avif",
+    w: "20%",
+    ml: "-1%",
+    ty: "0%",
+    rot: "0deg",
+    z: 10,
+    inputs: [
+      { src: "https://app.designbuilder.co/vitrine/ref-faixa/entradas/3-1.avif", transform: "translate(-76%, 75%) rotate(-9deg) scale(0.85)", delay: 0 },
+      { src: "https://app.designbuilder.co/vitrine/ref-faixa/entradas/3-2.avif", transform: "translate(0%, 63%) rotate(0deg) scale(0.85)", delay: 55 },
+      { src: "https://app.designbuilder.co/vitrine/ref-faixa/entradas/3-3.avif", transform: "translate(76%, 75%) rotate(9deg) scale(0.85)", delay: 110 },
+    ],
+  },
+  {
+    img: "https://app.designbuilder.co/vitrine/ref-faixa/ref-4.avif",
+    w: "20%",
+    ml: "-1%",
+    ty: "4.5%",
+    rot: "6deg",
+    z: 9,
+    inputs: [
+      { src: "https://app.designbuilder.co/vitrine/ref-faixa/entradas/4-1.avif", transform: "translate(-76%, 75%) rotate(-9deg) scale(0.85)", delay: 0 },
+      { src: "https://app.designbuilder.co/vitrine/ref-faixa/entradas/4-2.avif", transform: "translate(0%, 63%) rotate(0deg) scale(0.85)", delay: 55 },
+      { src: "https://app.designbuilder.co/vitrine/ref-faixa/entradas/4-3.avif", transform: "translate(76%, 75%) rotate(9deg) scale(0.85)", delay: 110 },
+    ],
+  },
+  {
+    img: "https://app.designbuilder.co/vitrine/ref-faixa/ref-5.avif",
+    w: "20%",
+    ml: "-1%",
+    ty: "14%",
+    rot: "13deg",
+    z: 8,
+    inputs: [
+      { src: "https://app.designbuilder.co/vitrine/ref-faixa/entradas/5-1.avif", transform: "translate(-76%, 75%) rotate(-9deg) scale(0.85)", delay: 0 },
+      { src: "https://app.designbuilder.co/vitrine/ref-faixa/entradas/5-2.avif", transform: "translate(0%, 63%) rotate(0deg) scale(0.85)", delay: 55 },
+      { src: "https://app.designbuilder.co/vitrine/ref-faixa/entradas/5-3.avif", transform: "translate(76%, 75%) rotate(9deg) scale(0.85)", delay: 110 },
+    ],
+  },
+];
+
+/* ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ Card Interativo com Troca de Imagem no Hover ÔöÇÔöÇÔöÇ */
+interface VitrineHoverCardProps {
+  images: string[];
+  alt: string;
+  onClick: () => void;
+  aspectClass?: string;
+  title?: string;
+  subtitle?: string;
+  showBottomTitleOverlay?: boolean;
+}
+
+const VitrineHoverCard: React.FC<VitrineHoverCardProps> = ({
+  images,
+  alt,
+  onClick,
+  aspectClass = "aspect-[16/9]",
+  title,
+  subtitle,
+  showBottomTitleOverlay = false,
+}) => {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!cardRef.current || images.length <= 1) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width - 1));
+    const nextIndex = Math.min(images.length - 1, Math.floor((x / rect.width) * images.length));
+    if (nextIndex !== activeIndex) {
+      setActiveIndex(nextIndex);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!cardRef.current || images.length <= 1 || !e.touches[0]) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    const x = Math.max(0, Math.min(e.touches[0].clientX - rect.left, rect.width - 1));
+    const nextIndex = Math.min(images.length - 1, Math.floor((x / rect.width) * images.length));
+    if (nextIndex !== activeIndex) {
+      setActiveIndex(nextIndex);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    setActiveIndex(0);
+  };
+
+  return (
+    <a
+      onClick={onClick}
+      className={`group block cursor-pointer select-none ${showBottomTitleOverlay ? "relative self-start" : ""}`}
+    >
+      <div
+        ref={cardRef}
+        onMouseMove={handleMouseMove}
+        onTouchMove={handleTouchMove}
+        onMouseLeave={handleMouseLeave}
+        className={`relative ${aspectClass} overflow-hidden rounded-2xl ring-1 ring-white/[0.06]`}
+      >
+        {/* Camadas de Imagens com Crossfade Suave e Zoom Lento */}
+        {images.map((src, idx) => (
+          <img
+            key={src}
+            src={src}
+            alt={alt}
+            loading={idx === 0 ? "eager" : "lazy"}
+            className={`absolute inset-0 h-full w-full object-cover zoom-lento transition-opacity duration-300 ease-in-out ${
+              idx === activeIndex ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none"
+            }`}
+          />
+        ))}
+
+        {/* Indicadores Pill Superiores Reativos (Ativo: w-5 bg-white | Inativos: w-2 bg-white/40) */}
+        <div className="pointer-events-none absolute inset-x-0 top-2.5 flex justify-center gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100 z-20">
+          {images.map((_, idx) => (
+            <span
+              key={idx}
+              className={`h-1 rounded-full transition-all duration-200 ${
+                idx === activeIndex ? "w-5 bg-white" : "w-2 bg-white/40"
+              }`}
+            />
+          ))}
+        </div>
+
+        {/* Overlay com T├¡tulo Inferior (Ex.: REF BUILDER) */}
+        {showBottomTitleOverlay && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-4 pb-4 pt-16 z-20">
+            <span className="font-display text-lg font-bold tracking-wider text-white">
+              {title || alt}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* T├¡tulo e Subt├¡tulo Abaixo do Card (Ex.: ├ôRION PRO / HYDRA) */}
+      {title && !showBottomTitleOverlay && (
+        <div className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+          <h2 className="font-display text-2xl font-bold tracking-wide text-white">{title}</h2>
+          {subtitle && (
+            <p className="font-sans text-[13px] tracking-[0.12em] text-zinc-400">{subtitle}</p>
+          )}
+        </div>
+      )}
+    </a>
+  );
+};
+
 export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
-  onGoHome,
   onOpenStudio,
   onOpenGallery,
   onOpenCommunity,
@@ -160,89 +284,237 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
   onOpenCreditsModal,
   userEmail: propUserEmail,
   userName: propUserName,
-  userTokens: propUserTokens = 6612,
+  userTokens: propUserTokens = 0,
 }) => {
-  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
-  const [isLinksMenuOpen, setIsLinksMenuOpen] = useState(false);
-  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
-
-  const [userEmail] = useState(() => {
+  const [userEmail, setUserEmail] = useState(() => {
     if (propUserEmail) return propUserEmail;
     try {
       const u = localStorage.getItem("currentUser") || localStorage.getItem("zion_user");
       if (u) {
         const parsed = JSON.parse(u);
-        return parsed?.email || "der.contatos@gmail.com";
+        return parsed?.email || "";
       }
     } catch (_) {}
-    return "der.contatos@gmail.com";
+    return "";
   });
 
-  const [userName] = useState(() => {
-    if (typeof window !== "undefined") {
-      const savedName = localStorage.getItem("zion_user_name");
-      if (savedName) return savedName;
-    }
-    if (propUserName && propUserName !== "Usuário" && propUserName !== "Equipe Zion") return propUserName;
+  const [userName, setUserName] = useState(() => {
+    if (propUserName) return propUserName;
     try {
       const u = localStorage.getItem("currentUser") || localStorage.getItem("zion_user");
       if (u) {
         const parsed = JSON.parse(u);
-        if (parsed?.name && parsed.name !== "Equipe Zion") return parsed.name;
-        if (parsed?.full_name && parsed.full_name !== "Equipe Zion") return parsed.full_name;
+        return parsed?.name || parsed?.full_name || "Equipe Zion";
       }
     } catch (_) {}
-    return "Ricardo";
+    return "Equipe Zion";
   });
 
-  const displayName = userName.split(" ")[0] || "Ricardo";
-  const userInitials = (displayName.length >= 2 ? displayName.substring(0, 2) : "RI").toUpperCase();
+  const userTokens = propUserTokens;
+  const [activeTab, setActiveTab] = useState<"comunidade" | "em_alta" | "recentes">("comunidade");
+  const [isCommunityExpanded, setIsCommunityExpanded] = useState(false);
+  const [previewArt, setPreviewArt] = useState<{ id: string; src: string; author: string; avatar?: string; initial?: string } | null>(null);
+  const [hoveredHydraIndex, setHoveredHydraIndex] = useState<number | null>(null);
+  const [hoveredRefIndex, setHoveredRefIndex] = useState<number | null>(null);
+  const [recentImages, setRecentImages] = useState<string[]>([]);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Calculate real credits
-  const storedReal = typeof window !== "undefined" ? localStorage.getItem("zion_real_credits") : null;
-  const realCredits = (storedReal !== null && !isNaN(Number(storedReal)) && Number(storedReal) > 100)
-    ? Number(storedReal)
-    : (typeof propUserTokens === "number" && propUserTokens > 100 && propUserTokens !== 999999 ? propUserTokens : 6612);
+  useEffect(() => {
+    const loadRecents = async () => {
+      const urls: string[] = [];
+      try {
+        const local = localStorage.getItem("savedCards");
+        if (local) {
+          const parsed = JSON.parse(local);
+          if (Array.isArray(parsed)) {
+            parsed.forEach((item: any) => {
+              const u = typeof item === "string" ? item : item?.url || item?.src;
+              if (u && typeof u === "string" && !urls.includes(u)) urls.push(u);
+            });
+          }
+        }
+      } catch (e) {}
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour >= 5 && hour < 12) return "Bom dia";
-    if (hour >= 12 && hour < 18) return "Boa tarde";
-    return "Boa noite";
-  };
+      try {
+        const res = await fetch("/api/historico-imagens");
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Array.isArray(data.images)) {
+            data.images.forEach((im: any) => {
+              if (im.url && !urls.includes(im.url)) urls.push(im.url);
+            });
+          }
+        }
+      } catch (e) {}
 
-  const handleLaunchAgent = (slug: string) => {
-    const targetRoute = slug === "design-builder1-2" ? "/agent/design-builder1-2" : slug === "ref" ? "/agent/ref" : `/${slug}`;
-    if (typeof window !== "undefined") {
-      window.history.pushState({ path: targetRoute }, "", targetRoute);
+      setRecentImages(urls);
+    };
+    loadRecents();
+  }, []);
+
+  const go = useCallback(
+    (slug: string) => {
+      onOpenStudio(slug);
+    },
+    [onOpenStudio]
+  );
+
+  const scrollCommunityRight = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollBy({ left: 340, behavior: "smooth" });
     }
-    onOpenStudio(slug);
   };
 
   return (
-    <div id="main-content" className="relative h-[100dvh] w-full overflow-hidden bg-black text-white select-none">
-      {/* Background orbs */}
+    <div className="flex h-[100dvh] flex-col overflow-hidden relative z-[2] scrollbar-hide"
+      style={{ backgroundColor: "#000000", color: "#ffffff", fontFamily: "'Inter', sans-serif" }}
+    >
+
+      {/* ─── CSS Oficial Design Builder: Ocultar Barras de Rolagem e Efeitos Hover ─── */}
+      <style>{`
+        /* Elimina completamente todas as barras de rolagem em todos os navegadores mantendo o scroll 100% funcional */
+        html, body, #root, * {
+          scrollbar-width: none !important;
+          -ms-overflow-style: none !important;
+        }
+        *::-webkit-scrollbar {
+          display: none !important;
+          width: 0px !important;
+          height: 0px !important;
+        }
+        .scrollbar-hide {
+          -ms-overflow-style: none !important;
+          scrollbar-width: none !important;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none !important;
+          width: 0px !important;
+          height: 0px !important;
+        }
+
+        /* Animação e propriedades oficiais do Botão Externo com brilho giratório */
+        @property --db-angulo {
+          syntax: "<angle>";
+          inherits: false;
+          initial-value: 0deg;
+        }
+        @property --db-recuo-do-angulo {
+          syntax: "<angle>";
+          inherits: false;
+          initial-value: 0deg;
+        }
+        @property --db-fatia {
+          syntax: "<percentage>";
+          inherits: false;
+          initial-value: 6%;
+        }
+        .botao-externo {
+          --db-fundo: #0d0716;
+          --db-brilho: #a855f7;
+          --db-brilho-claro: #f5f3ff;
+          --db-avanco: 210px;
+          isolation: isolate;
+          cursor: pointer;
+          color: #fff;
+          background: linear-gradient(var(--db-fundo), var(--db-fundo)) padding-box,
+            conic-gradient(from calc(var(--db-angulo) - var(--db-recuo-do-angulo)),
+              transparent,
+              var(--db-brilho) var(--db-fatia),
+              var(--db-brilho-claro) calc(var(--db-fatia) * 2),
+              var(--db-brilho) calc(var(--db-fatia) * 3),
+              transparent calc(var(--db-fatia) * 4)) border-box;
+          border: 1px solid #0000;
+          border-radius: 360px;
+          flex-direction: row-reverse;
+          align-items: center;
+          gap: 0;
+          padding: 6px 6px 6px 26px;
+          font-size: 14px;
+          font-weight: 600;
+          text-decoration: none;
+          transition: --db-recuo-do-angulo .8s cubic-bezier(.25,1,.5,1), --db-fatia .8s cubic-bezier(.25,1,.5,1);
+          animation: 3s linear infinite db-gira-brilho;
+          display: inline-flex;
+          position: relative;
+          overflow: hidden;
+          box-shadow: inset 0 0 0 1px #ffffff0f;
+        }
+        .botao-externo:hover, .botao-externo:focus-visible {
+          --db-fatia: 20%;
+          --db-recuo-do-angulo: 95deg;
+        }
+        .botao-externo__seta {
+          color: #0d0716;
+          box-sizing: content-box;
+          background: #fff;
+          border-radius: 360px;
+          flex: none;
+          place-items: center;
+          width: 34px;
+          height: 34px;
+          transition: padding-left .38s cubic-bezier(.4,0,.2,1), margin-left .38s cubic-bezier(.4,0,.2,1);
+          display: grid;
+        }
+        .botao-externo:hover .botao-externo__seta, .botao-externo:focus-visible .botao-externo__seta {
+          padding-left: var(--db-avanco);
+          margin-left: calc(var(--db-avanco) * -1);
+        }
+        .botao-externo__texto {
+          z-index: 1;
+          white-space: nowrap;
+          margin-right: 12px;
+          transition: color .38s cubic-bezier(.4,0,.2,1);
+          position: relative;
+        }
+        .botao-externo:hover .botao-externo__texto, .botao-externo:focus-visible .botao-externo__texto {
+          color: #0d0716;
+        }
+        .botao-externo:hover .botao-externo__seta > * {
+          animation: .32s db-seta-da-volta;
+        }
+        @keyframes db-gira-brilho {
+          to { --db-angulo: 360deg; }
+        }
+        @keyframes db-seta-da-volta {
+          0% { opacity: 1; transform: translate(0); }
+          20% { opacity: 0; transform: translate(60%); }
+          50% { opacity: 0; transform: translate(60%, 60%); }
+          70% { opacity: 0; transform: translate(-60%, 60%); }
+          85% { opacity: 0; transform: translate(-60%); }
+          to { opacity: 1; transform: translate(0); }
+        }
+
+        /* Efeito de Zoom Lento nas Imagens em Hover */
+        .zoom-lento {
+          transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+          will-change: transform;
+          backface-visibility: hidden;
+          transform: translateZ(0) scale(1);
+        }
+        .group:hover .zoom-lento, .group:focus-visible .zoom-lento {
+          transform: translateZ(0) scale(1.06);
+        }
+        .bordas-que-desvanecem {
+          mask-image: linear-gradient(90deg, transparent 0%, #000 30px, #000 calc(100% - 30px), transparent 100%);
+          -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 30px, #000 calc(100% - 30px), transparent 100%);
+        }
+      `}</style>
+
+      {/* ÔöÇÔöÇ Background Glow Orbs Oficiais ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ */}
       <div aria-hidden="true">
         <div className="bg-orb bg-orb-1" />
         <div className="bg-orb bg-orb-2" />
         <div className="bg-orb bg-orb-3" />
       </div>
 
-      {/* ── BARRA LATERAL UNIFICADA OFICIAL (DESKTOP DOCK + MOBILE BAR 1:1) ── */}
+      {/* ÔöÇÔöÇ Background Canvas de Estrelas / Cometas ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ */}
+      <CosmicBackground />
+
+      {/* ÔöÇÔöÇ Sidebar Desktop Oficial ├á Esquerda ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ */}
       <DesignBuilderSidebar
-        variant="dock"
-        activeTab="apps"
+        activeTab="home"
         onNavigateTab={(tab) => {
-          if (tab === "home" || tab === "ai-tools") {
-            if (onGoHome) onGoHome();
-            else if (typeof window !== "undefined") {
-              window.history.pushState({ path: "/" }, "", "/");
-              window.dispatchEvent(new CustomEvent("db:go_home"));
-            }
-          } else if (onNavigateTab) {
-            onNavigateTab(tab);
-          }
+          if (onNavigateTab) onNavigateTab(tab);
         }}
         onOpenProjects={onOpenProjects}
         onOpenGallery={onOpenGallery}
@@ -253,270 +525,724 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
         onOpenCreditsModal={onOpenCreditsModal}
         userEmail={userEmail}
         userName={userName}
-        userCredits={realCredits}
+        userCredits={typeof userTokens === "number" && userTokens !== 999999 && userTokens !== 45 ? userTokens : 6612}
         isUnlimited={false}
         userPlan="Profissional (Vertex AI)"
       />
 
+      {/* ÔöÇÔöÇ Conte├║do Principal com Scroll Suave ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ */}
+      <div className="flex-1 min-h-0 max-lg:overflow-x-hidden lg:pb-0 overflow-y-auto scrollbar-hide overscroll-contain pb-mobile-nav lg:overflow-y-auto scrollbar-hide">
+        <main className="max-lg:min-h-full lg:min-h-screen overflow-x-hidden lg:pl-72">
+          <div className="mx-auto w-full max-w-[1800px] px-4 pb-10 sm:px-6 sm:pb-14 xl:px-10 2xl:px-14 pt-10 sm:pt-14">
 
+            {/* ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ 1. HERO CARDS (├ôRION PRO & HYDRA) ÔòÉÔòÉÔòÉÔòÉÔòÉ */}
+            <section className="mb-12 lg:mb-16">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {/* ├ôRION PRO */}
+                <VitrineHoverCard
+                  images={["https://app.designbuilder.co/vitrine/orion/orion-3.avif", "https://app.designbuilder.co/vitrine/orion/orion-2.avif", "https://app.designbuilder.co/vitrine/orion/orion-1.avif"]}
+                  alt="├ôRION PRO"
+                  title="├ôRION PRO"
+                  subtitle="Exponencialize sua imagina├º├úo"
+                  onClick={() => go("orion-pro")}
+                />
 
-      {/* ── ÁREA PRINCIPAL COM SCROLL & CARDS (1:1 Oficial de Design Builder.html) ── */}
-      <div className="flex h-[100dvh] flex-col overflow-hidden relative z-[2] lg:pl-[60px]">
-        <div className="flex-1 min-h-0 max-lg:overflow-x-hidden lg:pb-0 overflow-y-auto overscroll-contain pb-24 lg:overflow-y-auto custom-scrollbar">
-          <main className="max-lg:min-h-full lg:min-h-screen overflow-x-hidden">
-            <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-20">
-              <div className="relative">
-                {/* Orbs de fundo da página */}
-                <div className="pointer-events-none absolute inset-0 -top-32 overflow-hidden">
-                  <div className="absolute -top-40 left-1/4 h-80 w-80 rounded-full bg-violet-500/[0.03] blur-[100px]" />
-                  <div className="absolute -top-20 right-1/4 h-60 w-60 rounded-full bg-blue-500/[0.03] blur-[80px]" />
-                </div>
+                {/* HYDRA */}
+                <VitrineHoverCard
+                  images={["https://app.designbuilder.co/vitrine/hydra-faixa/hydra-1.avif", "https://app.designbuilder.co/vitrine/hydra-faixa/hydra-2.avif", "https://app.designbuilder.co/vitrine/hydra-faixa/hydra-5.avif"]}
+                  alt="HYDRA"
+                  title="HYDRA"
+                  subtitle="Use inspira├º├Áes curadas por Designers s├¬niors"
+                  onClick={() => go("hydra")}
+                />
+              </div>
 
-                {/* Cabeçalho Oficial: Logo DB, Saudação, Subtítulo */}
-                <div className="relative mb-12">
-                  <div className="flex items-center gap-3 mb-4">
-                    <img
-                      alt="Design Builder"
-                      width={399}
-                      height={85}
-                      decoding="async"
-                      className="h-7 w-auto opacity-80"
-                      src="/logo-db.webp"
-                      onError={(e) => {
-                        (e.target as HTMLElement).setAttribute("src", "/Design Builder_files/logo-db.jpeg");
-                      }}
-                      style={{ color: "transparent" }}
-                    />
-                  </div>
-                  <h1 className="text-3xl font-bold text-white sm:text-4xl">
-                    {getGreeting()}
-                    <span className="text-zinc-400">, {displayName}</span>
-                  </h1>
-                  <p className="mt-3 max-w-lg text-[15px] leading-relaxed text-zinc-400">
-                    Selecione um dos agentes abaixo para criar designs profissionais com inteligência artificial
+              {/* ÔöÇÔöÇ 2┬¬ LINHA: GERA├ç├òES STRIP, REF BUILDER, ENHANCE ÔöÇÔöÇÔöÇ */}
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 mt-12 lg:mt-16">
+                
+                {/* Gera├º├Áes Horizontal Strip */}
+                <div className="group/comunidade group/recentes relative flex flex-col overflow-hidden rounded-2xl bg-violet-500/[0.04] p-4 ring-1 ring-white/[0.06] md:col-span-2 lg:aspect-[5/2] lg:self-start">
+                  <p className="shrink-0 font-display text-lg font-bold uppercase tracking-wider text-white">
+                    Comunidade
                   </p>
-                  <div className="mt-8 flex items-center gap-3">
-                    <div className="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent" />
-                    <span className="text-[11px] font-medium uppercase tracking-widest text-zinc-700">
-                      6 agentes
-                    </span>
-                    <div className="h-px flex-1 bg-gradient-to-l from-white/10 to-transparent" />
+                  <div className="relative mt-3 h-[132px] shrink-0 lg:h-auto lg:min-h-0 lg:flex-1 lg:shrink">
+                    <div className="h-full bordas-que-desvanecem">
+                      <div
+                        ref={scrollRef}
+                        className="flex h-full snap-x snap-mandatory gap-3 overflow-x-auto scrollbar-hide overscroll-x-contain scroll-smooth scrollbar-hide"
+                      >
+                        {COMUNIDADE_STRIP.map((item) => (
+                          <a
+                            key={item.id}
+                            onClick={() => {
+                              if (onOpenCommunity) onOpenCommunity();
+                              else onNavigateTab?.("community");
+                            }}
+                            className="group relative aspect-square h-full shrink-0 snap-start overflow-hidden rounded-xl cursor-pointer"
+                          >
+                            <img
+                              alt={item.alt}
+                              loading="lazy"
+                              className="h-full w-full object-cover zoom-lento"
+                              src={item.src}
+                            />
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                    {/* Bot├úo circular de avan├ºar */}
+                    <button
+                      type="button"
+                      aria-label="Ver mais"
+                      onClick={scrollCommunityRight}
+                      className="absolute top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/70 text-white opacity-0 ring-1 ring-white/15 backdrop-blur-sm transition-[opacity,background-color] duration-200 hover:bg-black/90 focus-visible:opacity-100 group-hover/comunidade:opacity-100 right-2 cursor-pointer"
+                    >
+                      <ChevronRight className="h-5 w-5" aria-hidden="true" />
+                    </button>
                   </div>
                 </div>
 
-                {/* Grid Oficial dos 6 Agentes com 3D Flip Card & Vídeo no Hover */}
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {AGENTS_LIST.map((agent, idx) => (
-                    <OfficialAgentCard
-                      key={agent.id}
-                      agent={agent}
-                      index={idx}
-                      onOpen={() => handleLaunchAgent(agent.id)}
-                    />
+                {/* REF BUILDER */}
+                <VitrineHoverCard
+                  images={["https://app.designbuilder.co/vitrine/ref-faixa/ref-4.avif", "https://app.designbuilder.co/vitrine/ref-faixa/ref-1.avif", "https://app.designbuilder.co/vitrine/ref-faixa/ref-2.avif"]}
+                  alt="REF BUILDER"
+                  title="REF BUILDER"
+                  aspectClass="aspect-[5/4]"
+                  showBottomTitleOverlay={true}
+                  onClick={() => go("ref")}
+                />
+
+                {/* ENHANCE - V├¡deo Oficial Looping */}
+                <a
+                  onClick={() => go("enhance-builder")}
+                  className="group relative block aspect-[5/4] self-start overflow-hidden rounded-2xl ring-1 ring-white/[0.06] cursor-pointer bg-black"
+                >
+                  <video
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    preload="metadata"
+                    ref={(el) => {
+                      if (el) {
+                        el.muted = true;
+                        el.play().catch(() => {});
+                      }
+                    }}
+                    aria-label="ENHANCE"
+                    className="h-full w-full object-cover zoom-lento"
+                  >
+                    <source src="https://apidb20.designbuilder.co/api/agent-videos/enhance-builder?v=4" type="video/mp4" />
+                    <source src="/vitrine/enhance-video.mp4" type="video/mp4" />
+                  </video>
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-4 pb-4 pt-16">
+                    <span className="font-display text-lg font-bold tracking-wider text-white">ENHANCE</span>
+                  </div>
+                </a>
+
+              </div>
+            </section>
+
+            {/* ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ 2. HYDRA FAIXA DE DESTAQUE 3D ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ */}
+            <div className="mt-12 lg:mt-16">
+              <section className="relative min-h-[380px] sm:min-h-[440px] overflow-hidden rounded-3xl bg-black ring-1 ring-white/[0.06]">
+                {/* 6 Fanned 3D Cards */}
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-y-0 right-0 w-[90%] md:w-[68%] block opacity-60 md:opacity-100"
+                  style={{ perspective: "1400px" }}
+                >
+                  {HYDRA_FANNED_CARDS.map((card, i) => (
+                    <div
+                      key={i}
+                      onMouseEnter={() => setHoveredHydraIndex(i)}
+                      onMouseLeave={() => setHoveredHydraIndex(null)}
+                      onClick={() => go("hydra")}
+                      className="pointer-events-auto absolute top-1/2 right-4 sm:right-6 h-[126%] w-[42%] sm:w-[40%] overflow-hidden rounded-[22px] shadow-[0_30px_60px_-20px_rgba(0,0,0,0.8)] cursor-pointer"
+                      style={{
+                        transform: hoveredHydraIndex === i
+                          ? `translate(${card.translate}, calc(-50% - 18px)) rotate(${card.rotate}) scale(${Number(card.scale) * 1.05}) translateZ(30px)`
+                          : `translate(${card.translate}, calc(-50% + 0px)) rotate(${card.rotate}) scale(${card.scale}) translateZ(0px)`,
+                        filter: hoveredHydraIndex === i ? "brightness(1.2)" : `brightness(${card.brightness})`,
+                        transitionProperty: "transform, filter",
+                        transitionDuration: "600ms",
+                        transitionTimingFunction: "cubic-bezier(0.32, 0.72, 0, 1)",
+                        transitionDelay: `${card.delay}ms`,
+                        zIndex: hoveredHydraIndex === i ? 70 : card.z,
+                      }}
+                    >
+                      <img alt="" loading="lazy" className="h-full w-full object-cover" src={card.img} />
+                    </div>
                   ))}
                 </div>
 
-                <div className="pointer-events-none mt-16 flex justify-center">
-                  <div className="h-px w-1/3 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black via-black/85 to-transparent md:via-black/35 md:to-transparent" />
+
+                <div className="relative max-w-2xl px-8 py-12 sm:px-12 sm:py-16">
+                  <span className="inline-flex rounded-full bg-brand-accent/15 px-3.5 py-1.5 font-display text-[11px] font-bold uppercase tracking-[0.18em] text-brand-accent">
+                    Hydra
+                  </span>
+                  <h2 className="mt-5 font-display text-[28px] font-bold uppercase leading-[1.15] text-white sm:text-[38px]">
+                    <span className="block whitespace-nowrap">Crie ensaios</span>
+                    <span className="block whitespace-nowrap">
+                      fotogr├íficos com o <span className="text-brand-accent">Hydra</span>
+                    </span>
+                    <span className="block whitespace-nowrap">em poucos cliques</span>
+                  </h2>
+                  <p className="mt-4 text-[15px] text-zinc-300">
+                    Escolha uma inspira├º├úo, envie suas fotos e gere seu ensaio.
+                  </p>
+                  <a onClick={() => go("hydra")} className="botao-externo mt-7 cursor-pointer">
+                    <span className="botao-externo__seta">
+                      <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+                    </span>
+                    <span className="botao-externo__texto">Criar ensaio</span>
+                  </a>
                 </div>
-              </div>
+              </section>
             </div>
-          </main>
-        </div>
+
+            {/* ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ 3. COMUNIDADE FEED MASONRY (4 COLUNAS) ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ */}
+            <div className="mt-12 lg:mt-16">
+              <section>
+                <div className="flex flex-wrap items-center gap-6 border-b border-white/[0.06] pb-3">
+                  <button
+                    type="button"
+                    aria-pressed={activeTab === "comunidade"}
+                    onClick={() => setActiveTab("comunidade")}
+                    className={`font-display text-lg font-bold uppercase tracking-wider transition-colors cursor-pointer ${
+                      activeTab === "comunidade" ? "text-brand-accent" : "text-white/90 hover:text-white"
+                    }`}
+                  >
+                    Comunidade
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={activeTab === "em_alta"}
+                    onClick={() => setActiveTab("em_alta")}
+                    className={`font-display text-lg font-bold uppercase tracking-wider transition-colors cursor-pointer ${
+                      activeTab === "em_alta" ? "text-brand-accent" : "text-white/90 hover:text-white"
+                    }`}
+                  >
+                    Em alta no Hydra
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={activeTab === "recentes"}
+                    onClick={() => setActiveTab("recentes")}
+                    className={`font-display text-lg font-bold uppercase tracking-wider transition-colors cursor-pointer ${
+                      activeTab === "recentes" ? "text-brand-accent" : "text-white/90 hover:text-white"
+                    }`}
+                  >
+                    Recentes
+                  </button>
+                </div>
+
+                {activeTab === "comunidade" && (
+                  <div className={`relative transition-all duration-500 ${isCommunityExpanded ? "" : "max-h-[720px] overflow-hidden"}`}>
+                    <div className="mt-4 flex gap-[2px]" style={{ "--duracao-zoom": "280ms" } as any}>
+                      {/* Coluna 1 */}
+                      <div className="flex min-w-0 flex-1 flex-col gap-[2px]">
+                        {COMMUNITY_COL_1.map((card) => (
+                          <a
+                            key={card.id}
+                            onClick={() => setPreviewArt(card)}
+                            className="group relative block overflow-hidden rounded-md cursor-pointer"
+                          >
+                            <img
+                              alt={`[${card.id}]`}
+                              loading="lazy"
+                              className="h-auto w-full zoom-lento"
+                              src={card.src}
+                            />
+                            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center gap-2 px-2.5 pt-10 pb-2">
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-transparent opacity-0 transition-opacity duration-[400ms] ease-suave group-hover:opacity-100" />
+                              {(card as any).avatar ? (
+                                <img
+                                  alt=""
+                                  loading="lazy"
+                                  className="relative h-7 w-7 shrink-0 rounded-full object-cover ring-1 ring-white/40 shadow-[0_2px_10px_rgba(0,0,0,0.7)]"
+                                  src={(card as any).avatar}
+                                />
+                              ) : (
+                                <span className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-black/50 text-[11px] font-semibold text-white ring-1 ring-white/40 shadow-[0_2px_10px_rgba(0,0,0,0.7)]">
+                                  {card.initial}
+                                </span>
+                              )}
+                              <span className="relative min-w-0 max-w-0 -translate-x-1 overflow-hidden opacity-0 transition-all duration-[400ms] ease-suave group-hover:max-w-[240px] group-hover:translate-x-0 group-hover:opacity-100">
+                                <span className="block truncate text-[12px] font-medium leading-tight text-white">
+                                  {card.author}
+                                </span>
+                              </span>
+                            </div>
+                          </a>
+                        ))}
+                      </div>
+
+                      {/* Coluna 2 */}
+                      <div className="flex min-w-0 flex-1 flex-col gap-[2px]">
+                        {COMMUNITY_COL_2.map((card) => (
+                          <a
+                            key={card.id}
+                            onClick={() => setPreviewArt(card)}
+                            className="group relative block overflow-hidden rounded-md cursor-pointer"
+                          >
+                            <img
+                              alt={`[${card.id}]`}
+                              loading="lazy"
+                              className="h-auto w-full zoom-lento"
+                              src={card.src}
+                            />
+                            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center gap-2 px-2.5 pt-10 pb-2">
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-transparent opacity-0 transition-opacity duration-[400ms] ease-suave group-hover:opacity-100" />
+                              {(card as any).avatar ? (
+                                <img
+                                  alt=""
+                                  loading="lazy"
+                                  className="relative h-7 w-7 shrink-0 rounded-full object-cover ring-1 ring-white/40 shadow-[0_2px_10px_rgba(0,0,0,0.7)]"
+                                  src={(card as any).avatar}
+                                />
+                              ) : (
+                                <span className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-black/50 text-[11px] font-semibold text-white ring-1 ring-white/40 shadow-[0_2px_10px_rgba(0,0,0,0.7)]">
+                                  {card.initial}
+                                </span>
+                              )}
+                              <span className="relative min-w-0 max-w-0 -translate-x-1 overflow-hidden opacity-0 transition-all duration-[400ms] ease-suave group-hover:max-w-[240px] group-hover:translate-x-0 group-hover:opacity-100">
+                                <span className="block truncate text-[12px] font-medium leading-tight text-white">
+                                  {card.author}
+                                </span>
+                              </span>
+                            </div>
+                          </a>
+                        ))}
+                      </div>
+
+                      {/* Coluna 3 */}
+                      <div className="flex min-w-0 flex-1 flex-col gap-[2px]">
+                        {COMMUNITY_COL_3.map((card) => (
+                          <a
+                            key={card.id}
+                            onClick={() => setPreviewArt(card)}
+                            className="group relative block overflow-hidden rounded-md cursor-pointer"
+                          >
+                            <img
+                              alt={`[${card.id}]`}
+                              loading="lazy"
+                              className="h-auto w-full zoom-lento"
+                              src={card.src}
+                            />
+                            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center gap-2 px-2.5 pt-10 pb-2">
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-transparent opacity-0 transition-opacity duration-[400ms] ease-suave group-hover:opacity-100" />
+                              {(card as any).avatar ? (
+                                <img
+                                  alt=""
+                                  loading="lazy"
+                                  className="relative h-7 w-7 shrink-0 rounded-full object-cover ring-1 ring-white/40 shadow-[0_2px_10px_rgba(0,0,0,0.7)]"
+                                  src={(card as any).avatar}
+                                />
+                              ) : (
+                                <span className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-black/50 text-[11px] font-semibold text-white ring-1 ring-white/40 shadow-[0_2px_10px_rgba(0,0,0,0.7)]">
+                                  {card.initial}
+                                </span>
+                              )}
+                              <span className="relative min-w-0 max-w-0 -translate-x-1 overflow-hidden opacity-0 transition-all duration-[400ms] ease-suave group-hover:max-w-[240px] group-hover:translate-x-0 group-hover:opacity-100">
+                                <span className="block truncate text-[12px] font-medium leading-tight text-white">
+                                  {card.author}
+                                </span>
+                              </span>
+                            </div>
+                          </a>
+                        ))}
+                      </div>
+
+                      {/* Coluna 4 */}
+                      <div className="flex min-w-0 flex-1 flex-col gap-[2px]">
+                        {COMMUNITY_COL_4.map((card) => (
+                          <a
+                            key={card.id}
+                            onClick={() => setPreviewArt(card)}
+                            className="group relative block overflow-hidden rounded-md cursor-pointer"
+                          >
+                            <img
+                              alt={`[${card.id}]`}
+                              loading="lazy"
+                              className="h-auto w-full zoom-lento"
+                              src={card.src}
+                            />
+                            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center gap-2 px-2.5 pt-10 pb-2">
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-transparent opacity-0 transition-opacity duration-[400ms] ease-suave group-hover:opacity-100" />
+                              {(card as any).avatar ? (
+                                <img
+                                  alt=""
+                                  loading="lazy"
+                                  className="relative h-7 w-7 shrink-0 rounded-full object-cover ring-1 ring-white/40 shadow-[0_2px_10px_rgba(0,0,0,0.7)]"
+                                  src={(card as any).avatar}
+                                />
+                              ) : (
+                                <span className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-black/50 text-[11px] font-semibold text-white ring-1 ring-white/40 shadow-[0_2px_10px_rgba(0,0,0,0.7)]">
+                                  {card.initial}
+                                </span>
+                              )}
+                              <span className="relative min-w-0 max-w-0 -translate-x-1 overflow-hidden opacity-0 transition-all duration-[400ms] ease-suave group-hover:max-w-[240px] group-hover:translate-x-0 group-hover:opacity-100">
+                                <span className="block truncate text-[12px] font-medium leading-tight text-white">
+                                  {card.author}
+                                </span>
+                              </span>
+                            </div>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Gradient Fade quando recolhido */}
+                    {!isCommunityExpanded && (
+                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-64 bg-gradient-to-t from-black via-black/85 to-transparent" />
+                    )}
+
+                    {/* Bot├úo Central "Ver mais" / "Recolher" */}
+                    <div className={`${isCommunityExpanded ? "relative mt-8" : "absolute inset-x-0 bottom-0"} flex justify-center pb-6 z-20`}>
+                      <button
+                        type="button"
+                        onClick={() => setIsCommunityExpanded(!isCommunityExpanded)}
+                        className="inline-flex items-center gap-2 rounded-full bg-brand-accent px-7 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-900/40 transition-[filter] duration-300 hover:brightness-110 disabled:opacity-60 cursor-pointer"
+                      >
+                        {isCommunityExpanded ? "Recolher feed" : "Ver mais"}
+                        <ArrowUpRight className={`h-4 w-4 transition-transform duration-300 ${isCommunityExpanded ? "rotate-180" : ""}`} aria-hidden="true" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === "em_alta" && (
+                  <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {COMMUNITY_COL_1.slice(0, 8).map((card) => (
+                      <div
+                        key={card.id}
+                        onClick={() => go("hydra")}
+                        className="group relative overflow-hidden rounded-2xl cursor-pointer bg-zinc-900 border border-white/[0.06] transition-all duration-300 hover:border-violet-500/40 hover:shadow-[0_12px_32px_rgba(168,85,247,0.3)] hover:-translate-y-1.5 aspect-[3/4]"
+                      >
+                        <img
+                          src={card.src}
+                          alt={card.author}
+                          loading="lazy"
+                          className="h-full w-full object-cover zoom-lento"
+                        />
+                        <div className="absolute bottom-2.5 left-2.5 flex items-center gap-1.5 rounded-full bg-black/70 backdrop-blur-md px-2.5 py-1 text-[11px] text-white border border-white/15">
+                          <span className="h-4 w-4 rounded-full bg-violet-500 flex items-center justify-center text-[9px] font-bold">
+                            {card.initial}
+                          </span>
+                          <span className="font-semibold truncate max-w-[120px]">{card.author}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {activeTab === "recentes" && (
+                  <div className="mt-4">
+                    {recentImages.length > 0 ? (
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {recentImages.slice(0, 12).map((imgUrl, i) => (
+                          <div
+                            key={i}
+                            onClick={() => go("ref")}
+                            className="group relative overflow-hidden rounded-2xl cursor-pointer bg-zinc-900 border border-white/[0.06] aspect-square"
+                          >
+                            <img src={imgUrl} alt="" className="h-full w-full object-cover zoom-lento" />
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center rounded-2xl border border-white/5 bg-zinc-950/40 py-24 text-center">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-900 border border-white/10 text-zinc-500 mb-3">
+                          <ImageOff className="h-6 w-6" />
+                        </div>
+                        <p className="text-sm font-medium text-zinc-400">Nada por aqui ainda</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </section>
+            </div>
+
+            {/* ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ 4. TRANSFORME INSPIRA├ç├òES (REF BANNER) ÔòÉÔòÉÔòÉÔòÉÔòÉ */}
+            <div className="mt-12 lg:mt-16">
+              <section
+                className="relative overflow-hidden rounded-3xl bg-[#08040f]"
+                style={{
+                  boxShadow: "rgba(139, 92, 246, 0.35) 0px 0px 90px 10px inset, rgba(217, 70, 239, 0.12) 0px 0px 200px 40px inset, rgba(139, 92, 246, 0.4) 0px 0px 60px -20px",
+                }}
+              >
+                <video
+                  src="https://apidb20.designbuilder.co/api/agent-videos/fundo-secao-referencias"
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  preload="metadata"
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+                />
+                <div
+                  className="pointer-events-none absolute inset-0"
+                  style={{
+                    background: "radial-gradient(ellipse at center, rgba(8,4,15,0.86) 0%, rgba(8,4,15,0.72) 55%, rgba(8,4,15,0.9) 100%)",
+                  }}
+                />
+
+                <div className="relative flex flex-col items-center gap-5 px-6 pt-16 pb-10 text-center sm:pt-20 md:pb-16 xl:pb-24">
+                  <img
+                    alt="Zion Design"
+                    loading="lazy"
+                    width={399}
+                    height={85}
+                    decoding="async"
+                    data-nimg="1"
+                    className="h-8 w-auto"
+                    src="/logo-zion.svg" onError={(e) => { (e.target as HTMLElement).setAttribute("src", "/logo-zion.webp"); }}
+                    style={{ color: "transparent" }}
+                  />
+                  <p className="font-display text-2xl leading-tight text-white sm:text-4xl">
+                    <span className="block">Transforme inspira├º├Áes</span>
+                    <span className="block">em cria├º├Áes ├║nicas</span>
+                  </p>
+                  <p className="max-w-xl text-[15px] text-zinc-300">
+                    Combine suas inspira├º├Áes no Ref Builder e crie uma imagem com identidade pr├│pria.
+                  </p>
+                  <a onClick={() => go("ref")} className="botao-externo cursor-pointer">
+                    <span className="botao-externo__seta">
+                      <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+                    </span>
+                    <span className="botao-externo__texto">Criar com inspira├º├Áes</span>
+                  </a>
+
+                  {/* 5 Cards em Leque com Miniaturas de Entrada Flutuantes */}
+                  <div className="mt-8 hidden w-full max-w-[1400px] items-end justify-center md:flex">
+                    {REF_FAIXA_CARDS.map((card, i) => (
+                      <div
+                        key={i}
+                        onMouseEnter={() => setHoveredRefIndex(i)}
+                        onMouseLeave={() => setHoveredRefIndex(null)}
+                        onClick={() => go("ref")}
+                        className="relative aspect-[3/4] shrink-0 overflow-hidden rounded-2xl shadow-[0_26px_60px_-18px_rgba(0,0,0,0.85)] cursor-pointer"
+                        style={{
+                          width: card.w,
+                          marginLeft: card.ml,
+                          transform: hoveredRefIndex === i
+                            ? `translateY(calc(${card.ty} - 24px)) rotate(${card.rot}) scale(1.06)`
+                            : `translateY(${card.ty}) rotate(${card.rot})`,
+                          filter: hoveredRefIndex === i ? "brightness(1.15)" : "brightness(0.92)",
+                          transitionProperty: "transform, filter",
+                          transitionDuration: "320ms",
+                          transitionTimingFunction: "cubic-bezier(0.32, 0.72, 0, 1)",
+                          zIndex: hoveredRefIndex === i ? 60 : card.z,
+                        }}
+                      >
+                        <img alt="" loading="lazy" className="h-full w-full object-cover" src={card.img} />
+
+                        {/* Entradas flutuantes ao passar o mouse */}
+                        <div className="pointer-events-none absolute inset-0 grid place-items-center">
+                          {card.inputs.map((inp, ii) => (
+                            <div
+                              key={ii}
+                              className="col-start-1 row-start-1 aspect-[3/4] w-[36%] overflow-hidden rounded-lg shadow-[0_10px_24px_-8px_rgba(0,0,0,0.9)] ring-1 ring-white/25"
+                              style={{
+                                transform: hoveredRefIndex === i ? inp.transform : "translate(0%, 50%) scale(0.3)",
+                                opacity: hoveredRefIndex === i ? 1 : 0,
+                                transitionProperty: "transform, opacity",
+                                transitionDuration: "560ms",
+                                transitionTimingFunction: "cubic-bezier(0.32, 0.72, 0, 1)",
+                                transitionDelay: `${inp.delay}ms`,
+                              }}
+                            >
+                              <img alt="" loading="lazy" className="h-full w-full object-cover" src={inp.src} />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            {/* ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ 5. ├üREA DE MEMBROS (SVG WIREFRAME GRID) ÔòÉÔòÉÔòÉÔòÉ */}
+            <div className="mt-12 lg:mt-16">
+              <section
+                className="relative overflow-hidden rounded-3xl bg-[#08040f]"
+                style={{
+                  boxShadow: "rgba(139, 92, 246, 0.35) 0px 0px 90px 10px inset, rgba(217, 70, 239, 0.12) 0px 0px 200px 40px inset, rgba(139, 92, 246, 0.4) 0px 0px 60px -20px",
+                }}
+              >
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 1000 400"
+                  preserveAspectRatio="none"
+                  className="pointer-events-none absolute inset-0 h-full w-full"
+                >
+                  <g stroke="rgba(167, 139, 250, 0.13)" strokeWidth="1" fill="none">
+                    <path d="M0 0 L340 130" /><path d="M0 400 L340 270" /><path d="M0 0 L340 130" /><path d="M1000 0 L660 130" /><path d="M100 0 L372 130" /><path d="M100 400 L372 270" /><path d="M0 40 L340 144" /><path d="M1000 40 L660 144" /><path d="M200 0 L404 130" /><path d="M200 400 L404 270" /><path d="M0 80 L340 158" /><path d="M1000 80 L660 158" /><path d="M300 0 L436 130" /><path d="M300 400 L436 270" /><path d="M0 120 L340 172" /><path d="M1000 120 L660 172" /><path d="M400 0 L468 130" /><path d="M400 400 L468 270" /><path d="M0 160 L340 186" /><path d="M1000 160 L660 186" /><path d="M500 0 L500 130" /><path d="M500 400 L500 270" /><path d="M0 200 L340 200" /><path d="M1000 200 L660 200" /><path d="M600 0 L532 130" /><path d="M600 400 L532 270" /><path d="M0 240 L340 214" /><path d="M1000 240 L660 214" /><path d="M700 0 L564 130" /><path d="M700 400 L564 270" /><path d="M0 280 L340 228" /><path d="M1000 280 L660 228" /><path d="M800 0 L596 130" /><path d="M800 400 L596 270" /><path d="M0 320 L340 242" /><path d="M1000 320 L660 242" /><path d="M900 0 L628 130" /><path d="M900 400 L628 270" /><path d="M0 360 L340 256" /><path d="M1000 360 L660 256" /><path d="M1000 0 L660 130" /><path d="M1000 400 L660 270" /><path d="M0 400 L340 270" /><path d="M1000 400 L660 270" />
+                  </g>
+                  <g stroke="rgba(167, 139, 250, 0.11)" strokeWidth="1" fill="none">
+                    <rect x="6.938775510204081" y="2.6530612244897958" width="986.1224489795918" height="394.69387755102036" />
+                    <rect x="27.755102040816325" y="10.612244897959183" width="944.4897959183672" height="378.7755102040817" />
+                    <rect x="62.44897959183673" y="23.877551020408163" width="875.1020408163265" height="352.2448979591836" />
+                    <rect x="111.0204081632653" y="42.44897959183673" width="777.9591836734694" height="315.1020408163265" />
+                    <rect x="173.46938775510205" y="66.3265306122449" width="653.0612244897959" height="267.34693877551024" />
+                    <rect x="249.79591836734693" y="95.51020408163265" width="500.4081632653061" height="208.9795918367347" />
+                  </g>
+                  <rect x="340" y="130" width="320" height="140" fill="none" stroke="rgba(167, 139, 250, 0.28)" strokeWidth="1" />
+                </svg>
+
+                <div
+                  className="pointer-events-none absolute inset-0"
+                  style={{
+                    background: "radial-gradient(ellipse at center, rgba(8,4,15,0.92) 0%, rgba(8,4,15,0.55) 45%, transparent 75%)",
+                  }}
+                />
+
+                <div className="relative flex flex-col items-center gap-5 px-6 py-16 text-center sm:py-20">
+                  <img
+                    alt="Zion Design"
+                    loading="lazy"
+                    width={399}
+                    height={85}
+                    decoding="async"
+                    data-nimg="1"
+                    className="h-8 w-auto"
+                    src="/logo-zion.svg" onError={(e) => { (e.target as HTMLElement).setAttribute("src", "/logo-zion.webp"); }}
+                    style={{ color: "transparent" }}
+                  />
+                  <p className="font-display text-2xl leading-tight text-white sm:text-4xl">
+                    <span className="block">Assista nossos conte├║dos</span>
+                    <span className="block">na ├írea de membros!</span>
+                  </p>
+                  <a
+                    href="#aulas"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="botao-externo cursor-pointer"
+                  >
+                    <span className="botao-externo__seta">
+                      <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+                    </span>
+                    <span className="botao-externo__texto">Acessar agora</span>
+                  </a>
+                </div>
+              </section>
+            </div>
+
+          </div>
+        </main>
       </div>
 
-      {/* Modais de suporte e configurações */}
-      <ReportModal
-        isOpen={isReportModalOpen}
-        onClose={() => setIsReportModalOpen(false)}
-        generationId="hub-feedback"
-      />
-      <DesignBuilderSettingsModal
-        isOpen={isSettingsModalOpen}
-        onClose={() => setIsSettingsModalOpen(false)}
+      {/* ÔöÇÔöÇ Mobile Bottom Navigation (Matching Home.html lines 175-233) ÔöÇÔöÇ */}
+      <DesignBuilderMobileNav
+        activeTab="home"
+        onNavigateHome={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+        onNavigateProjects={() => {
+          if (onOpenProjects) onOpenProjects();
+          else if (onNavigateTab) onNavigateTab("projetos");
+        }}
+        onNavigateGallery={() => {
+          if (onOpenGallery) onOpenGallery();
+          else if (onNavigateTab) onNavigateTab("gallery");
+        }}
+        onNavigateCommunity={() => {
+          if (onOpenCommunity) onOpenCommunity();
+          else if (onNavigateTab) onNavigateTab("community");
+        }}
+        onOpenAccount={() => {
+          window.dispatchEvent(new CustomEvent("open-auth-modal"));
+        }}
+        onOpenAdmin={onOpenAdmin}
+        onOpenCredits={() => {
+          if (onOpenCreditsModal) onOpenCreditsModal();
+          else window.dispatchEvent(new CustomEvent("open-credits-modal"));
+        }}
         userEmail={userEmail}
         userName={userName}
+        isAdmin={userEmail?.toLowerCase()?.trim() === "der.contatos@gmail.com"}
+        userInitial={userEmail ? (userName ? userName[0].toUpperCase() : userEmail[0].toUpperCase()) : "R"}
       />
+
+      {/* ÔöÇÔöÇ Assistente IA Flutuante Oficial (Matching Home.html lines 1176-1305) ÔöÇÔöÇ */}
+      <DesignBuilderAssistant />
+
+      {/* ÔöÇÔöÇ Modal de Detalhe da Comunidade ÔöÇÔöÇ */}
+      {previewArt && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200"
+          onClick={() => setPreviewArt(null)}
+        >
+          <div 
+            className="relative flex flex-col md:flex-row max-w-4xl w-full bg-zinc-950 border border-white/10 rounded-2xl overflow-hidden shadow-2xl shadow-black/90"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex-1 bg-black flex items-center justify-center min-h-[300px] max-h-[70vh] overflow-hidden p-2">
+              <img 
+                src={previewArt.src} 
+                alt={previewArt.author} 
+                className="max-h-full max-w-full object-contain rounded-lg"
+              />
+            </div>
+            <div className="w-full md:w-80 p-6 flex flex-col justify-between border-t md:border-t-0 md:border-l border-white/10">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-violet-400">Arte da Comunidade</span>
+                  <button 
+                    onClick={() => setPreviewArt(null)}
+                    className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors"
+                  >
+                    Ô£ò
+                  </button>
+                </div>
+                <div className="flex items-center gap-3">
+                  {previewArt.avatar ? (
+                    <img 
+                      src={previewArt.avatar} 
+                      alt="" 
+                      className="h-10 w-10 rounded-full object-cover ring-1 ring-white/20"
+                    />
+                  ) : (
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-violet-600 text-sm font-bold text-white ring-1 ring-white/20">
+                      {previewArt.initial || previewArt.author?.[0]}
+                    </span>
+                  )}
+                  <div>
+                    <h4 className="text-sm font-semibold text-white">{previewArt.author}</h4>
+                    <p className="text-xs text-zinc-500">Criado com Zion Design</p>
+                  </div>
+                </div>
+                <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3 text-xs text-zinc-400">
+                  C├│digo da arte: <span className="text-white font-mono">{previewArt.id}</span>
+                </div>
+              </div>
+
+              <div className="mt-6 flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPreviewArt(null);
+                    go("ref");
+                  }}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-900/30 hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  Abrir no Ref Builder
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewArt(null)}
+                  className="w-full rounded-xl border border-white/10 px-4 py-2.5 text-xs font-medium text-zinc-400 hover:bg-white/[0.06] hover:text-white transition-colors cursor-pointer"
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
-
-// ── COMPONENTE OFICIAL DO CARD 3D FLIP COM VÍDEO (1:1 Design Builder.html) ──
-interface OfficialAgentCardProps {
-  agent: AgentCardDef;
-  index: number;
-  onOpen: () => void;
-}
-
-const OfficialAgentCard: React.FC<OfficialAgentCardProps> = ({ agent, index, onOpen }) => {
-  const videoRef = useRef<HTMLVideoElement>(null);
-
-  const handleMouseEnter = () => {
-    if (videoRef.current && agent.videoUrl) {
-      videoRef.current.currentTime = 0;
-      videoRef.current.play().catch(() => {});
-    }
-  };
-
-  const handleMouseLeave = () => {
-    if (videoRef.current) {
-      videoRef.current.pause();
-    }
-  };
-
-  const renderCardIcon = () => {
-    switch (agent.icon) {
-      case "ref":
-        return <ImageIcon className="h-5 w-5" style={{ color: agent.color }} />;
-      case "hydra":
-        return <Package className="h-5 w-5" style={{ color: agent.color }} />;
-      case "enhance":
-        return <Palette className="h-5 w-5" style={{ color: agent.color }} />;
-      case "db12":
-        return <PenTool className="h-5 w-5" style={{ color: agent.color }} />;
-      case "orion":
-        return <Sparkles className="h-5 w-5" style={{ color: agent.color }} />;
-      case "altera":
-        return <Wand2 className="h-5 w-5" style={{ color: agent.color }} />;
-    }
-  };
-
-  const hasVideo = Boolean(agent.videoUrl && agent.bullets && agent.bullets.length > 0);
-
-  return (
-    <a
-      href={agent.route}
-      onClick={(e) => {
-        e.preventDefault();
-        onOpen();
-      }}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      style={{ animationDelay: `${index * 80}ms` }}
-      className={`group relative block lg:aspect-[4/5] ${
-        hasVideo ? "lg:[perspective:1200px]" : ""
-      } transition-[z-index] duration-0 lg:hover:z-50 active:scale-[0.98] cursor-pointer`}
-    >
-      <div
-        className={`relative w-full lg:h-full transition-transform duration-700 ease-suave ${
-          hasVideo
-            ? "lg:[transform-style:preserve-3d] [transform-origin:center_center] lg:group-hover:[transform:scale(1.2)_rotateY(180deg)]"
-            : ""
-        }`}
-      >
-        {/* ── CARD FRONT (Frente do Card) ── */}
-        <div
-          className={`relative lg:absolute lg:inset-0 flex flex-col justify-center rounded-2xl p-5 lg:p-6 overflow-hidden glass-card ${
-            hasVideo ? "lg:[backface-visibility:hidden]" : ""
-          } border border-white/[0.08] hover:border-white/20 transition-colors`}
-        >
-          {/* Linha de acento neon no topo */}
-          <div
-            className="absolute top-0 left-6 right-6 h-px opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-            style={{
-              background: `linear-gradient(90deg, transparent, ${agent.color}, transparent)`,
-            }}
-          />
-
-          {/* Badge (Top 1°, Top 2°, etc.) */}
-          {agent.badge && (
-            <div className="absolute top-4 right-4 flex flex-col items-end gap-1.5">
-              <span
-                className="rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider"
-                style={{
-                  backgroundColor: agent.badgeBg,
-                  color: agent.badgeColor,
-                }}
-              >
-                {agent.badge}
-              </span>
-            </div>
-          )}
-
-          {/* Ícone com glow */}
-          <div
-            className="flex h-11 w-11 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110"
-            style={{ backgroundColor: `${agent.color}15` }}
-          >
-            {renderCardIcon()}
-          </div>
-
-          {/* Textos */}
-          <div className="mt-4">
-            <h3 className="text-[22px] font-bold tracking-tight text-white leading-none transition-colors duration-200 group-hover:text-white/90">
-              {agent.name}
-            </h3>
-            {agent.subtitle && (
-              <span className="mt-1 block text-[11px] font-medium uppercase tracking-widest text-zinc-500">
-                {agent.subtitle}
-              </span>
-            )}
-            <p className="mt-3 text-sm leading-relaxed text-zinc-400 line-clamp-3 lg:text-[15px] lg:line-clamp-5">
-              {agent.desc}
-            </p>
-          </div>
-
-          {/* Rodapé do Card */}
-          <div
-            className="pt-4 flex items-center gap-1.5 text-xs font-medium text-zinc-600 transition-all duration-200 group-hover:gap-2.5 group-hover:text-white"
-            style={agent.id === "hydra" ? { color: agent.color } : {}}
-          >
-            {hasVideo && <span className="hidden lg:inline">Passe o mouse para ver</span>}
-            <span className={hasVideo ? "lg:hidden" : ""}>Abrir</span>
-            <ArrowRight size={14} />
-          </div>
-        </div>
-
-        {/* ── CARD BACK (Verso com Vídeo 3D no Hover) ── */}
-        {hasVideo && (
-          <div
-            className="absolute top-0 bottom-0 left-1/2 hidden overflow-hidden rounded-2xl bg-black lg:flex [backface-visibility:hidden] [transform:translateX(-50%)_rotateY(180deg)] border border-white/10"
-            style={{ aspectRatio: "7 / 5" }}
-          >
-            {/* Coluna do Vídeo */}
-            <div className="relative h-full shrink-0" style={{ aspectRatio: "4 / 5" }}>
-              <video
-                ref={videoRef}
-                src={agent.videoUrl}
-                loop
-                playsInline
-                muted
-                preload="metadata"
-                className="h-full w-full object-cover"
-              />
-              <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-black to-transparent" />
-            </div>
-
-            {/* Coluna das Vantagens e Ação */}
-            <div className="flex h-full flex-1 flex-col justify-between bg-black p-4">
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/55">
-                  {agent.name}
-                </p>
-                <div className="mt-2 h-px w-8 bg-white/15" />
-                <ul className="mt-3.5 space-y-2.5">
-                  {agent.bullets?.map((b, i) => (
-                    <li key={i} className="flex gap-2 text-[11px] leading-snug text-white/90">
-                      <span
-                        className="mt-1.5 inline-block h-1 w-1 shrink-0 rounded-full"
-                        style={{ backgroundColor: agent.color }}
-                      />
-                      <span>{b}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="flex items-center gap-1.5 text-[11px] font-medium text-white hover:text-violet-300 transition-colors">
-                <span>Abrir</span>
-                <ArrowRight size={13} />
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </a>
-  );
-};
-
-export default DesignBuilderVitrine;
