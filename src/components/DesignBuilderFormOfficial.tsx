@@ -14,6 +14,9 @@ interface DesignBuilderFormOfficialProps {
   onGenerate: () => void;
   activePalcoMode?: string;
   agentColWidth?: number;
+  isOrion?: boolean;
+  agentColor?: string;
+  onCloseMobileCategory?: () => void;
 }
 
 export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps> = ({
@@ -22,7 +25,10 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
   isGenerating = false,
   onGenerate,
   activePalcoMode,
-  agentColWidth = 420
+  agentColWidth = 420,
+  isOrion = false,
+  agentColor,
+  onCloseMobileCategory
 }) => {
   const store = useProjectStore();
 
@@ -570,7 +576,7 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
       }`}
       style={{
         "--agent-form-col-w": `${agentColWidth || 420}px`,
-        "--agent-color": "#7C3AED",
+        "--agent-color": isOrion ? "#ffd500" : (agentColor || "#7C3AED"),
       } as any}
     >
       <form
@@ -583,6 +589,34 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
         {/* ── 1. SUJEITO / PRODUTO ── */}
         <div id="section-sujeito" data-tour="form-sec-subject" className="scroll-mt-14">
           <div className="flex flex-col gap-6 lg:gap-12">
+
+            {/* Categoria* (Órion Pro) */}
+            {isOrion && (
+              <div data-field-id="categoria" className="flex flex-col gap-2 campo-com-info">
+                <label className="flex items-center gap-1.5 text-sm font-semibold text-white">
+                  <span>Categoria*</span>
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(["Pessoa", "Produto", "Livre"] as const).map((cat) => {
+                    const isSelected = (store.categoria || "Pessoa") === cat;
+                    return (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => store.updateConfig({ categoria: cat as any })}
+                        className={`flex h-10 items-center justify-center rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          isSelected
+                            ? "bg-[#2D2415] border-2 border-[#ffd500] text-[#ffd500] shadow-[0_0_12px_rgba(255,213,0,0.25)]"
+                            : "bg-white/[0.04] border border-white/10 text-zinc-400 hover:text-white hover:bg-white/[0.08]"
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             
             {/* Fotos do Sujeito / Produto */}
             {isSubjectManagerOpen ? (
@@ -2525,11 +2559,19 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
             <button
               type="submit"
               disabled={isGenerating}
-              className="flex w-full items-center justify-center gap-2 text-white rounded-xl px-6 py-4 text-base font-semibold transition-all duration-300 hover:scale-[1.01] active:scale-95 shadow-lg disabled:cursor-not-allowed disabled:hover:scale-100 disabled:opacity-40 cursor-pointer"
-              style={{ background: "linear-gradient(to right, rgb(124, 58, 237), rgba(124, 58, 237, 0.8))" }}
+              className={`flex w-full items-center justify-center gap-2 rounded-xl px-6 py-4 text-base font-semibold transition-all duration-300 hover:scale-[1.01] active:scale-95 shadow-lg disabled:cursor-not-allowed disabled:hover:scale-100 disabled:opacity-40 cursor-pointer ${
+                isOrion ? "text-black shadow-[0_4px_24px_rgba(255,213,0,0.3)]" : "text-white"
+              }`}
+              style={{
+                background: isOrion
+                  ? "linear-gradient(135deg, rgb(255, 213, 0), rgba(255, 213, 0, 0.85))"
+                  : "linear-gradient(to right, rgb(124, 58, 237), rgba(124, 58, 237, 0.8))"
+              }}
             >
               <span>{isGenerating ? "Construindo..." : "Construir"}</span>
-              <span className="ml-1.5 rounded-lg bg-white/15 px-2 py-0.5 text-xs font-medium">1 crédito</span>
+              <span className={`ml-1.5 rounded-lg px-2 py-0.5 text-xs font-semibold ${
+                isOrion ? "bg-black/15 text-black" : "bg-white/15 text-white"
+              }`}>1 crédito</span>
             </button>
             <div className="mt-2 flex items-center justify-center gap-3 text-[11px] text-[#9d94bb]">
               <button
@@ -2570,11 +2612,19 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
                   type="button"
                   disabled={isGenerating}
                   onClick={onGenerate}
-                  className="flex w-full items-center justify-center gap-2 text-white rounded-xl px-6 py-4 text-base font-semibold transition-all duration-300 hover:scale-[1.01] active:scale-95 shadow-lg disabled:cursor-not-allowed disabled:hover:scale-100 disabled:opacity-40 cursor-pointer"
-                  style={{ background: "linear-gradient(to right, rgb(124, 58, 237), rgba(124, 58, 237, 0.8))" }}
+                  className={`flex w-full items-center justify-center gap-2 rounded-xl px-6 py-4 text-base font-semibold transition-all duration-300 hover:scale-[1.01] active:scale-95 shadow-lg disabled:cursor-not-allowed disabled:hover:scale-100 disabled:opacity-40 cursor-pointer ${
+                    isOrion ? "text-black shadow-[0_4px_24px_rgba(255,213,0,0.3)]" : "text-white"
+                  }`}
+                  style={{
+                    background: isOrion
+                      ? "linear-gradient(135deg, rgb(255, 213, 0), rgba(255, 213, 0, 0.85))"
+                      : "linear-gradient(to right, rgb(124, 58, 237), rgba(124, 58, 237, 0.8))"
+                  }}
                 >
                   <span>{isGenerating ? "Construindo..." : "Construir"}</span>
-                  <span className="ml-1.5 rounded-lg bg-white/15 px-2 py-0.5 text-xs font-medium">1 crédito</span>
+                  <span className={`ml-1.5 rounded-lg px-2 py-0.5 text-xs font-semibold ${
+                    isOrion ? "bg-black/15 text-black" : "bg-white/15 text-white"
+                  }`}>1 crédito</span>
                 </button>
               </div>
               <div className="mt-2 px-1 pb-0.5">
@@ -2635,9 +2685,11 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
         <button
           type="button"
           aria-label="Minimizar filtros"
-          className="lg:hidden flex w-full shrink-0 items-center justify-center py-0.5 text-zinc-500 transition-colors active:text-white cursor-pointer"
+          onClick={onCloseMobileCategory}
+          className="lg:hidden flex w-full shrink-0 items-center justify-center py-2 text-zinc-400 hover:text-white transition-colors cursor-pointer gap-1"
         >
           <ChevronDown className="h-4 w-4" />
+          <span className="text-xs font-medium">Fechar filtros</span>
         </button>
 
         <div className="h-20 shrink-0" aria-hidden="true"></div>

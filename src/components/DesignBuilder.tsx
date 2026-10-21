@@ -622,12 +622,28 @@ export default function DesignBuilder({
   useEffect(() => {
     if (!mobileActiveCategory) return;
     const catMap: Record<string, string> = {
-      sujeito: '[data-tour="form-sec-subject"]',
-      contexto: '[data-tour="form-sec-context"]',
-      texto: '[data-tour="form-sec-step_1773771934403_6"]',
-      cores: '[data-tour="form-sec-advanced"]',
-      composicao: '[data-tour="form-sec-style"]',
-      prompt: '[data-tour="form-sec-step_1773770939424_4"]',
+      principal: '#section-sujeito, [data-tour="form-sec-subject"]',
+      sujeito: '#section-sujeito, [data-tour="form-sec-subject"]',
+      foto: '#section-sujeito, [data-tour="form-sec-subject"]',
+
+      marca: '#section-cores, [data-tour="form-sec-advanced"]',
+      marca_estilo: '#section-cores, [data-tour="form-sec-advanced"]',
+      cores: '#section-cores, [data-tour="form-sec-advanced"]',
+      estilo: '#section-cores, [data-tour="form-sec-advanced"]',
+
+      cenario: '#section-cenario, [data-tour="form-sec-context"]',
+      contexto: '#section-cenario, [data-tour="form-sec-context"]',
+
+      texto: '#section-texto, [data-tour="form-sec-step_1773771934403_6"]',
+      texto_imagem: '#section-texto, [data-tour="form-sec-step_1773771934403_6"]',
+
+      ajustes: '#section-composicao, [data-tour="form-sec-style"]',
+      composicao: '#section-composicao, [data-tour="form-sec-style"]',
+
+      configuracoes: '#section-prompt, [data-tour="form-sec-step_1773770939424_4"]',
+      config: '#section-prompt, [data-tour="form-sec-step_1773770939424_4"]',
+      prompt: '#section-prompt, [data-tour="form-sec-step_1773770939424_4"]',
+      saida: '#section-prompt, [data-tour="form-sec-step_1773770939424_4"]',
     };
     const selector = catMap[mobileActiveCategory];
     if (!selector) return;
@@ -1667,51 +1683,22 @@ export default function DesignBuilder({
               (mobileActiveCategory && !isGenerating) ? "max-lg:grid-rows-[0fr_1fr]" : "max-lg:grid-rows-[1fr_0fr]"
             }`}
           >
-            {/* ── COLUNA ESQUERDA: FORMULÁRIO DO AGENTE (420px) ── */}
-            {isOrion ? (
-              <aside
-                data-aside-form-col=""
-                data-tour="form"
-                className={`agent-form-col relative z-10 shrink-0 flex-col overflow-hidden border-r border-white/5 p-0 transition-[filter,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] w-full lg:h-full lg:w-[var(--agent-form-col-w,420px)] lg:min-w-[280px] lg:max-w-[700px] lg:flex-shrink-0 flex max-lg:order-last max-lg:min-h-0 lg:flex ${
-                  studioPalcoTab !== "builder" ? "max-lg:hidden" : ""
-                }`}
-                style={{ "--agent-form-col-w": "420px", "--agent-color": "#ffd500" } as any}
-              >
-                <OrionProBuilder
-                  onSwitchAgent={handleSwitchAgent}
-                  onOpenVitrine={handleGoHome}
-                  onOpenGallery={() => {
-                    setActivePalcoMode("galeria");
-                    setStudioPalcoTab("galeria");
-                    if (typeof window !== "undefined") window.history.pushState({ path: "/gallery" }, "", "/gallery");
-                  }}
-                  onOpenCommunity={() => {
-                    setActivePalcoMode("comunidade");
-                    setStudioPalcoTab("comunidade");
-                    if (typeof window !== "undefined") window.history.pushState({ path: "/community" }, "", "/community");
-                  }}
-                  onOpenChat={() => setIsAssistantOpen(true)}
-                  onOpenReport={() => setIsReportModalOpen(true)}
-                  showToast={showToast}
-                  isGenerating={isGenerating}
-                  generatePremiumImage={generatePremiumImage}
-                  onCloseMobileCategory={() => setMobileActiveCategory(null)}
-                />
-              </aside>
-            ) : (
-              <DesignBuilderFormOfficial
-                onOpenCropModal={handleOpenCropModal}
-                showToast={showToast}
-                isGenerating={isGenerating}
-                onGenerate={() => {
-                  setMobileActiveCategory(null);
-                  setStudioPalcoTab("builder");
-                  generatePremiumImage();
-                }}
-                activePalcoMode={activePalcoMode}
-                agentColWidth={420}
-              />
-            )}
+            {/* ── COLUNA ESQUERDA: FORMULÁRIO DO AGENTE (420px) (IDÊNTICO AO OFICIAL DESIGN BUILDER) ── */}
+            <DesignBuilderFormOfficial
+              onOpenCropModal={handleOpenCropModal}
+              showToast={showToast}
+              isGenerating={isGenerating}
+              onGenerate={() => {
+                setMobileActiveCategory(null);
+                setStudioPalcoTab("builder");
+                generatePremiumImage();
+              }}
+              activePalcoMode={activePalcoMode}
+              agentColWidth={420}
+              isOrion={isOrion}
+              agentColor={isOrion ? "#ffd500" : "#7C3AED"}
+              onCloseMobileCategory={() => setMobileActiveCategory(null)}
+            />
 
             {/* Divisor Redimensionável */}
             <div
