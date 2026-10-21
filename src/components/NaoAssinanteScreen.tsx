@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 interface NaoAssinanteScreenProps {
+  onClose?: () => void;
   currentUser: { email: string; role: "admin" | "client" } | null;
   onOpenAuth: () => void;
   onSignOut: () => void;
@@ -34,7 +35,8 @@ export const NaoAssinanteScreen: React.FC<NaoAssinanteScreenProps> = ({
   onSignOut,
   onRecheck,
   onOpenPlanModal,
-  subscriberInfo
+  subscriberInfo,
+  onClose
 }) => {
   const [isChecking, setIsChecking] = useState(false);
 
@@ -114,6 +116,16 @@ export const NaoAssinanteScreen: React.FC<NaoAssinanteScreenProps> = ({
         <div className="w-full max-w-xl mx-auto">
           {/* Card Container */}
           <div className="relative rounded-3xl border border-white/10 bg-[#0d0b18]/80 backdrop-blur-2xl p-7 sm:p-10 shadow-2xl shadow-purple-950/40 text-center overflow-hidden">
+            {onClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Fechar"
+                className="absolute top-4 right-4 rounded-full p-2 text-zinc-400 hover:bg-white/10 hover:text-white transition-colors cursor-pointer z-20"
+              >
+                ✕
+              </button>
+            )}
             {/* Top Accent Line */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-[2px] bg-gradient-to-r from-transparent via-[#a855f7] to-transparent" />
 
@@ -255,6 +267,15 @@ export const NaoAssinanteScreen: React.FC<NaoAssinanteScreenProps> = ({
                   >
                     Entrar com outra conta de e-mail
                   </button>
+                  {onClose && (
+                    <button
+                      type="button"
+                      onClick={onClose}
+                      className="mt-2 text-xs font-semibold text-violet-400 hover:text-violet-300 hover:underline cursor-pointer"
+                    >
+                      Continuar para o Studio Design Builder →
+                    </button>
+                  )}
                 </>
               ) : (
                 <button

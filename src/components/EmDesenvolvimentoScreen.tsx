@@ -2,6 +2,7 @@ import React from "react";
 import NaoAssinanteScreen from "./NaoAssinanteScreen";
 
 interface EmDesenvolvimentoScreenProps {
+  onClose?: () => void;
   currentUser: { email: string; role: "admin" | "client" } | null;
   onOpenAuth: () => void;
   onSignOut: () => void;
