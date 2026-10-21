@@ -2242,7 +2242,7 @@ export const HydraBuilder: React.FC<HydraBuilderProps> = ({
             disabled={isGenerating || !currentTab.productImage}
             onClick={() => {
               setMobileView("palco");
-              handleGenerateImage();
+              handleBuild();
             }}
             className="group ml-0.5 flex min-h-[46px] min-w-[70px] shrink-0 snap-start flex-col items-center justify-center gap-1 rounded-xl px-2.5 text-white transition-transform duration-100 ease-out active:scale-95 disabled:opacity-60 cursor-pointer shadow-lg shadow-violet-600/30"
             style={{

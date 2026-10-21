@@ -15,6 +15,9 @@ import { CosmicBackground } from "./CosmicBackground";
 import { DesignBuilderAssistant } from "./DesignBuilderAssistant";
 
 interface DesignBuilderHomeProps {
+  isLoggedIn?: boolean;
+  onOpenEntryModal?: (url?: string) => void;
+  onSignOut?: () => void;
   onOpenStudio: (agentSlug?: string) => void;
   onOpenGallery?: () => void;
   onOpenCommunity?: () => void;

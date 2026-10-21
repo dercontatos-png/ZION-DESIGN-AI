@@ -26,15 +26,19 @@ import {
 import { DesignBuilderSettingsModal } from "./DesignBuilderSettingsModal";
 
 export const AGENTS = [
-  { slug: "ref", name: "REF", href: "/agent/ref", color: "rgb(139, 92, 246)" },
-  { slug: "hydra", name: "Hydra", href: "/hydra", color: "rgb(139, 92, 246)" },
-  { slug: "enhance-builder", name: "Enhance", href: "/enhance-builder", color: "rgb(124, 58, 237)" },
-  { slug: "design-builder1-2", name: "Design Builder 1.2", href: "/agent/design-builder1-2", color: "rgb(124, 58, 237)" },
   { slug: "orion-pro", name: "Órion Pro", href: "/orion-pro", color: "rgb(255, 213, 0)" },
+  { slug: "design-builder1-2", name: "Orion 1.2", href: "/agent/design-builder1-2", color: "rgb(124, 58, 237)" },
+  { slug: "ref", name: "REF", href: "/agent/ref", color: "rgb(139, 92, 246)" },
+  { slug: "enhance-builder", name: "Enhance", href: "/enhance-builder", color: "rgb(124, 58, 237)" },
   { slug: "altera-facil", name: "Altera Fácil", href: "/altera-facil", color: "rgb(168, 85, 247)" },
+  { slug: "hydra", name: "Hydra", href: "/hydra", color: "rgb(139, 92, 246)" },
+  { slug: "remove-fundo", name: "Remove Fundo", href: "/remove-fundo", color: "rgb(236, 72, 153)" },
+  { slug: "vector-builder", name: "Vector Builder", href: "/vector-builder", color: "rgb(59, 130, 246)" },
+  { slug: "conversor", name: "Conversor", href: "/conversor", color: "rgb(16, 185, 129)" },
 ];
 
 export interface DesignBuilderSidebarProps {
+  onOpenMasterPrompts?: () => void;
   variant?: "dock" | "expanded";
   activeTab: string;
   onNavigateTab: (tab: string) => void;

@@ -81,6 +81,7 @@ interface ChatMsg {
 }
 
 interface DesignBuilderAssistantProps {
+  onSelectAgent?: (slug: string) => void;
   onApplyPrompt?: (prompt: string) => void;
   showToast?: (msg: string, type: "success" | "error" | "warning" | "info") => void;
 }

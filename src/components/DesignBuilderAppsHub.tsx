@@ -115,6 +115,57 @@ export const APPS_CATALOG: AppDefinition[] = [
     color: "rgb(168, 85, 247)",
     route: "/altera-facil",
     icon: "wand"
+  },
+  {
+    id: "remove-fundo",
+    name: "Remove Fundo",
+    subtitle: "Tool",
+    badge: "IA Rápida",
+    badgeColor: "rgb(236, 72, 153)",
+    badgeBg: "rgba(236, 72, 153, 0.125)",
+    desc: "Remova o fundo de imagens instantaneamente com IA em alta resolução.",
+    color: "rgb(236, 72, 153)",
+    route: "/remove-fundo",
+    bullets: [
+      "Remoção com 1 clique",
+      "Alta definição e transparência PNG",
+      "Perfeito para produtos e pessoas"
+    ],
+    icon: "wand"
+  },
+  {
+    id: "vector-builder",
+    name: "Vector Builder",
+    subtitle: "Tool",
+    badge: "Vetor",
+    badgeColor: "rgb(59, 130, 246)",
+    badgeBg: "rgba(59, 130, 246, 0.125)",
+    desc: "Converta imagens e logos em vetores SVG escaláveis e nítidos.",
+    color: "rgb(59, 130, 246)",
+    route: "/vector-builder",
+    bullets: [
+      "Exportação SVG escalável",
+      "Controle de cores e curvas",
+      "Ideal para identidades visuais"
+    ],
+    icon: "pen-tool"
+  },
+  {
+    id: "conversor",
+    name: "Conversor",
+    subtitle: "Tool",
+    badge: "Utilitário",
+    badgeColor: "rgb(16, 185, 129)",
+    badgeBg: "rgba(16, 185, 129, 0.125)",
+    desc: "Converta e comprima imagens entre PNG, JPG, WebP, AVIF e SVG.",
+    color: "rgb(16, 185, 129)",
+    route: "/conversor",
+    bullets: [
+      "Suporte a múltiplos formatos",
+      "Compressão sem perda visual",
+      "Conversão em lote ultra-rápida"
+    ],
+    icon: "package"
   }
 ];
 

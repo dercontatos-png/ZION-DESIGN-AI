@@ -3,6 +3,7 @@ import { X, Zap, CreditCard, User, Coins, ImageOff, Mail, Camera, Shield } from 
 import { getCreditState, getCreditTransactions, syncWithGoogleCloud, ExtratoItem, CreditState } from "../utils/creditsManager";
 
 interface CreditsModalProps {
+  isOpen?: boolean;
   onClose: () => void;
   onOpenSettings?: () => void;
   onOpenAdmin?: () => void;

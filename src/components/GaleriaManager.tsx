@@ -233,7 +233,7 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
             else if (fLower.includes("altera")) detectedSlug = "altera-facil";
             else if (fLower.includes("orion")) detectedSlug = "orion-pro";
 
-            const stableId = "store-gen-" + (imgUrl.split("/").pop() || idx).replace(/[^a-zA-Z0-9]/g, "_");
+            const stableId = "store-gen-" + String(imgUrl.split("/").pop() || idx).replace(/[^a-zA-Z0-9]/g, "_");
             newItems.push({
               id: stableId,
               status: "done",

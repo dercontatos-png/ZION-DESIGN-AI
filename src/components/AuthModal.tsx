@@ -208,12 +208,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
     // Background sync to Supabase database if available
     try {
-      supabase.from("users").upsert({
+      Promise.resolve(supabase.from("users").upsert({
         email: cleanEmail,
         role,
         data: { full_name: userPayload.name, phone: phone.trim(), channel },
         updated_at: new Date().toISOString()
-      }).catch(() => {});
+      })).catch(() => {});
     } catch (_) {}
 
     onLoginSuccess(userPayload);

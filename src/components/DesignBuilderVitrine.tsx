@@ -16,6 +16,11 @@ import { DesignBuilderAssistant } from "./DesignBuilderAssistant";
 import { DesignBuilderMobileNav } from "./DesignBuilderMobileNav";
 
 interface DesignBuilderVitrineProps {
+  isLoggedIn?: boolean;
+  onOpenEntryModal?: (url?: string) => void;
+  onSignOut?: () => void;
+  onGoHome?: () => void;
+  onOpenMasterPrompts?: () => void;
   onOpenStudio: (agentSlug?: string) => void;
   onOpenGallery?: () => void;
   onOpenCommunity?: () => void;

@@ -28,6 +28,9 @@ import HydraBuilder from "./HydraBuilder";
 import AlteraFacilBuilder from "./AlteraFacilBuilder";
 import { RefBuilder } from "./RefBuilder";
 import EnhanceBuilder from "./EnhanceBuilder";
+import { RemoveFundoTool } from "./RemoveFundoTool";
+import { VectorBuilderTool } from "./VectorBuilderTool";
+import { ConversorImagensTool } from "./ConversorImagensTool";
 import GenerationLoadingCanvas from "./GenerationLoadingCanvas";
 import ImageCropModal from "./ImageCropModal";
 import ReportModal from "./ReportModal";
@@ -130,6 +133,9 @@ export default function DesignBuilder({
       if (p === "/ref" || p === "/agent/ref" || agentParam === "ref") return "ref";
       if (p === "/orion-pro" || p === "/orion" || p === "/agent/orion-pro" || p === "/agent/orion" || agentParam === "orion-pro" || agentParam === "orion") return "orion-pro";
       if (p === "/agent/design-builder1-2" || p === "/design-builder" || agentParam === "design-builder" || agentParam === "design-builder1-2") return "design-builder1-2";
+      if (p === "/remove-fundo" || agentParam === "remove-fundo") return "remove-fundo";
+      if (p === "/vector-builder" || agentParam === "vector-builder") return "vector-builder";
+      if (p === "/conversor" || agentParam === "conversor") return "conversor";
       try {
         const saved = localStorage.getItem("zion_last_selected_agent");
         if (saved) return saved;
@@ -1086,9 +1092,8 @@ export default function DesignBuilder({
     store.updateConfig({ activeAgentSlug: clean } as any);
     setIsVitrineOpen(false);
     setActivePalcoMode("builder");
-    if (clean === "orion-pro" || clean === "orion") {
-      setMobileActiveCategory("principal");
-    }
+    // Manter mobileActiveCategory como null por padrão para mostrar o preview canvas imediato como no app oficial
+    // if (clean === "orion-pro" || clean === "orion") { setMobileActiveCategory(null); }
 
     if (typeof window !== "undefined") {
       try {
@@ -1619,6 +1624,34 @@ export default function DesignBuilder({
               }}
               onOpenChat={() => setIsAssistantOpen(true)}
               onOpenReport={() => setIsReportModalOpen(true)}
+            />
+          </div>
+        ) : selectedAgent === "remove-fundo" ? (
+          <div className="flex-1 flex flex-col h-full overflow-hidden">
+            <RemoveFundoTool
+              onClose={handleGoHome}
+              showToast={showToast}
+              onSendToOrion={(img) => {
+                store.setSujeitoBase64(img);
+                handleSwitchAgent("orion-pro");
+              }}
+              onSendToAltera={(img) => {
+                handleSwitchAgent("altera-facil");
+              }}
+            />
+          </div>
+        ) : selectedAgent === "vector-builder" ? (
+          <div className="flex-1 flex flex-col h-full overflow-hidden">
+            <VectorBuilderTool
+              onClose={handleGoHome}
+              showToast={showToast}
+            />
+          </div>
+        ) : selectedAgent === "conversor" ? (
+          <div className="flex-1 flex flex-col h-full overflow-hidden">
+            <ConversorImagensTool
+              onClose={handleGoHome}
+              showToast={showToast}
             />
           </div>
         ) : (
