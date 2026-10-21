@@ -1252,14 +1252,16 @@ export default function DesignBuilder({
         />
 
         {/* Credits Modal */}
-        <CreditsModal
-          isOpen={isCreditsModalOpen}
-          onClose={() => setIsCreditsModalOpen(false)}
-          userEmail={currentUser?.email || ""}
-          userName={currentUser?.name || "Visitante"}
-          userInitials={currentUser?.initials || "VI"}
-          onSignOut={handleSignOut}
-        />
+        {isCreditsModalOpen && (
+          <CreditsModal
+            isOpen={isCreditsModalOpen}
+            onClose={() => setIsCreditsModalOpen(false)}
+            userEmail={currentUser?.email || ""}
+            userName={currentUser?.name || "Visitante"}
+            userInitials={currentUser?.initials || "VI"}
+            onSignOut={handleSignOut}
+          />
+        )}
 
         {/* Modal Sem Créditos Oficial Design Builder */}
         <NoCreditsModal
@@ -1360,14 +1362,16 @@ export default function DesignBuilder({
         />
 
         {/* Credits Modal */}
-        <CreditsModal
-          isOpen={isCreditsModalOpen}
-          onClose={() => setIsCreditsModalOpen(false)}
-          userEmail={currentUser?.email || ""}
-          userName={currentUser?.name || "Visitante"}
-          userInitials={currentUser?.initials || "VI"}
-          onSignOut={handleSignOut}
-        />
+        {isCreditsModalOpen && (
+          <CreditsModal
+            isOpen={isCreditsModalOpen}
+            onClose={() => setIsCreditsModalOpen(false)}
+            userEmail={currentUser?.email || ""}
+            userName={currentUser?.name || "Visitante"}
+            userInitials={currentUser?.initials || "VI"}
+            onSignOut={handleSignOut}
+          />
+        )}
 
         {/* Modal Sem Créditos Oficial Design Builder */}
         <NoCreditsModal

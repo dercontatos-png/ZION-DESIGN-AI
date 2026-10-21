@@ -17,6 +17,7 @@ interface CreditsModalProps {
 }
 
 export const CreditsModal: React.FC<CreditsModalProps> = ({
+  isOpen = true,
   onClose,
   onOpenSettings,
   onOpenAdmin,
@@ -54,6 +55,11 @@ export const CreditsModal: React.FC<CreditsModalProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+
     // Sincroniza em tempo real com a API do Google Cloud/GCP
     syncWithGoogleCloud(true).then((updated) => {
       setCreditState(updated);
@@ -64,8 +70,11 @@ export const CreditsModal: React.FC<CreditsModalProps> = ({
       setTransactions(getCreditTransactions());
     };
     window.addEventListener("zion_credits_updated", update);
-    return () => window.removeEventListener("zion_credits_updated", update);
-  }, []);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("zion_credits_updated", update);
+    };
+  }, [onClose]);
 
   const remaining = creditState.remaining ?? 0;
   const userInitials = (name || propUserInitials).substring(0, 2).toUpperCase();
@@ -140,6 +149,8 @@ export const CreditsModal: React.FC<CreditsModalProps> = ({
     setIsChangingEmail(false);
     setNewEmail("");
   };
+  if (isOpen === false) return null;
+
 
   return (
     <div
