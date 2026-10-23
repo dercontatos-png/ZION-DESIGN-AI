@@ -7,6 +7,24 @@ import { checkAdminOrOpenPlan, getAuthHeaders, openPlanModal } from "../utils/us
  * Converte uma string base64 (com ou sem prefixo data:) em um File/Blob nativo
  * para envio em FormData sem perda de qualidade (evita re-compressão).
  */
+/**
+ * Normaliza a assinatura de uma imagem (base64 ou URL) para deduplicação precisa
+ */
+const getNormalizedImageKey = (img: any): string => {
+  if (!img) return '';
+  let str = typeof img === 'string' ? img.trim() : (((img as any)?.url || (img as any)?.data || '') as string).trim();
+  if (!str) return '';
+  if (str.startsWith('data:')) {
+    const commaIdx = str.indexOf(',');
+    if (commaIdx !== -1) str = str.slice(commaIdx + 1).trim();
+  }
+  if (str.includes('/') || str.includes('\\')) {
+    const parts = str.split(/[/\\]/);
+    return parts[parts.length - 1].split('?')[0].toLowerCase();
+  }
+  return str.slice(0, 100) + '_' + str.length;
+};
+
 const imageSourceToFile = async (source: string, filename: string): Promise<File | null> => {
   if (!source || typeof source !== "string" || !source.trim()) return null;
   const cleanSource = source.trim();
@@ -153,19 +171,24 @@ export const useGenerateImage = (
 
       // Brand Identity / Logotipos da Marca (Órion Pro e Design Builder)
       const allLogos: string[] = [];
-      if (store.logoBase64 && store.logoBase64.trim()) {
-        allLogos.push(store.logoBase64.trim());
+      const seenLogoKeys = new Set<string>();
+      const addLogoCandidate = (raw: any) => {
+        if (!raw) return;
+        const val = typeof raw === 'string' ? raw.trim() : (((raw as any)?.url || (raw as any)?.data || '') as string).trim();
+        if (!val) return;
+        const key = getNormalizedImageKey(val);
+        if (key && !seenLogoKeys.has(key)) {
+          seenLogoKeys.add(key);
+          allLogos.push(val);
+        }
+      };
+
+      if (store.logoBase64) {
+        addLogoCandidate(store.logoBase64);
       }
       if (Array.isArray(store.logosList)) {
         for (const l of store.logosList) {
-          const lStr = typeof l === "string" ? l.trim() : (((l as any)?.url || (l as any)?.data || "") as string).trim();
-          if (lStr && !allLogos.includes(lStr)) {
-            // Se já temos logoBase64 e a lista só tem 1 item, trata-se do mesmo logo
-            if (allLogos.length > 0 && store.logosList.length === 1) {
-              continue;
-            }
-            allLogos.push(lStr);
-          }
+          addLogoCandidate(l);
         }
       }
       // DEDUPLICAÇÃO INTELIGENTE DE LOGO:
@@ -611,18 +634,24 @@ export const useGenerateImage = (
       }
 
       const allLogos: string[] = [];
-      if (store.logoBase64 && store.logoBase64.trim()) {
-        allLogos.push(store.logoBase64.trim());
+      const seenLogoKeysFallback = new Set<string>();
+      const addLogoCandidateFallback = (raw: any) => {
+        if (!raw) return;
+        const val = typeof raw === 'string' ? raw.trim() : (((raw as any)?.url || (raw as any)?.data || '') as string).trim();
+        if (!val) return;
+        const key = getNormalizedImageKey(val);
+        if (key && !seenLogoKeysFallback.has(key)) {
+          seenLogoKeysFallback.add(key);
+          allLogos.push(val);
+        }
+      };
+
+      if (store.logoBase64) {
+        addLogoCandidateFallback(store.logoBase64);
       }
       if (Array.isArray(store.logosList)) {
         for (const l of store.logosList) {
-          const lStr = typeof l === "string" ? l.trim() : (((l as any)?.url || (l as any)?.data || "") as string).trim();
-          if (lStr && !allLogos.includes(lStr)) {
-            if (allLogos.length > 0 && store.logosList.length === 1) {
-              continue;
-            }
-            allLogos.push(lStr);
-          }
+          addLogoCandidateFallback(l);
         }
       }
       const finalLogos = allLogos.slice(0, 1);
@@ -639,8 +668,8 @@ export const useGenerateImage = (
         sujeitosBase64List: optSujeitosList,
         base64DoCenario: optCenario || optCenariosList[0] || "",
         cenariosBase64List: optCenariosList,
-        logoBase64: store.logoBase64 || finalLogos[0] || "",
-        logosList: finalLogos,
+        logoBase64: finalLogos[0] || "",
+        logosList: allLogos.length > 1 ? allLogos.slice(1) : [],
         useLogo: finalLogos.length > 0,
         referenciasEstilo: store.referenciasEstilo || [],
         designRefBase64: store.designRefBase64 || "",

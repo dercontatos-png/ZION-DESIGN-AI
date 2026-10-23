@@ -147,7 +147,7 @@ export const PromptsGallery: React.FC<PromptsGalleryProps> = ({
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-semibold mb-3">
                 <Sparkles className="w-3.5 h-3.5" />
-                24 Prompts Oficiais em Produção (15 Camadas de Física)
+                {prompts.length} Prompts Oficiais Extraídos (15 Camadas de Engenharia Reversa)
               </div>
               <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight text-white">
                 Galeria Mestre de Prompts

@@ -23,6 +23,7 @@ import { DesignBuilderHome } from "./DesignBuilderHome";
 import { DesignBuilderVitrine } from "./DesignBuilderVitrine";
 import { DesignBuilderAppsHub } from "./DesignBuilderAppsHub";
 import { OrionProBuilder } from "./OrionProBuilder";
+import { ErrorBoundary } from "./ErrorBoundary";
 import { DesignBuilderFormOfficial } from "./DesignBuilderFormOfficial";
 import HydraBuilder from "./HydraBuilder";
 import AlteraFacilBuilder from "./AlteraFacilBuilder";
@@ -1028,15 +1029,23 @@ export default function DesignBuilder({
         };
       }
 
-      // 1. Restaurar Logo / Identidade de Marca
-      const logoUrls = [
+      // 1. Restaurar Logo / Identidade de Marca (Deduplicação estrita - max 1 logo primário)
+      const rawLogoUrls = [
         ...extractUrls(inputUrls?.brand_identity_images),
         ...extractUrls(fd.brand_identity_images),
         ...extractUrls(fd.saved_files?.brand_identity_images)
       ];
+      const seenLogoSet = new Set();
+      const logoUrls = [];
+      for (const u of rawLogoUrls) {
+        if (u && !seenLogoSet.has(u)) {
+          seenLogoSet.add(u);
+          logoUrls.push(u);
+        }
+      }
       if (logoUrls.length > 0) {
         updates.logoBase64 = logoUrls[0];
-        updates.logosList = logoUrls;
+        updates.logosList = logoUrls.length > 1 ? logoUrls.slice(1) : [];
         updates.useLogo = true;
       }
 
@@ -1683,22 +1692,49 @@ export default function DesignBuilder({
               (mobileActiveCategory && !isGenerating) ? "max-lg:grid-rows-[0fr_1fr]" : "max-lg:grid-rows-[1fr_0fr]"
             }`}
           >
-            {/* ── COLUNA ESQUERDA: FORMULÁRIO DO AGENTE (420px) (IDÊNTICO AO OFICIAL DESIGN BUILDER) ── */}
-            <DesignBuilderFormOfficial
-              onOpenCropModal={handleOpenCropModal}
-              showToast={showToast}
-              isGenerating={isGenerating}
-              onGenerate={() => {
-                setMobileActiveCategory(null);
-                setStudioPalcoTab("builder");
-                generatePremiumImage();
-              }}
-              activePalcoMode={activePalcoMode}
-              agentColWidth={420}
-              isOrion={isOrion}
-              agentColor={isOrion ? "#ffd500" : "#7C3AED"}
-              onCloseMobileCategory={() => setMobileActiveCategory(null)}
-            />
+            {/* ── COLUNA ESQUERDA: FORMULÁRIO DO AGENTE (420px) ── */}
+            {isOrion ? (
+              <div className="w-full lg:w-[420px] shrink-0 h-full overflow-hidden flex flex-col bg-[#0C0D11] border-r border-white/5 z-20">
+                <ErrorBoundary fallbackTitle="Erro ao carregar o Órion Pro">
+                <OrionProBuilder
+                  onSwitchAgent={handleSwitchAgent}
+                  onOpenVitrine={handleOpenVitrine}
+                  onOpenGallery={() => {
+                    setActivePalcoMode("galeria");
+                    if (typeof window !== "undefined") window.history.pushState({ path: "/gallery" }, "", "/gallery");
+                  }}
+                  onOpenCommunity={() => {
+                    setActivePalcoMode("comunidade");
+                    if (typeof window !== "undefined") window.history.pushState({ path: "/community" }, "", "/community");
+                  }}
+                  showToast={showToast}
+                  isGenerating={isGenerating}
+                  generatePremiumImage={async () => {
+                    setMobileActiveCategory(null);
+                    setStudioPalcoTab("builder");
+                    await generatePremiumImage();
+                  }}
+                  onCloseMobileCategory={() => setMobileActiveCategory(null)}
+                />
+                </ErrorBoundary>
+              </div>
+            ) : (
+              <DesignBuilderFormOfficial
+                onOpenCropModal={handleOpenCropModal}
+                showToast={showToast}
+                isGenerating={isGenerating}
+                onGenerate={() => {
+                  setMobileActiveCategory(null);
+                  setStudioPalcoTab("builder");
+                  generatePremiumImage();
+                }}
+                activePalcoMode={activePalcoMode}
+                agentColWidth={420}
+                isOrion={isOrion}
+                agentColor={isOrion ? "#ffd500" : "#7C3AED"}
+                onCloseMobileCategory={() => setMobileActiveCategory(null)}
+              />
+            )}
 
             {/* Divisor Redimensionável */}
             <div

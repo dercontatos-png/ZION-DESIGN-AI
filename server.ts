@@ -1976,6 +1976,11 @@ async function startServer() {
     }
   };
 
+  // Healthcheck endpoint (Railway, Cloudflare, Docker)
+  app.get(["/api/health", "/health"], (_req: any, res: any) => {
+    return res.status(200).json({ status: "ok", timestamp: Date.now(), service: "zion-design-ai" });
+  });
+
   // Core Generation Endpoint (Express / Vite Dev Server)
   app.post(
     "/api/bff/api/generate",
@@ -7852,21 +7857,44 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
           });
         }
 
-        // Attach logo references (Strict deduplication)
+        // Attach logo references (Strict deduplication - max 1 primary logo)
+        const normalizeLogoKey = (str: any): string => {
+          if (!str) return '';
+          let s = typeof str === 'string' ? str.trim() : (((str as any)?.url || (str as any)?.data || '') as string).trim();
+          if (!s) return '';
+          if (s.startsWith('data:')) {
+            const comma = s.indexOf(',');
+            if (comma !== -1) s = s.slice(comma + 1).trim();
+          }
+          if (s.includes('/') || s.includes('\\')) {
+            const parts = s.split(/[/\\]/);
+            return parts[parts.length - 1].split('?')[0].toLowerCase();
+          }
+          return s.slice(0, 100) + '_' + s.length;
+        };
+
         const uniqueExpansionLogos: string[] = [];
-        if (logoBase64 && typeof logoBase64 === "string" && logoBase64.trim()) {
-          uniqueExpansionLogos.push(logoBase64.trim());
-        }
+        const seenExpLogos = new Set<string>();
+        const addExpLogo = (raw: any) => {
+          if (!raw) return;
+          const val = typeof raw === 'string' ? raw.trim() : (((raw as any)?.url || (raw as any)?.data || '') as string).trim();
+          if (!val) return;
+          const key = normalizeLogoKey(val);
+          if (key && !seenExpLogos.has(key)) {
+            seenExpLogos.add(key);
+            uniqueExpansionLogos.push(val);
+          }
+        };
+
+        if (logoBase64) addExpLogo(logoBase64);
         if (Array.isArray(logosList)) {
           for (const item of logosList) {
-            const l = typeof item === "string" ? item.trim() : (item?.url || item?.data || "");
-            if (l && !uniqueExpansionLogos.includes(l)) {
-              uniqueExpansionLogos.push(l);
-            }
+            addExpLogo(item);
           }
         }
-        uniqueExpansionLogos.forEach((ref, idx) => {
-          addImagePartToExpansion(ref, idx === 0 ? "Brand Logo Reference" : `Brand Logo Reference #${idx + 1}`);
+        const finalExpansionLogos = uniqueExpansionLogos.slice(0, 1);
+        finalExpansionLogos.forEach((ref) => {
+          addImagePartToExpansion(ref, "Brand Logo Reference");
         });
 
         const hasLogo = uniqueExpansionLogos.length > 0;
@@ -8265,31 +8293,53 @@ ${logoMandatoryRule}`;
         });
       }
 
-      // 7. Add Logo References for native AI rendering (placed LAST, strictly deduplicated)
+            // 7. Add Logo References for native AI rendering (placed LAST, strictly deduplicated - max 1 primary logo)
+      const normalizeGenLogoKey = (str: any): string => {
+        if (!str) return '';
+        let s = typeof str === 'string' ? str.trim() : (((str as any)?.url || (str as any)?.data || '') as string).trim();
+        if (!s) return '';
+        if (s.startsWith('data:')) {
+          const comma = s.indexOf(',');
+          if (comma !== -1) s = s.slice(comma + 1).trim();
+        }
+        if (s.includes('/') || s.includes('\\')) {
+          const parts = s.split(/[/\\]/);
+          return parts[parts.length - 1].split('?')[0].toLowerCase();
+        }
+        return s.slice(0, 100) + '_' + s.length;
+      };
+
       const uniqueGenerationLogos: string[] = [];
-      if (logoBase64 && typeof logoBase64 === "string" && logoBase64.trim()) {
-        uniqueGenerationLogos.push(logoBase64.trim());
-      }
+      const seenGenLogos = new Set<string>();
+      const addGenLogo = (raw: any) => {
+        if (!raw) return;
+        const val = typeof raw === 'string' ? raw.trim() : (((raw as any)?.url || (raw as any)?.data || '') as string).trim();
+        if (!val) return;
+        const key = normalizeGenLogoKey(val);
+        if (key && !seenGenLogos.has(key)) {
+          seenGenLogos.add(key);
+          uniqueGenerationLogos.push(val);
+        }
+      };
+
+      if (logoBase64) addGenLogo(logoBase64);
       if (Array.isArray(logosList)) {
         for (const item of logosList) {
-          const l = typeof item === "string" ? item.trim() : (item?.url || item?.data || "");
-          if (l && !uniqueGenerationLogos.includes(l)) {
-            uniqueGenerationLogos.push(l);
-          }
+          addGenLogo(item);
         }
       }
 
-      if (useLogo || uniqueGenerationLogos.length > 0) {
+      // Limitar estritamente a 1 logotipo oficial para evitar duplicação ou logos gêmeos
+      const finalGenerationLogos = uniqueGenerationLogos.slice(0, 1);
+
+      if (useLogo || finalGenerationLogos.length > 0) {
         if (isLogoOverlayMode) {
-          uniqueGenerationLogos.forEach((ref, idx) => {
-            addImagePart(ref, idx === 0
-              ? "LOGOTIPO DA MARCA DO CLIENTE (MODO OVERLAY DIGITAL: NÃO DESENHE ESTA LOGO NO CANVAS. Apenas reserve um espaço limpo e vazio no canto superior esquerdo/direito para a inclusão digital. APAGUE COMPLETAMENTE QUALQUER LOGO ANTIGO DA FOTO DE REFERÊNCIA DE DESIGN!)."
-              : `LOGOTIPO DA MARCA DO CLIENTE Adicional ${idx + 1} (MODO OVERLAY DIGITAL: NÃO DESENHAR NO CANVAS)`
-            );
+          finalGenerationLogos.forEach((ref) => {
+            addImagePart(ref, "LOGOTIPO DA MARCA DO CLIENTE (MODO OVERLAY DIGITAL: NÃO DESENHE ESTA LOGO NO CANVAS. Apenas reserve um espaço limpo e vazio no canto superior esquerdo/direito para a inclusão digital. APAGUE COMPLETAMENTE QUALQUER LOGO ANTIGO DA FOTO DE REFERÊNCIA DE DESIGN!).");
           });
         } else {
-          for (let idx = 0; idx < uniqueGenerationLogos.length; idx++) {
-            const rawRef = uniqueGenerationLogos[idx];
+          for (let idx = 0; idx < finalGenerationLogos.length; idx++) {
+            const rawRef = finalGenerationLogos[idx];
             let preparedLogoInput = rawRef;
             try {
               const rawParsed = parseBase64Part(rawRef);
@@ -8301,13 +8351,9 @@ ${logoMandatoryRule}`;
               console.warn("[/api/gerar] prepareLogoForGeminiVision warning:", e);
             }
 
-            if (idx === 0) {
-              addImagePart(preparedLogoInput, `LOGOTIPO DA MARCA DO CLIENTE (MANDATÓRIO — IDENTIDADE VISUAL EXATA):
+            addImagePart(preparedLogoInput, `LOGOTIPO DA MARCA DO CLIENTE (MANDATÓRIO — IDENTIDADE VISUAL EXATA):
 - Render EXACTLY ONE single instance of this brand logo cleanly positioned (typically in the header corner).
 - PROHIBITION: NEVER duplicate, clone, or place multiple copies of the logo. Do NOT keep any old logos or emblems from the design reference image. Replicate ONLY this exact brand logo provided, preserving its authentic symbols, typography, and colors.`);
-            } else {
-              addImagePart(preparedLogoInput, `LOGOTIPO DA MARCA DO CLIENTE Adicional ${idx + 1} (Preservar símbolo e tipografia exatos sem duplicar)`);
-            }
           }
         }
       }

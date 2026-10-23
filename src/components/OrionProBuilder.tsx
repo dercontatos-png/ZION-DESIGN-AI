@@ -4,14 +4,12 @@ import { compressImageForStorage } from "../utils/imageCompressor";
 import {
   Image as ImageIcon,
   UserRound,
+  Package,
   Camera,
   Layers,
   Sparkles,
-  Clock,
-  Briefcase,
-  Crown,
   Flame,
-  Shield,
+  Crown,
   Cpu,
   GlassWater,
   Layout,
@@ -28,14 +26,13 @@ import {
   Mountain,
   Type,
   Settings,
-  ChevronUp,
   ChevronDown,
   X,
   Plus,
   Trash2,
   Copy,
   RotateCcw,
-  Sliders
+  Info
 } from "lucide-react";
 
 interface OrionProBuilderProps {
@@ -59,7 +56,7 @@ export interface TextBlockItem {
   id: string;
   type: "H1" | "H2" | "Texto" | "Bullets" | "CTA";
   text: string;
-  weight: number; // 1 to 5
+  weight: number;
   color: string;
   position: string;
 }
@@ -70,16 +67,16 @@ interface ImageWithDesc {
   desc: string;
 }
 
-// 17 Canonical Visual Styles
+// Estilos Visuais canônicos do Órion Pro idênticos ao site oficial
 const ESTILOS_VISUAIS = [
+  { value: "publicitario", label: "Publicitário", Icon: Camera },
+  { value: "flyer_sertanejo", label: "Flyer Sertanejo", Icon: Flame },
+  { value: "flyer_funk", label: "Flyer Funk", Icon: Zap },
+  { value: "delivery", label: "Delivery", Icon: Package },
+  { value: "brand_premium", label: "Brand Premium", Icon: Crown },
   { value: "ultra_realistic", label: "Ultra Realista", Icon: Camera },
   { value: "glow", label: "Glow Radiante", Icon: Sparkles },
   { value: "pro_portrait", label: "Retrato Profissional", Icon: Layers },
-  { value: "classic", label: "Clássico", Icon: Clock },
-  { value: "formal", label: "Formal Corporativo", Icon: Briefcase },
-  { value: "elegant", label: "Elegante & Luxo", Icon: Crown },
-  { value: "sexy", label: "Editorial Dramático", Icon: Flame },
-  { value: "institutional", label: "Institucional", Icon: Shield },
   { value: "tech", label: "Tecnológico / Cyber", Icon: Cpu },
   { value: "glassmorphism", label: "Glassmorphism", Icon: GlassWater },
   { value: "ui_interface", label: "Interface UI", Icon: Layout },
@@ -90,6 +87,21 @@ const ESTILOS_VISUAIS = [
   { value: "jovial", label: "Jovial Lifestyle", Icon: Sparkles },
   { value: "gamer", label: "Gamer Esports", Icon: Gamepad2 }
 ];
+
+const FieldInfo: React.FC<{ tooltip?: string }> = ({ tooltip }) => (
+  <span className="relative inline-flex items-center">
+    <button
+      type="button"
+      data-field-info=""
+      aria-label="Mais informações"
+      title={tooltip || "Informações do campo"}
+      className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 cursor-pointer"
+      style={{ color: "rgb(255, 213, 0)" }}
+    >
+      <Info className="h-3.5 w-3.5" />
+    </button>
+  </span>
+);
 
 export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
   showToast = () => {},
@@ -116,20 +128,6 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
     }));
   };
 
-  const allOpen = Object.values(openSections).every(Boolean);
-
-  const handleToggleAll = () => {
-    const nextState = !allOpen;
-    setOpenSections({
-      principal: nextState,
-      marca_estilo: nextState,
-      cenario: nextState,
-      texto_imagem: nextState,
-      ajustes: nextState,
-      configuracoes: nextState
-    });
-  };
-
   // ── Section 1: Principal
   const [categoria, setCategoria] = useState<"Pessoa" | "Produto" | "Livre">("Pessoa");
   const [quantidade, setQuantidade] = useState<string>("1");
@@ -143,14 +141,12 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
   const [corDestaque, setCorDestaque] = useState<string>("#7C3AED");
   const [estiloVisual, setEstiloVisual] = useState<string>("ultra_realistic");
   const [estiloImages, setEstiloImages] = useState<ImageWithDesc[]>([]);
-  const [styleRefDescription, setStyleRefDescription] = useState<string>("");
   const [sobriedadeCriatividade, setSobriedadeCriatividade] = useState<number>(50);
 
   // ── Section 3: Cenário
   const [nichoProjeto, setNichoProjeto] = useState<string>("");
   const [sceneDescription, setSceneDescription] = useState<string>("");
   const [ambienteImages, setAmbienteImages] = useState<ImageWithDesc[]>([]);
-  const [sceneRefDescription, setSceneRefDescription] = useState<string>("");
 
   // ── Section 4: Texto na imagem
   const [textBlocks, setTextBlocks] = useState<TextBlockItem[]>([
@@ -167,9 +163,6 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
   // ── Section 6: Configurações
   const [dimensao, setDimensao] = useState<string>("16:9");
   const [quality, setQuality] = useState<"1K" | "2K" | "4K">("2K");
-
-  // Modal Ajustar Fotos e Cena
-  const [showPhotoAdjustModal, setShowPhotoAdjustModal] = useState<boolean>(false);
 
   // File Input Refs
   const fileInputSujeitoRef = useRef<HTMLInputElement>(null);
@@ -230,12 +223,12 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
     }
   }, [store.activeProjectId, store.lastLoadedAt]);
 
-  // Sync to store in background
+  // Sync to store in background without subscribing to store changes
   const syncToStore = useCallback(() => {
     const calculatedTypoPos = posicaoTexto === "left" ? "Esquerda" : posicaoTexto === "right" ? "Direita" : "Centro";
     const effectiveSubjectPos = subjectPosition === "left" ? "Esquerda" : subjectPosition === "right" ? "Direita" : "Centro";
 
-    store.updateConfig({
+    useProjectStore.getState().updateConfig({
       qualidade: quality,
       resolucao: quality,
       dimensao: dimensao,
@@ -297,8 +290,7 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
     elementosFlutuantes,
     usarBlur,
     promptAdicional,
-    sobriedadeCriatividade,
-    store
+    sobriedadeCriatividade
   ]);
 
   // Handle Upload Photos
@@ -361,8 +353,42 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
     }
   }, [store, showToast]);
 
-  // Handle Text Blocks
-  const handleAddTextBlock = () => {
+  const handleUploadEstilo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const files = Array.from(e.target.files);
+    for (const file of files) {
+      try {
+        const compressed = await compressImageForStorage(file);
+        setEstiloImages((prev) => [
+          ...prev,
+          { id: Math.random().toString(36).substring(2, 9), url: compressed, desc: "" }
+        ]);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    e.target.value = "";
+  };
+
+  const handleUploadAmbiente = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const files = Array.from(e.target.files);
+    for (const file of files) {
+      try {
+        const compressed = await compressImageForStorage(file);
+        setAmbienteImages((prev) => [
+          ...prev,
+          { id: Math.random().toString(36).substring(2, 9), url: compressed, desc: "" }
+        ]);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    e.target.value = "";
+  };
+
+  // Text Blocks Management
+  const addTextBlock = () => {
     if (textBlocks.length >= 8) {
       showToast("Limite de 8 blocos de texto atingido.", "warning");
       return;
@@ -373,860 +399,799 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
     ]);
   };
 
-  const handleRemoveTextBlock = (id: string) => {
+  const removeTextBlock = (id: string) => {
     setTextBlocks((prev) => prev.filter((b) => b.id !== id));
   };
 
-  const handleUpdateTextBlock = (id: string, updates: Partial<TextBlockItem>) => {
+  const updateTextBlock = (id: string, updates: Partial<TextBlockItem>) => {
     setTextBlocks((prev) => prev.map((b) => (b.id === id ? { ...b, ...updates } : b)));
   };
 
-  // Main Click Construir
   const handleConstruirClick = () => {
     syncToStore();
+    onCloseMobileCategory?.();
     generatePremiumImage?.();
   };
 
   const fotosList = store.sujeitosBase64List || [];
 
   return (
-    <div 
+    <aside
+      data-aside-form-col=""
+      data-tour="form"
       onPaste={handlePaste}
       tabIndex={0}
-      className="flex flex-col h-full w-full overflow-hidden bg-[#0C0D11] text-[#E4E4E7] select-none font-sans outline-none"
+      className="agent-form-col relative z-10 shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-white/5 scrollbar-hide px-1.5 py-3 lg:p-6 transition-[filter,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] w-full lg:h-full lg:w-[var(--agent-form-col-w,420px)] lg:min-w-[280px] lg:max-w-[700px] lg:flex-shrink-0 flex max-lg:order-last max-lg:min-h-0 select-none font-sans outline-none"
+      style={{ "--agent-form-col-w": "420px", "--agent-color": "#ffd500" } as any}
     >
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* 1. TOPO FIXO: EXPANDIR / RECOLHER TUDO                              */}
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-white/5 bg-[#0C0D11] z-20">
-        <span className="text-[11px] font-bold tracking-wider text-zinc-400 uppercase">
-          Direção Criativa do Órion Pro
-        </span>
-        <button
-          type="button"
-          onClick={handleToggleAll}
-          className="text-[11px] font-semibold text-purple-400 hover:text-purple-300 transition-colors cursor-pointer"
-        >
-          {allOpen ? "Recolher Tudo" : "Expandir Tudo"}
-        </button>
-      </div>
-
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* 2. ÁREA ROLÁVEL COM OS 6 ACCORDIONS                                */}
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      <div className="flex-1 overflow-y-auto overscroll-contain px-3 py-3 space-y-3 scrollbar-thin scrollbar-thumb-zinc-800">
+      <form className="flex flex-col gap-4 lg:gap-5 pb-6" onSubmit={(e) => e.preventDefault()}>
         
-        {/* ── 1. PRINCIPAL ── */}
-        <div className="rounded-2xl border border-white/5 bg-[#0F1017] p-4 transition-all">
-          <div
-            onClick={() => toggleSection("principal")}
-            className="flex items-center justify-between cursor-pointer"
-          >
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/5 text-zinc-300">
-                <UserRound className="h-4 w-4" />
-              </div>
-              <span className="text-sm font-bold text-[#E2D9FF]">1. Principal</span>
-              <span className="rounded-full bg-purple-500/10 px-2 py-0.5 text-[10px] font-bold text-purple-300 border border-purple-500/20">
-                {categoria} · {quantidade}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* 1. PRINCIPAL                                                        */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        <div data-tour="form-sec-principal">
+          <div className="group/step relative overflow-hidden rounded-2xl border border-white/[0.04] transition-colors duration-200 bg-white/[0.015] hover:border-white/[0.08]">
+            <button
+              type="button"
+              onClick={() => toggleSection("principal")}
+              aria-expanded={openSections.principal}
+              className="flex w-full items-center gap-3 px-2 py-3 lg:px-4 lg:py-3.5 text-left select-none cursor-pointer transition-colors duration-200 hover:bg-white/[0.025] outline-none"
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.04] transition-colors">
+                <ImageIcon className="h-[18px] w-[18px] text-zinc-400 transition-colors" />
               </span>
-            </div>
-            {openSections.principal ? <ChevronUp className="h-4 w-4 text-zinc-400" /> : <ChevronDown className="h-4 w-4 text-zinc-400" />}
-          </div>
+              <span className="flex min-w-0 flex-1 items-baseline gap-2">
+                <span className="truncate text-left text-base font-normal text-[#e2d9ff]">Principal</span>
+              </span>
+              <ChevronDown
+                className={`h-4 w-4 shrink-0 text-zinc-500 transition-transform duration-200 ease-out ${
+                  openSections.principal ? "rotate-180" : ""
+                }`}
+              />
+            </button>
 
-          {openSections.principal && (
-            <div className="mt-4 flex flex-col gap-4 pt-3 border-t border-white/5">
-              {/* Categoria* */}
-              <div>
-                <label className="block text-xs font-semibold text-zinc-300 mb-2">Categoria*</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {(["Pessoa", "Produto", "Livre"] as const).map((cat) => {
-                    const active = categoria === cat;
-                    return (
-                      <button
-                        key={cat}
-                        type="button"
-                        onClick={() => setCategoria(cat)}
-                        className={`h-10 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                          active
-                            ? "bg-[#261742] border-2 border-purple-500 text-white shadow-[0_0_12px_rgba(168,85,247,0.3)]"
-                            : "bg-[#12141A] border border-white/5 text-zinc-400 hover:text-white hover:bg-white/5"
-                        }`}
-                      >
-                        {cat}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Fotos do Sujeito / Produto */}
-              <div>
-                <label className="block text-xs font-semibold text-zinc-300 mb-2">Fotos do Sujeito / Produto</label>
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {fotosList.map((photo, idx) => (
-                    <div key={idx} className="relative h-16 w-16 rounded-xl border border-white/10 overflow-hidden group">
-                      <img src={photo} alt="" className="h-full w-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveSujeito(idx)}
-                        className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/80 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center cursor-pointer transition-colors"
-                      >
-                        <X size={12} />
-                      </button>
-                    </div>
-                  ))}
-                  <label
-                    onClick={() => fileInputSujeitoRef.current?.click()}
-                    className="h-16 flex-1 min-w-[120px] rounded-xl border border-dashed border-white/15 hover:border-purple-500/50 bg-[#12141A] hover:bg-purple-950/20 flex flex-col items-center justify-center gap-1 cursor-pointer transition-all text-zinc-400 hover:text-white p-2"
-                  >
-                    <Plus size={18} />
-                    <span className="text-[10px] text-center leading-tight">Clique, arraste ou cole (Ctrl+V)</span>
+            {openSections.principal && (
+              <div className="px-2 pb-3 lg:px-4 lg:pb-4 pt-1 flex flex-col gap-4 animate-in fade-in duration-150">
+                
+                {/* Categoria* */}
+                <div data-field-id="categoria" className="flex flex-col gap-2">
+                  <label className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-white">
+                    <span>Categoria</span>
+                    <span className="ml-1 text-red-400">*</span>
+                    <FieldInfo tooltip="Escolha o tipo principal da sua composição" />
                   </label>
+                  <div role="group" aria-label="Categoria" className="grid grid-cols-3 gap-2.5">
+                    {[
+                      { id: "Pessoa", label: "Pessoa", Icon: UserRound },
+                      { id: "Produto", label: "Produto", Icon: Package },
+                      { id: "Livre", label: "Livre", Icon: Sparkles }
+                    ].map((cat) => {
+                      const active = categoria === cat.id;
+                      return (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          onClick={() => setCategoria(cat.id as any)}
+                          className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${
+                            active ? "pb-ctrl-active text-white" : "text-zinc-200"
+                          }`}
+                        >
+                          <cat.Icon className="h-5 w-5" />
+                          <span className="font-medium text-sm">{cat.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Fotos do Sujeito / Produto */}
+                <div data-field-id="fotos" className="flex flex-col gap-2">
+                  <label className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-white">
+                    <span>Fotos do Sujeito / Produto</span>
+                    <FieldInfo tooltip="Envie foto do sujeito ou produto para preservar identidade" />
+                  </label>
+                  
+                  {fotosList.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {fotosList.map((photo, idx) => (
+                        <div key={idx} className="relative h-20 w-20 rounded-xl border border-white/10 overflow-hidden group">
+                          <img src={photo} alt="" className="h-full w-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveSujeito(idx)}
+                            className="absolute top-1 right-1 h-5 w-5 rounded-full bg-black/80 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center cursor-pointer transition-colors"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ))}
+                      <div
+                        onClick={() => fileInputSujeitoRef.current?.click()}
+                        className="flex cursor-pointer items-center justify-center rounded-xl border-2 border-dashed transition-all flex-col gap-1.5 h-20 w-20 border-[rgba(139,92,246,0.20)] bg-[rgba(139,92,246,0.03)] hover:border-[rgba(139,92,246,0.38)] hover:bg-[rgba(139,92,246,0.07)] text-[#5c5278] hover:text-[#9d94bb]"
+                      >
+                        <span className="text-2xl font-light">+</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      onClick={() => fileInputSujeitoRef.current?.click()}
+                      className="flex cursor-pointer items-center justify-center rounded-xl border-2 border-dashed transition-all flex-col gap-1.5 h-40 border-[rgba(139,92,246,0.20)] bg-[rgba(139,92,246,0.03)] hover:border-[rgba(139,92,246,0.38)] hover:bg-[rgba(139,92,246,0.07)]"
+                    >
+                      <div className="flex min-w-0 flex-1 items-center justify-center gap-2">
+                        <span className="font-light text-[#5c5278] text-4xl">+</span>
+                        <span className="truncate text-xs text-[#5c5278]">Clique, arraste ou cole (Ctrl+V)</span>
+                      </div>
+                    </div>
+                  )}
+
                   <input
                     ref={fileInputSujeitoRef}
                     type="file"
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
                     multiple
                     onChange={handleUploadSujeito}
                     className="hidden"
                   />
+                  <p className="text-xs text-amber-400/80 pl-0.5">Para máxima fidelidade, use uma única foto</p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setShowPhotoAdjustModal(true)}
-                  className="mt-1 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1A152B] border border-purple-500/30 text-purple-200 text-[11px] font-semibold hover:bg-purple-900/40 transition-colors cursor-pointer"
-                >
-                  <Sliders size={13} />
-                  <span>Ajustar fotos e cena</span>
-                </button>
-                <p className="text-[11px] font-medium text-[#EAB308] mt-2">
-                  Para máxima fidelidade, use uma única foto
-                </p>
-              </div>
-
-              {/* Quantidade */}
-              <div>
-                <label className="block text-xs font-semibold text-zinc-300 mb-2">Quantidade</label>
-                <div className="grid grid-cols-5 gap-2">
-                  {["1", "2", "3", "4", "5"].map((num) => {
-                    const active = quantidade === num;
-                    return (
-                      <button
-                        key={num}
-                        type="button"
-                        onClick={() => setQuantidade(num)}
-                        className={`h-10 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                          active
-                            ? "bg-[#261742] border-2 border-purple-500 text-white shadow-[0_0_12px_rgba(168,85,247,0.3)]"
-                            : "bg-[#12141A] border border-white/5 text-zinc-400 hover:text-white"
-                        }`}
-                      >
-                        {num}
-                      </button>
-                    );
-                  })}
+                {/* Quantidade */}
+                <div data-field-id="quantidade" className="flex flex-col gap-2">
+                  <label className="flex items-center gap-1.5 text-sm font-semibold text-white">
+                    <span>Quantidade</span>
+                  </label>
+                  <div className="grid grid-cols-5 gap-2">
+                    {["1", "2", "3", "4", "5"].map((num) => {
+                      const active = quantidade === num;
+                      return (
+                        <button
+                          key={num}
+                          type="button"
+                          onClick={() => setQuantidade(num)}
+                          className={`flex h-11 items-center justify-center text-center transition-colors pb-ctrl-btn rounded-xl text-sm font-semibold cursor-pointer ${
+                            active ? "pb-ctrl-active text-white" : "text-zinc-200"
+                          }`}
+                        >
+                          {num}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
 
-              {/* Como o sujeito deve aparecer? */}
-              <div>
-                <label className="block text-xs font-semibold text-zinc-300 mb-2">Como o sujeito deve aparecer?</label>
-                <div className="rounded-xl border border-white/10 bg-[#10121A] p-2.5">
-                  <textarea
-                    rows={3}
-                    value={subjectDescription}
-                    onChange={(e) => setSubjectDescription(e.target.value)}
-                    placeholder="Descreva roupas, pose, acessorios, acao..."
-                    className="w-full bg-transparent text-xs text-zinc-200 placeholder-zinc-500 outline-none resize-none leading-relaxed"
-                  />
+                {/* Como o sujeito deve aparecer? */}
+                <div data-field-id="como_aparecer" className="flex flex-col gap-2">
+                  <label className="flex items-center gap-1.5 text-sm font-semibold text-white">
+                    <span>Como o sujeito deve aparecer?</span>
+                    <FieldInfo tooltip="Descreva roupas, pose, acessórios ou ações desejadas" />
+                  </label>
+                  <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3 transition-colors focus-within:border-purple-500/40">
+                    <textarea
+                      rows={3}
+                      value={subjectDescription}
+                      onChange={(e) => setSubjectDescription(e.target.value)}
+                      placeholder="Descreva roupas, pose, acessorios, acao..."
+                      className="w-full bg-transparent text-sm text-zinc-100 placeholder-[#5c5278] outline-none resize-none leading-relaxed"
+                    />
+                  </div>
                 </div>
-              </div>
 
-              {/* Posição do Sujeito */}
-              <div>
-                <label className="block text-xs font-semibold text-zinc-300 mb-2">Posição do Sujeito</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { id: "left", label: "Esquerda", Icon: AlignLeft },
-                    { id: "center", label: "Centro", Icon: AlignCenter },
-                    { id: "right", label: "Direita", Icon: AlignRight }
-                  ].map((pos) => {
-                    const active = subjectPosition === pos.id;
-                    return (
-                      <button
-                        key={pos.id}
-                        type="button"
-                        onClick={() => setSubjectPosition(pos.id as any)}
-                        className={`h-14 rounded-xl flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
-                          active
-                            ? "bg-[#261742] border-2 border-purple-500 text-white shadow-[0_0_12px_rgba(168,85,247,0.3)]"
-                            : "bg-[#12141A] border border-white/5 text-zinc-400 hover:text-white"
-                        }`}
-                      >
-                        <pos.Icon size={16} />
-                        <span className="text-[11px] font-semibold">{pos.label}</span>
-                      </button>
-                    );
-                  })}
+                {/* Posição do Sujeito */}
+                <div data-field-id="posicao" className="flex flex-col gap-2">
+                  <label className="flex items-center gap-1.5 text-sm font-semibold text-white">
+                    <span>Posição do Sujeito</span>
+                  </label>
+                  <div className="grid grid-cols-3 gap-2.5">
+                    {[
+                      { id: "left", label: "Esquerda", Icon: AlignLeft },
+                      { id: "center", label: "Centro", Icon: AlignCenter },
+                      { id: "right", label: "Direita", Icon: AlignRight }
+                    ].map((pos) => {
+                      const active = subjectPosition === pos.id;
+                      return (
+                        <button
+                          key={pos.id}
+                          type="button"
+                          onClick={() => setSubjectPosition(pos.id as any)}
+                          className={`flex h-16 flex-col items-center justify-center gap-1.5 text-center transition-colors pb-ctrl-btn rounded-xl p-2 cursor-pointer ${
+                            active ? "pb-ctrl-active text-white" : "text-zinc-200"
+                          }`}
+                        >
+                          <pos.Icon className="h-4 w-4" />
+                          <span className="text-xs font-medium">{pos.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
 
-              {/* Plano (Grade 2x2 com 4 Opções) */}
-              <div>
-                <label className="block text-xs font-semibold text-zinc-300 mb-2">Plano</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { id: "close-up", label: "Close-up (Rosto)", Icon: UserRound },
-                    { id: "medium", label: "Plano Médio (Busto)", Icon: UserRound },
-                    { id: "american", label: "Plano Americano", Icon: ImageIcon },
-                    { id: "full_body", label: "Corpo Inteiro", Icon: UserRound }
-                  ].map((p) => {
-                    const active = plano === p.id;
-                    return (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => setPlano(p.id)}
-                        className={`h-14 rounded-xl flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
-                          active
-                            ? "bg-[#261742] border-2 border-purple-500 text-white shadow-[0_0_12px_rgba(168,85,247,0.3)]"
-                            : "bg-[#12141A] border border-white/5 text-zinc-400 hover:text-white"
-                        }`}
-                      >
-                        <p.Icon size={16} />
-                        <span className="text-[11px] font-semibold">{p.label}</span>
-                      </button>
-                    );
-                  })}
+                {/* Plano */}
+                <div data-field-id="plano" className="flex flex-col gap-2">
+                  <label className="flex items-center gap-1.5 text-sm font-semibold text-white">
+                    <span>Plano</span>
+                  </label>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {[
+                      { id: "close-up", label: "Close-up (Rosto)", Icon: UserRound },
+                      { id: "medium", label: "Plano Médio (Busto)", Icon: UserRound },
+                      { id: "american", label: "Plano Americano", Icon: ImageIcon },
+                      { id: "full_body", label: "Corpo Inteiro", Icon: UserRound }
+                    ].map((p) => {
+                      const active = plano === p.id;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => setPlano(p.id)}
+                          className={`flex h-16 flex-col items-center justify-center gap-1.5 text-center transition-colors pb-ctrl-btn rounded-xl p-2 cursor-pointer ${
+                            active ? "pb-ctrl-active text-white" : "text-zinc-200"
+                          }`}
+                        >
+                          <p.Icon className="h-4 w-4" />
+                          <span className="text-xs font-medium">{p.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
+
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
-        {/* ── 2. MARCA E ESTILO ── */}
-        <div className="rounded-2xl border border-white/5 bg-[#0F1017] p-4 transition-all">
-          <div
-            onClick={() => toggleSection("marca_estilo")}
-            className="flex items-center justify-between cursor-pointer"
-          >
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/5 text-zinc-300">
-                <Palette className="h-4 w-4" />
-              </div>
-              <span className="text-sm font-bold text-[#E2D9FF]">2. Marca e estilo</span>
-            </div>
-            {openSections.marca_estilo ? <ChevronUp className="h-4 w-4 text-zinc-400" /> : <ChevronDown className="h-4 w-4 text-zinc-400" />}
-          </div>
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* 2. MARCA E ESTILO                                                   */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        <div data-tour="form-sec-marca_estilo">
+          <div className="group/step relative overflow-hidden rounded-2xl border border-white/[0.04] transition-colors duration-200 bg-white/[0.015] hover:border-white/[0.08]">
+            <button
+              type="button"
+              onClick={() => toggleSection("marca_estilo")}
+              aria-expanded={openSections.marca_estilo}
+              className="flex w-full items-center gap-3 px-2 py-3 lg:px-4 lg:py-3.5 text-left select-none cursor-pointer transition-colors duration-200 hover:bg-white/[0.025] outline-none"
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.04] transition-colors">
+                <Palette className="h-[18px] w-[18px] text-zinc-400 transition-colors" />
+              </span>
+              <span className="flex min-w-0 flex-1 items-baseline gap-2">
+                <span className="truncate text-left text-base font-normal text-[#e2d9ff]">Marca e estilo</span>
+              </span>
+              <ChevronDown
+                className={`h-4 w-4 shrink-0 text-zinc-500 transition-transform duration-200 ease-out ${
+                  openSections.marca_estilo ? "rotate-180" : ""
+                }`}
+              />
+            </button>
 
-          {openSections.marca_estilo && (
-            <div className="mt-4 flex flex-col gap-4 pt-3 border-t border-white/5">
-              {/* Cores da marca */}
-              <div>
-                <label className="block text-xs font-semibold text-zinc-300 mb-2">Cores da marca</label>
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="bg-[#12141A] p-2.5 rounded-xl flex flex-col items-center gap-1.5 border border-white/5">
-                    <input
-                      type="color"
-                      value={corAmbiente}
-                      onChange={(e) => setCorAmbiente(e.target.value)}
-                      className="w-7 h-7 rounded-full border-none cursor-pointer bg-transparent"
-                    />
-                    <span className="text-[10px] text-zinc-400 text-center font-medium">Ambiente</span>
-                  </div>
-                  <div className="bg-[#12141A] p-2.5 rounded-xl flex flex-col items-center gap-1.5 border border-white/5">
-                    <input
-                      type="color"
-                      value={luzComplementar}
-                      onChange={(e) => setLuzComplementar(e.target.value)}
-                      className="w-7 h-7 rounded-full border-none cursor-pointer bg-transparent"
-                    />
-                    <span className="text-[10px] text-zinc-400 text-center font-medium">Luz</span>
-                  </div>
-                  <div className="bg-[#12141A] p-2.5 rounded-xl flex flex-col items-center gap-1.5 border border-white/5">
-                    <input
-                      type="color"
-                      value={corDestaque}
-                      onChange={(e) => setCorDestaque(e.target.value)}
-                      className="w-7 h-7 rounded-full border-none cursor-pointer bg-transparent"
-                    />
-                    <span className="text-[10px] text-zinc-400 text-center font-medium">Complementar</span>
+            {openSections.marca_estilo && (
+              <div className="px-2 pb-3 lg:px-4 lg:pb-4 pt-1 flex flex-col gap-4 animate-in fade-in duration-150">
+                
+                {/* Cores da Marca */}
+                <div className="flex flex-col gap-2">
+                  <label className="flex items-center gap-1.5 text-sm font-semibold text-white">
+                    <span>Identidade da Marca</span>
+                    <FieldInfo tooltip="Cores principais aplicadas no ambiente e na iluminação" />
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-[11px] text-[#9d94bb]">Ambiente</span>
+                      <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.02] p-1.5">
+                        <input
+                          type="color"
+                          value={corAmbiente}
+                          onChange={(e) => setCorAmbiente(e.target.value)}
+                          className="h-7 w-7 rounded-lg border-0 bg-transparent cursor-pointer"
+                        />
+                        <span className="text-xs font-mono text-zinc-300 uppercase">{corAmbiente}</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-[11px] text-[#9d94bb]">Luz Comp.</span>
+                      <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.02] p-1.5">
+                        <input
+                          type="color"
+                          value={luzComplementar}
+                          onChange={(e) => setLuzComplementar(e.target.value)}
+                          className="h-7 w-7 rounded-lg border-0 bg-transparent cursor-pointer"
+                        />
+                        <span className="text-xs font-mono text-zinc-300 uppercase">{luzComplementar}</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-[11px] text-[#9d94bb]">Destaque</span>
+                      <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.02] p-1.5">
+                        <input
+                          type="color"
+                          value={corDestaque}
+                          onChange={(e) => setCorDestaque(e.target.value)}
+                          className="h-7 w-7 rounded-lg border-0 bg-transparent cursor-pointer"
+                        />
+                        <span className="text-xs font-mono text-zinc-300 uppercase">{corDestaque}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Estilos Visuais (17 Estilos em Grid) */}
-              <div>
-                <label className="block text-xs font-semibold text-zinc-300 mb-2">Estilos Visuais</label>
-                <div className="grid grid-cols-3 gap-2 max-h-56 overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-700 pr-1">
-                  {ESTILOS_VISUAIS.map((est) => {
-                    const active = estiloVisual === est.value;
-                    return (
-                      <button
-                        key={est.value}
-                        type="button"
-                        onClick={() => setEstiloVisual(est.value)}
-                        className={`p-2 rounded-xl flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
-                          active
-                            ? "bg-[#261742] border-2 border-purple-500 text-white shadow-[0_0_12px_rgba(168,85,247,0.3)]"
-                            : "bg-[#12141A] border border-white/5 text-zinc-400 hover:text-white"
-                        }`}
-                      >
-                        <est.Icon size={16} className={active ? "text-purple-300" : "text-zinc-400"} />
-                        <span className="text-[10px] font-semibold text-center leading-tight">{est.label}</span>
-                      </button>
-                    );
-                  })}
+                {/* Estilo Visual */}
+                <div className="flex flex-col gap-2">
+                  <label className="flex items-center gap-1.5 text-sm font-semibold text-white">
+                    <span>Estilo Visual</span>
+                    <FieldInfo tooltip="Escolha o tom artístico que define toda a cena" />
+                  </label>
+                  <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-zinc-800">
+                    {ESTILOS_VISUAIS.map((est) => {
+                      const active = estiloVisual === est.value;
+                      return (
+                        <button
+                          key={est.value}
+                          type="button"
+                          onClick={() => setEstiloVisual(est.value)}
+                          className={`flex items-center gap-2.5 p-3 rounded-xl text-left transition-colors pb-ctrl-btn cursor-pointer ${
+                            active ? "pb-ctrl-active text-white" : "text-zinc-200"
+                          }`}
+                        >
+                          <est.Icon className="h-4 w-4 shrink-0 text-zinc-400" />
+                          <span className="text-xs font-medium truncate">{est.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
 
-              {/* Inspirações de estilo */}
-              <div>
-                <label className="block text-xs font-semibold text-zinc-300 mb-2">Inspirações de estilo</label>
-                <div className="flex gap-2 mb-2">
+                {/* Referências de Estilo */}
+                <div className="flex flex-col gap-2">
+                  <label className="flex items-center gap-1.5 text-sm font-semibold text-white">
+                    <span>Referências de Estilo</span>
+                    <FieldInfo tooltip="Fotos de iluminação, cores ou referências que a IA deve seguir" />
+                  </label>
+                  <div
+                    onClick={() => fileInputEstiloRef.current?.click()}
+                    className="flex cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-[rgba(139,92,246,0.20)] bg-[rgba(139,92,246,0.03)] hover:border-[rgba(139,92,246,0.38)] py-3 px-4 transition-colors"
+                  >
+                    <span className="text-xs text-[#5c5278] hover:text-[#9d94bb] flex items-center gap-2">
+                      <span className="text-base leading-none">+</span>
+                      Clique, arraste ou cole referências (Ctrl+V)
+                    </span>
+                  </div>
                   <input
                     ref={fileInputEstiloRef}
                     type="file"
                     accept="image/*"
                     multiple
-                    onChange={(e) => {
-                      const files = e.target.files;
-                      if (!files) return;
-                      Array.from(files).forEach(async (file) => {
-                        const b64 = await compressImageForStorage(file, 1600, 0.82);
-                        if (b64) {
-                          setEstiloImages((prev) => [...prev, { id: String(Date.now()), url: b64, desc: "" }]);
-                        }
-                      });
-                    }}
+                    onChange={handleUploadEstilo}
                     className="hidden"
                   />
-                  <button
-                    type="button"
-                    onClick={() => fileInputEstiloRef.current?.click()}
-                    className="px-3 py-2 rounded-xl border border-dashed border-white/15 hover:border-purple-500/50 bg-[#12141A] text-zinc-400 hover:text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
-                  >
-                    <Plus size={14} />
-                    <span>Upload Estilo</span>
-                  </button>
-                  <input
-                    type="text"
-                    value={styleRefDescription}
-                    onChange={(e) => setStyleRefDescription(e.target.value)}
-                    placeholder="Descrição da referência estética..."
-                    className="flex-1 bg-[#10121A] border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 outline-none"
-                  />
+                  {estiloImages.length > 0 && (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {estiloImages.map((img, i) => (
+                        <div key={i} className="relative h-14 w-14 rounded-lg overflow-hidden border border-white/10 group">
+                          <img src={img.url} alt="" className="h-full w-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => setEstiloImages(estiloImages.filter((_, idx) => idx !== i))}
+                            className="absolute top-0.5 right-0.5 p-0.5 bg-black/80 rounded-full text-red-400 hover:text-white"
+                          >
+                            <X size={10} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                {estiloImages.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {estiloImages.map((img, idx) => (
-                      <div key={idx} className="relative h-14 w-14 rounded-xl border border-white/10 overflow-hidden">
-                        <img src={img.url} alt="" className="h-full w-full object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => setEstiloImages((prev) => prev.filter((_, i) => i !== idx))}
-                          className="absolute top-1 right-1 h-4 w-4 rounded-full bg-black/80 text-red-400 flex items-center justify-center cursor-pointer"
-                        >
-                          <X size={10} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
 
-              {/* Slider Sobriedade x Criatividade */}
-              <div>
-                <div className="flex justify-between items-center mb-1.5">
-                  <label className="text-xs font-semibold text-zinc-300">Sobriedade x Criatividade</label>
-                  <span className="text-xs font-mono text-purple-400">{sobriedadeCriatividade}%</span>
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={sobriedadeCriatividade}
-                  onChange={(e) => setSobriedadeCriatividade(Number(e.target.value))}
-                  className="w-full accent-purple-500 cursor-pointer"
-                />
-                <div className="flex justify-between text-[10px] text-zinc-500 mt-1">
-                  <span>Sóbrio</span>
-                  <span>Criativo</span>
-                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
-        {/* ── 3. CENÁRIO ── */}
-        <div className="rounded-2xl border border-white/5 bg-[#0F1017] p-4 transition-all">
-          <div
-            onClick={() => toggleSection("cenario")}
-            className="flex items-center justify-between cursor-pointer"
-          >
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/5 text-zinc-300">
-                <Mountain className="h-4 w-4" />
-              </div>
-              <span className="text-sm font-bold text-[#E2D9FF]">3. Cenário</span>
-            </div>
-            {openSections.cenario ? <ChevronUp className="h-4 w-4 text-zinc-400" /> : <ChevronDown className="h-4 w-4 text-zinc-400" />}
-          </div>
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* 3. CENÁRIO                                                          */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        <div data-tour="form-sec-cenario">
+          <div className="group/step relative overflow-hidden rounded-2xl border border-white/[0.04] transition-colors duration-200 bg-white/[0.015] hover:border-white/[0.08]">
+            <button
+              type="button"
+              onClick={() => toggleSection("cenario")}
+              aria-expanded={openSections.cenario}
+              className="flex w-full items-center gap-3 px-2 py-3 lg:px-4 lg:py-3.5 text-left select-none cursor-pointer transition-colors duration-200 hover:bg-white/[0.025] outline-none"
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.04] transition-colors">
+                <Mountain className="h-[18px] w-[18px] text-zinc-400 transition-colors" />
+              </span>
+              <span className="flex min-w-0 flex-1 items-baseline gap-2">
+                <span className="truncate text-left text-base font-normal text-[#e2d9ff]">Cenário</span>
+              </span>
+              <ChevronDown
+                className={`h-4 w-4 shrink-0 text-zinc-500 transition-transform duration-200 ease-out ${
+                  openSections.cenario ? "rotate-180" : ""
+                }`}
+              />
+            </button>
 
-          {openSections.cenario && (
-            <div className="mt-4 flex flex-col gap-4 pt-3 border-t border-white/5">
-              <div>
-                <label className="block text-xs font-semibold text-zinc-300 mb-1.5">Nicho/Projeto</label>
-                <input
-                  type="text"
-                  value={nichoProjeto}
-                  onChange={(e) => setNichoProjeto(e.target.value)}
-                  placeholder="ex: Odontologia estética, lançamento tech..."
-                  className="w-full bg-[#10121A] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-500 outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-zinc-300 mb-1.5">Descrição do cenário</label>
-                <div className="rounded-xl border border-white/10 bg-[#10121A] p-2.5">
-                  <textarea
-                    rows={3}
-                    value={sceneDescription}
-                    onChange={(e) => setSceneDescription(e.target.value)}
-                    placeholder="Descreva o fundo, ambiente, iluminação ambiente, objetos..."
-                    className="w-full bg-transparent text-xs text-zinc-200 placeholder-zinc-500 outline-none resize-none leading-relaxed"
-                  />
+            {openSections.cenario && (
+              <div className="px-2 pb-3 lg:px-4 lg:pb-4 pt-1 flex flex-col gap-4 animate-in fade-in duration-150">
+                
+                {/* Nicho */}
+                <div className="flex flex-col gap-2">
+                  <label className="flex items-center gap-1.5 text-sm font-semibold text-white">
+                    <span>O que você está criando? Para qual nicho?</span>
+                    <span className="ml-1 text-red-400">*</span>
+                    <FieldInfo tooltip="Ex: Hambúrguer artesanal, anúncio de dentista, evento sertanejo" />
+                  </label>
+                  <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3 transition-colors focus-within:border-purple-500/40">
+                    <input
+                      type="text"
+                      value={nichoProjeto}
+                      onChange={(e) => setNichoProjeto(e.target.value)}
+                      placeholder="Ex: Consultório odontológico de luxo, Hamburgueria gourmet..."
+                      className="w-full bg-transparent text-sm text-zinc-100 placeholder-[#5c5278] outline-none"
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-zinc-300 mb-1.5">Inspirações de ambiente</label>
-                <div className="flex gap-2">
+                {/* Descrição do Cenário */}
+                <div className="flex flex-col gap-2">
+                  <label className="flex items-center gap-1.5 text-sm font-semibold text-white">
+                    <span>Descrição da Cena / Ambiente</span>
+                    <FieldInfo tooltip="Detalhes do fundo, iluminação, elementos ao redor do sujeito" />
+                  </label>
+                  <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3 transition-colors focus-within:border-purple-500/40">
+                    <textarea
+                      rows={3}
+                      value={sceneDescription}
+                      onChange={(e) => setSceneDescription(e.target.value)}
+                      placeholder="Descreva o cenário, iluminação volumétrica, partículas..."
+                      className="w-full bg-transparent text-sm text-zinc-100 placeholder-[#5c5278] outline-none resize-none leading-relaxed"
+                    />
+                  </div>
+                </div>
+
+                {/* Imagens de Cenário / Referência */}
+                <div className="flex flex-col gap-2">
+                  <label className="flex items-center gap-1.5 text-sm font-semibold text-white">
+                    <span>Imagens de Cenário</span>
+                    <FieldInfo tooltip="Imagens de fundo ou ambiente para inspiração direta" />
+                  </label>
+                  <div
+                    onClick={() => fileInputAmbienteRef.current?.click()}
+                    className="flex cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-[rgba(139,92,246,0.20)] bg-[rgba(139,92,246,0.03)] hover:border-[rgba(139,92,246,0.38)] py-3 px-4 transition-colors"
+                  >
+                    <span className="text-xs text-[#5c5278] hover:text-[#9d94bb] flex items-center gap-2">
+                      <span className="text-base leading-none">+</span>
+                      Clique ou arraste imagens de ambiente
+                    </span>
+                  </div>
                   <input
                     ref={fileInputAmbienteRef}
                     type="file"
                     accept="image/*"
                     multiple
-                    onChange={(e) => {
-                      const files = e.target.files;
-                      if (!files) return;
-                      Array.from(files).forEach(async (file) => {
-                        const b64 = await compressImageForStorage(file, 1600, 0.82);
-                        if (b64) {
-                          setAmbienteImages((prev) => [...prev, { id: String(Date.now()), url: b64, desc: "" }]);
-                        }
-                      });
-                    }}
+                    onChange={handleUploadAmbiente}
                     className="hidden"
                   />
+                  {ambienteImages.length > 0 && (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {ambienteImages.map((img, i) => (
+                        <div key={i} className="relative h-14 w-14 rounded-lg overflow-hidden border border-white/10 group">
+                          <img src={img.url} alt="" className="h-full w-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => setAmbienteImages(ambienteImages.filter((_, idx) => idx !== i))}
+                            className="absolute top-0.5 right-0.5 p-0.5 bg-black/80 rounded-full text-red-400 hover:text-white"
+                          >
+                            <X size={10} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* 4. TEXTO NA IMAGEM [EXPERIMENTAL]                                  */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        <div data-tour="form-sec-texto_imagem">
+          <div className="group/step relative overflow-hidden rounded-2xl border border-white/[0.04] transition-colors duration-200 bg-white/[0.015] hover:border-white/[0.08]">
+            <button
+              type="button"
+              onClick={() => toggleSection("texto_imagem")}
+              aria-expanded={openSections.texto_imagem}
+              className="flex w-full items-center gap-3 px-2 py-3 lg:px-4 lg:py-3.5 text-left select-none cursor-pointer transition-colors duration-200 hover:bg-white/[0.025] outline-none"
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.04] transition-colors">
+                <Type className="h-[18px] w-[18px] text-zinc-400 transition-colors" />
+              </span>
+              <span className="flex min-w-0 flex-1 items-baseline gap-2">
+                <span className="truncate text-left text-base font-normal text-[#e2d9ff]">Texto na imagem</span>
+              </span>
+              <span className="shrink-0 rounded-md border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                experimental
+              </span>
+              <ChevronDown
+                className={`h-4 w-4 shrink-0 text-zinc-500 transition-transform duration-200 ease-out ${
+                  openSections.texto_imagem ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+
+            {openSections.texto_imagem && (
+              <div className="px-2 pb-3 lg:px-4 lg:pb-4 pt-1 flex flex-col gap-4 animate-in fade-in duration-150">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-semibold text-white flex items-center gap-1.5">
+                    <span>Textos da Imagem</span>
+                    <FieldInfo tooltip="Defina as palavras exatas para a IA renderizar com tipografia fidedigna" />
+                  </label>
                   <button
                     type="button"
-                    onClick={() => fileInputAmbienteRef.current?.click()}
-                    className="px-3 py-2 rounded-xl border border-dashed border-white/15 hover:border-purple-500/50 bg-[#12141A] text-zinc-400 hover:text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
+                    onClick={addTextBlock}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-purple-400 hover:text-purple-300 hover:bg-white/5 transition-colors cursor-pointer"
                   >
                     <Plus size={14} />
-                    <span>Upload Ambiente</span>
+                    <span>Adicionar Texto</span>
                   </button>
-                  <input
-                    type="text"
-                    value={sceneRefDescription}
-                    onChange={(e) => setSceneRefDescription(e.target.value)}
-                    placeholder="Descrição da referência do cenário..."
-                    className="flex-1 bg-[#10121A] border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 outline-none"
-                  />
                 </div>
-                {ambienteImages.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {ambienteImages.map((img, idx) => (
-                      <div key={idx} className="relative h-14 w-14 rounded-xl border border-white/10 overflow-hidden">
-                        <img src={img.url} alt="" className="h-full w-full object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => setAmbienteImages((prev) => prev.filter((_, i) => i !== idx))}
-                          className="absolute top-1 right-1 h-4 w-4 rounded-full bg-black/80 text-red-400 flex items-center justify-center cursor-pointer"
-                        >
-                          <X size={10} />
-                        </button>
+
+                <div className="flex flex-col gap-3">
+                  {textBlocks.map((block, idx) => (
+                    <div key={block.id} className="flex flex-col gap-2 rounded-xl border border-white/5 bg-white/[0.02] p-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-semibold text-[#9d94bb]">Bloco #{idx + 1} ({block.type})</span>
+                        {textBlocks.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeTextBlock(block.id)}
+                            className="text-zinc-500 hover:text-red-400 transition-colors cursor-pointer"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        )}
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* ── 4. TEXTO NA IMAGEM [EXPERIMENTAL] ── */}
-        <div className="rounded-2xl border border-white/5 bg-[#0F1017] p-4 transition-all">
-          <div
-            onClick={() => toggleSection("texto_imagem")}
-            className="flex items-center justify-between cursor-pointer"
-          >
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/5 text-zinc-300">
-                <Type className="h-4 w-4" />
-              </div>
-              <span className="text-sm font-bold text-[#E2D9FF]">4. Texto na imagem</span>
-              <span className="text-[10px] font-bold text-amber-400 px-1.5 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20">
-                EXPERIMENTAL
-              </span>
-            </div>
-            {openSections.texto_imagem ? <ChevronUp className="h-4 w-4 text-zinc-400" /> : <ChevronDown className="h-4 w-4 text-zinc-400" />}
-          </div>
-
-          {openSections.texto_imagem && (
-            <div className="mt-4 flex flex-col gap-4 pt-3 border-t border-white/5">
-              {/* Dynamic text blocks */}
-              <div className="space-y-3">
-                {textBlocks.map((block) => (
-                  <div key={block.id} className="p-3 rounded-xl bg-[#12141A] border border-white/5 flex flex-col gap-2">
-                    <div className="flex items-center justify-between">
-                      <select
-                        value={block.type}
-                        onChange={(e) => handleUpdateTextBlock(block.id, { type: e.target.value as any })}
-                        className="bg-black/50 border border-white/10 rounded-lg text-purple-300 text-xs px-2 py-1 outline-none cursor-pointer"
-                      >
-                        <option value="H1">Título (H1)</option>
-                        <option value="H2">Subtítulo (H2)</option>
-                        <option value="Texto">Texto</option>
-                        <option value="Bullets">Lista (Bullets)</option>
-                        <option value="CTA">Botão (CTA)</option>
-                      </select>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveTextBlock(block.id)}
-                        className="text-zinc-500 hover:text-red-400 p-1 cursor-pointer transition-colors"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-
-                    <input
-                      type="text"
-                      value={block.text}
-                      onChange={(e) => handleUpdateTextBlock(block.id, { text: e.target.value })}
-                      placeholder="Digite o texto da arte..."
-                      className="w-full bg-transparent border-b border-white/10 text-xs text-white pb-1 outline-none placeholder-zinc-500"
-                    />
-
-                    <div className="flex justify-between items-center text-[10px] text-zinc-400 pt-1">
-                      <span>Peso: {block.weight === 1 ? "Sutil" : block.weight === 5 ? "Dominante" : "Normal"}</span>
                       <input
-                        type="range"
-                        min="1"
-                        max="5"
-                        value={block.weight}
-                        onChange={(e) => handleUpdateTextBlock(block.id, { weight: Number(e.target.value) })}
-                        className="w-24 accent-purple-500 cursor-pointer"
+                        type="text"
+                        value={block.text}
+                        onChange={(e) => updateTextBlock(block.id, { text: e.target.value })}
+                        placeholder="Digite o texto exato..."
+                        className="w-full rounded-lg border border-white/5 bg-black/40 px-3 py-2 text-xs text-white placeholder-[#5c5278] outline-none focus:border-purple-500/40"
                       />
                     </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* 5. AJUSTES                                                          */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        <div data-tour="form-sec-ajustes">
+          <div className="group/step relative overflow-hidden rounded-2xl border border-white/[0.04] transition-colors duration-200 bg-white/[0.015] hover:border-white/[0.08]">
+            <button
+              type="button"
+              onClick={() => toggleSection("ajustes")}
+              aria-expanded={openSections.ajustes}
+              className="flex w-full items-center gap-3 px-2 py-3 lg:px-4 lg:py-3.5 text-left select-none cursor-pointer transition-colors duration-200 hover:bg-white/[0.025] outline-none"
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.04] transition-colors">
+                <SlidersHorizontal className="h-[18px] w-[18px] text-zinc-400 transition-colors" />
+              </span>
+              <span className="flex min-w-0 flex-1 items-baseline gap-2">
+                <span className="truncate text-left text-base font-normal text-[#e2d9ff]">Ajustes</span>
+              </span>
+              <ChevronDown
+                className={`h-4 w-4 shrink-0 text-zinc-500 transition-transform duration-200 ease-out ${
+                  openSections.ajustes ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+
+            {openSections.ajustes && (
+              <div className="px-2 pb-3 lg:px-4 lg:pb-4 pt-1 flex flex-col gap-4 animate-in fade-in duration-150">
+                {/* Elementos Flutuantes */}
+                <div className="flex flex-col gap-2">
+                  <label className="flex items-center gap-1.5 text-sm font-semibold text-white">
+                    <span>Elementos Flutuantes</span>
+                    <FieldInfo tooltip="Partículas, faíscas, confetes, notas de dinheiro, gotas de água, fumaça..." />
+                  </label>
+                  <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3 transition-colors focus-within:border-purple-500/40">
+                    <textarea
+                      rows={2}
+                      value={elementosFlutuantes}
+                      onChange={(e) => setElementosFlutuantes(e.target.value)}
+                      placeholder="Ex: Moedas de ouro voando, faíscas incandescentes, névoa..."
+                      className="w-full bg-transparent text-sm text-zinc-100 placeholder-[#5c5278] outline-none resize-none leading-relaxed"
+                    />
                   </div>
-                ))}
-
-                <button
-                  type="button"
-                  onClick={handleAddTextBlock}
-                  className="w-full py-2.5 rounded-xl bg-white/5 border border-purple-500/20 text-purple-300 text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-purple-950/30 transition-colors cursor-pointer"
-                >
-                  <Plus size={14} />
-                  <span>+ Adicionar texto</span>
-                </button>
-              </div>
-
-              {/* Posição do texto */}
-              <div>
-                <label className="block text-xs font-semibold text-zinc-300 mb-2">Posição do texto</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { id: "left", label: "Esquerda", Icon: AlignLeft },
-                    { id: "center", label: "Centro", Icon: AlignCenter },
-                    { id: "right", label: "Direita", Icon: AlignRight }
-                  ].map((pos) => {
-                    const active = posicaoTexto === pos.id;
-                    return (
-                      <button
-                        key={pos.id}
-                        type="button"
-                        onClick={() => setPosicaoTexto(pos.id as any)}
-                        className={`h-10 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                          active
-                            ? "bg-[#261742] border-2 border-purple-500 text-white shadow-[0_0_12px_rgba(168,85,247,0.3)]"
-                            : "bg-[#12141A] border border-white/5 text-zinc-400 hover:text-white"
-                        }`}
-                      >
-                        <pos.Icon size={14} />
-                        <span className="text-xs font-semibold">{pos.label}</span>
-                      </button>
-                    );
-                  })}
                 </div>
-              </div>
 
-              {/* Degradê de leitura */}
-              <div className="flex items-center justify-between p-3 rounded-xl bg-[#12141A] border border-white/5">
-                <div>
-                  <span className="block text-xs font-semibold text-zinc-200">Degradê de leitura</span>
-                  <span className="block text-[10px] text-zinc-500">Melhora o contraste sob o texto</span>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={degradeTexto}
-                  onChange={(e) => setDegradeTexto(e.target.checked)}
-                  className="h-4 w-4 accent-purple-500 cursor-pointer"
-                />
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* ── 5. AJUSTES ── */}
-        <div className="rounded-2xl border border-white/5 bg-[#0F1017] p-4 transition-all">
-          <div
-            onClick={() => toggleSection("ajustes")}
-            className="flex items-center justify-between cursor-pointer"
-          >
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/5 text-zinc-300">
-                <Settings className="h-4 w-4" />
-              </div>
-              <span className="text-sm font-bold text-[#E2D9FF]">5. Ajustes</span>
-            </div>
-            {openSections.ajustes ? <ChevronUp className="h-4 w-4 text-zinc-400" /> : <ChevronDown className="h-4 w-4 text-zinc-400" />}
-          </div>
-
-          {openSections.ajustes && (
-            <div className="mt-4 flex flex-col gap-4 pt-3 border-t border-white/5">
-              <div>
-                <label className="block text-xs font-semibold text-zinc-300 mb-1.5">Elementos Flutuantes</label>
-                <input
-                  type="text"
-                  value={elementosFlutuantes}
-                  onChange={(e) => setElementosFlutuantes(e.target.value)}
-                  placeholder="Ex: Notas de dólar, moedas... (vazio = IA decide)"
-                  className="w-full bg-[#10121A] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-500 outline-none"
-                />
-              </div>
-
-              <div className="flex items-center justify-between p-3 rounded-xl bg-[#12141A] border border-white/5">
-                <div>
-                  <span className="block text-xs font-semibold text-zinc-200">Desfocar fundo (Blur)</span>
-                  <span className="block text-[10px] text-zinc-500">Desfoque óptico de profundidade de campo</span>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={usarBlur}
-                  onChange={(e) => setUsarBlur(e.target.checked)}
-                  className="h-4 w-4 accent-purple-500 cursor-pointer"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-zinc-300 mb-1.5">Prompt Adicional</label>
-                <div className="rounded-xl border border-white/10 bg-[#10121A] p-2.5">
-                  <textarea
-                    rows={3}
-                    value={promptAdicional}
-                    onChange={(e) => setPromptAdicional(e.target.value)}
-                    placeholder="Instruções extras de direção de arte, renderização, câmera..."
-                    className="w-full bg-transparent text-xs text-zinc-200 placeholder-zinc-500 outline-none resize-none leading-relaxed"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* ── 6. CONFIGURAÇÕES (DIMENSÕES E QUALIDADE) ── */}
-        <div className="rounded-2xl border border-white/5 bg-[#0F1017] p-4 transition-all">
-          <div
-            onClick={() => toggleSection("configuracoes")}
-            className="flex items-center justify-between cursor-pointer"
-          >
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/5 text-zinc-300">
-                <SlidersHorizontal className="h-4 w-4" />
-              </div>
-              <span className="text-sm font-bold text-[#E2D9FF]">6. Configurações</span>
-            </div>
-            {openSections.configuracoes ? <ChevronUp className="h-4 w-4 text-zinc-400" /> : <ChevronDown className="h-4 w-4 text-zinc-400" />}
-          </div>
-
-          {openSections.configuracoes && (
-            <div className="mt-4 flex flex-col gap-4 pt-3 border-t border-white/5">
-              {/* Dimensões */}
-              <div>
-                <label className="block text-xs font-semibold text-zinc-300 mb-2">Dimensões</label>
-                <div className="grid grid-cols-4 gap-2">
-                  {[
-                    { id: "16:9", label: "16:9", sub: "Banner" },
-                    { id: "4:5", label: "4:5", sub: "Feed" },
-                    { id: "1:1", label: "1:1", sub: "Square" },
-                    { id: "9:16", label: "9:16", sub: "Story" }
-                  ].map((dim) => {
-                    const active = dimensao === dim.id;
-                    return (
-                      <button
-                        key={dim.id}
-                        type="button"
-                        onClick={() => setDimensao(dim.id)}
-                        className={`h-12 rounded-xl flex flex-col items-center justify-center transition-all cursor-pointer ${
-                          active
-                            ? "bg-[#261742] border-2 border-purple-500 text-white shadow-[0_0_12px_rgba(168,85,247,0.3)]"
-                            : "bg-[#12141A] border border-white/5 text-zinc-400 hover:text-white"
-                        }`}
-                      >
-                        <span className="text-xs font-bold">{dim.label}</span>
-                        <span className="text-[9px] text-zinc-500">{dim.sub}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Qualidade */}
-              <div>
-                <label className="block text-xs font-semibold text-zinc-300 mb-2">Qualidade</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { id: "1K", label: "1K", sub: "Rápido" },
-                    { id: "2K", label: "2K", sub: "Equilibrado" },
-                    { id: "4K", label: "4K", sub: "Ultra" }
-                  ].map((q) => {
-                    const active = quality === q.id;
-                    return (
-                      <button
-                        key={q.id}
-                        type="button"
-                        onClick={() => setQuality(q.id as any)}
-                        className={`h-12 rounded-xl flex flex-col items-center justify-center transition-all cursor-pointer ${
-                          active
-                            ? "bg-[#261742] border-2 border-purple-500 text-white shadow-[0_0_12px_rgba(168,85,247,0.3)]"
-                            : "bg-[#12141A] border border-white/5 text-zinc-400 hover:text-white"
-                        }`}
-                      >
-                        <span className="text-xs font-bold">{q.label}</span>
-                        <span className="text-[9px] text-zinc-500">{q.sub}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-      </div>
-
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* 3. RODAPÉ FIXO NO FUNDO (STICKY BOTTOM): CONSTRUIR (1 CRÉDITO)     */}
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      <div className="shrink-0 sticky bottom-0 z-30 bg-[#0C0D11]/95 backdrop-blur-md border-t border-white/10 px-4 py-3 shadow-[0_-10px_25px_rgba(0,0,0,0.7)]">
-        <button
-          type="button"
-          onClick={handleConstruirClick}
-          disabled={isGenerating}
-          className="flex w-full items-center justify-between font-extrabold rounded-2xl px-5 h-[52px] text-[15px] transition-all duration-300 hover:scale-[1.01] active:scale-95 shadow-[0_4px_20px_rgba(234,179,8,0.25)] disabled:cursor-not-allowed disabled:hover:scale-100 disabled:opacity-50 cursor-pointer"
-          style={{
-            backgroundColor: "#EAB308",
-            color: "#FFFFFF",
-            border: "none",
-          }}
-        >
-          <div className="w-5" />
-          <span className="flex items-center gap-2 font-black text-white text-base">
-            {isGenerating ? "Construindo..." : "Construir"}
-          </span>
-          <span className="rounded-full bg-black/20 px-2.5 py-1 text-[11px] font-bold text-white">
-            1 crédito
-          </span>
-        </button>
-
-        <div className="mt-2 flex items-center justify-center gap-3 text-[11px] text-[#9d94bb]">
-          <button
-            type="button"
-            onClick={() => {
-              store.createProject();
-              showToast?.("Configurações duplicadas em uma nova aba!", "success");
-            }}
-            title="Duplicar configurações para uma nova aba"
-            className="inline-flex items-center gap-1 transition-colors hover:text-[#f0ecff] cursor-pointer"
-          >
-            <Copy className="h-3 w-3" />
-            <span>Duplicar</span>
-          </button>
-          <span aria-hidden="true" className="text-white/15">·</span>
-          <button
-            type="button"
-            onClick={() => {
-              store.resetConfig();
-              showToast?.("Formulário resetado com sucesso!", "info");
-            }}
-            title="Resetar todas as configurações do formulário"
-            className="inline-flex items-center gap-1 transition-colors hover:text-[#f0ecff] cursor-pointer"
-          >
-            <RotateCcw className="h-3 w-3" />
-            <span>Resetar</span>
-          </button>
-        </div>
-      </div>
-
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* MODAL AJUSTAR FOTOS E CENA                                         */}
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      {showPhotoAdjustModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-zinc-950 p-6 shadow-2xl flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-purple-400">
-                <Sliders className="h-5 w-5" />
-                <h3 className="text-base font-semibold text-white">Ajustar Fotos e Cena</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowPhotoAdjustModal(false)}
-                className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <p className="text-xs text-zinc-400 leading-relaxed">
-              Gerencie as fotos enviadas para o Órion Pro para garantir máxima fidelidade na criação.
-            </p>
-            <div className="grid grid-cols-4 gap-2.5 py-2">
-              {fotosList.map((img, idx) => (
-                <div key={idx} className="relative aspect-square rounded-xl border border-white/10 overflow-hidden group">
-                  <img src={img} alt="" className="w-full h-full object-cover" />
+                {/* Toggles Rápidos */}
+                <div className="grid grid-cols-2 gap-2.5">
                   <button
                     type="button"
-                    onClick={() => handleRemoveSujeito(idx)}
-                    className="absolute top-1 right-1 p-1 rounded-full bg-black/80 text-red-400 hover:bg-red-500 hover:text-white cursor-pointer"
+                    onClick={() => setUsarBlur(!usarBlur)}
+                    className={`flex items-center justify-between p-3 rounded-xl transition-colors pb-ctrl-btn cursor-pointer ${
+                      usarBlur ? "pb-ctrl-active text-white" : "text-zinc-200"
+                    }`}
                   >
-                    <X size={12} />
+                    <span className="text-xs font-medium">Desfoque Fundo</span>
+                    <span className={`h-2 w-2 rounded-full ${usarBlur ? "bg-purple-400 shadow-[0_0_8px_#c084fc]" : "bg-zinc-600"}`} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDegradeTexto(!degradeTexto)}
+                    className={`flex items-center justify-between p-3 rounded-xl transition-colors pb-ctrl-btn cursor-pointer ${
+                      degradeTexto ? "pb-ctrl-active text-white" : "text-zinc-200"
+                    }`}
+                  >
+                    <span className="text-xs font-medium">Degradê Suave</span>
+                    <span className={`h-2 w-2 rounded-full ${degradeTexto ? "bg-purple-400 shadow-[0_0_8px_#c084fc]" : "bg-zinc-600"}`} />
                   </button>
                 </div>
-              ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* 6. CONFIGURAÇÕES (DIMENSÕES E QUALIDADE)                            */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        <div data-tour="form-sec-configuracoes">
+          <div className="group/step relative overflow-hidden rounded-2xl border border-white/[0.04] transition-colors duration-200 bg-white/[0.015] hover:border-white/[0.08]">
+            <button
+              type="button"
+              onClick={() => toggleSection("configuracoes")}
+              aria-expanded={openSections.configuracoes}
+              className="flex w-full items-center gap-3 px-2 py-3 lg:px-4 lg:py-3.5 text-left select-none cursor-pointer transition-colors duration-200 hover:bg-white/[0.025] outline-none"
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.04] transition-colors">
+                <Settings className="h-[18px] w-[18px] text-zinc-400 transition-colors" />
+              </span>
+              <span className="flex min-w-0 flex-1 items-baseline gap-2">
+                <span className="truncate text-left text-base font-normal text-[#e2d9ff]">Configurações</span>
+              </span>
+              <ChevronDown
+                className={`h-4 w-4 shrink-0 text-zinc-500 transition-transform duration-200 ease-out ${
+                  openSections.configuracoes ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+
+            {openSections.configuracoes && (
+              <div className="px-2 pb-3 lg:px-4 lg:pb-4 pt-1 flex flex-col gap-4 animate-in fade-in duration-150">
+                {/* Formato / Dimensão */}
+                <div className="flex flex-col gap-2">
+                  <label className="flex items-center gap-1.5 text-sm font-semibold text-white">
+                    <span>Dimensão da Arte</span>
+                  </label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {[
+                      { id: "1:1", label: "1:1 Feed" },
+                      { id: "9:16", label: "9:16 Story" },
+                      { id: "16:9", label: "16:9 Banner" },
+                      { id: "4:5", label: "4:5 Retrato" }
+                    ].map((d) => {
+                      const active = dimensao === d.id;
+                      return (
+                        <button
+                          key={d.id}
+                          type="button"
+                          onClick={() => setDimensao(d.id)}
+                          className={`flex h-11 flex-col items-center justify-center text-center transition-colors pb-ctrl-btn rounded-xl p-1 cursor-pointer ${
+                            active ? "pb-ctrl-active text-white" : "text-zinc-200"
+                          }`}
+                        >
+                          <span className="text-xs font-semibold">{d.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Qualidade */}
+                <div className="flex flex-col gap-2">
+                  <label className="flex items-center gap-1.5 text-sm font-semibold text-white">
+                    <span>Qualidade de Renderização</span>
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(["1K", "2K", "4K"] as const).map((q) => {
+                      const active = quality === q;
+                      return (
+                        <button
+                          key={q}
+                          type="button"
+                          onClick={() => setQuality(q)}
+                          className={`flex h-11 items-center justify-center text-center transition-colors pb-ctrl-btn rounded-xl text-sm font-semibold cursor-pointer ${
+                            active ? "pb-ctrl-active text-white" : "text-zinc-200"
+                          }`}
+                        >
+                          {q}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Prompt Adicional */}
+                <div className="flex flex-col gap-2">
+                  <label className="flex items-center gap-1.5 text-sm font-semibold text-white">
+                    <span>Prompt Adicional</span>
+                    <FieldInfo tooltip="Comandos técnicos e instruções livres para a engine" />
+                  </label>
+                  <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3 transition-colors focus-within:border-purple-500/40">
+                    <textarea
+                      rows={2}
+                      value={promptAdicional}
+                      onChange={(e) => setPromptAdicional(e.target.value)}
+                      placeholder="Instruções adicionais personalizadas..."
+                      className="w-full bg-transparent text-sm text-zinc-100 placeholder-[#5c5278] outline-none resize-none leading-relaxed"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        {/* STICKY BOTTOM: CONSTRUIR (1 CRÉDITO) & DUPLICAR · RESETAR           */}
+        {/* ═══════════════════════════════════════════════════════════════════ */}
+        <div className="sticky bottom-3 z-30 -mx-1 animate-in fade-in slide-in-from-bottom-2 duration-200 mt-2">
+          <div className="rounded-2xl border border-white/10 bg-black/70 px-2 py-2 shadow-2xl backdrop-blur-md">
+            <div className="w-full">
+              <button
+                type="button"
+                onClick={handleConstruirClick}
+                disabled={isGenerating}
+                className="flex w-full items-center justify-center gap-2 text-black rounded-xl px-6 py-4 text-base font-bold transition-all duration-300 hover:scale-[1.01] active:scale-95 shadow-lg disabled:cursor-not-allowed disabled:hover:scale-100 disabled:opacity-40 cursor-pointer"
+                style={{
+                  background: "linear-gradient(to right, rgb(255, 213, 0), rgba(255, 213, 0, 0.8))"
+                }}
+              >
+                <span>{isGenerating ? "Construindo..." : "Construir"}</span>
+                <span className="ml-1.5 rounded-lg bg-black/15 px-2 py-0.5 text-xs font-semibold">
+                  1 crédito
+                </span>
+              </button>
             </div>
-            <div className="flex justify-between items-center pt-2 border-t border-white/5">
-              <button
-                type="button"
-                onClick={() => fileInputSujeitoRef.current?.click()}
-                className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-purple-600/20 text-purple-300 border border-purple-500/30 hover:bg-purple-600/30 cursor-pointer transition-colors"
-              >
-                + Adicionar foto
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowPhotoAdjustModal(false)}
-                className="px-4 py-2 rounded-xl text-xs font-bold bg-[#EAB308] text-black hover:opacity-95 cursor-pointer"
-              >
-                Concluir
-              </button>
+            <div className="mt-2 px-1 pb-0.5">
+              <div className="flex items-center justify-center gap-3 text-[11px] text-[#9d94bb]">
+                <button
+                  type="button"
+                  title="Duplicar configurações para uma nova aba"
+                  onClick={() => {
+                    store.createProject();
+                    showToast?.("Configurações duplicadas em uma nova aba!", "success");
+                  }}
+                  className="inline-flex items-center gap-1 transition-colors hover:text-[#f0ecff] cursor-pointer"
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                  <span>Duplicar</span>
+                </button>
+                <span className="text-white/20">·</span>
+                <button
+                  type="button"
+                  title="Resetar configurações para o padrão"
+                  onClick={() => {
+                    store.resetConfig();
+                    showToast?.("Configurações resetadas com sucesso!", "info");
+                  }}
+                  className="inline-flex items-center gap-1 transition-colors hover:text-[#f0ecff] cursor-pointer"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  <span>Resetar</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      )}
-    </div>
+
+      </form>
+    </aside>
   );
 };
