@@ -272,6 +272,10 @@ function getCandidateClients(customApiKey?: string): { name: string; instance: G
       const tmpPath = path.join(os.tmpdir(), "chave-vertex.json");
       fs.writeFileSync(tmpPath, JSON.stringify(saParsed, null, 2));
       process.env.GOOGLE_APPLICATION_CREDENTIALS = tmpPath;
+      const cwdPath = path.join(process.cwd(), "chave-vertex.json");
+      if (!fs.existsSync(cwdPath)) {
+        try { fs.writeFileSync(cwdPath, JSON.stringify(saParsed, null, 2)); } catch (_) {}
+      }
     } catch (e) {}
 
     // Multi-region with round-robin: rotate starting region to distribute load
