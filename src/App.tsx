@@ -4573,7 +4573,7 @@ ${textContent}`
   }
 
   return (
-    <div className="flex flex-col h-screen bg-black text-zinc-100 overflow-hidden relative" style={{ fontFamily: "Montserrat, sans-serif" }}>
+    <div className="flex flex-col h-screen h-[100dvh] bg-black text-zinc-100 overflow-hidden relative" style={{ fontFamily: "Montserrat, sans-serif" }}>
       {isOffline && (
         <div className="absolute top-0 left-0 right-0 z-50 bg-red-500 text-white text-center py-2 text-sm font-medium flex items-center justify-center gap-2 animate-in slide-in-from-top-full shadow-lg shadow-red-500/20">
           <WifiOff size={16} />
@@ -4599,7 +4599,7 @@ ${textContent}`
       )}
 
       {/* Conteúdo Principal + Barra Lateral */}
-      <div className="flex h-screen mt-0 overflow-hidden relative w-full">
+      <div className="flex h-screen h-[100dvh] mt-0 overflow-hidden relative w-full">
         
         {/* Menu Lateral Unificado Oficial: Design Builder Vitrine & Mobile Nav */}
         {activeTab !== "ai-tools" && (

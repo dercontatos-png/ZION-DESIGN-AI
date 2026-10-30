@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from
 import { useProjectStore, addDeletedImage } from "../store/useProjectStore";
 import { checkAdminOrOpenPlan, getAuthHeaders } from "../utils/userAuth";
 import { downloadImage } from "../utils/downloadImage";
-import { deductCredit } from "../utils/creditsManager";
+import { deductCredit, getCreditState } from "../utils/creditsManager";
 import { set as idbSet, get as idbGet } from "idb-keyval";
 import { ImageCropModal } from "./ImageCropModal";
 import { CarouselSlicerModal } from "./CarouselSlicerModal";
@@ -91,16 +91,16 @@ const defaultTabState: RefTabState = {
   refPhotos: [],
   isManagingReferencias: false,
   useRefOnBuild: true,
-  dimension: "4:5",
+  dimension: "1:1",
   customWidth: 1200,
   customHeight: 630,
-  quality: "4K",
+  quality: "1K",
   assetsPhotoBase64: null,
   assetsPhotoDesc: "",
   assetsPhotos: [],
   isManagingAssets: false,
   additionalDescription: "",
-  generatedImage: "/generated-images/img_1788816149705_0n9eo.png",
+  generatedImage: null,
   masterPromptResult: ""
 };
 
@@ -689,7 +689,6 @@ export const RefBuilder: React.FC<RefBuilderProps> = ({
       if (saved) return JSON.parse(saved);
     } catch {}
     return [
-      { id: "ref-4k-test", url: "/generated-images/img_1788816149705_0n9eo.png", type: "geracao", timestamp: Date.now() - 60000, isFavorited: false },
       { id: "ref-demo-1", url: "/galeria/thumbnail(1).avif", type: "refino", timestamp: Date.now() - 120000, isFavorited: true },
       { id: "ref-demo-2", url: "/galeria/thumbnail(2).avif", type: "geracao", timestamp: Date.now() - 180000, isFavorited: false },
       { id: "ref-demo-3", url: "/galeria/thumbnail(3).avif", type: "geracao", timestamp: Date.now() - 240000, isFavorited: false },
@@ -829,6 +828,8 @@ export const RefBuilder: React.FC<RefBuilderProps> = ({
 
   const setSubjectPosition = (val: "left" | "center" | "right") => {
     updateActiveTab({ subjectPosition: val });
+    const mapped = val === "left" ? "Esquerda" : val === "right" ? "Direita" : val === "center" ? "Centro" : "";
+    store.updateConfig({ positioning: mapped });
   };
 
   const setRefPhotoBase64 = (val: string | null) => {
@@ -1353,8 +1354,8 @@ export const RefBuilder: React.FC<RefBuilderProps> = ({
       refPhotos: [],
       isManagingReferencias: false,
       useRefOnBuild: true,
-      dimension: "4:5",
-      quality: "4K",
+      dimension: "1:1",
+      quality: "1K",
       assetsPhotoBase64: null,
       assetsPhotoDesc: "",
       assetsPhotos: [],
@@ -1686,6 +1687,10 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
         saveToRefHistory(finalImg, "refino");
         deductCredit(1);
         store.setGaleriaImages(prev => [finalImg, ...prev]);
+        store.addGaleriaImage(finalImg, { app: "ref" });
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("zion-generation-done", { detail: { imageUrl: finalImg, app: "ref" } }));
+        }
         if (store.activeProjectId) {
           store.addImagesToProjectGallery(store.activeProjectId, [finalImg]);
         }
@@ -1767,6 +1772,10 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
         });
         deductCredit(1);
         store.setGaleriaImages((prev) => [finalImg, ...prev]);
+        store.addGaleriaImage(finalImg, { app: "ref" });
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("zion-generation-done", { detail: { imageUrl: finalImg, app: "ref" } }));
+        }
         if (store.activeProjectId) {
           store.addImagesToProjectGallery(store.activeProjectId, [finalImg]);
         }
@@ -1786,6 +1795,15 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
 
   // ── CONSTRUIR (AÇÃO PRINCIPAL DEPENDENTE DO TOGGLE) ──
   const handleBuild = async () => {
+    // Se o saldo de créditos for zero (credits === 0), abre o NoCreditsModal
+    const creditState = getCreditState();
+    if (creditState.remaining <= 0) {
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("zion:no_credits"));
+      }
+      return;
+    }
+
     // Se o modo "Gerar Prompt" estiver ativado, gera o prompt mestre (0 créditos)
     if (generatePromptOnly) {
       await handleGeneratePrompt();
@@ -1882,11 +1900,16 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
         saveToRefHistory(finalImg, "geracao", snapshot);
         deductCredit(1);
         store.setGaleriaImages(prev => [finalImg, ...prev]);
+        store.addGaleriaImage(finalImg, { app: "ref" });
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("zion-generation-done", { detail: { imageUrl: finalImg, app: "ref" } }));
+        }
+        store.addGaleriaImage(finalImg, { app: "ref" });
         if (store.activeProjectId) {
           store.addImagesToProjectGallery(store.activeProjectId, [finalImg]);
         }
         if (typeof window !== "undefined") {
-          window.dispatchEvent(new CustomEvent("zion-generation-done", { detail: { imageUrl: finalImg } }));
+          window.dispatchEvent(new CustomEvent("zion-generation-done", { detail: { imageUrl: finalImg, app: "ref" } }));
         }
         showToast("Imagem sintetizada com sucesso no REF!", "success");
       } else {
@@ -1904,7 +1927,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
   return (
     <div className="flex h-full w-full flex-1 overflow-hidden bg-black text-white relative font-sans select-none flex-col">
       {/* Header Mobile Oficial com Voltar e Alternar Visualização */}
-      <div className="lg:hidden flex items-center justify-between px-3 py-2 bg-[#0c0a15] border-b border-white/[0.08] z-30 shrink-0">
+      <div className="lg:hidden flex items-center justify-between px-3 py-2 pt-[max(0.5rem,env(safe-area-inset-top,0px))] bg-[#0c0a15] border-b border-white/[0.08] z-30 shrink-0">
         <button
           type="button"
           onClick={() => {
@@ -1958,7 +1981,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
         <aside
           data-aside-form-col=""
           data-tour="form"
-          className="agent-form-col relative z-10 shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-white/5 scrollbar-hide px-1.5 py-3 max-lg:pb-4 lg:p-6 lg:pb-6 transition-[filter,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] w-full lg:h-full lg:w-[var(--agent-form-col-w,420px)] lg:min-w-[280px] lg:max-w-[700px] lg:flex-shrink-0 flex max-lg:order-last max-lg:min-h-0 lg:flex"
+          className="agent-form-col relative z-10 shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-white/5 scrollbar-hide px-1.5 py-3 max-lg:pb-[calc(3rem+env(safe-area-inset-bottom,0px))] lg:p-6 lg:pb-6 transition-[filter,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] w-full lg:h-full lg:w-[var(--agent-form-col-w,420px)] lg:min-w-[280px] lg:max-w-[700px] lg:flex-shrink-0 flex max-lg:order-last max-lg:min-h-0 lg:flex"
           style={{ "--agent-form-col-w": "420px", "--agent-color": "#8B5CF6" } as any}
         >
         <form onSubmit={(e) => { e.preventDefault(); handleBuild(); }} className="flex flex-col gap-4 lg:gap-5">
@@ -3160,7 +3183,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
           {/* ── CARD DE AÇÃO FLUTUANTE AO ROLAR O FORMULÁRIO ── */}
           {/* ── CARD DE AÇÃO FLUTUANTE AO ROLAR O FORMULÁRIO (100% IDÊNTICO AO HTML OFICIAL) ── */}
           {!isSubmitIntersecting && (
-            <div className="sticky bottom-3 z-30 animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <div className="sticky bottom-[max(0.75rem,env(safe-area-inset-bottom,0.75rem))] z-30 animate-in fade-in slide-in-from-bottom-2 duration-200">
               <div className="rounded-2xl border border-white/10 bg-black/70 px-2 py-2 shadow-2xl backdrop-blur-md">
                 <div className="w-full">
                   <button
@@ -3216,8 +3239,28 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
         <section className="palco-central relative flex-col overflow-hidden flex max-lg:order-first max-lg:min-h-0 max-lg:overflow-hidden max-lg:pt-[env(safe-area-inset-top)] lg:h-full lg:flex-1" style={{ minWidth: 0 }}>
           
           {/* Botão de minimizar filtros no mobile */}
-          <button type="button" aria-label="Minimizar filtros" className="lg:hidden flex w-full shrink-0 items-center justify-center py-0.5 text-zinc-500 transition-colors active:text-white">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-up h-5 w-5" aria-hidden="true"><path d="m18 15-6-6-6 6"></path></svg>
+          <button
+            type="button"
+            aria-label={mobileView === "form" ? "Recolher ajustes e ver palco" : "Abrir ajustes do formulário"}
+            title={mobileView === "form" ? "Recolher ajustes e ver palco" : "Abrir ajustes do formulário"}
+            onClick={() => setMobileView(mobileView === "form" ? "palco" : "form")}
+            className="lg:hidden flex w-full shrink-0 items-center justify-center py-1 text-zinc-400 hover:text-white transition-colors cursor-pointer active:scale-95 bg-white/[0.02]"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={`lucide lucide-chevron-up h-5 w-5 transition-transform duration-300 ${mobileView === "form" ? "rotate-180" : ""}`}
+              aria-hidden="true"
+            >
+              <path d="m18 15-6-6-6 6"></path>
+            </svg>
           </button>
 
           {/* ── BARRA DE NAVEGAÇÃO PERSISTENTE (IDÊNTICO AO SNIPPET OFICIAL) ── */}
@@ -3747,7 +3790,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                         </button>
 
                           {/* Bloco Central: Publish Alert + Magic Bar */}
-                          <div className={`absolute bottom-8 left-1/2 z-20 flex w-[min(92vw,480px)] -translate-x-1/2 flex-col items-center gap-2.5 lg:w-[calc(100%-120px)] transition-[max-width] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${isMagicBarFocused || magicRefineText.length > 0 || attachments.length > 0 || isBrushActive ? "lg:max-w-[660px]" : "lg:max-w-[480px]"}`}>
+                          <div className={`absolute bottom-[max(1rem,env(safe-area-inset-bottom,1rem))] sm:bottom-8 left-1/2 z-20 flex w-[min(92vw,480px)] -translate-x-1/2 flex-col items-center gap-2.5 lg:w-[calc(100%-120px)] transition-[max-width] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${isMagicBarFocused || magicRefineText.length > 0 || attachments.length > 0 || isBrushActive ? "lg:max-w-[660px]" : "lg:max-w-[480px]"}`}>
                             {showPublishAlert && (
                               <div className="publish-alert-card relative inline-flex items-center gap-3 rounded-2xl py-2 pl-4 pr-2.5 shadow-xl shadow-black/30" style={{ "--alert-idv": "#8B5CF6", "--alert-idv-dim": "#8B5CF640" } as any}>
                                 <p className="whitespace-nowrap text-[15px] font-semibold leading-snug" style={{ color: "color-mix(in srgb, rgb(139, 92, 246) 74%, rgb(0, 0, 0))" }}>

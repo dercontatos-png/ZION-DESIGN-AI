@@ -12,6 +12,7 @@ chave-vertex.json
 .railway
 
 public/generated-images/
+public/uploads/
 
 test*
 patch*
