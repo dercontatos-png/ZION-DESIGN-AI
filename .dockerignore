@@ -1,0 +1,17 @@
+node_modules
+.git
+.github
+dist
+build
+coverage
+*.log
+.env*
+!.env.example
+public/generated-images/*
+public/uploads/*
+local_storage/*
+whatsapp-sessions/*
+realesrgan/*
+*.key
+*.pem
+chave-vertex*.json
