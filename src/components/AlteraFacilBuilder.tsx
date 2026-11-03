@@ -326,7 +326,7 @@ const AlteraFacilBuilder: React.FC<AlteraFacilBuilderProps> = ({
 
   // Dimensions & Quality
   const [aspectRatio, setAspectRatio] = useState<"9:16" | "4:5" | "1:1" | "16:9">("4:5");
-  const [quality, setQuality] = useState<"1K" | "2K" | "4K">("2K");
+  const [quality, setQuality] = useState<"1K" | "2K" | "4K">("4K");
 
   // Canvas state
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
@@ -603,13 +603,29 @@ const AlteraFacilBuilder: React.FC<AlteraFacilBuilderProps> = ({
       const selectedFoco = FOCOS_LIST[focusIndex];
 
       const apiKey = localStorage.getItem("custom_gemini_api_key") || "";
-      const res = await fetch("/api/gerar", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders(apiKey) },
-        body: JSON.stringify({
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 min timeout
+      let res: Response;
+      try {
+        res = await fetch("/api/gerar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...getAuthHeaders(apiKey) },
+          signal: controller.signal,
+          body: JSON.stringify({
           base64DoSujeito: photoBase64,
           sujeitosBase64List: [photoBase64],
-          promptTraduzido: `SWAP SLOT IDENTITY PRESERVATION — Keep 100% of the authentic facial identity, skin texture, bone structure, eye color, and natural facial features from the attached reference photo. Apply ONLY the requested presentation changes: Gênero: ${templateGroup}. Pose: ${selectedPose.title}. Expressão: ${selectedExpr.title}. Enquadramento: ${selectedEnq.title}. Foco: ${selectedFoco.title}. Do not alter facial proportions or age. ${negativePrompt ? `Negative: ${negativePrompt}` : ""}`,
+          promptTraduzido: [
+            `SWAP SLOT — Image 1 is the identity reference, and it owns the entire person. From image 1 come the face, bone structure, eye colour, skin tone, pores, ethnicity, and authentic facial features. None of those are to be altered or invented.`,
+            `THE PICTURE — Elite commercial studio portrait transformation of the subject with sovereign identity lock.`,
+            `LIMB COUNT AND ANATOMY (OFFICIAL DESIGN BUILDER MANDATE — OVERRIDES ANY ALTERNATIVE READING):\nTrace each limb sequentially from the shoulder joint to the fingertips and from the hip joint to the toes:\n1. Near Arm: Trace from shoulder down the bicep, through the elbow, along the forearm, across the wrist, to the hand and all 5 distinct fingers.\n2. Far Arm: Trace from opposite shoulder, down the arm, establishing proper depth and occlusion with exactly 5 fingers.\n3. Hands & Fingers: Exactly two hands exist. Exactly 5 fully articulated fingers per hand, natural fingernail beds, with tactile dermal contact deformation.\n4. Cervical & Body Torque: Sternocleidomastoid muscle tension aligning gaze vector with camera optical axis.\n5. Anatomical Topology: Exactly 2 arms, 2 legs, 2 hands, 5 fingers each. Zero extra limbs, zero fused digits, zero AI hallucinations.`,
+            `FRAMING AND CAMERA — ${selectedEnq.title}. Full-frame Sony A1, 85mm f/1.4 GM prime lens at f/2.0-f/2.8, cinematic depth of field.`,
+            `POSE — ${selectedPose.title}. Natural anatomical posture with organic body-to-head torque.`,
+            `EXPRESSION — ${selectedExpr.title}. Micro-facial muscle tension (zygomaticus major, orbicularis oculi, corrugator supercilii) with natural corneal catchlights.`,
+            `FOCUS — ${selectedFoco.title}. Razor-sharp focal plane on the nearest iris and fine vellus hairs.`,
+            `LIGHTING — 3-point studio lighting with authentic 3-layer Subsurface Scattering (epidermis, dermis, subcutaneous adipose) on living human skin, controlled black clipping in shadow crevices.`,
+            `CAPTURE — Pristine full-frame optical capture, zero AI plastic smoothing, authentic biological human skin with micro-pores.`,
+            negativePrompt ? `NEGATIVE DIRECTIVES: ${negativePrompt}` : ""
+          ].filter(Boolean).join("\n\n"),
           resolutionInput: quality,
           dimensao: aspectRatio,
           formato: "PNG",
@@ -617,6 +633,9 @@ const AlteraFacilBuilder: React.FC<AlteraFacilBuilderProps> = ({
           customApiKey: apiKey
         })
       });
+      } finally {
+        clearTimeout(timeoutId);
+      }
 
       const data = await res.json();
       const finalImg = data.image || data.imageUrl;
@@ -649,19 +668,86 @@ const AlteraFacilBuilder: React.FC<AlteraFacilBuilderProps> = ({
     showToast?.("Formulário resetado com sucesso!", "info");
   };
 
-  const handleDownloadFormat = (fmt: "avif" | "png" | "jpeg" | "webp") => {
+  const handleDownloadFormat = async (fmt: "avif" | "png" | "jpeg" | "webp") => {
     if (!generatedImage && !photoBase64) {
       showToast?.("Nenhuma imagem para exportar.", "warning");
       return;
     }
     const img = generatedImage || photoBase64!;
-    const a = document.createElement("a");
-    a.href = img;
-    a.download = `altera-facil-${Date.now()}.${fmt}`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    showToast?.(`Download iniciado em ${fmt.toUpperCase()}!`, "success");
+    const ext = fmt === "jpeg" ? "jpg" : fmt;
+
+    try {
+      // Priorizar download direto dos bytes originais do servidor (100% sem perda)
+      if (img.startsWith("http") || img.startsWith("/")) {
+        try {
+          const res = await fetch(img);
+          const blob = await res.blob();
+          const mime = blob.type.toLowerCase();
+          const matchesFormat = (fmt === "png" && mime.includes("png")) ||
+                                (fmt === "jpeg" && (mime.includes("jpeg") || mime.includes("jpg"))) ||
+                                (fmt === "webp" && mime.includes("webp")) ||
+                                (fmt === "avif" && mime.includes("avif"));
+          if (matchesFormat && blob.size > 0) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `altera-facil-${Date.now()}.${ext}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 5000);
+            showToast?.(`Download concluído em ${fmt.toUpperCase()} (Nativo)!`, "success");
+            return;
+          }
+        } catch (_) {}
+      }
+
+      // Conversão limpa via canvas sem distorção bilinear
+      const imgEl = new Image();
+      imgEl.crossOrigin = "anonymous";
+      imgEl.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = imgEl.naturalWidth || 1024;
+        canvas.height = imgEl.naturalHeight || 1024;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(imgEl, 0, 0);
+
+        const mimeMap: Record<string, string> = {
+          avif: "image/avif",
+          png: "image/png",
+          jpeg: "image/jpeg",
+          webp: "image/webp"
+        };
+        const mime = mimeMap[fmt] || "image/png";
+
+        canvas.toBlob((blob) => {
+          if (!blob) {
+            const a = document.createElement("a");
+            a.href = img;
+            a.download = `altera-facil-${Date.now()}.${ext}`;
+            a.click();
+            return;
+          }
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `altera-facil-${Date.now()}.${ext}`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(url), 5000);
+          showToast?.(`Download concluído em ${fmt.toUpperCase()}!`, "success");
+        }, mime, 1.0);
+      };
+      imgEl.src = img;
+    } catch {
+      const a = document.createElement("a");
+      a.href = img;
+      a.download = `altera-facil-${Date.now()}.${ext}`;
+      a.click();
+    }
   };
 
   return (
@@ -721,7 +807,7 @@ const AlteraFacilBuilder: React.FC<AlteraFacilBuilderProps> = ({
         <aside
           data-aside-form-col=""
           data-tour="form"
-          className="agent-form-col relative z-10 flex shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-white/5 scrollbar-hide px-2 py-3 max-lg:pb-4 lg:px-6 lg:py-6 lg:pb-6 transition-[filter,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] gap-5 lg:gap-6 lg:sticky lg:top-0 lg:h-full max-lg:order-2 w-full lg:w-[420px] lg:min-w-[280px] lg:max-w-[700px] max-lg:min-h-0"
+          className="agent-form-col bg-black relative z-10 flex shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-white/5 scrollbar-hide px-2 py-3 max-lg:pb-4 lg:px-6 lg:py-6 lg:pb-6 transition-[filter,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] gap-5 lg:gap-6 lg:sticky lg:top-0 lg:h-full max-lg:order-2 w-full lg:w-[420px] lg:min-w-[280px] lg:max-w-[700px] max-lg:min-h-0"
         >
         {/* 1. Foto para alterar */}
         <div data-tour="form-sec-ef-foto" className="campo-com-info">
@@ -1160,63 +1246,7 @@ const AlteraFacilBuilder: React.FC<AlteraFacilBuilderProps> = ({
           </div>
         </div>
 
-        {/* Sticky Floating Action Card */}
-        {!isSubmitButtonVisible && (
-          <div className="sticky bottom-3 z-30 -mx-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
-            <div className="rounded-2xl border border-white/10 bg-black/70 px-2 py-2 shadow-2xl backdrop-blur-md">
-              <div className="w-full">
-                <button
-                  type="button"
-                  disabled={isProcessing}
-                  onClick={handleExecute}
-                  className="flex w-full items-center justify-center gap-2 text-white rounded-xl px-6 py-4 text-base font-semibold transition-all duration-300 hover:scale-[1.01] active:scale-95 shadow-lg disabled:cursor-not-allowed disabled:hover:scale-100 disabled:opacity-40 cursor-pointer"
-                  style={{ background: "linear-gradient(to right, rgb(168, 85, 247), rgba(168, 85, 247, 0.8))" }}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-wand-sparkles h-4 w-4" aria-hidden="true">
-                    <path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"></path>
-                    <path d="m14 7 3 3"></path>
-                    <path d="M5 6v4"></path>
-                    <path d="M19 14v4"></path>
-                    <path d="M10 2v2"></path>
-                    <path d="M7 8H3"></path>
-                    <path d="M21 16h-4"></path>
-                    <path d="M11 3H9"></path>
-                  </svg>
-                  <span>{isProcessing ? "Alterando..." : "Alterar imagem"}</span>
-                  <span className="ml-1.5 rounded-lg bg-white/15 px-2 py-0.5 text-xs font-medium">1 crédito</span>
-                </button>
-              </div>
-              <div className="mt-2 px-1 pb-0.5">
-                <div className="flex items-center justify-center gap-4 text-[11px] text-[#9d94bb]">
-                  <button
-                    type="button"
-                    onClick={handleDuplicate}
-                    title="Duplicar configurações para uma nova aba"
-                    className="inline-flex items-center gap-1 transition-colors hover:text-[#f0ecff] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-[#9d94bb] cursor-pointer"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-copy h-3 w-3" aria-hidden="true">
-                      <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
-                      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
-                    </svg>
-                    Duplicar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleReset}
-                    title="Resetar todas as configurações do formulário"
-                    className="inline-flex items-center gap-1 transition-colors hover:text-[#f0ecff] cursor-pointer"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-rotate-ccw h-3 w-3" aria-hidden="true">
-                      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
-                      <path d="M3 3v5h5"></path>
-                    </svg>
-                    Resetar
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+
 
         {/* Bottom row: Duplicar & Resetar */}
         <div className="flex gap-2">
@@ -1510,8 +1540,7 @@ const AlteraFacilBuilder: React.FC<AlteraFacilBuilderProps> = ({
               </div>
 
               {/* Bloco Central: Magic Bar & Publish Alert */}
-              <div className="absolute bottom-8 left-1/2 z-20 flex w-[min(92vw,480px)] -translate-x-1/2 flex-col items-center gap-2.5 lg:w-[calc(100%-120px)] transition-[max-width] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] lg:max-w-[480px] pointer-events-auto">
-                <MagicRefineBar
+              <MagicRefineBar
                   activeImage={generatedImage || photoBase64 || undefined}
                   isProcessing={isProcessing}
                   agentColor="#a855f7"
@@ -1526,7 +1555,7 @@ const AlteraFacilBuilder: React.FC<AlteraFacilBuilderProps> = ({
                     setTimeout(() => handleExecute(), 50);
                   }}
                 />
-              </div>
+              
             </div>
               </>
             )}

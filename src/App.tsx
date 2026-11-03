@@ -8287,6 +8287,28 @@ ${textContent}`
           showToast={showToast}
         />
       )}
+
+      {/* Botão Flutuante Oficial do WhatsApp Suporte (100% IDÊNTICO AO ORIGINAL) */}
+      <a
+        href="https://link.designbuilder.co/fale-com-suporte-db"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Falar com o suporte pelo WhatsApp"
+        title="Falar com o suporte pelo WhatsApp"
+        className="pointer-events-auto fixed bottom-[calc(9.25rem+env(safe-area-inset-bottom))] right-4 z-[2147483647] flex h-14 w-14 items-center justify-center rounded-full transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-400 focus-visible:ring-offset-2 focus-visible:ring-offset-black lg:bottom-[5.75rem] lg:right-6"
+      >
+        <img
+          alt=""
+          loading="lazy"
+          width="56"
+          height="56"
+          decoding="async"
+          data-nimg="1"
+          className="h-14 w-14"
+          style={{ color: "transparent" }}
+          src="/WhatsApp.svg"
+        />
+      </a>
     </div>
   );
 }

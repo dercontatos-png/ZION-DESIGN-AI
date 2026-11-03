@@ -162,7 +162,7 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
 
   // ── Section 6: Configurações
   const [dimensao, setDimensao] = useState<string>("16:9");
-  const [quality, setQuality] = useState<"1K" | "2K" | "4K">("2K");
+  const [quality, setQuality] = useState<"1K" | "2K" | "4K">("4K");
 
   // File Input Refs
   const fileInputSujeitoRef = useRef<HTMLInputElement>(null);
@@ -421,7 +421,7 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
       data-tour="form"
       onPaste={handlePaste}
       tabIndex={0}
-      className="agent-form-col relative z-10 shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-white/5 scrollbar-hide px-1.5 py-3 lg:p-6 transition-[filter,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] w-full lg:h-full lg:w-[var(--agent-form-col-w,420px)] lg:min-w-[280px] lg:max-w-[700px] lg:flex-shrink-0 flex max-lg:order-last max-lg:min-h-0 select-none font-sans outline-none"
+      className="agent-form-col bg-black relative z-10 shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-white/5 scrollbar-hide px-1.5 py-3 lg:p-6 transition-[filter,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] w-full lg:h-full lg:w-[var(--agent-form-col-w,420px)] lg:min-w-[280px] lg:max-w-[700px] lg:flex-shrink-0 flex max-lg:order-last max-lg:min-h-0 select-none font-sans outline-none"
       style={{ "--agent-form-col-w": "420px", "--agent-color": "#ffd500" } as any}
     >
       <form className="flex flex-col gap-4 lg:gap-5 pb-6" onSubmit={(e) => e.preventDefault()}>

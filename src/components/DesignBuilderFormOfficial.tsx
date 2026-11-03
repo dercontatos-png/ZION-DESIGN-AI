@@ -17,6 +17,7 @@ interface DesignBuilderFormOfficialProps {
   isOrion?: boolean;
   agentColor?: string;
   onCloseMobileCategory?: () => void;
+  mobileActiveCategory?: string | null;
 }
 
 export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps> = ({
@@ -28,8 +29,20 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
   agentColWidth = 420,
   isOrion = false,
   agentColor,
-  onCloseMobileCategory
+  onCloseMobileCategory,
+  mobileActiveCategory
 }) => {
+  const [isDesktop, setIsDesktop] = useState(typeof window !== "undefined" ? window.innerWidth >= 1024 : true);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsDesktop(window.innerWidth >= 1024);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const shouldRenderFormContent = isDesktop || !!mobileActiveCategory;
   const store = useProjectStore();
 
   // Floating submit visibility on scroll (IntersectionObserver matching official FloatingSubmitOnScroll)
@@ -571,12 +584,12 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
       ref={asideRef}
       data-aside-form-col=""
       data-tour="form"
-      className={`agent-form-col relative z-10 shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-white/5 scrollbar-hide scroll-smooth px-1.5 py-3 lg:p-6 transition-[filter,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] w-full lg:h-full lg:w-[var(--agent-form-col-w,420px)] lg:min-w-[280px] lg:max-w-[700px] lg:flex-shrink-0 ${
-        activePalcoMode && activePalcoMode !== "builder" ? "hidden" : "flex max-lg:order-last max-lg:min-h-0 lg:flex"
+      className={`agent-form-col bg-black relative z-10 shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-white/5 scrollbar-hide scroll-smooth px-1.5 py-3 lg:p-6 transition-[filter,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] w-full lg:h-full lg:w-[var(--agent-form-col-w,420px)] lg:min-w-[280px] lg:max-w-[700px] lg:flex-shrink-0 ${
+        activePalcoMode && activePalcoMode !== "builder" && activePalcoMode !== "home" ? "hidden" : "flex max-lg:order-last max-lg:min-h-0 lg:flex"
       }`}
       style={{
         "--agent-form-col-w": `${agentColWidth || 420}px`,
-        "--agent-color": isOrion ? "#ffd500" : (agentColor || "#7C3AED"),
+        "--agent-color": isOrion ? "#ffd500" : (agentColor || "#8B5CF6"),
       } as any}
     >
       <form
@@ -584,8 +597,10 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
           e.preventDefault();
           onGenerate();
         }}
-        className="flex flex-col gap-4 lg:gap-5 pb-16"
+        className="flex flex-col gap-6 lg:gap-12 pb-16"
       >
+        {shouldRenderFormContent && (
+          <>
         {/* ── 1. SUJEITO / PRODUTO ── */}
         <div id="section-sujeito" data-tour="form-sec-subject" className="scroll-mt-14">
           <div className="flex flex-col gap-6 lg:gap-12">
@@ -2559,17 +2574,17 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
             <button
               type="submit"
               disabled={isGenerating}
-              className={`flex w-full items-center justify-center gap-2 rounded-xl px-6 py-4 text-base font-semibold transition-all duration-300 hover:scale-[1.01] active:scale-95 shadow-lg disabled:cursor-not-allowed disabled:hover:scale-100 disabled:opacity-40 cursor-pointer ${
+              className={`flex w-full items-center justify-center gap-2 rounded-xl px-6 py-4 text-base font-semibold transition-all duration-300 hover:scale-[1.01] active:scale-95 shadow-lg disabled:cursor-not-allowed disabled:hover:scale-100 disabled:opacity-40 ${
                 isOrion ? "text-black shadow-[0_4px_24px_rgba(255,213,0,0.3)]" : "text-white"
               }`}
               style={{
                 background: isOrion
                   ? "linear-gradient(135deg, rgb(255, 213, 0), rgba(255, 213, 0, 0.85))"
-                  : "linear-gradient(to right, rgb(124, 58, 237), rgba(124, 58, 237, 0.8))"
+                  : "linear-gradient(to right, rgb(139, 92, 246), rgba(139, 92, 246, 0.8))"
               }}
             >
               <span>{isGenerating ? "Construindo..." : "Construir"}</span>
-              <span className={`ml-1.5 rounded-lg px-2 py-0.5 text-xs font-semibold ${
+              <span className={`ml-1.5 rounded-lg px-2 py-0.5 text-xs font-medium ${
                 isOrion ? "bg-black/15 text-black" : "bg-white/15 text-white"
               }`}>1 crédito</span>
             </button>
@@ -2603,59 +2618,7 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
           </div>
         </div>
 
-        {/* Sticky Bottom Bar (Exibida suavemente enquanto o usuário navega pelo formulário; oculta no topo para não cobrir campos) */}
-        {hasScrolled && !isStaticSubmitVisible && (
-          <div className="sticky bottom-3 z-30 -mx-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
-            <div className="rounded-2xl border border-white/10 bg-black/70 px-2 py-2 shadow-2xl backdrop-blur-md">
-              <div className="w-full">
-                <button
-                  type="button"
-                  disabled={isGenerating}
-                  onClick={onGenerate}
-                  className={`flex w-full items-center justify-center gap-2 rounded-xl px-6 py-4 text-base font-semibold transition-all duration-300 hover:scale-[1.01] active:scale-95 shadow-lg disabled:cursor-not-allowed disabled:hover:scale-100 disabled:opacity-40 cursor-pointer ${
-                    isOrion ? "text-black shadow-[0_4px_24px_rgba(255,213,0,0.3)]" : "text-white"
-                  }`}
-                  style={{
-                    background: isOrion
-                      ? "linear-gradient(135deg, rgb(255, 213, 0), rgba(255, 213, 0, 0.85))"
-                      : "linear-gradient(to right, rgb(124, 58, 237), rgba(124, 58, 237, 0.8))"
-                  }}
-                >
-                  <span>{isGenerating ? "Construindo..." : "Construir"}</span>
-                  <span className={`ml-1.5 rounded-lg px-2 py-0.5 text-xs font-semibold ${
-                    isOrion ? "bg-black/15 text-black" : "bg-white/15 text-white"
-                  }`}>1 crédito</span>
-                </button>
-              </div>
-              <div className="mt-2 px-1 pb-0.5">
-                <div className="flex items-center justify-center gap-3 text-[11px] text-[#9d94bb]">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      store.createProject();
-                      showToast("Configurações duplicadas em uma nova aba!", "success");
-                    }}
-                    title="Duplicar configurações para uma nova aba"
-                    className="inline-flex items-center gap-1 transition-colors hover:text-[#f0ecff] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-[#9d94bb] cursor-pointer"
-                  >
-                    <Copy className="h-3 w-3" />
-                    <span>Duplicar</span>
-                  </button>
-                  <span aria-hidden="true" className="text-white/15">·</span>
-                  <button
-                    type="button"
-                    onClick={handleResetAll}
-                    title="Resetar todas as configurações do formulário"
-                    className="inline-flex items-center gap-1 transition-colors hover:text-[#f0ecff] cursor-pointer"
-                  >
-                    <RotateCcw className="h-3 w-3" />
-                    <span>Resetar</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+
 
         <div className="flex gap-2">
           <button
@@ -2693,6 +2656,8 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
         </button>
 
         <div className="h-20 shrink-0" aria-hidden="true"></div>
+          </>
+        )}
       </form>
 
       {/* Modal Ampliar Imagem do Sujeito */}
@@ -2889,7 +2854,7 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
                     showToast("Texto salvo com sucesso!", "success");
                   }}
                   className="rounded-lg px-4 py-1.5 text-xs font-semibold text-white transition-colors cursor-pointer"
-                  style={{ backgroundColor: "rgb(124, 58, 237)" }}
+                  style={{ backgroundColor: "rgb(139, 92, 246)" }}
                 >
                   Salvar
                 </button>

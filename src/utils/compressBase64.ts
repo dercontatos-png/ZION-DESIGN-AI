@@ -10,10 +10,25 @@ export async function optimizeBase64Image(
 ): Promise<string> {
   if (!base64Str || typeof base64Str !== "string") return "";
 
-  const isUrl = base64Str.startsWith("http://") || base64Str.startsWith("https://") || base64Str.startsWith("/") || base64Str.startsWith("./");
+  const isUrl = (base64Str.startsWith("http://") || base64Str.startsWith("https://") || (base64Str.startsWith("/") && !base64Str.startsWith("/9j/")) || base64Str.startsWith("./")) && base64Str.length < 2048;
+  const isPngRaw = base64Str.startsWith("iVBORw0KGgo");
+  const isJpegRaw = base64Str.startsWith("/9j/");
+  const isWebpRaw = base64Str.startsWith("UklGR");
+  const isAvifRaw = base64Str.startsWith("AAAAIGZ0eXBhdmlm");
+
   const src = base64Str.startsWith("data:")
     ? base64Str
-    : (isUrl ? base64Str : `data:image/jpeg;base64,${base64Str}`);
+    : isPngRaw
+    ? `data:image/png;base64,${base64Str}`
+    : isWebpRaw
+    ? `data:image/webp;base64,${base64Str}`
+    : isAvifRaw
+    ? `data:image/avif;base64,${base64Str}`
+    : isJpegRaw
+    ? `data:image/jpeg;base64,${base64Str}`
+    : isUrl
+    ? base64Str
+    : `data:image/jpeg;base64,${base64Str}`;
 
   return new Promise((resolve) => {
     const img = new Image();

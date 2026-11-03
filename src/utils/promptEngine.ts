@@ -113,7 +113,7 @@ const FOCUS_PRESETS: Record<string, string> = {
 
   pov_enclosed: `Depth-of-field blur only, no motion blur anywhere. Critical sharpness sits on the eyes — lashes, iris texture, pores across the cheeks are all resolved. The plane of sharpness carries the whole face and collar. Objects inside the enclosure closest to the lens are noticeably softer, outlines spread while remaining identifiable. The exterior background is slightly soft.`,
 
-  bust_shallow: `Depth-of-field blur only, no motion blur anywhere; every edge is a still edge. Critical sharpness on the eyes — individual lashes, iris texture, creases at the outer corners and pores across the cheeks are all resolved — and carries through the teeth, hair and neckline. Background elements are slightly soft. Fine grain is visible throughout.`,
+  bust_shallow: `Depth-of-field blur only, no motion blur anywhere; every edge is a still edge. Critical sharpness on the eyes — individual lashes, iris texture, creases at the outer corners and pores across the cheeks are all resolved — and carries through the teeth, hair and neckline. Background elements are slightly soft. Clean studio clarity without noise or grain dots.`,
 };
 
 // ─── COLOUR PRESETS ───────────────────────────────────────────────────
@@ -138,7 +138,7 @@ const COLOUR_PRESETS: Record<string, string> = {
 
 // ─── CAPTURE RULES ────────────────────────────────────────────────────
 
-const CAPTURE_RULE = `A real exposure made on a full-frame camera. Light falls off toward the four corners. Highlights on bright sources clip hard and stay small; lit surfaces clip softly and keep their modelling. Shadows stay open — dark areas hold readable detail and surface texture rather than collapsing to black. Every repeated element varies: no two textures, no two highlights, no two shadows are identical or evenly spaced. Render skin as a real camera renders skin, whatever skin the reference provides: pores and fine surface texture resolved, individual hairs at the hairline and brows resolved, tone varying across the face rather than running uniform, and a slight specular sheen on the forehead, nose and cheekbones. Do not smooth, retouch or plasticise it, and do not add or subtract any feature. Visible fine grain throughout, heavier in dark areas.`;
+const CAPTURE_RULE = `A real exposure made on a full-frame camera. Light falls off toward the four corners. Highlights on bright sources clip hard and stay small; lit surfaces clip softly and keep their modelling. Shadows stay open — dark areas hold readable detail and surface texture rather than collapsing to black. Every repeated element varies: no two textures, no two highlights, no two shadows are identical or evenly spaced. Render skin as a real camera renders skin, whatever skin the reference provides: clean photographic surface texture resolved, individual hairs at the hairline and brows resolved, tone varying across the face rather than running uniform, and a slight specular sheen on the forehead, nose and cheekbones. Do not smooth or plasticise it, and do not add painted or dot artifacts. Clean digital photographic capture with zero grain dots, zero stippling, and zero oil-paint brushstroke textures.`;
 
 // ─── COMPOSITION & SAFE MARGIN RULES ──────────────────────────────────
 
@@ -159,15 +159,15 @@ CRITICAL COMPOSITION & SAFE MARGIN LAW (HIGHEST PRIORITY):
 
 // ─── ANATOMY SAFETY ───────────────────────────────────────────────────
 
+// ─── ANATOMY SAFETY (DESIGN BUILDER OFFICIAL LIMB TRACING) ────────────
+
 const ANATOMY_RULE = `
-ANATOMY SAFETY RULE (CRITICAL — non-negotiable):
-Every human subject in the final image MUST have:
-- EXACTLY 2 arms (not 3, not 4, not 1)
-- EXACTLY 2 hands with 5 fingers each (no extra fingers)
-- EXACTLY 2 legs (unless framing cuts them off)
-- EXACTLY 1 head with normal human proportions
-- Normal, symmetric, anatomically correct human body
-No extra limbs, no floating hands, no duplicated body parts.`;
+LIMB COUNT AND ANATOMY (OFFICIAL DESIGN BUILDER MANDATE — OVERRIDES ANY ALTERNATIVE READING):
+This block strictly overrides any other interpretation. The human body has EXACTLY two arms, two legs, and two hands with five distinct fingers each. No third arm, no floating hands, no chimeric or duplicate limbs exist in the picture.
+- Near arm: Leaves the shoulder and runs in one continuous, unbroken anatomical line (shoulder -> upper arm -> elbow -> forearm -> wrist -> hand). It has exactly one role and holds natural joint articulation.
+- Far arm: Leaves the opposite shoulder in one continuous, unbroken line with realistic foreshortening and muscle tension. Each shoulder has exactly one arm attached to it.
+- Tactile dermal contact: Fingers touching skin, fabric, or props exhibit authentic physical pressure and soft tissue deformation at contact points (Z-depth: Skin > Fabric > Prop).
+- Gaze vector & cervical torque: Body-to-head torque with natural muscular tension in the sternocleidomastoid and trapezius muscles when turning, aligning gaze directly with the camera's optical axis.`;
 
 // ─── PHOTOREALISTIC QUALITY DIRECTIVES ────────────────────────────────
 
@@ -175,8 +175,8 @@ const PHOTOREALISM_DIRECTIVES = `
 PHOTOREALISTIC QUALITY DIRECTIVES:
 
 Skin & facial realism:
-- Visible pores in T-zone and cheeks
-- Natural skin texture with authentic grain
+- Smooth, natural skin texture with pristine photographic clarity
+- Zero artificial noise, zero grain dots, zero stippling
 - Fine vellus hair visible in raking light
 - Slight facial asymmetry, no perfect symmetry
 - Organic, slightly imprecise catchlights
@@ -188,11 +188,11 @@ Lens optics simulation:
 - Bokeh: circular highlights with slight cat-eye distortion at edges
 - Chromatic aberration: subtle purple fringe at high-contrast edges
 
-Film emulsion simulation:
-- Grain visible in shadows, creamy in highlights
-- Grain structure: organic, not uniform — varies by luminance zone
+Clean digital capture:
+- Clean shadow transitions without noise or grain
+- Pure, clean gradients without stippling or dot artifacts
 - Slight halation around light sources
-- Shadow detail: crushed but not clipped (separation preserved)`;
+- Shadow detail: rich depth with full separation preserved`;
 
 // ─── CATEGORY DETECTION ───────────────────────────────────────────────
 

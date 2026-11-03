@@ -114,7 +114,16 @@ export default function DesignBuilder({
   userTokens = 97
 }: DesignBuilderProps) {
   const store = useProjectStore();
-
+const hasFotoDot = Boolean(
+    store.sujeitoBase64 ||
+    ((store as any).uploadedImages && (store as any).uploadedImages.length > 0) ||
+    ((store as any).produtosBase64 && (store as any).produtosBase64.length > 0)
+  );
+  const hasEstiloDot = Boolean(
+    store.estiloVisual && store.estiloVisual !== "" && store.estiloVisual !== "Nenhum" && store.estiloVisual !== "Padrao"
+  );
+  const hasSaidaDot = Boolean((store as any).aspectRatio || store.dimensao || store.resolucao);
+  
   const realCredits = (() => {
     try {
       const s = localStorage.getItem("zion_real_credits");
@@ -136,21 +145,48 @@ export default function DesignBuilder({
       if (p === "/agent/design-builder1-2" || p === "/design-builder" || agentParam === "design-builder" || agentParam === "design-builder1-2") return "design-builder1-2";
       if (p === "/remove-fundo" || agentParam === "remove-fundo") return "remove-fundo";
       if (p === "/vector-builder" || agentParam === "vector-builder") return "vector-builder";
-      if (p === "/conversor" || agentParam === "conversor") return "conversor";
+      if (p === "/conversor" || p === "/conversor-imagens" || agentParam === "conversor" || agentParam === "conversor-imagens") return "conversor";
       try {
         const saved = localStorage.getItem("zion_last_selected_agent");
-        if (saved) return saved;
+        if (saved && saved !== "design-builder1-2" && saved !== "design-builder") return saved;
       } catch (_) {}
     }
-    return "design-builder1-2";
+    return "ref";
   };
 
   const detectIsHomeFromUrl = (): boolean => {
     if (typeof window !== "undefined") {
       const p = window.location.pathname;
+      const search = new URLSearchParams(window.location.search);
+      if (
+        p.startsWith("/agent/") ||
+        p === "/orion-pro" ||
+        p === "/hydra" ||
+        p === "/ref" ||
+        p === "/enhance-builder" ||
+        p === "/altera-facil" ||
+        p === "/enhance" ||
+        p === "/remove-fundo" ||
+        p === "/vector-builder" ||
+        p === "/conversor" ||
+        p === "/conversor-imagens" ||
+        p === "/apps" ||
+        p === "/todos-os-apps" ||
+        p === "/projetos" ||
+        p === "/projects" ||
+        p === "/community" ||
+        p === "/comunidade" ||
+        p === "/gallery" ||
+        p === "/galeria" ||
+        p === "/pinterest" ||
+        p === "/prompts" ||
+        search.get("agent")
+      ) {
+        return false;
+      }
       if (p === "/" || p === "" || p === "/home") return true;
     }
-    return false;
+    return true;
   };
 
   const detectIsAppsFromUrl = (): boolean => {
@@ -513,7 +549,7 @@ export default function DesignBuilder({
         setIsAppsOpen(false);
         setIsVitrineOpen(false);
         setActivePalcoMode("pinterest");
-      } else if (p.startsWith("/agent/") || p === "/orion-pro" || p === "/hydra" || p === "/ref" || p === "/enhance-builder" || p === "/altera-facil" || p === "/enhance") {
+      } else if (p.startsWith("/agent/") || p === "/orion-pro" || p === "/hydra" || p === "/ref" || p === "/enhance-builder" || p === "/altera-facil" || p === "/enhance" || p === "/remove-fundo" || p === "/vector-builder" || p === "/conversor" || p === "/conversor-imagens") {
         setIsHomeOpen(false);
         setIsAppsOpen(false);
         setIsVitrineOpen(false);
@@ -658,7 +694,7 @@ export default function DesignBuilder({
   }, [mobileActiveCategory]);
 
   // Active image in gallery
-  const activeImage = store.galeriaImages?.[store.activeImageIndex] || null;
+  const activeImage = store.galeriaImages?.[store.activeImageIndex] || (store.galeriaImages?.[0]) || "/Design Builder1 2_files/result.avif";
 
   // Real-time timer during generation
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
@@ -700,6 +736,20 @@ export default function DesignBuilder({
     }
     return () => clearInterval(timer);
   }, [store.isGenerating, store.activeProjectId, store.resolucao, store.projectGenerationStartTimes]);
+
+  // Safety Watchdog: Garante que a UI nunca fique presa em carregamento infinito (máximo 180s)
+  useEffect(() => {
+    if (!store.isGenerating) return;
+    const watchdogTimer = setTimeout(() => {
+      console.warn("[Watchdog] Geração excedeu 180s. Resetando estado para liberar a UI.");
+      if (store.activeProjectId) {
+        store.setIsProjectGenerating(store.activeProjectId, false);
+      }
+      store.setIsGenerating(false);
+      showToast("A geração demorou mais que o esperado. Você pode clicar em Construir novamente.", "warning");
+    }, 180000);
+    return () => clearTimeout(watchdogTimer);
+  }, [store.isGenerating, store.activeProjectId]);
 
   // Hook for image generation
   const { generatePremiumImage, isGenerating } = useGenerateImage(
@@ -952,7 +1002,7 @@ export default function DesignBuilder({
       }
 
       const targetDim = fd.dimensions || fd.dimensao || "4:5";
-      const targetQuality = fd.quality || fd.resolucao || "1K";
+      const targetQuality = fd.quality || fd.resolucao || "4K";
 
       let newCamadas = store.camadasTexto;
       if (Array.isArray(fd.text_blocks) && fd.text_blocks.length > 0) {
@@ -1437,7 +1487,7 @@ export default function DesignBuilder({
 
       {/* ── BARRA LATERAL UNIFICADA OFICIAL (DESKTOP DOCK + MOBILE BAR 1:1) ── */}
       <DesignBuilderSidebar
-        variant={activePalcoMode === "galeria" || activePalcoMode === "apps" || activePalcoMode === "prompts" ? "expanded" : "dock"}
+        variant={activePalcoMode === "galeria" || activePalcoMode === "apps" || activePalcoMode === "prompts" || activePalcoMode === "projetos" || activePalcoMode === "comunidade" ? "expanded" : "dock"}
         activeTab={
           activePalcoMode === "projetos"
             ? "projetos"
@@ -1451,7 +1501,7 @@ export default function DesignBuilder({
             ? "apps"
             : "ai-tools"
         }
-        hideMobileNav={activePalcoMode === "builder"}
+        hideMobileNav={activePalcoMode === "builder" || activePalcoMode === "home" || (activePalcoMode !== "apps" && activePalcoMode !== "projetos" && activePalcoMode !== "galeria" && activePalcoMode !== "comunidade" && activePalcoMode !== "prompts")}
         onNavigateTab={(tab) => {
           if (tab === "projetos" || tab === "projects") {
             setActivePalcoMode("projetos");
@@ -1499,7 +1549,7 @@ export default function DesignBuilder({
 
       {/* ── ÁREA PRINCIPAL DE CONTEÚDO (COM PADDING PARA O DOCK OU SIDEBAR) ── */}
       <div className={`flex h-[100dvh] flex-col overflow-hidden relative z-[2] flex-1 bg-black ${
-        activePalcoMode === "galeria" || activePalcoMode === "apps" || activePalcoMode === "prompts" ? "lg:pl-72" : "lg:pl-[60px]"
+        activePalcoMode === "galeria" || activePalcoMode === "apps" || activePalcoMode === "prompts" || activePalcoMode === "projetos" || activePalcoMode === "comunidade" ? "lg:pl-72" : "lg:pl-[60px]"
       }`}>
         {activePalcoMode === "apps" ? (
           <div className="flex-1 flex flex-col h-full overflow-hidden bg-black">
@@ -1652,7 +1702,9 @@ export default function DesignBuilder({
                 if (typeof window !== "undefined") window.history.pushState({ path: "/community" }, "", "/community");
               }}
               onOpenChat={() => setIsAssistantOpen(true)}
+              onOpenAssistant={() => setIsAssistantOpen(true)}
               onOpenReport={() => setIsReportModalOpen(true)}
+              showToast={showToast}
             />
           </div>
         ) : selectedAgent === "remove-fundo" ? (
@@ -1685,9 +1737,10 @@ export default function DesignBuilder({
           </div>
         ) : (
           /* STUDIO MODE: DESIGN BUILDER 1.2 & ÓRION PRO */
-          <>
-          <main
-            data-builder-workspace-shell=""
+          <div className="flex-1 min-h-0 max-lg:overflow-x-hidden lg:pb-0 overflow-hidden">
+            <div className="flex h-full flex-col overflow-hidden">
+              <main
+                data-builder-workspace-shell=""
             className={`relative flex h-full min-h-0 overflow-hidden bg-black lg:flex-row max-lg:grid max-lg:overflow-hidden max-lg:transition-[grid-template-rows] max-lg:duration-300 max-lg:ease-in-out flex-1 ${
               (mobileActiveCategory && !isGenerating) ? "max-lg:grid-rows-[0fr_1fr]" : "max-lg:grid-rows-[1fr_0fr]"
             }`}
@@ -1733,6 +1786,7 @@ export default function DesignBuilder({
                 isOrion={isOrion}
                 agentColor={isOrion ? "#ffd500" : "#7C3AED"}
                 onCloseMobileCategory={() => setMobileActiveCategory(null)}
+                mobileActiveCategory={mobileActiveCategory}
               />
             )}
 
@@ -1747,37 +1801,46 @@ export default function DesignBuilder({
             </div>
 
             {/* ── COLUNA DIREITA: PALCO CENTRAL & HISTÓRICO ── */}
-            <section
-              className="palco-central relative flex flex-col overflow-hidden max-lg:order-first max-lg:min-h-0 max-lg:overflow-hidden max-lg:pt-[env(safe-area-inset-top)] lg:h-full lg:flex-1"
-              style={{ minWidth: "0px" }}
-            >
-              {/* Botão Minimizar filtros no Mobile */}
+            <div className="relative flex min-h-0 min-w-0 flex-1 max-lg:contents">
+              <section
+                className="palco-central relative flex flex-col overflow-hidden max-lg:order-first max-lg:min-h-0 max-lg:overflow-hidden max-lg:pt-[env(safe-area-inset-top)] lg:h-full lg:flex-1"
+                style={{ minWidth: "0px" }}
+              >
+              {/* Botão Minimizar filtros no Mobile (100% IDÊNTICO AO OFICIAL) */}
               <button
                 type="button"
-                aria-label={mobileActiveCategory ? "Minimizar filtros" : "Expandir filtros"}
+                aria-label="Minimizar filtros"
                 onClick={() => {
                   if (mobileActiveCategory) {
                     setMobileActiveCategory(null);
                   } else {
-                    handleSelectMobileCategory(isOrion ? "principal" : "sujeito");
+                    handleSelectMobileCategory(isOrion ? "principal" : "foto");
                   }
-                  setIsMobileNavCollapsed(!isMobileNavCollapsed);
                 }}
                 className="lg:hidden flex w-full shrink-0 items-center justify-center py-0.5 text-zinc-500 transition-colors active:text-white cursor-pointer"
               >
-                <ChevronUp
-                  className={`h-5 w-5 transition-transform duration-200 ${
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className={`lucide lucide-chevron-up h-5 w-5 transition-transform duration-200 ${
                     mobileActiveCategory ? "" : "rotate-180"
                   }`}
                   aria-hidden="true"
-                />
+                >
+                  <path d="m18 15-6-6-6 6"></path>
+                </svg>
               </button>
 
               {/* BARRA DE NAVEGAÇÃO PERSISTENTE (IDÊNTICO AO DESIGN BUILDER ORIGINAL) */}
               <div
-                className={`barra-de-navegacao navegacao-persistente relative flex w-full items-center justify-start gap-2 py-3 pl-3 pr-14 shrink-0 scrollbar-hide max-lg:flex-col max-lg:items-stretch max-lg:gap-1.5 max-lg:px-2 max-lg:py-1.5 max-lg:sticky max-lg:top-0 max-lg:z-20 max-lg:border-b max-lg:border-white/[0.06] max-lg:bg-[#0c0a15]/85 max-lg:backdrop-blur-sm lg:z-30 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:gap-0 lg:overflow-visible lg:pl-0 lg:pr-0 max-lg:overflow-hidden max-lg:transition-all max-lg:duration-300 max-lg:ease-out ${
-                  isMobileNavCollapsed ? "max-lg:max-h-0 max-lg:py-0 max-lg:border-none" : "max-lg:max-h-48"
-                }`}
+                className="barra-de-navegacao navegacao-persistente relative flex w-full items-center justify-start gap-2 py-3 pl-3 pr-14 shrink-0 scrollbar-hide max-lg:flex-col max-lg:items-stretch max-lg:gap-1.5 max-lg:px-2 max-lg:py-1.5 max-lg:sticky max-lg:top-0 max-lg:z-20 max-lg:border-b max-lg:border-white/[0.06] max-lg:bg-[#0c0a15]/85 max-lg:backdrop-blur-sm lg:z-30 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:gap-0 lg:overflow-visible lg:pl-0 lg:pr-0 max-lg:overflow-hidden max-lg:transition-all max-lg:duration-300 max-lg:ease-out max-lg:max-h-48"
               >
                 {/* Coluna 1: Abas de Geração do Projeto + Botão Nova Aba */}
                 <div className="pointer-events-auto flex min-w-0 items-start gap-2 max-lg:order-2 max-lg:w-full max-lg:justify-center lg:w-full lg:pl-4">
@@ -2106,31 +2169,41 @@ export default function DesignBuilder({
               </div>
             ) : activeImage ? (
               /* ESTADO 2: IMAGEM GERADA ATIVA */
-              <div className="group/viewer relative flex h-full min-h-0 min-w-0 flex-1 overflow-hidden items-center justify-center p-2 pb-20 sm:pb-24 lg:pb-28">
-                <div
-                  onClick={() => {
-                    setZoomLevel(100);
-                    setIsFullscreenDetailsOpen(true);
-                  }}
-                  className="relative flex h-full min-h-0 w-full min-w-0 items-center justify-center cursor-pointer"
-                >
-                  <img
-                    alt="Arte gerada pelo Zion Design"
-                    src={activeImage}
-                    className="block max-h-full max-w-full h-auto w-auto shrink rounded-2xl object-contain object-center shadow-2xl shadow-black/80 hover:scale-[1.01] transition-transform"
-                  />
-                  {/* Botão de Ações no Canto Superior Esquerdo da Arte (3 pontinhos no Mobile) */}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsMobileActionsOpen(true);
-                    }}
-                    title="Ações da Arte"
-                    className="absolute top-3 left-3 z-30 flex h-10 w-10 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-md border border-white/10 hover:bg-black/80 transition-all cursor-pointer shadow-lg active:scale-95"
-                  >
-                    <MoreHorizontal className="h-5 w-5" />
-                  </button>
+              <div className="relative flex h-full min-h-0 min-w-0 flex-1 overflow-hidden flex-col items-center justify-center">
+                <div className="flex h-full min-h-0 min-w-0 flex-1 items-center justify-center gap-3 p-4 pb-36 w-full">
+                  <div className="group/viewer relative flex h-full min-h-0 min-w-0 flex-1 overflow-hidden">
+                    <div
+                      data-testid="result-viewer-surface"
+                      onClick={() => {
+                        setZoomLevel(100);
+                        setIsFullscreenDetailsOpen(true);
+                      }}
+                      className="relative flex h-full min-h-0 w-full min-w-0 items-center justify-center overflow-hidden"
+                      style={{ cursor: "pointer" }}
+                    >
+                      <img
+                        alt="design-builder-result"
+                        data-testid="result-viewer"
+                        draggable="true"
+                        decoding="async"
+                        fetchPriority="high"
+                        src={activeImage}
+                        className="block h-auto w-auto max-h-full max-w-full shrink rounded-2xl object-contain object-center shadow-2xl shadow-black/80 hover:scale-[1.01] transition-transform"
+                      />
+                      {/* Botão de Ações no Canto Superior Esquerdo da Arte (3 pontinhos no Mobile) */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsMobileActionsOpen(true);
+                        }}
+                        title="Ações da Arte"
+                        className="absolute top-3 left-3 z-30 flex h-10 w-10 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-md border border-white/10 hover:bg-black/80 transition-all cursor-pointer shadow-lg active:scale-95"
+                      >
+                        <MoreHorizontal className="h-5 w-5" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Floating Glass Action Bar - Lado Esquerdo */}
@@ -2246,51 +2319,37 @@ export default function DesignBuilder({
                       <span>Exportar</span>
                     </button>
                     {isExportDropdownOpen && (
-                      <div className="absolute bottom-full right-0 mb-2 z-30 w-56 rounded-2xl border border-white/10 bg-[#0c0817]/95 backdrop-blur-xl p-3 shadow-2xl">
-                        <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/10">
-                          <span className="text-xs font-bold text-white">Exportar Imagem</span>
+                      <div className="absolute bottom-full right-0 mb-2 z-30 min-w-[160px] rounded-xl py-1.5 border border-white/[0.08] bg-[rgba(15,10,30,0.95)] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] animate-in fade-in slide-in-from-bottom-2 duration-150">
+                        <p className="px-3 pb-1 pt-0.5 text-[10px] font-medium text-zinc-500">Baixar</p>
+                        {[
+                          { ext: "AVIF", label: "AVIF", sub: "Original" },
+                          { ext: "PNG", label: "PNG", sub: "Sem perda" },
+                          { ext: "JPEG", label: "JPEG", sub: "Alta qualidade" },
+                          { ext: "WEBP", label: "WebP", sub: "Web otimizado" },
+                        ].map((item) => (
                           <button
+                            key={item.ext}
                             type="button"
-                            onClick={() => setIsExportDropdownOpen(false)}
-                            className="rounded-lg p-1 text-zinc-500 hover:bg-white/5 hover:text-white cursor-pointer"
-                          >
-                            <X className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                        <div className="flex flex-col gap-1.5">
-                          {[
-                            { ext: "AVIF", sub: "Original" },
-                            { ext: "PNG", sub: "Sem perda" },
-                            { ext: "JPEG", sub: "Alta qualidade" },
-                            { ext: "WEBP", sub: "Otimizado Web" }
-                          ].map((item) => (
-                            <button
-                              key={item.ext}
-                              type="button"
-                              onClick={() => {
-                                if (!activeImage) {
-                                  showToast("Nenhuma arte disponível para baixar. Gere uma imagem primeiro!", "warning");
-                                  setIsExportDropdownOpen(false);
-                                  return;
-                                }
-                                const q = store.resolucao || store.qualidade || "4K";
-                                const isOriginal = item.ext === "AVIF" || item.ext === "PNG";
-                                downloadImage(activeImage, item.ext as any, undefined, undefined, undefined, q as any, {
-                                  title: store.projectsList.find((p) => p.id === store.activeProjectId)?.name || "arte"
-                                });
+                            onClick={() => {
+                              if (!activeImage) {
+                                showToast("Nenhuma arte disponível para baixar. Gere uma imagem primeiro!", "warning");
                                 setIsExportDropdownOpen(false);
-                                showToast(`Download ${item.ext} (${q}) iniciado!`, "success");
-                              }}
-                              className="flex items-center gap-2 rounded-lg border border-white/5 bg-zinc-900 px-3 py-2 text-left transition-all hover:border-violet-500/40 hover:bg-violet-500/10 cursor-pointer"
-                            >
-                              <Download className="h-3.5 w-3.5 text-zinc-400" />
-                              <div>
-                                <p className="text-[11px] font-semibold text-white">{item.ext}</p>
-                                <p className="text-[9px] text-zinc-500">{item.sub}</p>
-                              </div>
-                            </button>
-                          ))}
-                        </div>
+                                return;
+                              }
+                              const q = store.resolucao || store.qualidade || "4K";
+                              downloadImage(activeImage, item.ext as any, undefined, undefined, undefined, q as any, {
+                                title: store.projectsList.find((p) => p.id === store.activeProjectId)?.name || "arte"
+                              });
+                              setIsExportDropdownOpen(false);
+                              showToast(`Download ${item.ext} (${q}) iniciado!`, "success");
+                            }}
+                            className="flex w-full items-center gap-2.5 whitespace-nowrap px-3.5 py-2 text-xs text-zinc-400 transition-all duration-150 hover:bg-white/[0.06] hover:text-zinc-200 cursor-pointer"
+                          >
+                            <Download className="h-3 w-3 text-zinc-500" aria-hidden="true" />
+                            <span className="font-medium text-zinc-300">{item.label}</span>
+                            <span className="text-zinc-600">{item.sub}</span>
+                          </button>
+                        ))}
                       </div>
                     )}
                   </div>
@@ -2312,29 +2371,27 @@ export default function DesignBuilder({
                 </div>
 
                 {/* Magic Refine Bar & Community Publish Card Oficial */}
-                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex w-[min(92vw,560px)] flex-col items-center gap-1.5 pointer-events-auto">
-                  <MagicRefineBar
-                    activeImage={activeImage}
-                    isProcessing={isRefining}
-                    agentColor={isOrion ? "#ffd500" : "#a855f7"}
-                    onPublishCommunity={() => {
-                      setActivePalcoMode("comunidade");
-                      showToast("Publicar na Comunidade aberto!", "info");
-                    }}
-                    onSendRefine={(text, atts) => {
-                      setRefinePrompt(text);
-                      if (atts.length > 0) {
-                        setRefineAttachedFiles(atts.map((a, i) => ({ name: a.file?.name || `anexo_${i}`, url: a.preview })));
-                      }
-                      setTimeout(() => handleSendRefinement(), 50);
-                    }}
-                  />
-                </div>
+                <MagicRefineBar
+                  activeImage={activeImage}
+                  isProcessing={isRefining}
+                  agentColor={isOrion ? "#ffd500" : "#a855f7"}
+                  onPublishCommunity={() => {
+                    setActivePalcoMode("comunidade");
+                    showToast("Publicar na Comunidade aberto!", "info");
+                  }}
+                  onSendRefine={(text, atts) => {
+                    setRefinePrompt(text);
+                    if (atts.length > 0) {
+                      setRefineAttachedFiles(atts.map((a, i) => ({ name: a.file?.name || `anexo_${i}`, url: a.preview })));
+                    }
+                    setTimeout(() => handleSendRefinement(), 50);
+                  }}
+                />
               </div>
             ) : (
               /* ESTADO 3: PALCO EM ESPERA / PREVIEW DO SUJEITO E PALETA */
               <div className={`jsx-60dea475f91d3ae3 flex w-full ${
-                store.dimensao === "9:16" ? "max-w-[320px]" : store.dimensao === "16:9" ? "max-w-[560px]" : store.dimensao === "4:5" ? "max-w-[360px]" : "max-w-[400px]"
+                store.dimensao === "9:16" ? "max-w-[320px]" : store.dimensao === "16:9" ? "max-w-[560px]" : store.dimensao === "3:4" ? "max-w-[340px]" : store.dimensao === "4:5" ? "max-w-[360px]" : "max-w-[400px]"
               } max-lg:max-w-[88vw] flex-col items-center gap-4 mx-auto p-3 lg:p-4`}>
                 {store.dimensao && (
                   <span className="jsx-60dea475f91d3ae3 text-xs font-medium tracking-widest uppercase text-zinc-600">{store.dimensao}</span>
@@ -2342,7 +2399,7 @@ export default function DesignBuilder({
                 <div
                   data-testid="preview-canvas"
                   className={`jsx-60dea475f91d3ae3 relative w-full ${
-                    store.dimensao === "9:16" ? "aspect-[9/16]" : store.dimensao === "16:9" ? "aspect-[16/9]" : store.dimensao === "1:1" ? "aspect-square" : "aspect-[4/5]"
+                    store.dimensao === "9:16" ? "aspect-[9/16]" : store.dimensao === "16:9" ? "aspect-[16/9]" : store.dimensao === "1:1" ? "aspect-square" : store.dimensao === "3:4" ? "aspect-[3/4]" : store.dimensao === "4:3" ? "aspect-[4/3]" : "aspect-[4/5]"
                   } rounded-lg lg:rounded-2xl overflow-hidden border border-white/[0.06] shadow-lg lg:shadow-2xl shadow-black/50 transition-all duration-300`}
                   style={{ backgroundColor: "#0c0a15" }}
                 >
@@ -2370,9 +2427,27 @@ export default function DesignBuilder({
                       />
                     </div>
                   ) : (
-                    <div data-testid="subject-placeholder" className="jsx-60dea475f91d3ae3 absolute inset-0 flex flex-col items-center justify-center gap-3 text-zinc-600">
-                      <ImageIcon className="h-10 w-10 text-zinc-700" />
-                      <span className="text-xs font-medium">Seu design será gerado aqui</span>
+                    <div data-testid="subject-placeholder" className="jsx-60dea475f91d3ae3 absolute inset-0 flex flex-col items-center justify-center gap-3 p-4 text-center">
+                      <div className="h-16 w-16 rounded-2xl bg-white/[0.03] border border-white/5 flex items-center justify-center">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="24"
+                          height="24"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="lucide lucide-upload h-7 w-7 text-[#5c5278]"
+                          aria-hidden="true"
+                        >
+                          <path d="M12 3v12"></path>
+                          <path d="m17 8-5-5-5 5"></path>
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        </svg>
+                      </div>
+                      <p className="text-xs text-[#5c5278] max-w-[200px]">Envie uma foto para ver a prévia aqui</p>
                     </div>
                   )}
 
@@ -2554,7 +2629,8 @@ export default function DesignBuilder({
           </div>
         </div>
 
-            </section>
+              </section>
+            </div>
           </main>
 
           {/* ── BARRA INFERIOR MOBILE OFICIAL (1:1 COM DESIGN BUILDER ORIGINAL) ── */}
@@ -2563,491 +2639,387 @@ export default function DesignBuilder({
             className="relative shrink-0 overflow-x-hidden border-t border-white/[0.08] backdrop-blur-xl pb-safe shadow-[0_-8px_24px_rgba(0,0,0,0.35)] lg:hidden"
             style={{ background: "rgba(10, 7, 25, 0.92)" }}
           >
-              <div
-                role="tablist"
-                aria-label="Categorias do agente"
-                className="flex items-stretch gap-0.5 overflow-x-auto scrollbar-hide px-2 py-1.5 [scroll-snap-type:x_proximity]"
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8"
+              style={{ background: "linear-gradient(to right, rgba(10, 7, 25, 0.92), transparent)" }}
+            />
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8"
+              style={{ background: "linear-gradient(to left, rgba(10, 7, 25, 0.92), transparent)" }}
+            />
+            {/* Indicador de rolagem pulsante (100% IDÊNTICO AO OFICIAL) */}
+            <div aria-hidden="true" className="pointer-events-none absolute right-1.5 top-1/2 z-20 -translate-y-1/2 animate-pulse">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-right h-5 w-5 drop-shadow-[0_1px_3px_rgba(0,0,0,0.6)]" aria-hidden="true" style={{ color: "rgb(139, 92, 246)" }}>
+                <path d="m9 18 6-6-6-6"></path>
+              </svg>
+            </div>
+            <div
+              role="tablist"
+              aria-label="Categorias do agente"
+              className="flex items-stretch gap-0.5 overflow-x-auto scrollbar-hide px-2 py-1.5 [scroll-snap-type:x_proximity]"
+            >
+              {/* Início */}
+              <button
+                type="button"
+                aria-label="Sair para o início"
+                onClick={() => {
+                  setMobileActiveCategory(null);
+                  handleGoHome();
+                }}
+                className="group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 text-zinc-300"
               >
-                {/* Início */}
-                <button
-                  type="button"
-                  aria-label="Sair para o início"
-                  onClick={() => {
-                    setMobileActiveCategory(null);
-                    handleGoHome();
-                  }}
-                  className="group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 text-zinc-300 cursor-pointer"
-                >
-                  <span className="flex h-7 w-12 items-center justify-center rounded-full transition-colors bg-white/[0.05] ring-1 ring-white/15 group-hover:bg-white/[0.10]">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-house lucide-home h-[22px] w-[22px]" aria-hidden="true">
-                      <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" />
-                      <path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                    </svg>
-                  </span>
-                  <span className="whitespace-nowrap text-[10px] leading-none font-semibold">Início</span>
-                </button>
+                <span className="flex h-7 w-12 items-center justify-center rounded-full transition-colors bg-white/[0.05] ring-1 ring-white/15 group-hover:bg-white/[0.10]">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-house lucide-home h-[22px] w-[22px]" aria-hidden="true">
+                    <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"></path>
+                    <path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                  </svg>
+                </span>
+                <span className="whitespace-nowrap text-[10px] leading-none font-semibold">Início</span>
+              </button>
 
-                <span aria-hidden="true" className="mx-1 my-2 w-px shrink-0 self-stretch bg-white/10" />
+              <span aria-hidden="true" className="mx-1 my-2 w-px shrink-0 self-stretch bg-white/10"></span>
 
-                {isOrion ? (
-                  <>
-                    {/* Principal */}
-                    {(() => {
-                      const isActive = mobileActiveCategory === "principal" || mobileActiveCategory === "sujeito";
-                      return (
-                        <button
-                          type="button"
-                          role="tab"
-                          aria-selected={isActive}
-                          aria-current={isActive ? "true" : undefined}
-                          onClick={() => handleSelectMobileCategory("principal")}
-                          className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
-                            isActive ? "text-[#EAB308]" : "text-zinc-500 hover:text-zinc-300"
+              {isOrion ? (
+                <>
+                  {/* Órion Pro Categories */}
+                  {(() => {
+                    const isActive = mobileActiveCategory === "principal" || mobileActiveCategory === "sujeito";
+                    return (
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={isActive}
+                        aria-current={isActive ? "true" : undefined}
+                        onClick={() => handleSelectMobileCategory("principal")}
+                        className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
+                          isActive ? "text-[#EAB308]" : "text-zinc-500 hover:text-zinc-300"
+                        }`}
+                      >
+                        <span
+                          className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
+                            isActive ? "bg-[#2D2415] border border-[#EAB308]" : "group-hover:bg-white/[0.06]"
                           }`}
                         >
-                          <span
-                            className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
-                              isActive ? "bg-[#2D2415] border border-[#EAB308]" : "group-hover:bg-white/[0.06]"
-                            }`}
-                          >
-                            <span className="relative">
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="24"
-                                height="24"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                className="lucide lucide-image h-[22px] w-[22px]"
-                                aria-hidden="true"
-                                style={isActive ? { color: "rgb(234, 179, 8)" } : undefined}
-                              >
-                                <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
-                                <circle cx="9" cy="9" r="2" />
-                                <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
-                              </svg>
-                            </span>
+                          <span className="relative">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-image h-[22px] w-[22px]" aria-hidden="true" style={isActive ? { color: "rgb(234, 179, 8)" } : undefined}>
+                              <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+                              <circle cx="9" cy="9" r="2" />
+                              <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+                            </svg>
                           </span>
-                          <span className="whitespace-nowrap text-[10px] font-medium leading-none">Principal</span>
-                        </button>
-                      );
-                    })()}
+                        </span>
+                        <span className="whitespace-nowrap text-[10px] font-medium leading-none">Principal</span>
+                      </button>
+                    );
+                  })()}
 
-                    {/* Marca e estilo */}
-                    {(() => {
-                      const isActive = mobileActiveCategory === "marca" || mobileActiveCategory === "marca_estilo" || mobileActiveCategory === "cores";
-                      return (
-                        <button
-                          type="button"
-                          role="tab"
-                          aria-selected={isActive}
-                          aria-current={isActive ? "true" : undefined}
-                          onClick={() => handleSelectMobileCategory("marca")}
-                          className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
-                            isActive ? "text-[#EAB308]" : "text-zinc-500 hover:text-zinc-300"
+                  {(() => {
+                    const isActive = mobileActiveCategory === "marca" || mobileActiveCategory === "marca_estilo" || mobileActiveCategory === "cores";
+                    return (
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={isActive}
+                        aria-current={isActive ? "true" : undefined}
+                        onClick={() => handleSelectMobileCategory("marca")}
+                        className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
+                          isActive ? "text-[#EAB308]" : "text-zinc-500 hover:text-zinc-300"
+                        }`}
+                      >
+                        <span
+                          className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
+                            isActive ? "bg-[#2D2415] border border-[#EAB308]" : "group-hover:bg-white/[0.06]"
                           }`}
                         >
-                          <span
-                            className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
-                              isActive ? "bg-[#2D2415] border border-[#EAB308]" : "group-hover:bg-white/[0.06]"
-                            }`}
-                          >
-                            <span className="relative flex items-center justify-center">
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="24"
-                                height="24"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                className="lucide lucide-palette h-[22px] w-[22px]"
-                                aria-hidden="true"
-                                style={isActive ? { color: "rgb(234, 179, 8)" } : undefined}
-                              >
-                                <path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z" />
-                                <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
-                                <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
-                                <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
-                                <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
-                              </svg>
-                              <span className="absolute -top-1 -right-1 h-1.5 w-1.5 rounded-full bg-[#EAB308]" />
-                            </span>
+                          <span className="relative flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-palette h-[22px] w-[22px]" aria-hidden="true" style={isActive ? { color: "rgb(234, 179, 8)" } : undefined}>
+                              <path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z" />
+                              <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
+                              <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
+                              <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
+                              <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
+                            </svg>
+                            <span className="absolute -top-1 -right-1 h-1.5 w-1.5 rounded-full bg-[#EAB308]" />
                           </span>
-                          <span className="whitespace-nowrap text-[10px] font-medium leading-none">Marca e estilo</span>
-                        </button>
-                      );
-                    })()}
+                        </span>
+                        <span className="whitespace-nowrap text-[10px] font-medium leading-none">Marca e estilo</span>
+                      </button>
+                    );
+                  })()}
 
-                    {/* Cenário */}
-                    {(() => {
-                      const isActive = mobileActiveCategory === "cenario" || mobileActiveCategory === "contexto";
-                      return (
-                        <button
-                          type="button"
-                          role="tab"
-                          aria-selected={isActive}
-                          aria-current={isActive ? "true" : undefined}
-                          onClick={() => handleSelectMobileCategory("cenario")}
-                          className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
-                            isActive ? "text-[#EAB308]" : "text-zinc-500 hover:text-zinc-300"
+                  {(() => {
+                    const isActive = mobileActiveCategory === "cenario" || mobileActiveCategory === "contexto";
+                    return (
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={isActive}
+                        aria-current={isActive ? "true" : undefined}
+                        onClick={() => handleSelectMobileCategory("cenario")}
+                        className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
+                          isActive ? "text-[#EAB308]" : "text-zinc-500 hover:text-zinc-300"
+                        }`}
+                      >
+                        <span
+                          className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
+                            isActive ? "bg-[#2D2415] border border-[#EAB308]" : "group-hover:bg-white/[0.06]"
                           }`}
                         >
-                          <span
-                            className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
-                              isActive ? "bg-[#2D2415] border border-[#EAB308]" : "group-hover:bg-white/[0.06]"
-                            }`}
-                          >
-                            <span className="relative flex items-center justify-center">
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="24"
-                                height="24"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                className="lucide lucide-mountain h-[22px] w-[22px]"
-                                aria-hidden="true"
-                                style={isActive ? { color: "rgb(234, 179, 8)" } : undefined}
-                              >
-                                <path d="m8 3 4 8 5-5 5 15H2L8 3z" />
-                              </svg>
-                              <span className="absolute -top-1 -right-1 h-1.5 w-1.5 rounded-full bg-[#EAB308]" />
-                            </span>
+                          <span className="relative flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-mountain h-[22px] w-[22px]" aria-hidden="true" style={isActive ? { color: "rgb(234, 179, 8)" } : undefined}>
+                              <path d="m8 3 4 8 5-5 5 15H2L8 3z" />
+                            </svg>
+                            <span className="absolute -top-1 -right-1 h-1.5 w-1.5 rounded-full bg-[#EAB308]" />
                           </span>
-                          <span className="whitespace-nowrap text-[10px] font-medium leading-none">Cenário</span>
-                        </button>
-                      );
-                    })()}
+                        </span>
+                        <span className="whitespace-nowrap text-[10px] font-medium leading-none">Cenário</span>
+                      </button>
+                    );
+                  })()}
 
-                    {/* Texto na imagem */}
-                    {(() => {
-                      const isActive = mobileActiveCategory === "texto" || mobileActiveCategory === "texto_imagem";
-                      return (
-                        <button
-                          type="button"
-                          role="tab"
-                          aria-selected={isActive}
-                          aria-current={isActive ? "true" : undefined}
-                          onClick={() => handleSelectMobileCategory("texto")}
-                          className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
-                            isActive ? "text-[#EAB308]" : "text-zinc-500 hover:text-zinc-300"
+                  {(() => {
+                    const isActive = mobileActiveCategory === "texto" || mobileActiveCategory === "texto_imagem";
+                    return (
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={isActive}
+                        aria-current={isActive ? "true" : undefined}
+                        onClick={() => handleSelectMobileCategory("texto")}
+                        className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
+                          isActive ? "text-[#EAB308]" : "text-zinc-500 hover:text-zinc-300"
+                        }`}
+                      >
+                        <span
+                          className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
+                            isActive ? "bg-[#2D2415] border border-[#EAB308]" : "group-hover:bg-white/[0.06]"
                           }`}
                         >
-                          <span
-                            className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
-                              isActive ? "bg-[#2D2415] border border-[#EAB308]" : "group-hover:bg-white/[0.06]"
-                            }`}
-                          >
-                            <span className="relative flex items-center justify-center">
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="24"
-                                height="24"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                className="lucide lucide-text-initial lucide-letter-text h-[22px] w-[22px]"
-                                aria-hidden="true"
-                                style={isActive ? { color: "rgb(234, 179, 8)" } : undefined}
-                              >
-                                <path d="M15 5h6" />
-                                <path d="M15 12h6" />
-                                <path d="M3 19h18" />
-                                <path d="m3 12 3.553-7.724a.5.5 0 0 1 .894 0L11 12" />
-                                <path d="M3.92 10h6.16" />
-                              </svg>
-                              <span className="absolute -top-1 -right-1 h-1.5 w-1.5 rounded-full bg-[#EAB308]" />
-                            </span>
+                          <span className="relative flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-type h-[22px] w-[22px]" aria-hidden="true" style={isActive ? { color: "rgb(234, 179, 8)" } : undefined}>
+                              <polyline points="4 7 4 4 20 4 20 7" />
+                              <line x1="9" x2="15" y1="20" y2="20" />
+                              <line x1="12" x2="12" y1="4" y2="20" />
+                            </svg>
+                            <span className="absolute -top-1 -right-1 h-1.5 w-1.5 rounded-full bg-[#EAB308]" />
                           </span>
-                          <span className="whitespace-nowrap text-[10px] font-medium leading-none">Texto na imagem</span>
-                        </button>
-                      );
-                    })()}
+                        </span>
+                        <span className="whitespace-nowrap text-[10px] font-medium leading-none">Texto</span>
+                      </button>
+                    );
+                  })()}
 
-                    {/* Ajustes */}
-                    {(() => {
-                      const isActive = mobileActiveCategory === "ajustes" || mobileActiveCategory === "composicao";
-                      return (
-                        <button
-                          type="button"
-                          role="tab"
-                          aria-selected={isActive}
-                          aria-current={isActive ? "true" : undefined}
-                          onClick={() => handleSelectMobileCategory("ajustes")}
-                          className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
-                            isActive ? "text-[#EAB308]" : "text-zinc-500 hover:text-zinc-300"
+                  {(() => {
+                    const isActive = mobileActiveCategory === "ajustes";
+                    return (
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={isActive}
+                        aria-current={isActive ? "true" : undefined}
+                        onClick={() => handleSelectMobileCategory("ajustes")}
+                        className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
+                          isActive ? "text-[#EAB308]" : "text-zinc-500 hover:text-zinc-300"
+                        }`}
+                      >
+                        <span
+                          className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
+                            isActive ? "bg-[#2D2415] border border-[#EAB308]" : "group-hover:bg-white/[0.06]"
                           }`}
                         >
-                          <span
-                            className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
-                              isActive ? "bg-[#2D2415] border border-[#EAB308]" : "group-hover:bg-white/[0.06]"
-                            }`}
-                          >
-                            <span className="relative flex items-center justify-center">
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="24"
-                                height="24"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                className="lucide lucide-settings h-[22px] w-[22px]"
-                                aria-hidden="true"
-                                style={isActive ? { color: "rgb(234, 179, 8)" } : undefined}
-                              >
-                                <path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915" />
-                                <circle cx="12" cy="12" r="3" />
-                              </svg>
-                            </span>
+                          <span className="relative flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-settings h-[22px] w-[22px]" aria-hidden="true" style={isActive ? { color: "rgb(234, 179, 8)" } : undefined}>
+                              <path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915" />
+                              <circle cx="12" cy="12" r="3" />
+                            </svg>
                           </span>
-                          <span className="whitespace-nowrap text-[10px] font-medium leading-none">Ajustes</span>
-                        </button>
-                      );
-                    })()}
-
-                    {/* Configurações */}
-                    {(() => {
-                      const isActive = mobileActiveCategory === "configuracoes" || mobileActiveCategory === "config" || mobileActiveCategory === "prompt";
-                      return (
-                        <button
-                          type="button"
-                          role="tab"
-                          aria-selected={isActive}
-                          aria-current={isActive ? "true" : undefined}
-                          onClick={() => handleSelectMobileCategory("configuracoes")}
-                          className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
-                            isActive ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+                        </span>
+                        <span className="whitespace-nowrap text-[10px] font-medium leading-none">Ajustes</span>
+                      </button>
+                    );
+                  })()}
+                </>
+              ) : (
+                <>
+                  {/* Foto (100% IDÊNTICO AO SNIPPET DO USUÁRIO) */}
+                  {(() => {
+                    const isActive = mobileActiveCategory === "foto" || mobileActiveCategory === "sujeito" || mobileActiveCategory === "principal";
+                    return (
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={isActive ? "true" : "false"}
+                        onClick={() => handleSelectMobileCategory("foto")}
+                        className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 ${
+                          isActive ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+                        }`}
+                      >
+                        <span
+                          className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
+                            isActive ? "bg-violet-600/30 border border-violet-500" : "group-hover:bg-white/[0.06]"
                           }`}
                         >
-                          <span
-                            className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
-                              isActive ? "" : "group-hover:bg-white/[0.06]"
-                            }`}
-                            style={isActive ? { backgroundColor: "rgba(255, 213, 0, 0.15)" } : undefined}
-                          >
-                            <span className="relative">
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="24"
-                                height="24"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                className="lucide lucide-sliders-horizontal h-[22px] w-[22px]"
-                                aria-hidden="true"
-                                style={isActive ? { color: "rgb(255, 213, 0)" } : undefined}
-                              >
-                                <path d="M10 5H3" />
-                                <path d="M12 19H3" />
-                                <path d="M14 3v4" />
-                                <path d="M16 17v4" />
-                                <path d="M21 12h-9" />
-                                <path d="M21 19h-5" />
-                                <path d="M21 5h-7" />
-                                <path d="M8 10v4" />
-                                <path d="M8 12H3" />
-                              </svg>
-                            </span>
+                          <span className="relative">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="24"
+                              height="24"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="lucide lucide-image h-[22px] w-[22px]"
+                              aria-hidden="true"
+                            >
+                              <rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect>
+                              <circle cx="9" cy="9" r="2"></circle>
+                              <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
+                            </svg>
+                            {hasFotoDot && (
+                              <span aria-hidden="true" className="absolute -right-1.5 -top-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: "rgb(139, 92, 246)" }}></span>
+                            )}
                           </span>
-                          <span className="whitespace-nowrap text-[10px] font-medium leading-none">Configurações</span>
-                        </button>
-                      );
-                    })()}
-                  </>
-                ) : (
-                  <>
-                    {/* Foto */}
-                    {(() => {
-                      const isActive = mobileActiveCategory === "foto" || mobileActiveCategory === "sujeito" || mobileActiveCategory === "principal";
-                      return (
-                        <button
-                          type="button"
-                          role="tab"
-                          aria-selected={isActive}
-                          aria-current={isActive ? "true" : undefined}
-                          onClick={() => handleSelectMobileCategory("foto")}
-                          className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
-                            isActive ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+                        </span>
+                        <span className="whitespace-nowrap text-[10px] font-medium leading-none">Foto</span>
+                      </button>
+                    );
+                  })()}
+
+                  {/* Estilo (100% IDÊNTICO AO SNIPPET DO USUÁRIO) */}
+                  {(() => {
+                    const isActive = mobileActiveCategory === "estilo" || mobileActiveCategory === "cenario" || mobileActiveCategory === "contexto";
+                    return (
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={isActive ? "true" : "false"}
+                        onClick={() => handleSelectMobileCategory("estilo")}
+                        className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 ${
+                          isActive ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+                        }`}
+                      >
+                        <span
+                          className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
+                            isActive ? "bg-violet-600/30 border border-violet-500" : "group-hover:bg-white/[0.06]"
                           }`}
                         >
-                          <span
-                            className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
-                              isActive ? "bg-violet-600/30 border border-violet-500" : "group-hover:bg-white/[0.06]"
-                            }`}
-                          >
-                            <span className="relative">
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="24"
-                                height="24"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                className="lucide lucide-image h-[22px] w-[22px]"
-                                aria-hidden="true"
-                                style={isActive ? { color: "rgb(192, 132, 252)" } : undefined}
-                              >
-                                <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
-                                <circle cx="9" cy="9" r="2" />
-                                <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
-                              </svg>
-                            </span>
+                          <span className="relative">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="24"
+                              height="24"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="lucide lucide-sparkles lucide-stars h-[22px] w-[22px]"
+                              aria-hidden="true"
+                            >
+                              <path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"></path>
+                              <path d="M20 2v4"></path>
+                              <path d="M22 4h-4"></path>
+                              <circle cx="4" cy="20" r="2"></circle>
+                            </svg>
+                            {hasEstiloDot && (
+                              <span aria-hidden="true" className="absolute -right-1.5 -top-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: "rgb(139, 92, 246)" }}></span>
+                            )}
                           </span>
-                          <span className="whitespace-nowrap text-[10px] font-medium leading-none">Foto</span>
-                        </button>
-                      );
-                    })()}
+                        </span>
+                        <span className="whitespace-nowrap text-[10px] font-medium leading-none">Estilo</span>
+                      </button>
+                    );
+                  })()}
 
-                    {/* Estilo */}
-                    {(() => {
-                      const isActive = mobileActiveCategory === "estilo" || mobileActiveCategory === "cenario" || mobileActiveCategory === "contexto";
-                      return (
-                        <button
-                          type="button"
-                          role="tab"
-                          aria-selected={isActive}
-                          aria-current={isActive ? "true" : undefined}
-                          onClick={() => handleSelectMobileCategory("estilo")}
-                          className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
-                            isActive ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+                  {/* Saída (100% IDÊNTICO AO SNIPPET DO USUÁRIO) */}
+                  {(() => {
+                    const isActive = mobileActiveCategory === "saida" || mobileActiveCategory === "config" || mobileActiveCategory === "prompt";
+                    return (
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={isActive ? "true" : "false"}
+                        onClick={() => handleSelectMobileCategory("saida")}
+                        className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 ${
+                          isActive ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+                        }`}
+                      >
+                        <span
+                          className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
+                            isActive ? "bg-violet-600/30 border border-violet-500" : "group-hover:bg-white/[0.06]"
                           }`}
                         >
-                          <span
-                            className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
-                              isActive ? "bg-violet-600/30 border border-violet-500" : "group-hover:bg-white/[0.06]"
-                            }`}
-                          >
-                            <span className="relative">
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="24"
-                                height="24"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                className="lucide lucide-sparkles h-[22px] w-[22px]"
-                                aria-hidden="true"
-                                style={isActive ? { color: "rgb(192, 132, 252)" } : undefined}
-                              >
-                                <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
-                                <path d="M5 3v4" />
-                                <path d="M19 17v4" />
-                                <path d="M3 5h4" />
-                                <path d="M17 19h4" />
-                              </svg>
-                            </span>
+                          <span className="relative">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="24"
+                              height="24"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="lucide lucide-sliders-horizontal h-[22px] w-[22px]"
+                              aria-hidden="true"
+                            >
+                              <path d="M10 5H3"></path>
+                              <path d="M12 19H3"></path>
+                              <path d="M14 3v4"></path>
+                              <path d="M16 17v4"></path>
+                              <path d="M21 12h-9"></path>
+                              <path d="M21 19h-5"></path>
+                              <path d="M21 5h-7"></path>
+                              <path d="M8 10v4"></path>
+                              <path d="M8 12H3"></path>
+                            </svg>
+                            {hasSaidaDot && (
+                              <span aria-hidden="true" className="absolute -right-1.5 -top-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: "rgb(139, 92, 246)" }}></span>
+                            )}
                           </span>
-                          <span className="whitespace-nowrap text-[10px] font-medium leading-none">Estilo</span>
-                        </button>
-                      );
-                    })()}
+                        </span>
+                        <span className="whitespace-nowrap text-[10px] font-medium leading-none">Saída</span>
+                      </button>
+                    );
+                  })()}
+                </>
+              )}
 
-                    {/* Saída */}
-                    {(() => {
-                      const isActive = mobileActiveCategory === "saida" || mobileActiveCategory === "config" || mobileActiveCategory === "prompt";
-                      return (
-                        <button
-                          type="button"
-                          role="tab"
-                          aria-selected={isActive}
-                          aria-current={isActive ? "true" : undefined}
-                          onClick={() => handleSelectMobileCategory("saida")}
-                          className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
-                            isActive ? "text-white" : "text-zinc-500 hover:text-zinc-300"
-                          }`}
-                        >
-                          <span
-                            className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
-                              isActive ? "bg-violet-600/30 border border-violet-500" : "group-hover:bg-white/[0.06]"
-                            }`}
-                          >
-                            <span className="relative">
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="24"
-                                height="24"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                className="lucide lucide-sliders-horizontal h-[22px] w-[22px]"
-                                aria-hidden="true"
-                                style={isActive ? { color: "rgb(192, 132, 252)" } : undefined}
-                              >
-                                <line x1="21" x2="14" y1="4" y2="4" />
-                                <line x1="10" x2="3" y1="4" y2="4" />
-                                <line x1="21" x2="12" y1="12" y2="12" />
-                                <line x1="8" x2="3" y1="12" y2="12" />
-                                <line x1="21" x2="16" y1="20" y2="20" />
-                                <line x1="12" x2="3" y1="20" y2="20" />
-                                <line x1="14" x2="14" y1="2" y2="6" />
-                                <line x1="8" x2="8" y1="10" y2="14" />
-                                <line x1="16" x2="16" y1="18" y2="22" />
-                              </svg>
-                            </span>
-                          </span>
-                          <span className="whitespace-nowrap text-[10px] font-medium leading-none">Saída</span>
-                        </button>
-                      );
-                    })()}
-                  </>
-                )}
+              <span aria-hidden="true" className="mx-1 my-2 w-px shrink-0 self-stretch bg-white/10" />
 
-                <span aria-hidden="true" className="mx-1 my-2 w-px shrink-0 self-stretch bg-white/10" />
-
-                {/* Botão Construir (Idêntico ao original) */}
-                <button
-                  type="button"
-                  aria-label="Construir"
-                  disabled={isGenerating}
-                  onClick={() => {
-                    setMobileActiveCategory(null);
-                    generatePremiumImage();
-                  }}
-                  className="group ml-0.5 flex min-h-[52px] min-w-[78px] shrink-0 snap-start flex-col items-center justify-center gap-1 rounded-2xl px-3 text-white transition-transform duration-100 ease-out active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
-                  style={{
-                    color: "rgb(255, 255, 255)",
-                    background: isOrion
-                      ? "#EAB308"
-                      : "linear-gradient(to right, rgb(124, 58, 237), rgba(124, 58, 237, 0.8))",
-                    boxShadow: isOrion
-                      ? "rgba(234, 179, 8, 0.35) 0px 4px 16px"
-                      : "rgba(124, 58, 237, 0.35) 0px 4px 16px"
-                  }}
-                >
-                  <span className="whitespace-nowrap text-sm font-extrabold leading-tight">
-                    {isGenerating ? "Criando..." : "Construir"}
-                  </span>
-                </button>
-              </div>
-            </nav>
-          </>
+              {/* Botão Construir (100% IDÊNTICO AO SNIPPET DO USUÁRIO) */}
+              <button
+                type="button"
+                aria-label="Construir"
+                disabled={isGenerating}
+                onClick={() => {
+                  setMobileActiveCategory(null);
+                  generatePremiumImage();
+                }}
+                className="group ml-0.5 flex min-h-[52px] min-w-[78px] shrink-0 snap-start flex-col items-center justify-center gap-1 rounded-2xl px-3 text-white transition-transform duration-100 ease-out active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+                style={{
+                  color: "rgb(255, 255, 255)",
+                  background: isOrion
+                    ? "#EAB308"
+                    : "linear-gradient(to right, rgb(139, 92, 246), rgba(139, 92, 246, 0.8))",
+                  boxShadow: isOrion
+                    ? "rgba(234, 179, 8, 0.35) 0px 4px 16px"
+                    : "rgba(139, 92, 246, 0.35) 0px 4px 16px"
+                }}
+              >
+                <span className="whitespace-nowrap text-sm font-extrabold leading-tight">
+                  {isGenerating ? "Criando..." : "Construir"}
+                </span>
+              </button>
+            </div>
+              </nav>
+            </div>
+          </div>
         )}
       </div>
 
@@ -3274,10 +3246,10 @@ export default function DesignBuilder({
               <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-500 mb-3">EXPORTAR</h4>
               <div className="grid grid-cols-2 gap-2.5">
                 {[
-                  { ext: "AVIF", label: "AVIF", sub: "Original" },
-                  { ext: "PNG", label: "PNG", sub: "Sem perda" },
+                  { ext: "PNG", label: "PNG", sub: "Original 4K Master" },
                   { ext: "JPEG", label: "JPEG", sub: "Alta qualidade" },
-                  { ext: "WEBP", label: "WebP", sub: "Web otimizado" }
+                  { ext: "WEBP", label: "WebP", sub: "Web otimizado" },
+                  { ext: "AVIF", label: "AVIF", sub: "Alta compressão" }
                 ].map((exp) => (
                   <button
                     key={exp.ext}

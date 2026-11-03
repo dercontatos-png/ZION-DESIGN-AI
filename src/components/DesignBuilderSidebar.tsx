@@ -26,15 +26,15 @@ import {
 import { DesignBuilderSettingsModal } from "./DesignBuilderSettingsModal";
 
 export const AGENTS = [
-  { slug: "orion-pro", name: "Órion Pro", href: "/orion-pro", color: "rgb(255, 213, 0)" },
-  { slug: "design-builder1-2", name: "Orion 1.2", href: "/agent/design-builder1-2", color: "rgb(124, 58, 237)" },
   { slug: "ref", name: "REF", href: "/agent/ref", color: "rgb(139, 92, 246)" },
-  { slug: "enhance-builder", name: "Enhance", href: "/enhance-builder", color: "rgb(124, 58, 237)" },
-  { slug: "altera-facil", name: "Altera Fácil", href: "/altera-facil", color: "rgb(168, 85, 247)" },
   { slug: "hydra", name: "Hydra", href: "/hydra", color: "rgb(139, 92, 246)" },
+  { slug: "enhance-builder", name: "Enhance", href: "/enhance-builder", color: "rgb(124, 58, 237)" },
+  { slug: "design-builder1-2", name: "Orion 1.2", href: "/agent/design-builder1-2", color: "rgb(124, 58, 237)" },
+  { slug: "orion-pro", name: "Órion Pro", href: "/orion-pro", color: "rgb(255, 213, 0)" },
+  { slug: "altera-facil", name: "Altera Fácil", href: "/altera-facil", color: "rgb(168, 85, 247)" },
   { slug: "remove-fundo", name: "Remove Fundo", href: "/remove-fundo", color: "rgb(236, 72, 153)" },
   { slug: "vector-builder", name: "Vector Builder", href: "/vector-builder", color: "rgb(59, 130, 246)" },
-  { slug: "conversor", name: "Conversor", href: "/conversor", color: "rgb(16, 185, 129)" },
+  { slug: "conversor", name: "Conversor", href: "/conversor-imagens", color: "rgb(16, 185, 129)" },
 ];
 
 export interface DesignBuilderSidebarProps {
@@ -146,10 +146,10 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
     onCloseMobile?.();
   };
 
-  const isHomeActive = activeTab === "ai-tools" || activeTab === "home" || activeTab === "apps";
-  const isProjectsActive = activeTab === "projetos" || activeTab === "projects" || activeTab === "tasks";
-  const isGalleryActive = activeTab === "gallery" || activeTab === "galeria";
-  const isCommunityActive = activeTab === "community" || activeTab === "comunidade";
+  const isProjectsActive = activeTab === "projetos" || activeTab === "projects" || activeTab === "tasks" || (typeof window !== "undefined" && (window.location.pathname === "/projetos" || window.location.pathname === "/projects"));
+  const isGalleryActive = activeTab === "gallery" || activeTab === "galeria" || (typeof window !== "undefined" && (window.location.pathname === "/gallery" || window.location.pathname === "/galeria"));
+  const isCommunityActive = activeTab === "community" || activeTab === "comunidade" || (typeof window !== "undefined" && (window.location.pathname === "/community" || window.location.pathname === "/comunidade"));
+  const isHomeActive = !isProjectsActive && !isGalleryActive && !isCommunityActive && ((activeTab === "home" || activeTab === "apps" || (activeTab === "ai-tools" && !selectedAgent)) || (typeof window !== "undefined" && (window.location.pathname === "/" || window.location.pathname === "/home")));
 
   const renderMobileNavigation = () => {
     return (
@@ -523,72 +523,138 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
           <ul className="space-y-0.5">
             <li>
               <a
+                aria-current={isHomeActive ? "page" : undefined}
+                className={`flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-left text-[15px] transition-colors cursor-pointer ${
+                  isHomeActive
+                    ? "bg-violet-600/25 font-medium text-white"
+                    : "text-zinc-300 hover:bg-white/[0.06] hover:text-white"
+                }`}
                 href="/"
                 onClick={(e) => {
                   e.preventDefault();
                   handleHomeClick();
                 }}
-                className={`flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-left text-[15px] transition-colors cursor-pointer ${
-                  activeTab === "home" || activeTab === "ai-tools"
-                    ? "bg-violet-600/25 font-medium text-white shadow-[0_0_20px_rgba(139,92,246,0.2)]"
-                    : "text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100"
-                }`}
               >
-                <Home className="h-[18px] w-[18px] shrink-0 text-violet-400" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="lucide lucide-house lucide-home h-[18px] w-[18px] shrink-0"
+                  aria-hidden="true"
+                >
+                  <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" />
+                  <path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                </svg>
                 <span className="truncate">Home</span>
               </a>
             </li>
             <li>
               <a
+                aria-current={isProjectsActive ? "page" : undefined}
+                className={`flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-left text-[15px] transition-colors cursor-pointer ${
+                  isProjectsActive
+                    ? "bg-violet-600/25 font-medium text-white"
+                    : "text-zinc-300 hover:bg-white/[0.06] hover:text-white"
+                }`}
                 href="/projetos"
                 onClick={(e) => {
                   e.preventDefault();
                   if (onOpenProjects) onOpenProjects();
                   else onNavigateTab("projetos");
                 }}
-                className={`flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-left text-[15px] transition-colors cursor-pointer ${
-                  isProjectsActive
-                    ? "bg-violet-600/25 font-medium text-white"
-                    : "text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100"
-                }`}
               >
-                <Briefcase className="h-[18px] w-[18px] shrink-0" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="lucide lucide-folder-open h-[18px] w-[18px] shrink-0"
+                  aria-hidden="true"
+                >
+                  <path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2" />
+                </svg>
                 <span className="truncate">Projetos</span>
               </a>
             </li>
             <li>
               <a
+                aria-current={isGalleryActive ? "page" : undefined}
+                className={`flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-left text-[15px] transition-colors cursor-pointer ${
+                  isGalleryActive
+                    ? "bg-violet-600/25 font-medium text-white"
+                    : "text-zinc-300 hover:bg-white/[0.06] hover:text-white"
+                }`}
                 href="/gallery"
                 onClick={(e) => {
                   e.preventDefault();
                   if (onOpenGallery) onOpenGallery();
                   else onNavigateTab("gallery");
                 }}
-                className={`flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-left text-[15px] transition-colors cursor-pointer ${
-                  isGalleryActive
-                    ? "bg-violet-600/25 font-medium text-white"
-                    : "text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100"
-                }`}
               >
-                <Images className="h-[18px] w-[18px] shrink-0" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="lucide lucide-images h-[18px] w-[18px] shrink-0"
+                  aria-hidden="true"
+                >
+                  <path d="m22 11-1.296-1.296a2.4 2.4 0 0 0-3.408 0L11 16" />
+                  <path d="M4 8a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2" />
+                  <circle cx="13" cy="7" r="1" fill="currentColor" />
+                  <rect x="8" y="2" width="14" height="14" rx="2" />
+                </svg>
                 <span className="truncate">Galeria</span>
               </a>
             </li>
             <li>
               <a
+                aria-current={isCommunityActive ? "page" : undefined}
+                className={`flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-left text-[15px] transition-colors cursor-pointer ${
+                  isCommunityActive
+                    ? "bg-violet-600/25 font-medium text-white"
+                    : "text-zinc-300 hover:bg-white/[0.06] hover:text-white"
+                }`}
                 href="/community"
                 onClick={(e) => {
                   e.preventDefault();
                   if (onOpenCommunity) onOpenCommunity();
                   else onNavigateTab("community");
                 }}
-                className={`flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-left text-[15px] transition-colors cursor-pointer ${
-                  isCommunityActive
-                    ? "bg-violet-600/25 font-medium text-white"
-                    : "text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100"
-                }`}
               >
-                <Globe className="h-[18px] w-[18px] shrink-0" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="lucide lucide-globe h-[18px] w-[18px] shrink-0"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+                  <path d="M2 12h20" />
+                </svg>
                 <span className="truncate">Comunidade</span>
               </a>
             </li>
@@ -596,9 +662,28 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
               <span
                 title="Em breve"
                 aria-disabled="true"
-                className="flex cursor-not-allowed items-center gap-3 rounded-lg px-4 py-2.5 text-[15px] text-zinc-600 select-none"
+                className="flex cursor-not-allowed items-center gap-3 rounded-lg px-4 py-2.5 text-[15px] text-zinc-600"
               >
-                <Bot className="h-[18px] w-[18px] shrink-0 text-zinc-600" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="lucide lucide-bot h-[18px] w-[18px] shrink-0"
+                  aria-hidden="true"
+                >
+                  <path d="M12 8V4H8" />
+                  <rect width="16" height="12" x="4" y="8" rx="2" />
+                  <path d="M2 14h2" />
+                  <path d="M20 14h2" />
+                  <path d="M15 13v2" />
+                  <path d="M9 13v2" />
+                </svg>
                 <span className="truncate">Agentes</span>
                 <span className="ml-auto shrink-0 rounded-full bg-white/[0.04] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-zinc-500">
                   Em breve
@@ -607,27 +692,33 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
             </li>
           </ul>
 
-          <div className="my-3 mx-4 h-px bg-white/[0.06]" />
+          <div className="my-4 h-px bg-white/10" />
 
           <ul className="space-y-0.5">
-            {AGENTS.map((agent) => (
-              <li key={agent.slug}>
-                <a
-                  href={agent.href}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleAgentClick(agent.slug);
-                  }}
-                  className={`flex w-full items-center gap-3 rounded-lg px-4 py-2 text-left text-[14px] transition-colors cursor-pointer ${
-                    selectedAgent === agent.slug
-                      ? "bg-violet-600/20 font-medium text-white"
-                      : "text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100"
-                  }`}
-                >
-                  <span className="truncate">{agent.name}</span>
-                </a>
-              </li>
-            ))}
+            {AGENTS.map((agent) => {
+              const isAgentActive = (selectedAgent === agent.slug || (typeof window !== "undefined" && (window.location.pathname === agent.href || (agent.href === "/conversor-imagens" && window.location.pathname === "/conversor")))) && !isHomeActive && !isProjectsActive && !isGalleryActive && !isCommunityActive;
+              return (
+                <li key={agent.slug}>
+                  <div>
+                    <a
+                      aria-current={isAgentActive ? "page" : undefined}
+                      className={`flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-left text-[15px] transition-colors cursor-pointer ${
+                        isAgentActive
+                          ? "bg-violet-600/25 font-medium text-white"
+                          : "text-zinc-300 hover:bg-white/[0.06] hover:text-white"
+                      }`}
+                      href={agent.href}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleAgentClick(agent.slug);
+                      }}
+                    >
+                      <span className="truncate">{agent.name}</span>
+                    </a>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         </nav>
 

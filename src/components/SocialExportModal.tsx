@@ -357,7 +357,7 @@ export const SocialExportModal: React.FC<SocialExportModalProps> = ({
 
   // Handle Download Action
   const handleDownload = async () => {
-    const srcToUse = optimizedImage || activeImage;
+    const srcToUse = activeImage || optimizedImage;
     if (!srcToUse) {
       showToast("Nenhuma imagem selecionada para download.", "error");
       return;

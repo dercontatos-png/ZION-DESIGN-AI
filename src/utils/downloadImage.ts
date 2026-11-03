@@ -208,34 +208,51 @@ export const downloadImage = (
         resolvedSource = resolvedSource.replace(/\.avif(\?.*)?$/, ".png$1");
       }
 
-      // Direct download of native API bytes if format is PNG/ORIGINAL/NATIVO and no canvas operations are needed
-      const isPngDirect = (formatoSelecionado.toUpperCase() === "PNG" || isOriginalMode) && !hasBgColor;
-      if (isPngDirect) {
-        const isUrl = resolvedSource.startsWith("http") || resolvedSource.startsWith("/");
-        const isBase64 = resolvedSource.startsWith("data:");
+      // Direct download of native API bytes / server-side Sharp conversion (zero canvas pixel bugs)
+      const requestedFmt = (formatoSelecionado || "png").toLowerCase();
+      const smartExt = requestedFmt === "jpeg" ? "jpg" : requestedFmt;
+      const isUrl = resolvedSource.startsWith("http") || resolvedSource.startsWith("/");
+      const isBase64 = resolvedSource.startsWith("data:");
+      const isSpecialTarget = targetResolution === "16MB" || targetResolution === "16MP" || targetResolution === "30MB";
 
-        if (isUrl || isBase64) {
-          try {
-            const res = await fetch(resolvedSource);
-            const blob = await res.blob();
+      if (!hasBgColor && !isSpecialTarget && (isUrl || isBase64)) {
+        try {
+          const smartName = originalName || generateSmartFileName({ ...metaInfo, targetResolution: metaInfo?.targetResolution || targetResolution || "4K" }, smartExt);
 
-            if (blob.type.startsWith("image/") || isBase64) {
-              // Pure native fast path (zero re-encode = zero loss)
-              const extFromMime = blob.type.split("/")[1] || "png";
-              const blobUrl = URL.createObjectURL(blob);
+          // Utiliza o endpoint Sharp de altíssima fidelidade do servidor para todos os formatos (PNG, JPEG, WebP, AVIF)
+          // Isso garante TrueColor 24-bit sRGB sem perda, chroma subsampling 4:4:4 e elimina 100% dos bugs de pixels do canvas da GPU
+          let serverDownloadUrl = "";
+          let fetchOptions: RequestInit | undefined;
+
+          if (isUrl) {
+            serverDownloadUrl = `/api/download-image?url=${encodeURIComponent(resolvedSource)}&format=${requestedFmt}&name=${encodeURIComponent(smartName)}`;
+          } else {
+            serverDownloadUrl = `/api/download-image`;
+            fetchOptions = {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ url: resolvedSource, format: requestedFmt, name: smartName })
+            };
+          }
+
+          const sRes = await fetch(serverDownloadUrl, fetchOptions);
+          if (sRes.ok) {
+            const convertedBlob = await sRes.blob();
+            if (convertedBlob.size > 0) {
+              const blobUrl = URL.createObjectURL(convertedBlob);
               const link = document.createElement("a");
               link.href = blobUrl;
-              link.download = originalName || generateSmartFileName({ ...metaInfo, targetResolution: metaInfo?.targetResolution || targetResolution || "4K" }, extFromMime);
+              link.download = smartName;
               document.body.appendChild(link);
               link.click();
               document.body.removeChild(link);
-              setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+              setTimeout(() => URL.revokeObjectURL(blobUrl), 3000);
               resolve();
               return;
             }
-          } catch (fetchErr) {
-            console.warn("Fetch de bytes originais falhou, caindo para canvas nativo:", fetchErr);
           }
+        } catch (fetchErr) {
+          console.warn("Server conversion fetch fallback to smooth canvas:", fetchErr);
         }
       }
 
@@ -260,37 +277,9 @@ export const downloadImage = (
             const totalPixels = 16_000_000;
             targetW = Math.round(Math.sqrt(totalPixels * aspectRatio));
             targetH = Math.round(Math.sqrt(totalPixels / aspectRatio));
-          } else if (isInstagram30MB || targetResolution === "4K") {
-            // 4K Ultra HD base resolution
-            if (aspectRatio >= 1) {
-              targetW = 3840;
-              targetH = Math.round(3840 / aspectRatio);
-            } else {
-              targetH = 3840;
-              targetW = Math.round(3840 * aspectRatio);
-            }
-          } else if (targetResolution === "2K") {
-            if (aspectRatio >= 1) {
-              targetW = 2048;
-              targetH = Math.round(2048 / aspectRatio);
-            } else {
-              targetH = 2048;
-              targetW = Math.round(2048 * aspectRatio);
-            }
-          } else if (targetResolution === "1K") {
-            // Se a imagem ja veio na resolucao nativa 1K ou maior, preserva os pixels reais sem nunca diminuir
-            if (origW >= 1024 || origH >= 1024) {
-              targetW = origW;
-              targetH = origH;
-            } else if (aspectRatio >= 1) {
-              targetW = 1024;
-              targetH = Math.round(1024 / aspectRatio);
-            } else {
-              targetH = 1350;
-              targetW = Math.round(1350 * aspectRatio);
-            }
           } else {
-            // "ORIGINAL" or default: maintain exact natural API dimensions
+            // Para preservar 100% da nitidez óptica sem distorção bilinear do canvas do browser,
+            // mantém exatamente a resolução real gerada pelo servidor
             targetW = origW;
             targetH = origH;
           }
@@ -323,21 +312,20 @@ export const downloadImage = (
           // 2. Draw high resolution image
           ctx.drawImage(img, 0, 0, targetW, targetH);
 
-          // 3. Determine MIME type and extension
-          // Native (ORIGINAL), WhatsApp HD (16MB), and Instagram (30MB) default to lossless PNG
-          const forceLosslessPng = Boolean(isOriginalMode || isWhatsAppHD || isInstagram30MB || targetResolution === "4K" || targetResolution === "2K" || targetResolution === "1K");
-          let extension = forceLosslessPng ? "png" : (formatoSelecionado ? formatoSelecionado.toLowerCase() : "png");
+          // 3. Determine MIME type and extension respecting user requested format
+          let extension = (formatoSelecionado || "png").toLowerCase();
+          if (extension === "jpeg") extension = "jpg";
           let mimeType = "image/png";
 
-          if (!forceLosslessPng) {
-            if (extension === "jpeg" || extension === "jpg") {
-              mimeType = "image/jpeg";
-              extension = "jpg";
-            } else if (extension === "webp") {
-              mimeType = "image/webp";
-            } else if (extension === "avif") {
-              mimeType = "image/avif";
-            }
+          if (extension === "jpg") {
+            mimeType = "image/jpeg";
+          } else if (extension === "webp") {
+            mimeType = "image/webp";
+          } else if (extension === "avif") {
+            mimeType = "image/avif";
+          } else {
+            mimeType = "image/png";
+            extension = "png";
           }
 
           // Quality: 0.98 for JPEG to preserve max crispness without artifacting (PNG is always lossless)

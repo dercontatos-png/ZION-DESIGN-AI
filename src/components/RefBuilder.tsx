@@ -3710,12 +3710,12 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                             </div>
                             {activePopover === "exportar" && (
                               <div className="absolute bottom-full mb-2 z-30 min-w-[160px] rounded-xl py-1.5 border border-white/[0.08] bg-[rgba(15,10,30,0.95)] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] animate-in fade-in slide-in-from-bottom-2 duration-150 right-0" onClick={() => setActivePopover(null)}>
-                                <p className="px-3 pb-1 pt-0.5 text-[10px] font-medium text-zinc-500">Download</p>
+                                <p className="px-3 pb-1 pt-0.5 text-[10px] font-medium text-zinc-500">Baixar</p>
                                 {[
-                                  { id: "avif", label: "AVIF", desc: "Formato original" },
+                                  { id: "avif", label: "AVIF", desc: "Original" },
                                   { id: "png", label: "PNG", desc: "Sem perda" },
                                   { id: "jpeg", label: "JPEG", desc: "Alta qualidade" },
-                                  { id: "webp", label: "WebP", desc: "Otimizado para web" }
+                                  { id: "webp", label: "WebP", desc: "Web otimizado" }
                                 ].map((fmt) => (
                                   <button
                                     key={fmt.id}

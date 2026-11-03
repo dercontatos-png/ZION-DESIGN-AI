@@ -378,10 +378,10 @@ export const GaleriaDetailModal: React.FC<GaleriaDetailModalProps> = ({
           <div className="mt-5 space-y-2">
             <div className="flex flex-col gap-1.5">
               {[
-                { format: "avif", label: "AVIF", sublabel: "Resolução original" },
-                { format: "png", label: "PNG", sublabel: "Sem perda" },
-                { format: "jpeg", label: "JPEG", sublabel: "Alta qualidade" },
-                { format: "webp", label: "WebP", sublabel: "Web otimizado" }
+                { format: "png", label: "PNG", sublabel: "Original 4K Master (Sem perda)" },
+                { format: "jpeg", label: "JPEG", sublabel: "Alta qualidade (Compatível)" },
+                { format: "webp", label: "WebP", sublabel: "Web otimizado" },
+                { format: "avif", label: "AVIF", sublabel: "Alta compressão" }
               ].map(({ format, label, sublabel }) => {
                 const isLoading = downloadingFormat === format;
                 const isSuccess = downloadSuccessFormat === format;

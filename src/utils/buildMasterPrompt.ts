@@ -240,14 +240,15 @@ MANDATORY: If the user explicitly requested white squares, cards, panels, or spe
 
   blocks.push(`FRAMING AND CAMERA — Aspect ratio ${ratio}, ${ratio === "9:16" || ratio === "4:5" || ratio === "3:4" ? "vertical" : ratio === "16:9" ? "horizontal" : "square"}. ${cameraSetup}\nBackground: ${bgStyle}\n${getLayoutRatioGuidance(ratio)}`);
 
-  // ── BLOCO 5: LIMB COUNT AND ANATOMY SAFETY (CRITICAL) ──
+  // ── BLOCO 5: LIMB COUNT AND ANATOMY (OFFICIAL DESIGN BUILDER MANDATE — OVERRIDES ANY ALTERNATIVE READING) ──
   if (!isLogo && hasSubject) {
-    blocks.push(`LIMB COUNT AND ANATOMY (CRITICAL SAFETY RULE — NON-NEGOTIABLE):
-The body has EXACTLY two arms, two legs, two hands, and two feet.
-Two hands exist in the picture and no more. Exactly 5 fingers per hand (no extra fingers, no fused digits, no floating hands).
-Each limb is continuous from its joint to its endpoint in one unbroken line: shoulder -> upper arm -> elbow -> forearm -> wrist -> hand.
-Dermal deformation on contact: realistic soft compression where digits touch objects or clothing.
-Normal, symmetric, anatomically correct human proportions. Zero AI hallucinations, zero duplicated limbs.`);
+    blocks.push(`LIMB COUNT AND ANATOMY (OFFICIAL DESIGN BUILDER MANDATE — OVERRIDES ANY ALTERNATIVE READING):
+Trace each limb sequentially from the shoulder joint to the fingertips and from the hip joint to the toes:
+1. Near Arm: Trace from shoulder down the bicep, through the elbow, along the forearm, across the wrist, to the hand and all 5 distinct fingers.
+2. Far Arm: Trace from opposite shoulder, down the arm, establishing proper depth and occlusion behind or across the body with exactly 5 fingers.
+3. Hands & Fingers: Exactly two hands exist in the picture and no more. Exactly 5 fully articulated fingers per hand, natural fingernail beds, with realistic tactile dermal contact deformation where digits touch objects or clothing.
+4. Cervical & Body Torque: Sternocleidomastoid and trapezius muscle tension aligning gaze vector with camera optical axis.
+5. Normal, symmetric, anatomically correct human proportions. Zero extra limbs, zero fused digits, zero floating hands, zero AI hallucinations.`);
   }
 
   // ── BLOCO 6: HERO EFFECTS & MATERIAL PHYSICS ──

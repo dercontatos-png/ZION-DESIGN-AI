@@ -28,22 +28,58 @@ const getNormalizedImageKey = (img: any): string => {
 const imageSourceToFile = async (source: string, filename: string): Promise<File | null> => {
   if (!source || typeof source !== "string" || !source.trim()) return null;
   const cleanSource = source.trim();
-  try {
-    // 1. Data URL (base64)
-    if (cleanSource.startsWith("data:")) {
-      const res = await fetch(cleanSource);
-      const blob = await res.blob();
-      const mime = blob.type || "image/png";
-      const ext = mime.includes("png") ? "png" : mime.includes("webp") ? "webp" : "jpg";
-      return new File([blob], `${filename}.${ext}`, { type: mime });
-    }
 
-    // 2. Relative or Absolute URL (/uploads/..., http..., /Design Builder...)
+  // 1. Data URL (base64) or Raw Base64 string
+  const isDataUrl = cleanSource.startsWith("data:");
+  const isRawBase64 =
+    !isDataUrl &&
+    (cleanSource.startsWith("iVBORw0KGgo") ||
+     cleanSource.startsWith("/9j/") ||
+     cleanSource.startsWith("UklGR") ||
+     cleanSource.startsWith("AAAAIGZ0eXBhdmlm") ||
+     (cleanSource.length > 500 && !cleanSource.includes(" ") && !cleanSource.includes("\n") && !cleanSource.startsWith("http")));
+
+  if (isDataUrl || isRawBase64) {
+    try {
+      let mime = "image/jpeg";
+      let base64Data = cleanSource;
+      if (isDataUrl) {
+        const commaIdx = cleanSource.indexOf(",");
+        const mimeMatch = cleanSource.slice(0, commaIdx).match(/:(.*?);/);
+        if (mimeMatch) mime = mimeMatch[1];
+        base64Data = commaIdx !== -1 ? cleanSource.slice(commaIdx + 1) : "";
+      } else {
+        if (cleanSource.startsWith("iVBORw0KGgo")) mime = "image/png";
+        else if (cleanSource.startsWith("/9j/")) mime = "image/jpeg";
+        else if (cleanSource.startsWith("UklGR")) mime = "image/webp";
+        else if (cleanSource.startsWith("AAAAIGZ0eXBhdmlm")) mime = "image/avif";
+      }
+
+      const binaryStr = atob(base64Data);
+      const len = binaryStr.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryStr.charCodeAt(i);
+      }
+      const ext = mime.includes("png") ? "png" : mime.includes("webp") ? "webp" : mime.includes("avif") ? "avif" : "jpg";
+      const blob = new Blob([bytes], { type: mime });
+      return new File([blob], `${filename}.${ext}`, { type: mime });
+    } catch (base64Err) {
+      console.warn(`[imageSourceToFile] Falha na conversão de base64 ${filename}:`, base64Err);
+    }
+  }
+
+  // 2. Relative or Absolute URL (/uploads/..., http..., /Design Builder...)
+  try {
     const fullUrl = cleanSource.startsWith("http://") || cleanSource.startsWith("https://")
       ? cleanSource
       : `${typeof window !== "undefined" ? window.location.origin : "http://localhost:3000"}${cleanSource.startsWith("/") ? "" : "/"}${cleanSource}`;
 
-    const res = await fetch(fullUrl);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 12000);
+    const res = await fetch(fullUrl, { signal: controller.signal });
+    clearTimeout(timeout);
+
     if (!res.ok) {
       console.warn(`[imageSourceToFile] Falha ao carregar imagem em ${fullUrl}: status ${res.status}`);
       return null;
@@ -58,7 +94,7 @@ const imageSourceToFile = async (source: string, filename: string): Promise<File
     const ext = mime.includes("png") ? "png" : mime.includes("webp") ? "webp" : mime.includes("avif") ? "avif" : "jpg";
     return new File([blob], `${filename}.${ext}`, { type: mime });
   } catch (err) {
-    console.error(`[imageSourceToFile] Erro ao converter imagem ${filename}: `, err);
+    console.error(`[imageSourceToFile] Erro ao carregar URL ${filename}: `, err);
     return null;
   }
 };
@@ -446,15 +482,15 @@ export const useGenerateImage = (
         let pollTimer: ReturnType<typeof setInterval> | null = null;
         const sseController = new AbortController();
 
-        // Timeout de segurança (5 min)
+        // Timeout de segurança (3 min)
         const safetyTimeout = setTimeout(() => {
           if (!resolved) {
             resolved = true;
             sseController.abort();
             if (pollTimer) clearInterval(pollTimer);
-            reject(new Error("⏱️ Tempo limite de geração excedido (5 min). Tente novamente."));
+            reject(new Error("⏱️ Tempo limite de geração excedido (3 min). Tente novamente."));
           }
-        }, 300000);
+        }, 180000);
 
         const cleanup = () => {
           clearTimeout(safetyTimeout);
@@ -462,15 +498,57 @@ export const useGenerateImage = (
           sseController.abort();
         };
 
-        // SSE stream
+        const handleSuccessResult = (rawUrl: string) => {
+          if (!resolved && rawUrl) {
+            resolved = true;
+            cleanup();
+            resolve(rawUrl);
+          }
+        };
+
+        const handleErrorResult = (errText: string) => {
+          if (!resolved) {
+            resolved = true;
+            cleanup();
+            reject(new Error(errText || "Falha na geração."));
+          }
+        };
+
+        // Polling paralelo contínuo (inicia IMEDIATAMENTE para garantir que o frontend nunca fique travado)
+        const startPolling = () => {
+          if (pollTimer) return;
+          console.log("[FRONT] Starting parallel status polling...");
+          pollTimer = setInterval(async () => {
+            if (resolved) {
+              if (pollTimer) clearInterval(pollTimer);
+              return;
+            }
+            try {
+              const statusRes = await fetch(`/api/bff/api/generations/${generationId}/status`);
+              if (!statusRes.ok) return;
+              const statusData = await statusRes.json();
+              console.log(`[FRONT] Poll: status=${statusData.status}, progress=${statusData.progress}`);
+
+              const resolvedUrl = statusData.result_url || statusData.download_url || (statusData.outputs && statusData.outputs[0]?.url) || (statusData.result && statusData.result.url);
+
+              if (statusData.status === "done" && resolvedUrl) {
+                handleSuccessResult(resolvedUrl);
+              } else if (statusData.status === "error") {
+                handleErrorResult(statusData.error_message || statusData.message || "Falha na geração.");
+              }
+            } catch { /* ignore poll network glitches */ }
+          }, 2000);
+        };
+
+        // Inicia polling imediatamente em paralelo com SSE
+        startPolling();
+
+        // SSE stream para recepção em tempo real
         fetch(`/api/bff/api/generations/${generationId}/stream`, {
           headers: { Accept: "text/event-stream" },
           signal: sseController.signal
         }).then(async (sseRes) => {
           if (!sseRes.ok || !sseRes.body) {
-            // SSE failed, fall back to polling
-            console.warn("[FRONT] SSE stream failed, falling back to polling...");
-            startPolling();
             return;
           }
 
@@ -493,21 +571,15 @@ export const useGenerateImage = (
                   const payload = JSON.parse(line.slice(6));
                   console.log(`[FRONT] SSE: status=${payload.status}, progress=${payload.progress}`);
 
-                  if (payload.status === "done" && payload.result_url) {
-                    if (!resolved) {
-                      resolved = true;
-                      cleanup();
-                      resolve(payload.result_url);
-                    }
+                  const streamUrl = payload.result_url || payload.download_url || (payload.outputs && payload.outputs[0]?.url) || (payload.result && payload.result.url);
+
+                  if (payload.status === "done" && streamUrl) {
+                    handleSuccessResult(streamUrl);
                     return;
                   }
 
                   if (payload.status === "error") {
-                    if (!resolved) {
-                      resolved = true;
-                      cleanup();
-                      reject(new Error(payload.error_message || payload.message || "Falha na geração."));
-                    }
+                    handleErrorResult(payload.error_message || payload.message || "Falha na geração.");
                     return;
                   }
                 } catch { /* ignore parse errors */ }
@@ -515,48 +587,14 @@ export const useGenerateImage = (
             }
           } catch (readErr: any) {
             if (!resolved && readErr?.name !== "AbortError") {
-              console.warn("[FRONT] SSE read error, falling back to polling:", readErr?.message);
-              startPolling();
+              console.warn("[FRONT] SSE read interrupted, polling continues:", readErr?.message);
             }
           }
         }).catch((sseErr) => {
           if (!resolved && sseErr?.name !== "AbortError") {
-            console.warn("[FRONT] SSE connection failed, falling back to polling:", sseErr?.message);
-            startPolling();
+            console.warn("[FRONT] SSE connection failed, polling continues:", sseErr?.message);
           }
         });
-
-        // Polling fallback
-        function startPolling() {
-          if (pollTimer || resolved) return;
-          console.log("[FRONT] Starting status polling...");
-          pollTimer = setInterval(async () => {
-            if (resolved) {
-              if (pollTimer) clearInterval(pollTimer);
-              return;
-            }
-            try {
-              const statusRes = await fetch(`/api/bff/api/generations/${generationId}/status`);
-              if (!statusRes.ok) return;
-              const statusData = await statusRes.json();
-              console.log(`[FRONT] Poll: status=${statusData.status}, progress=${statusData.progress}`);
-
-              if (statusData.status === "done" && statusData.result_url) {
-                if (!resolved) {
-                  resolved = true;
-                  cleanup();
-                  resolve(statusData.result_url);
-                }
-              } else if (statusData.status === "error") {
-                if (!resolved) {
-                  resolved = true;
-                  cleanup();
-                  reject(new Error(statusData.error_message || statusData.message || "Falha na geração."));
-                }
-              }
-            } catch { /* ignore poll errors */ }
-          }, 3000);
-        }
       });
 
       // 4. Imagem recebida! Carregar no projeto
@@ -584,6 +622,7 @@ export const useGenerateImage = (
       onError?.(errMsg);
     } finally {
       store.setIsProjectGenerating(targetProjectId, false);
+      store.setIsGenerating(false);
       console.log(`[DEBUG] Generation finished for project ${targetProjectId}`);
     }
   };
