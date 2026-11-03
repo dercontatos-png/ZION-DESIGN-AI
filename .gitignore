@@ -1,6 +1,11 @@
 node_modules/
 build/
-dist/
+dist/demo.mp4
+dist/generated-images/
+dist/uploads/
+dist/local_storage/
+dist/whatsapp-sessions/
+dist/*.mp4
 coverage/
 .DS_Store
 *.log

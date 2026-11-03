@@ -35,3 +35,4 @@ RUN id -u user >/dev/null 2>&1 || useradd -m -u 1000 user && \
 USER 1000
 
 CMD ["npm", "start"]
+

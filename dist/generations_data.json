@@ -1,0 +1,305 @@
+[
+  {
+    "id": "img_1793687299831_q9j3g",
+    "status": "done",
+    "result_url": "/generated-images/img_1793687299831_q9j3g.png",
+    "thumbnail_url": "/generated-images/img_1793687299831_q9j3g.png",
+    "created_at": "2026-11-03T06:28:20.626Z",
+    "agent_slug": "design-builder1-2",
+    "dimensions": "4:5",
+    "form_data": {
+      "quality": "4K",
+      "dimensions": "4:5"
+    }
+  },
+  {
+    "id": "img_1793687021863_y7ca5",
+    "status": "done",
+    "result_url": "/generated-images/img_1793687021863_y7ca5.png",
+    "thumbnail_url": "/generated-images/img_1793687021863_y7ca5.png",
+    "created_at": "2026-11-03T06:23:41.945Z",
+    "agent_slug": "design-builder1-2",
+    "dimensions": "4:5",
+    "form_data": {
+      "quality": "4K",
+      "dimensions": "4:5"
+    }
+  },
+  {
+    "id": "1790979907582_vtrshyi",
+    "title": "foto",
+    "timestamp": "2026-10-02T22:25:30.513Z",
+    "created_at": "2026-10-02T22:25:30.513Z",
+    "imageUrl": "/designbuilder/results/1790979907582_vtrshyi/result.avif",
+    "result_url": "/designbuilder/results/1790979907582_vtrshyi/result.avif",
+    "thumbnail_url": "/designbuilder/thumbnails/1790979907582_vtrshyi/thumbnail.avif",
+    "pngUrl": "/designbuilder/results/1790979907582_vtrshyi/result.png",
+    "aspectRatio": "4:5",
+    "dimensions": "4:5",
+    "resolution": "1K",
+    "agent_slug": "orion-pro",
+    "prompt": "[Style]: ultra_realistic. [Framing]: medium. [Scene Background]: Nicho/Projeto: foto. Cenário: praia. [Main Subject]:  (male), positioned at center. [Floating Elements]: None. [Color Palette]: ambient_color: #1A1A2E, complementary_color: #E2E2E2, complementary_light: #FFD500. [Text Layout]: No text overlay at align-center (Gradient: true). [Output Specs]: Aspect Ratio 4:5, Quality: 1K, Variations: 1.",
+    "form_data": {
+      "plano": "medium",
+      "quality": "1K",
+      "dimensions": "4:5",
+      "quantidade": "1",
+      "genero": "male",
+      "subject_description": "",
+      "subject_position": "center",
+      "scene_description": "Nicho/Projeto: foto. Cenário: praia",
+      "estilo_visual": "ultra_realistic",
+      "nicho_projeto": "foto",
+      "prompt_adicional": "Categoria: Pessoa. Quantidade: 1. Modo Criativo: Builder",
+      "text_blocks": [],
+      "color_palette": {
+        "ambient_color": "#1A1A2E",
+        "complementary_color": "#E2E2E2",
+        "complementary_light": "#FFD500"
+      },
+      "degrade": "true",
+      "posicao_do_texto": "align-center",
+      "elementos_flutuantes": "",
+      "usar_desfoque_blur": "true",
+      "sobriedade_criatividade": "50",
+      "saved_files": {
+        "fotos_do_sujeito_produto": "inputs/1790979907582_vtrshyi/fotos_do_sujeito_produto/sujeito_0.jpg",
+        "brand_identity_images": null,
+        "referencias_de_ambiente": null,
+        "referencias_de_estilo": null
+      }
+    },
+    "input_image_urls": {
+      "fotos_do_sujeito_produto": [
+        "/designbuilder/inputs/1790979907582_vtrshyi/fotos_do_sujeito_produto/0.jpg"
+      ]
+    }
+  },
+  {
+    "id": "1790978920571_4o9zh4w",
+    "title": "Categoria: Livre",
+    "timestamp": "2026-10-02T22:09:06.269Z",
+    "created_at": "2026-10-02T22:09:06.269Z",
+    "imageUrl": "/designbuilder/results/1790978920571_4o9zh4w/result.avif",
+    "result_url": "/designbuilder/results/1790978920571_4o9zh4w/result.avif",
+    "thumbnail_url": "/designbuilder/thumbnails/1790978920571_4o9zh4w/thumbnail.avif",
+    "pngUrl": "/designbuilder/results/1790978920571_4o9zh4w/result.png",
+    "aspectRatio": "4:5",
+    "dimensions": "4:5",
+    "resolution": "1K",
+    "agent_slug": "orion-pro",
+    "prompt": "[Style]: ultra_realistic. [Framing]: medium. [Scene Background]: . [Main Subject]:  (male), positioned at right. [Floating Elements]: None. [Color Palette]: ambient_color: #1A1A2E, complementary_color: #E2E2E2, complementary_light: #FFD500. [Text Layout]: No text overlay at align-center (Gradient: true). [Output Specs]: Aspect Ratio 4:5, Quality: 1K, Variations: 1.",
+    "form_data": {
+      "plano": "medium",
+      "quality": "1K",
+      "dimensions": "4:5",
+      "quantidade": "1",
+      "genero": "male",
+      "subject_description": "",
+      "subject_position": "right",
+      "scene_description": "",
+      "estilo_visual": "ultra_realistic",
+      "nicho_projeto": "Categoria: Livre",
+      "prompt_adicional": "Categoria: Livre. Quantidade: 1. Modo Criativo: Builder",
+      "text_blocks": [],
+      "color_palette": {
+        "ambient_color": "#1A1A2E",
+        "complementary_color": "#E2E2E2",
+        "complementary_light": "#FFD500"
+      },
+      "degrade": "true",
+      "posicao_do_texto": "align-center",
+      "elementos_flutuantes": "",
+      "usar_desfoque_blur": "true",
+      "sobriedade_criatividade": "50",
+      "saved_files": {
+        "fotos_do_sujeito_produto": null,
+        "brand_identity_images": null,
+        "referencias_de_ambiente": null,
+        "referencias_de_estilo": null
+      }
+    },
+    "input_image_urls": {}
+  },
+  {
+    "id": "1790489997993_t4bwi3w",
+    "title": "Design Builder Arte",
+    "timestamp": "2026-09-27T06:20:26.628Z",
+    "created_at": "2026-09-27T06:20:26.628Z",
+    "imageUrl": "/designbuilder/results/1790489997993_t4bwi3w/result.avif",
+    "result_url": "/designbuilder/results/1790489997993_t4bwi3w/result.avif",
+    "thumbnail_url": "/designbuilder/thumbnails/1790489997993_t4bwi3w/thumbnail.avif",
+    "pngUrl": "/designbuilder/results/1790489997993_t4bwi3w/result.png",
+    "aspectRatio": "4:5",
+    "dimensions": "4:5",
+    "resolution": "1K",
+    "agent_slug": "orion-pro",
+    "prompt": "[Style]: ultra_realistic. [Framing]: medium. [Scene Background]: spaço cideral. [Main Subject]: neymar com roupa de astronauta (male), positioned at center. [Floating Elements]: None. [Color Palette]: ambient_color: #CA00E5, complementary_color: #E85700, complementary_light: #39ED53. [Text Layout]: No text overlay at align-center (Gradient: true). [Output Specs]: Aspect Ratio 4:5, Quality: 1K, Variations: 1.",
+    "form_data": {
+      "plano": "medium",
+      "quality": "1K",
+      "dimensions": "4:5",
+      "quantidade": "1",
+      "genero": "male",
+      "subject_description": "neymar com roupa de astronauta",
+      "subject_position": "center",
+      "scene_description": "spaço cideral",
+      "estilo_visual": "ultra_realistic",
+      "nicho_projeto": "",
+      "prompt_adicional": "",
+      "text_blocks": [],
+      "color_palette": {
+        "ambient_color": "#CA00E5",
+        "complementary_color": "#E85700",
+        "complementary_light": "#39ED53"
+      },
+      "degrade": "true",
+      "posicao_do_texto": "align-center",
+      "elementos_flutuantes": "",
+      "usar_desfoque_blur": "true",
+      "sobriedade_criatividade": "50",
+      "saved_files": {
+        "fotos_do_sujeito_produto": "inputs/1790489997993_t4bwi3w/fotos_do_sujeito_produto/sujeito_0.jpg",
+        "brand_identity_images": null,
+        "referencias_de_ambiente": null,
+        "referencias_de_estilo": null
+      }
+    },
+    "input_image_urls": {
+      "fotos_do_sujeito_produto": [
+        "/designbuilder/inputs/1790489997993_t4bwi3w/fotos_do_sujeito_produto/0.jpg"
+      ]
+    }
+  },
+  {
+    "id": "img_1790271644901_sh3r1",
+    "status": "done",
+    "result_url": "/generated-images/img_1790271644901_sh3r1.png",
+    "thumbnail_url": "/generated-images/img_1790271644901_sh3r1.png",
+    "created_at": "2026-09-24T17:40:44.978Z",
+    "agent_slug": "design-builder1-2",
+    "dimensions": "4:5",
+    "form_data": {
+      "quality": "4K",
+      "dimensions": "4:5"
+    }
+  },
+  {
+    "id": "img_1790271339979_xeco0",
+    "status": "done",
+    "result_url": "/generated-images/img_1790271339979_xeco0.png",
+    "thumbnail_url": "/generated-images/img_1790271339979_xeco0.png",
+    "created_at": "2026-09-24T17:35:40.022Z",
+    "agent_slug": "design-builder1-2",
+    "dimensions": "4:5",
+    "form_data": {
+      "quality": "4K",
+      "dimensions": "4:5"
+    }
+  },
+  {
+    "id": "1790244192693_upnh2yl",
+    "title": "Saúde, Cursos Técnicos, Capacitações Profissionais, Teoria e Prática Profissional",
+    "timestamp": "2026-09-24T10:04:51.149Z",
+    "created_at": "2026-09-24T10:04:51.149Z",
+    "imageUrl": "/designbuilder/results/1790244192693_upnh2yl/result.avif",
+    "result_url": "/designbuilder/results/1790244192693_upnh2yl/result.avif",
+    "thumbnail_url": "/designbuilder/thumbnails/1790244192693_upnh2yl/thumbnail.avif",
+    "pngUrl": "/designbuilder/results/1790244192693_upnh2yl/result.png",
+    "aspectRatio": "4:5",
+    "dimensions": "4:5",
+    "resolution": "4K",
+    "agent_slug": "orion-pro",
+    "prompt": "[Style]: ultra_realistic. [Framing]: medium. [Scene Background]: Nicho/Projeto: Saúde, Cursos Técnicos, Capacitações Profissionais, Teoria e Prática Profissional. [Main Subject]:  (male), positioned at right. [Floating Elements]: None. [Color Palette]: ambient_color: #1A1A2E, complementary_color: #E2E2E2, complementary_light: #FFD500. [Text Layout]: \"CICLO DE MATRÍCULAS 2027\"; \"Técnico em Radiologia\nTécnico em Farmácia\"; \"Técnico em Enfermagem\nAuxiliar em Saúde Bucal\"; \"(74) 9950-3892 - (74) 9917-2411\"; \"@centrocepar\" at align-left (Gradient: true). [Output Specs]: Aspect Ratio 4:5, Quality: 4K, Variations: 1.",
+    "form_data": {
+      "plano": "medium",
+      "quality": "4K",
+      "dimensions": "4:5",
+      "quantidade": "1",
+      "genero": "male",
+      "subject_description": "",
+      "subject_position": "right",
+      "scene_description": "Nicho/Projeto: Saúde, Cursos Técnicos, Capacitações Profissionais, Teoria e Prática Profissional",
+      "estilo_visual": "ultra_realistic",
+      "nicho_projeto": "Saúde, Cursos Técnicos, Capacitações Profissionais, Teoria e Prática Profissional",
+      "prompt_adicional": "Quantidade: 1. Elementos flutuantes dinâmicos no ambiente. Modo Criativo: Builder. Identidade da Marca #1: minha logo,. Referência de Estilo #1: quero nesse estilo porem com algumas correções. quero nesse estilo porem com algumas correções. deve ter 4 quadrados brancos solidos pra eu colocar algo depois. ",
+      "text_blocks": [
+        {
+          "type": "h1",
+          "weight": 5,
+          "content": "CICLO DE MATRÍCULAS 2027",
+          "color": "#FFFFFF",
+          "position": "top-center"
+        },
+        {
+          "type": "bullets",
+          "weight": 2,
+          "content": "Técnico em Radiologia\nTécnico em Farmácia",
+          "color": "#FFFFFF",
+          "position": "middle-left"
+        },
+        {
+          "type": "bullets",
+          "weight": 2,
+          "content": "Técnico em Enfermagem\nAuxiliar em Saúde Bucal",
+          "color": "#FFFFFF",
+          "position": "middle-right"
+        },
+        {
+          "type": "cta",
+          "weight": 4,
+          "content": "(74) 9950-3892 - (74) 9917-2411",
+          "color": "#FFFFFF",
+          "position": "middle-center"
+        },
+        {
+          "type": "cta",
+          "weight": 4,
+          "content": "@centrocepar",
+          "color": "#FFFFFF",
+          "position": "bottom-center"
+        }
+      ],
+      "color_palette": {
+        "ambient_color": "#1A1A2E",
+        "complementary_color": "#E2E2E2",
+        "complementary_light": "#FFD500"
+      },
+      "degrade": "true",
+      "posicao_do_texto": "align-left",
+      "elementos_flutuantes": "",
+      "usar_desfoque_blur": "true",
+      "sobriedade_criatividade": "50",
+      "saved_files": {
+        "fotos_do_sujeito_produto": null,
+        "brand_identity_images": "inputs/1790244192693_upnh2yl/brand_identity_images/brand_logo_0.png",
+        "referencias_de_ambiente": null,
+        "referencias_de_estilo": "inputs/1790244192693_upnh2yl/referencias_de_estilo/estilo_0.avif"
+      }
+    },
+    "input_image_urls": {
+      "brand_identity_images": [
+        "/designbuilder/inputs/1790244192693_upnh2yl/brand_identity_images/0.jpg"
+      ],
+      "referencias_de_estilo": [
+        "/designbuilder/inputs/1790244192693_upnh2yl/referencias_de_estilo/0.jpg"
+      ]
+    }
+  },
+  {
+    "id": "hydra_4cards_perfeito_com_margem",
+    "status": "done",
+    "result_url": "/generated-images/hydra_4cards_perfeito_com_margem.png",
+    "thumbnail_url": "/generated-images/hydra_4cards_perfeito_com_margem.png",
+    "created_at": "2026-09-24T02:52:13.761Z",
+    "agent_slug": "hydra",
+    "dimensions": "4:5",
+    "title": "CEPAR - 4 Cursos (Diagramação Perfeita com Margem)",
+    "form_data": {
+      "dimensions": "4:5",
+      "quality": "4K",
+      "nicho_projeto": "Saúde, Cursos Técnicos, CE-PAR",
+      "prompt_adicional": "4 cards brancos lado a lado, matrículas abertas 2027, 2 números de whatsapp com mesmo tamanho, margem de segurança nas bordas"
+    }
+  }
+]

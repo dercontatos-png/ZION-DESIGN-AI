@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&family=Goldman:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/_next/static/chunks/3uph4nl5rlpxb.css">
+  <link rel="stylesheet" href="/_next/static/chunks/3_nurdfouf042.css">
+  <meta name="theme-color" content="#000000">
+  <title>Ref</title>
+  <meta name="description" content="Design Builder — Gerador de artes profissionais com IA">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Design Builder">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon-db.png" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <style type="text/css">
+    /* Responsive utilities */
+    @media (max-width: 1023px) {
+      .max-lg\:hidden {
+        display: none !important;
+      }
+      .lg\:flex {
+        display: none !important;
+      }
+    }
+    @media (min-width: 1024px) {
+      .max-lg\:hidden {
+        display: flex !important;
+      }
+      .lg\:flex {
+        display: flex !important;
+      }
+    }
+    :root {
+      --agent-form-col-w: 420px;
+      --agent-color: #8B5CF6;
+      --alert-idv: #8B5CF6;
+      --alert-idv-dim: #8B5CF640;
+    }
+    body {
+      background-color: #000000;
+      color: #ffffff;
+      font-family: var(--font-geist-sans, system-ui, -apple-system, sans-serif);
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      user-select: none;
+    }
+    .pb-glass-input {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: #f0ecff;
+    }
+    .pb-glass-input:focus {
+      border-color: rgba(139, 92, 246, 0.5);
+      background: rgba(255, 255, 255, 0.07);
+      outline: none;
+    }
+    .pb-ctrl-btn {
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.025);
+      transition: all 0.2s;
+    }
+    .pb-ctrl-btn:hover {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(255, 255, 255, 0.16);
+    }
+    .pb-ctrl-active {
+      border-color: rgba(139, 92, 246, 0.6) !important;
+      background: rgba(139, 92, 246, 0.25) !important;
+      color: #fff !important;
+    }
+    .scrollbar-hide::-webkit-scrollbar {
+      display: none;
+    }
+    .scrollbar-hide {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    /* Magic bar */
+    .magic-bar {
+      border-radius: 22px;
+      background: rgba(18, 14, 30, 0.75);
+      border: 1px solid rgba(139, 92, 246, 0.25);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 24px rgba(139, 92, 246, 0.15);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+    /* Publish alert card */
+    .publish-alert-card {
+      background: linear-gradient(#fff, #fff) padding-box,
+                  linear-gradient(var(--alert-idv, #8b5cf6), var(--alert-idv, #8b5cf6)) border-box;
+      border: 2px solid transparent;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+    }
+    /* Toast */
+    #db-toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+    .db-toast {
+      pointer-events: auto;
+      padding: 12px 18px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #fff;
+      background: #18181b;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: fadeInToast 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: all 0.3s;
+    }
+    .db-toast-success {
+      border-color: rgba(16, 185, 129, 0.4);
+      background: #064e3b;
+    }
+    .db-toast-info {
+      border-color: rgba(139, 92, 246, 0.4);
+      background: #1e1046;
+    }
+    .db-toast-error {
+      border-color: rgba(239, 68, 68, 0.4);
+      background: #450a0a;
+    }
+    @keyframes fadeInToast {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="geist_a71539c9-module__T19VSG__variable geist_mono_8d43a2aa-module__8Li5zG__variable goldman_4f4cb83b-module__AKz63G__variable antialiased" style="background-color:#000000">
+  <div id="db-toast-container"></div>
+  <a href="#main-content" class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[9999] focus:rounded-lg focus:bg-violet-600 focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-white focus:outline-none">Ir para o conteúdo</a>
+  
+  <div id="main-content">
+    <div aria-hidden="true">
+      <div class="bg-orb bg-orb-1"></div>
+      <div class="bg-orb bg-orb-2"></div>
+      <div class="bg-orb bg-orb-3"></div>
+    </div>
+    
+    <!-- Sidebar esquerda oficial -->
+    <nav data-tour="menu" class="barra-lateral fixed left-3 top-1/2 z-50 hidden -translate-y-1/2 lg:block">
+      <div class="flex flex-col items-center gap-1.5 rounded-2xl bg-zinc-950 px-2 py-3 shadow-2xl shadow-black/40 ring-1 ring-white/[0.06]">
+        <div title="26 créditos" class="group relative flex flex-col items-center gap-0.5 mb-0.5">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sparkles h-3.5 w-3.5 text-amber-400" aria-hidden="true"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"></path><path d="M20 2v4"></path><path d="M22 4h-4"></path><circle cx="4" cy="20" r="2"></circle></svg>
+          <span id="sidebar-credits-num" class="text-[10px] font-bold tabular-nums leading-none text-amber-400">26</span>
+          <span class="pointer-events-none absolute left-full ml-3 whitespace-nowrap rounded-lg bg-zinc-800 px-2.5 py-1 text-xs font-medium text-zinc-200 opacity-0 shadow-lg ring-1 ring-white/10 transition-opacity group-hover:opacity-100">26 créditos</span>
+        </div>
+        <div class="mb-1">
+          <div class="relative">
+            <button type="button" aria-label="Abrir menu do usuário" aria-expanded="false" class="h-7 w-7 overflow-hidden rounded-full ring-2 transition-all focus:outline-none focus-visible:ring-violet-400 ring-violet-500/20 hover:ring-violet-400/50">
+              <div class="flex h-full w-full items-center justify-center bg-gradient-to-br from-violet-500 to-fuchsia-500 text-[11px] font-semibold text-white">RI</div>
+            </button>
+          </div>
+        </div>
+        <div class="mx-auto h-px w-5 bg-white/10"></div>
+        <div class="group/home relative">
+          <a title="Apps" class="flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200 text-zinc-400 hover:bg-white/10 hover:text-white" href="/">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-house h-[18px] w-[18px]" aria-hidden="true"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"></path><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+          </a>
+        </div>
+        <a title="Projetos" class="group relative flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200 text-zinc-400 hover:bg-white/10 hover:text-white" href="/projetos">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-briefcase h-[18px] w-[18px]" aria-hidden="true"><path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path><rect width="20" height="14" x="2" y="6" rx="2"></rect></svg>
+          <span class="pointer-events-none absolute left-full ml-3 whitespace-nowrap rounded-lg bg-zinc-800 px-2.5 py-1 text-xs font-medium text-zinc-200 opacity-0 shadow-lg ring-1 ring-white/10 transition-opacity group-hover:opacity-100">Projetos</span>
+        </a>
+        <a title="Galeria" class="group relative flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200 text-zinc-400 hover:bg-white/10 hover:text-white" href="/gallery">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-images h-[18px] w-[18px]" aria-hidden="true"><path d="m22 11-1.296-1.296a2.4 2.4 0 0 0-3.408 0L11 16"></path><path d="M4 8a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2"></path><circle cx="13" cy="7" r="1" fill="currentColor"></circle><rect x="8" y="2" width="14" height="14" rx="2"></rect></svg>
+          <span class="pointer-events-none absolute left-full ml-3 whitespace-nowrap rounded-lg bg-zinc-800 px-2.5 py-1 text-xs font-medium text-zinc-200 opacity-0 shadow-lg ring-1 ring-white/10 transition-opacity group-hover:opacity-100">Galeria</span>
+        </a>
+        <a title="Comunidade" class="group relative flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200 text-zinc-400 hover:bg-white/10 hover:text-white" href="/community">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-globe h-[18px] w-[18px]" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg>
+          <span class="pointer-events-none absolute left-full ml-3 whitespace-nowrap rounded-lg bg-zinc-800 px-2.5 py-1 text-xs font-medium text-zinc-200 opacity-0 shadow-lg ring-1 ring-white/10 transition-opacity group-hover:opacity-100">Comunidade</span>
+        </a>
+        <div class="rodape-da-sidebar">
+          <div class="min-h-0 overflow-hidden">
+            <div class="mx-auto my-1.5 h-px w-5 bg-white/10"></div>
+            <div class="flex flex-col items-center gap-1.5">
+              <div class="relative">
+                <button type="button" aria-label="Avisos" class="relative flex h-10 w-10 items-center justify-center rounded-xl text-zinc-500 hover:bg-white/10 hover:text-white transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bell h-[18px] w-[18px]" aria-hidden="true"><path d="M10.268 21a2 2 0 0 0 3.464 0"></path><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"></path></svg>
+                </button>
+              </div>
+              <button type="button" data-tour="report" title="Reportar erro ou sugestão" class="group relative flex h-10 w-10 items-center justify-center rounded-xl text-red-400 transition-all duration-200 hover:bg-red-500/15 hover:text-red-300">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-triangle-alert h-[18px] w-[18px]" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
+                <span class="pointer-events-none absolute left-full ml-3 whitespace-nowrap rounded-lg bg-zinc-800 px-2.5 py-1 text-xs font-medium text-zinc-200 opacity-0 shadow-lg ring-1 ring-white/10 transition-opacity group-hover:opacity-100">Reportar</span>
+              </button>
+              <div class="relative">
+                <button type="button" class="group relative flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200 text-zinc-500 hover:bg-white/10 hover:text-white" aria-label="Links úteis">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-ellipsis h-[18px] w-[18px]" aria-hidden="true"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
+                  <span class="pointer-events-none absolute left-full ml-3 whitespace-nowrap rounded-lg bg-zinc-800 px-2.5 py-1 text-xs font-medium text-zinc-200 opacity-0 shadow-lg ring-1 ring-white/10 transition-opacity group-hover:opacity-100">Links úteis</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Shell Principal do Workspace -->
+    <div class="flex h-[100dvh] flex-col overflow-hidden relative z-[2] lg:pl-[60px]">
+      <div class="flex-1 min-h-0 max-lg:overflow-x-hidden lg:pb-0 overflow-hidden">
+        <div class="flex h-full flex-col overflow-hidden">
+          <main data-builder-workspace-shell="" class="relative flex h-full min-h-0 overflow-hidden bg-black lg:flex-row max-lg:grid max-lg:overflow-hidden max-lg:transition-[grid-template-rows] max-lg:duration-300 max-lg:ease-in-out max-lg:grid-rows-[1fr_0fr] flex-1">
+            
+            <!-- Coluna de Formulário do Agente (420px) -->
+            <aside data-aside-form-col="" data-tour="form" class="agent-form-col relative z-10 shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-white/5 scrollbar-hide px-1.5 py-3 lg:p-6 transition-[filter,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] w-full lg:h-full lg:w-[var(--agent-form-col-w,420px)] lg:min-w-[280px] lg:max-w-[700px] lg:flex-shrink-0 flex max-lg:order-last max-lg:min-h-0 lg:flex" style="--agent-form-col-w:420px;--agent-color:#8B5CF6">
+              <form id="ref-agent-form" class="flex flex-col gap-4 lg:gap-5" onsubmit="return false;">
+                <div data-tour="form-sec-ref-essential">
+                  <div class="flex flex-col gap-12">
+                    
+                    <!-- Campo 1: Sujeitos (Imagem principal) -->
+                    <div data-field-id="sujeitos" class="flex flex-col gap-1 campo-com-info">
+                      <div class="flex flex-col gap-3" data-image-field-id="sujeitos">
+                        <div class="flex min-w-0 items-center justify-between gap-2">
+                          <label class="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-white">
+                            <span>Envie sua imagem principal</span>
+                            <span class="relative inline-flex items-center">
+                              <button type="button" data-field-info="" aria-label="Mais informações Envie sua imagem principal" class="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none" style="color: rgb(139, 92, 246);">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-info h-3.5 w-3.5" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+                              </button>
+                            </span>
+                          </label>
+                        </div>
+                        <div tabindex="0" class="relative flex flex-col gap-2 rounded-lg p-2 -m-2 transition-colors outline-none">
+                          <div class="flex flex-col gap-1">
+                            <div class="flex items-center rounded-lg border-2 border-dashed border-[rgba(139,92,246,0.20)] bg-[rgba(139,92,246,0.03)] transition-colors hover:border-[rgba(139,92,246,0.38)] h-10 gap-2 px-1">
+                              <!-- Botões de Alinhamento -->
+                              <div class="flex shrink-0 items-center gap-1" role="group" aria-label="Alinhamento do sujeito">
+                                <button type="button" id="align-left" aria-label="Sujeito à esquerda" aria-pressed="false" title="Sujeito à esquerda" class="flex h-7 w-7 items-center justify-center rounded-md border transition-colors border-white/10 bg-white/[0.04] text-zinc-500 hover:border-white/20 hover:text-zinc-300">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-text-align-start h-3.5 w-3.5" aria-hidden="true"><path d="M21 5H3"></path><path d="M15 12H3"></path><path d="M17 19H3"></path></svg>
+                                </button>
+                                <button type="button" id="align-center" aria-label="Sujeito ao centro" aria-pressed="true" title="Sujeito ao centro" class="flex h-7 w-7 items-center justify-center rounded-md border transition-colors border-violet-500/60 bg-violet-500/25 text-violet-200">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-text-align-center h-3.5 w-3.5" aria-hidden="true"><path d="M21 5H3"></path><path d="M17 12H7"></path><path d="M19 19H5"></path></svg>
+                                </button>
+                                <button type="button" id="align-right" aria-label="Sujeito à direita" aria-pressed="false" title="Sujeito à direita" class="flex h-7 w-7 items-center justify-center rounded-md border transition-colors border-white/10 bg-white/[0.04] text-zinc-500 hover:border-white/20 hover:text-zinc-300">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-text-align-end h-3.5 w-3.5" aria-hidden="true"><path d="M21 5H3"></path><path d="M21 12H9"></path><path d="M21 19H7"></path></svg>
+                                </button>
+                              </div>
+                              <button type="button" id="btn-upload-sujeito" class="flex min-w-0 flex-1 items-center justify-center gap-1.5 self-stretch text-xs text-[#5c5278] transition-colors hover:text-[#9d94bb]">
+                                <span class="text-base leading-none">+</span>
+                                <span class="truncate" id="label-upload-sujeito">Clique, arraste ou cole (Ctrl+V)</span>
+                              </button>
+                              <button type="button" aria-label="Ajustar fotos e cena" title="Ajustar fotos e cena" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-zinc-500 transition-colors hover:border-violet-500/30 hover:text-zinc-200">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-folder-open h-3.5 w-3.5" aria-hidden="true"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"></path></svg>
+                              </button>
+                            </div>
+                          </div>
+                          <input id="input-file-sujeito" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" multiple="" class="hidden" type="file">
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Campo 2: Inspirações de Estilo (referencias) -->
+                    <div data-field-id="referencias" class="flex flex-col gap-1 campo-com-info">
+                      <div class="flex flex-col gap-3" data-image-field-id="referencias">
+                        <div class="flex min-w-0 items-center justify-between gap-2">
+                          <label class="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-white">
+                            <span>Inspirações de Estilo</span>
+                            <span class="relative inline-flex items-center">
+                              <button type="button" data-field-info="" aria-label="Mais informações Inspirações de Estilo" class="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none" style="color: rgb(139, 92, 246);">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-info h-3.5 w-3.5" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+                              </button>
+                            </span>
+                          </label>
+                          <button type="button" id="btn-toggle-style" aria-label="Usar na imagem: ativado" aria-pressed="true" class="flex shrink-0 items-center gap-1.5 text-[10px] text-zinc-500 transition-colors hover:text-zinc-300">
+                            <span>Usar na imagem</span>
+                            <span class="relative h-4 w-7 rounded-full border transition-colors border-violet-500/50 bg-violet-500/30">
+                              <span id="toggle-style-dot" class="absolute top-0.5 h-2.5 w-2.5 rounded-full transition-all left-3.5 bg-violet-300"></span>
+                            </span>
+                          </button>
+                        </div>
+                        <div tabindex="0" class="relative flex flex-col gap-2 rounded-lg p-2 -m-2 transition-colors outline-none">
+                          <div class="flex flex-col gap-1">
+                            <div class="flex items-center rounded-lg border-2 border-dashed border-[rgba(139,92,246,0.20)] bg-[rgba(139,92,246,0.03)] transition-colors hover:border-[rgba(139,92,246,0.38)] h-10 gap-2 px-1">
+                              <button type="button" id="btn-upload-ref" class="flex min-w-0 flex-1 items-center justify-center gap-1.5 self-stretch text-xs text-[#5c5278] transition-colors hover:text-[#9d94bb]">
+                                <span class="text-base leading-none">+</span>
+                                <span class="truncate" id="label-upload-ref">Clique, arraste ou cole (Ctrl+V)</span>
+                              </button>
+                              <button type="button" aria-label="Ajustar fotos e cena" title="Ajustar fotos e cena" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-zinc-500 transition-colors hover:border-violet-500/30 hover:text-zinc-200">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-folder-open h-3.5 w-3.5" aria-hidden="true"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"></path></svg>
+                              </button>
+                            </div>
+                          </div>
+                          <input id="input-file-ref" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" multiple="" class="hidden" type="file">
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Campo 3: Dimensões (9:16, 4:5, 1:1, 16:9) -->
+                    <div data-field-id="dimensions" class="flex flex-col gap-1 campo-com-info">
+                      <div class="flex flex-col gap-1.5">
+                        <div class="flex flex-col gap-1">
+                          <div class="flex items-center gap-1.5">
+                            <span class="font-semibold text-white text-xs">Dimensões</span>
+                            <span class="relative inline-flex items-center">
+                              <button type="button" data-field-info="" aria-label="Mais informações Dimensões" class="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10" style="color: rgb(139, 92, 246);">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-info h-3.5 w-3.5" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+                              </button>
+                            </span>
+                          </div>
+                        </div>
+                        <div role="group" aria-label="Dimensões" class="grid grid-cols-4 gap-1.5">
+                          <button type="button" data-dim="9:16" aria-label="Stories 9:16" aria-pressed="false" title="Stories · 9:16" class="dim-btn flex h-12 items-center justify-center gap-2 rounded-lg px-2 transition-colors pb-ctrl-btn text-zinc-500 hover:text-zinc-200">
+                            <span aria-hidden="true" class="block rounded-[3px] border border-zinc-600 bg-white/[0.025]" style="width: 12px; height: 22px;"></span>
+                            <span class="text-[10px] font-semibold tabular-nums">9:16</span>
+                          </button>
+                          <button type="button" data-dim="4:5" aria-label="Feed Vertical 4:5" aria-pressed="false" title="Feed Vertical · 4:5" class="dim-btn flex h-12 items-center justify-center gap-2 rounded-lg px-2 transition-colors pb-ctrl-btn text-zinc-500 hover:text-zinc-200">
+                            <span aria-hidden="true" class="block rounded-[3px] border border-zinc-600 bg-white/[0.025]" style="width: 18px; height: 22px;"></span>
+                            <span class="text-[10px] font-semibold tabular-nums">4:5</span>
+                          </button>
+                          <button type="button" data-dim="1:1" aria-label="Feed 1:1" aria-pressed="true" title="Feed · 1:1" class="dim-btn flex h-12 items-center justify-center gap-2 rounded-lg px-2 transition-colors pb-ctrl-btn pb-ctrl-active text-white">
+                            <span aria-hidden="true" class="block rounded-[3px] border border-violet-300 bg-violet-400/20" style="width: 22px; height: 22px;"></span>
+                            <span class="text-[10px] font-semibold tabular-nums">1:1</span>
+                          </button>
+                          <button type="button" data-dim="16:9" aria-label="Cinema 16:9" aria-pressed="false" title="Cinema · 16:9" class="dim-btn flex h-12 items-center justify-center gap-2 rounded-lg px-2 transition-colors pb-ctrl-btn text-zinc-500 hover:text-zinc-200">
+                            <span aria-hidden="true" class="block rounded-[3px] border border-zinc-600 bg-white/[0.025]" style="width: 22px; height: 12px;"></span>
+                            <span class="text-[10px] font-semibold tabular-nums">16:9</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Campo 4: Qualidade (1K, 2K, 4K) -->
+                    <div data-field-id="quality" class="flex flex-col gap-1 campo-com-info">
+                      <div class="flex flex-col gap-1.5">
+                        <div class="flex flex-col gap-1">
+                          <div class="flex items-center gap-1.5">
+                            <span class="font-semibold text-white text-xs">Qualidade</span>
+                            <span class="relative inline-flex items-center">
+                              <button type="button" data-field-info="" aria-label="Mais informações Qualidade" class="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10" style="color: rgb(139, 92, 246);">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-info h-3.5 w-3.5" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+                              </button>
+                            </span>
+                            <div class="ml-auto text-[10px] tabular-nums text-white/60">
+                              <div class="flex items-center gap-2">
+                                <span class="rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider" style="background-color: rgba(255, 255, 255, 0.06); color: rgb(161, 161, 170); border: 1px solid rgba(255, 255, 255, 0.08);">PADRÃO</span>
+                                <span id="quality-res-label" class="text-[10px] tabular-nums text-zinc-500">1024×1024</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div role="group" aria-label="Qualidade" class="grid gap-1.5" style="grid-template-columns: repeat(3, minmax(0px, 1fr));">
+                          <button type="button" data-quality="1K" aria-pressed="true" class="quality-btn group flex items-center justify-center rounded-xl px-2 transition-all duration-200 cursor-pointer h-10 gap-1.5 py-1.5" style="background: linear-gradient(rgba(30, 16, 70, 0.6), rgba(20, 10, 50, 0.7)) padding-box padding-box, linear-gradient(135deg, rgba(139, 92, 246, 0.447), rgba(139, 92, 246, 0.12) 50%, rgba(139, 92, 246, 0.28)) border-box border-box; border: 1px solid transparent; box-shadow: rgba(139, 92, 246, 0.19) 0px 0px 12px, rgba(139, 92, 246, 0.07) 0px 0px 28px;">
+                            <span class="text-base font-bold leading-none tracking-tight transition-colors text-white">1K</span>
+                            <span class="font-medium uppercase tracking-[0.05em] transition-colors text-[9px] text-white">Rápido</span>
+                          </button>
+                          <button type="button" data-quality="2K" aria-pressed="false" class="quality-btn group flex items-center justify-center rounded-xl px-2 transition-all duration-200 cursor-pointer h-10 gap-1.5 py-1.5" style="background: linear-gradient(rgba(16, 10, 40, 0.4), rgba(10, 7, 28, 0.5)) padding-box padding-box, linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(139, 92, 246, 0.027)) border-box border-box; border: 1px solid transparent;">
+                            <span class="text-base font-bold leading-none tracking-tight transition-colors text-zinc-400">2K</span>
+                            <span class="font-medium uppercase tracking-[0.05em] transition-colors text-[9px] text-zinc-400">Médio</span>
+                          </button>
+                          <button type="button" data-quality="4K" aria-pressed="false" class="quality-btn group flex items-center justify-center rounded-xl px-2 transition-all duration-200 cursor-pointer h-10 gap-1.5 py-1.5" style="background: linear-gradient(rgba(16, 10, 40, 0.4), rgba(10, 7, 28, 0.5)) padding-box padding-box, linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(139, 92, 246, 0.027)) border-box border-box; border: 1px solid transparent;">
+                            <span class="text-base font-bold leading-none tracking-tight transition-colors text-zinc-400">4K</span>
+                            <span class="font-medium uppercase tracking-[0.05em] transition-colors text-[9px] text-zinc-400">Lento</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Seção: Mais Opções (Assets e Descrição Adicional) -->
+                <div data-tour="form-sec-ref-more-options">
+                  <div class="flex flex-col gap-4">
+                    
+                    <!-- Campo Assets -->
+                    <div data-field-id="assets" class="flex flex-col gap-1 campo-com-info">
+                      <div class="flex flex-col gap-3" data-image-field-id="assets">
+                        <div class="flex min-w-0 items-center justify-between gap-2">
+                          <label class="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-white">
+                            <span>Assets (opcional)</span>
+                            <span class="relative inline-flex items-center">
+                              <button type="button" data-field-info="" aria-label="Mais informações Assets (opcional)" class="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10" style="color: rgb(139, 92, 246);">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-info h-3.5 w-3.5" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+                              </button>
+                            </span>
+                          </label>
+                        </div>
+                        <div tabindex="0" class="relative flex flex-col gap-2 rounded-lg p-2 -m-2 transition-colors outline-none">
+                          <div id="assets-list-container" class="flex flex-col gap-2">
+                            <!-- Asset item demo -->
+                            <div class="group flex items-center gap-2" id="asset-item-1">
+                              <div class="relative shrink-0">
+                                <img id="asset-img-thumb" alt="imagem 1" class="h-12 w-12 rounded-lg object-cover border border-white/10 cursor-pointer transition-all hover:border-violet-500/40 hover:ring-1 hover:ring-violet-500/20" src="https://9b5acaa4fb5a7649b098778a4320abc3.r2.cloudflarestorage.com/designbuilder/temp/de3515a0-e005-40be-a35c-8cf2a55011e0/b6aa2df3-7ae9-4efd-8b6f-970a3f3cc649.avif" onerror="this.onerror=null; this.src='/galeria/thumbnail(4).avif';">
+                                <button type="button" onclick="document.getElementById('asset-item-1').remove()" aria-label="Remover imagem 1" title="Remover imagem 1" class="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-zinc-800 border border-white/10 text-zinc-300 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 hover:text-white hover:border-red-500 z-10">×</button>
+                                <button type="button" aria-label="Recortar imagem 1" title="Recortar imagem 1" class="absolute -bottom-1.5 -right-1.5 h-5 w-5 rounded-full bg-zinc-800 border border-white/10 text-zinc-300 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-violet-600 hover:text-white hover:border-violet-500 z-10 disabled:opacity-40">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-crop h-2.5 w-2.5" aria-hidden="true"><path d="M6 2v14a2 2 0 0 0 2 2h14"></path><path d="M18 22V8a2 2 0 0 0-2-2H2"></path></svg>
+                                </button>
+                              </div>
+                              <input id="asset-desc-input" placeholder="O que é este asset? (ex: 'logo principal', 'mockup de celular pra mão do sujeito')" class="flex-1 rounded-lg pb-glass-input px-3 py-2 text-xs transition-colors" type="text" value="">
+                            </div>
+                          </div>
+                          <div class="flex flex-col gap-1">
+                            <div class="flex items-center rounded-lg border-2 border-dashed border-[rgba(139,92,246,0.20)] bg-[rgba(139,92,246,0.03)] transition-colors hover:border-[rgba(139,92,246,0.38)] py-2">
+                              <button type="button" id="btn-upload-asset" class="flex min-w-0 flex-1 items-center justify-center gap-1.5 self-stretch text-xs text-[#5c5278] transition-colors hover:text-[#9d94bb]">
+                                <span class="text-base leading-none">+</span>
+                                <span class="truncate">Clique, arraste ou cole (Ctrl+V)</span>
+                              </button>
+                            </div>
+                          </div>
+                          <input id="input-file-asset" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" multiple="" class="hidden" type="file">
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Campo Descrição Adicional -->
+                    <div data-field-id="descricao_adicional" class="flex flex-col gap-1 campo-com-info">
+                      <div class="flex flex-col gap-2">
+                        <label for="descricao_adicional" class="flex items-center gap-1.5 text-sm font-semibold text-white">
+                          <span>Descrição adicional (opcional)</span>
+                          <span class="relative inline-flex items-center">
+                            <button type="button" data-field-info="" aria-label="Mais informações Descrição adicional (opcional)" class="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10" style="color: rgb(139, 92, 246);">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-info h-3.5 w-3.5" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+                            </button>
+                          </span>
+                        </label>
+                        <div class="group relative">
+                          <textarea id="descricao_adicional" rows="2" placeholder="Instruções extras ou contexto. Ex: 'coloque o sujeito em pé com o logo no peito'..." class="w-full rounded-2xl pb-glass-input px-4 py-3 pb-8 text-sm resize-none min-h-[80px] transition-colors disabled:cursor-not-allowed disabled:opacity-50" style="height: 85.6px;"></textarea>
+                          <button type="button" class="absolute bottom-2 right-2 rounded-md p-1 text-zinc-600 transition-all opacity-0 group-hover:opacity-100 hover:bg-white/5 hover:text-zinc-300" title="Expandir editor">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-maximize2 lucide-maximize-2 h-3.5 w-3.5" aria-hidden="true"><path d="M15 3h6v6"></path><path d="m21 3-7 7"></path><path d="m3 21 7-7"></path><path d="M9 21H3v-6"></path></svg>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+
+                <!-- Botão Construir -->
+                <div>
+                  <div class="w-full">
+                    <button type="button" id="btn-construir" class="flex w-full items-center justify-center gap-2 text-white rounded-xl px-6 py-4 text-base font-semibold transition-all duration-300 hover:scale-[1.01] active:scale-95 shadow-lg cursor-pointer" style="background: linear-gradient(to right, rgb(139, 92, 246), rgba(139, 92, 246, 0.8));">
+                      <span id="btn-construir-spinner" class="hidden h-5 w-5 rounded-full border-2 border-white/20 border-t-white animate-spin"></span>
+                      <span id="btn-construir-text">Construir</span>
+                      <span class="ml-1.5 rounded-lg bg-white/15 px-2 py-0.5 text-xs font-medium">1 crédito</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Botões Duplicar e Resetar -->
+                <div class="flex gap-2">
+                  <button type="button" id="btn-duplicar" title="Duplicar configurações para uma nova aba" class="flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-medium text-[#9d94bb] transition-colors pb-ctrl-btn hover:text-[#f0ecff]">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-copy h-4 w-4" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path></svg>
+                    Duplicar
+                  </button>
+                  <button type="button" id="btn-resetar" title="Resetar todas as configurações do formulário" class="flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-medium text-[#9d94bb] transition-colors pb-ctrl-btn hover:text-[#f0ecff]">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-rotate-ccw h-4 w-4" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+                    Resetar
+                  </button>
+                </div>
+
+              </form>
+            </aside>
+
+            <!-- Separador redimensionável -->
+            <div role="separator" aria-orientation="vertical" title="Arraste para redimensionar" class="group relative z-10 hidden w-1.5 cursor-col-resize items-center justify-center border-r border-white/5 transition-colors lg:flex">
+              <div class="h-8 w-0.5 rounded-full bg-white/10 transition-colors"></div>
+            </div>
+
+            <!-- Palco Central -->
+            <div class="relative flex min-h-0 min-w-0 flex-1 max-lg:contents">
+              <section class="palco-central relative flex-col overflow-hidden flex max-lg:order-first max-lg:min-h-0 max-lg:overflow-hidden max-lg:pt-[env(safe-area-inset-top)] lg:h-full lg:flex-1" style="min-width:0">
+                
+                <!-- Barra de Navegação Superior -->
+                <div class="barra-de-navegacao navegacao-persistente relative flex w-full items-center justify-start gap-2 py-3 pl-3 pr-14 shrink-0 scrollbar-hide max-lg:flex-col max-lg:items-stretch max-lg:gap-1.5 max-lg:px-2 max-lg:py-1.5 max-lg:sticky max-lg:top-0 max-lg:z-20 max-lg:border-b max-lg:border-white/[0.06] max-lg:bg-[#0c0a15]/85 max-lg:backdrop-blur-sm lg:z-30 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:gap-0 lg:overflow-visible lg:pl-0 lg:pr-0 max-lg:overflow-hidden max-lg:transition-all max-lg:duration-300 max-lg:ease-out max-lg:max-h-48">
+                  
+                  <!-- Abas de Geração -->
+                  <div class="pointer-events-auto flex min-w-0 items-start gap-2 max-lg:order-2 max-lg:w-full max-lg:justify-center lg:w-full lg:pl-4">
+                    <div class="hidden min-w-0 flex-1 lg:flex">
+                      <div id="tabs-header-container" data-tour="tabs" role="tablist" aria-label="Abas de geração" class="pointer-events-auto flex min-w-0 flex-row items-center gap-1 overflow-x-auto scrollbar-hide w-full max-w-full">
+                        <div class="group relative flex w-fit shrink-0 items-center">
+                          <button type="button" role="tab" aria-selected="true" class="inline-flex h-7 max-w-[12rem] flex-none items-center justify-center gap-1.5 rounded-lg border px-2.5 text-[11px] font-semibold uppercase tracking-wide transition-colors duration-200 outline-none focus-visible:ring-2 hover:bg-white/[0.06]" style="color: rgb(139, 92, 246); border-color: rgba(139, 92, 246, 0.333);">
+                            <span class="truncate" title="Duplo clique para renomear">Aba 1</span>
+                          </button>
+                        </div>
+                        <button type="button" id="btn-nova-aba" aria-label="Nova aba" class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-zinc-700 transition-colors hover:bg-white/[0.06] hover:text-zinc-400" title="Nova aba">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus h-3 w-3" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Seletor de Modos (Builder, Pinterest, Comunidade, Galeria) -->
+                  <div class="flex shrink-0 items-center gap-2 max-lg:order-1 max-lg:w-full lg:contents">
+                    <div role="tablist" aria-label="Modo de visualização" data-tour="gallery" class="flex shrink-0 items-center rounded-full border border-white/[0.06] bg-[rgba(10,7,25,0.70)] p-1 max-lg:min-w-0 max-lg:flex-1">
+                      <button type="button" role="tab" id="view-mode-builder" aria-selected="true" class="relative rounded-full px-5 py-2 text-xs font-semibold uppercase tracking-wider transition-all duration-200 max-lg:min-w-0 max-lg:flex-1 max-lg:truncate max-lg:px-1 max-lg:text-[10px] max-lg:tracking-normal text-white shadow-lg" style="background:linear-gradient(135deg, #8B5CF6, #8B5CF6cc)">Builder</button>
+                      <button type="button" role="tab" id="view-mode-pinterest" aria-selected="false" class="relative rounded-full px-5 py-2 text-xs font-semibold uppercase tracking-wider transition-all duration-200 max-lg:min-w-0 max-lg:flex-1 max-lg:truncate max-lg:px-1 max-lg:text-[10px] max-lg:tracking-normal text-zinc-500 hover:text-zinc-300">Pinterest</button>
+                      <button type="button" role="tab" id="view-mode-community" aria-selected="false" class="relative rounded-full px-5 py-2 text-xs font-semibold uppercase tracking-wider transition-all duration-200 max-lg:min-w-0 max-lg:flex-1 max-lg:truncate max-lg:px-1 max-lg:text-[10px] max-lg:tracking-normal text-zinc-500 hover:text-zinc-300">Comunidade</button>
+                      <button type="button" role="tab" id="view-mode-gallery" aria-selected="false" class="relative rounded-full px-5 py-2 text-xs font-semibold uppercase tracking-wider transition-all duration-200 max-lg:min-w-0 max-lg:flex-1 max-lg:truncate max-lg:px-1 max-lg:text-[10px] max-lg:tracking-normal text-zinc-500 hover:text-zinc-300">Galeria</button>
+                    </div>
+
+                    <!-- Botão Guia -->
+                    <button type="button" id="btn-guia" data-tour="header-actions" aria-haspopup="menu" aria-expanded="false" aria-label="Guia" class="flex shrink-0 items-center gap-1.5 rounded-full py-2 text-xs font-semibold transition-colors hover:bg-white/[0.06] max-lg:px-2.5 h-10 px-5 uppercase tracking-wider lg:mr-4 lg:justify-self-end" style="color:#8B5CF6;border:1px solid #8B5CF633">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-book-open h-3.5 w-3.5 shrink-0" aria-hidden="true"><path d="M12 7v14"></path><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"></path></svg>
+                      <span class="max-lg:hidden">Guia</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-down h-3 w-3 shrink-0 transition-transform duration-200 max-lg:hidden" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Palco da Arte Principal -->
+                <div class="relative flex flex-1 min-h-0 flex-row overflow-hidden">
+                  <div class="relative flex flex-1 min-h-0 flex-col items-center justify-center overflow-hidden">
+                    <div class="flex items-center justify-center overflow-hidden h-full w-full">
+                      <div class="palco-da-arte relative flex h-full min-h-0 w-full min-w-0 overflow-hidden">
+                        
+                        <!-- Visualizador Central de Imagem -->
+                        <div class="flex h-full min-h-0 min-w-0 flex-1 items-center justify-center gap-3 p-4 pb-24">
+                          <div class="group/viewer relative flex h-full min-h-0 min-w-0 flex-1 overflow-hidden">
+                            <div id="viewer-container" class="relative flex h-full min-h-0 w-full min-w-0 items-center justify-center overflow-hidden" style="cursor: pointer;">
+                              <img id="main-result-viewer" alt="design-builder-6c01bbd7" data-testid="result-viewer" draggable="true" decoding="async" fetchpriority="high" class="block h-auto w-auto max-h-full max-w-full shrink rounded-2xl object-contain shadow-2xl transition-transform duration-200" src="https://9b5acaa4fb5a7649b098778a4320abc3.r2.cloudflarestorage.com/designbuilder/results/6c01bbd7-c8d2-4442-b272-50c470824a4f/result.avif" onerror="this.onerror=null; this.src='/generated-images/img_1788816149705_0n9eo.png';">
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Gradiente Inferior Oficial -->
+                        <div class="pointer-events-none absolute bottom-0 left-0 right-0 z-10 h-48 bg-gradient-to-t from-[rgba(4,2,12,0.70)] via-[rgba(4,2,12,0.35)] to-transparent"></div>
+
+                        <!-- Container Absoluto Flutuante (@container) -->
+                        <div class="@container absolute inset-x-0 bottom-0">
+                          
+                          <!-- Ações da Lateral Esquerda (Reportar, Reutilizar, Favoritar, Publicar) -->
+                          <div class="acoes-da-arte absolute left-6 z-30 flex items-center gap-1.5 transition-all duration-300 max-[1800px]:flex-col max-[1800px]:items-start max-lg:hidden" style="bottom: 108px;">
+                            <button type="button" id="btn-action-report" title="Reportar geração (problema nesta geração)" aria-label="Reportar geração" class="flex h-9 items-center rounded-lg px-3 text-xs font-medium backdrop-blur-sm transition-all duration-200 bg-black/70 text-red-400 hover:text-red-300">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-triangle-alert h-4 w-4" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
+                            </button>
+                            <button type="button" id="btn-action-reuse" title="Reutilizar configurações" class="flex h-9 items-center rounded-lg px-3 text-xs font-medium backdrop-blur-sm transition-all duration-200 bg-black/70 text-zinc-300 hover:text-white">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-rotate-ccw h-4 w-4" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+                              <span class="rotulo-da-acao">Reutilizar</span>
+                            </button>
+                            <button type="button" id="btn-action-fav" title="Favoritar" class="flex h-9 items-center rounded-lg px-3 text-xs font-medium backdrop-blur-sm transition-all duration-200 bg-black/70 text-zinc-300 hover:text-white">
+                              <svg id="fav-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-heart h-4 w-4" aria-hidden="true"><path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5"></path></svg>
+                              <span class="rotulo-da-acao">Favoritar</span>
+                            </button>
+                            <button type="button" id="btn-action-publish" title="Publicar na Comunidade" class="flex h-9 items-center rounded-lg px-3 text-xs font-medium backdrop-blur-sm transition-all duration-200 bg-black/70 text-zinc-300 hover:text-white">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-globe h-4 w-4" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg>
+                              <span class="rotulo-da-acao">Publicar</span>
+                            </button>
+                          </div>
+
+                          <!-- Ações da Lateral Direita (Formato, Exportar, Usar como base) -->
+                          <div class="acoes-da-arte absolute right-6 z-30 flex items-center gap-1.5 transition-all duration-300 max-[1800px]:flex-col max-[1800px]:items-end max-lg:hidden" style="bottom: 108px;">
+                            <div class="relative">
+                              <div>
+                                <button type="button" id="btn-action-format" title="Formato" class="flex h-9 items-center rounded-lg px-3 text-xs font-medium backdrop-blur-sm transition-all duration-200 bg-black/70 text-zinc-300 hover:text-white">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-crop h-4 w-4" aria-hidden="true"><path d="M6 2v14a2 2 0 0 0 2 2h14"></path><path d="M18 22V8a2 2 0 0 0-2-2H2"></path></svg>
+                                  <span class="rotulo-da-acao">Formato</span>
+                                </button>
+                              </div>
+                            </div>
+                            <div class="relative">
+                              <div>
+                                <button type="button" id="btn-action-export" title="Exportar" class="flex h-9 items-center rounded-lg px-3 text-xs font-medium backdrop-blur-sm transition-all duration-200 bg-black/70 text-zinc-300 hover:text-white">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download h-4 w-4" aria-hidden="true"><path d="M12 15V3"></path><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path></svg>
+                                  <span class="rotulo-da-acao">Exportar</span>
+                                </button>
+                              </div>
+                            </div>
+                            <button type="button" id="btn-action-base" title="Usar esta imagem como entrada do agente" class="flex h-9 items-center rounded-lg px-3 text-xs font-medium backdrop-blur-sm transition-all duration-200 bg-black/70 text-zinc-300 hover:text-white">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sparkles h-4 w-4" aria-hidden="true"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"></path><path d="M20 2v4"></path><path d="M22 4h-4"></path><circle cx="4" cy="20" r="2"></circle></svg>
+                              <span class="rotulo-da-acao">Usar como base</span>
+                            </button>
+                          </div>
+
+                          <!-- Mobile Ellipsis Mais Ações -->
+                          <button type="button" aria-label="Mais ações" class="lg:hidden absolute left-3 top-3 z-30 flex h-8 w-8 items-center justify-center rounded-full bg-black/55 text-white ring-1 ring-white/15 backdrop-blur-md active:scale-95">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-ellipsis h-4 w-4" aria-hidden="true"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
+                          </button>
+
+                          <!-- Bloco Central: Publish Alert + Magic Bar -->
+                          <div class="absolute bottom-8 left-1/2 z-20 flex w-[min(92vw,480px)] -translate-x-1/2 flex-col items-center gap-2.5 lg:w-[calc(100%-120px)] transition-[max-width] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] lg:max-w-[480px]">
+                            
+                            <!-- Card de Alerta da Comunidade -->
+                            <div id="publish-alert" class="publish-alert-card relative inline-flex items-center gap-3 rounded-2xl py-2 pl-4 pr-2.5 shadow-xl shadow-black/30" style="--alert-idv: #8B5CF6; --alert-idv-dim: #8B5CF640;"><p class="whitespace-nowrap text-[15px] font-semibold leading-snug" style="color: color-mix(in srgb, rgb(139, 92, 246) 74%, rgb(0, 0, 0));">Vire inspiração na comunidade. Compartilhe!</p><button type="button" id="btn-banner-publish" class="flex shrink-0 items-center gap-1.5 rounded-xl px-4 py-2.5 text-[14.5px] font-semibold text-white transition-transform hover:scale-[1.03] disabled:opacity-60" title="Publicar na Comunidade" style="background-color: color-mix(in srgb, rgb(139, 92, 246) 74%, rgb(0, 0, 0));">Publicar<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-right h-4 w-4" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></button><button type="button" id="btn-close-publish-alert" class="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-zinc-900 text-white/80 ring-1 ring-white/15 transition-colors hover:bg-zinc-800 hover:text-white" title="Fechar" aria-label="Fechar aviso de publicar"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x h-3 w-3" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button></div>
+
+                            <!-- Magic Bar (Barra de Refinamento Mágico) -->
+                            <div class="magic-bar relative flex w-full flex-col overflow-hidden rounded-[22px] backdrop-blur-2xl animate-in fade-in slide-in-from-bottom-3 duration-500">
+                              <div id="drop-zone-overlay" class="overflow-hidden transition-[max-height,opacity] duration-300 ease-out max-h-0 opacity-0">
+                                <div class="px-3 pt-2 pb-1">
+                                  <div class="flex items-center justify-center gap-2.5 rounded-2xl border-2 border-dashed border-violet-400/50 bg-violet-500/[0.08] py-5 transition-all duration-200">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-image-plus h-5 w-5 text-violet-300 animate-pulse" aria-hidden="true"><path d="M16 5h6"></path><path d="M19 2v6"></path><path d="M21 11.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7.5"></path><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path><circle cx="9" cy="9" r="2"></circle></svg>
+                                    <span class="text-sm font-medium text-violet-200">Solte a imagem aqui</span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div class="flex items-end gap-2 px-3.5 max-lg:gap-1.5 max-lg:py-1.5 transition-[padding] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] py-2.5">
+                                <button type="button" aria-label="Ferramentas: pincel e anexar" aria-expanded="false" class="lg:hidden flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors bg-white/[0.06] text-violet-200 hover:bg-white/[0.10]">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-ellipsis h-[18px] w-[18px]" aria-hidden="true"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
+                                </button>
+                                <button type="button" id="btn-magic-pencil" class="flex h-9 w-9 max-lg:hidden shrink-0 items-center justify-center rounded-full transition-all duration-300 hover:scale-105 bg-gradient-to-br from-violet-500/[0.15] to-purple-500/[0.08] text-[rgba(196,181,253,0.85)] hover:from-violet-500/25 hover:to-purple-500/[0.15] hover:text-[#e0d4ff]" title="Marcar área da imagem" aria-label="Marcar área da imagem" aria-pressed="false">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-pencil h-[18px] w-[18px]" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"></path><path d="m15 5 4 4"></path></svg>
+                                </button>
+                                <button type="button" id="btn-magic-clip" class="flex h-9 w-9 max-lg:hidden shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500/[0.15] to-purple-500/[0.08] text-[rgba(196,181,253,0.85)] transition-all duration-300 hover:from-violet-500/25 hover:to-purple-500/[0.15] hover:text-[#e0d4ff] hover:scale-105" title="Anexar imagem" aria-label="Anexar imagem">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-paperclip h-[18px] w-[18px]" aria-hidden="true"><path d="m16 6-8.414 8.586a2 2 0 0 0 2.829 2.829l8.414-8.586a4 4 0 1 0-5.657-5.657l-8.379 8.551a6 6 0 1 0 8.485 8.485l8.379-8.551"></path></svg>
+                                </button>
+                                <div class="area-do-campo flex min-w-0 flex-1 flex-col justify-end">
+                                  <textarea id="campo-de-refino" rows="1" placeholder="Descreva a alteração mágica..." class="campo-de-refino w-full min-w-0 resize-none bg-transparent px-1 py-[6px] text-[15px] leading-6 text-[#f0ecff] outline-none scrollbar-hide disabled:opacity-50" style="height: 36px;"></textarea>
+                                </div>
+                                <button type="button" id="btn-send-refine" disabled="" class="flex h-9 w-9 max-lg:h-8 max-lg:w-8 shrink-0 items-center justify-center rounded-full transition-all duration-200 bg-white/[0.06] text-zinc-600 cursor-not-allowed" title="Enviar refinamento" aria-label="Enviar refinamento">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-send h-[18px] w-[18px]" aria-hidden="true"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"></path><path d="m21.854 2.147-10.94 10.939"></path></svg>
+                                </button>
+                              </div>
+                              <input id="input-magic-file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" multiple="" class="hidden" type="file">
+                            </div>
+
+                          </div>
+                        </div>
+
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Coluna de Histórico Oficial (72px) -->
+                  <div data-tour="history" class="coluna-de-historico relative z-10 hidden h-full shrink-0 flex-col lg:flex" style="width: 72px; --largura-do-historico: 72px;">
+                    <div class="historico-lateral absolute right-0 top-0 flex h-full flex-col border-l border-white/[0.04]" style="background-color: rgb(0, 0, 0); width: 72px;">
+                      <div class="absolute left-0 top-0 z-20 h-full w-1.5 -translate-x-1/2 cursor-col-resize transition-colors hover:bg-violet-500/30" title="Arraste para redimensionar"></div>
+                      <div id="historico-items-container" class="flex-1 space-y-1.5 overflow-y-auto px-1.5 py-2 scrollbar-hide">
+                        
+                        <!-- Item 1: Formato -->
+                        <div data-media-window="mounted" class="w-full [content-visibility:auto] [contain-intrinsic-size:auto_400px]">
+                          <div class="group relative w-full overflow-hidden rounded-lg border transition-all duration-200 border-violet-500/50 shadow-[0_0_8px_rgba(139,92,246,0.2)]" style="border-color: rgba(139, 92, 246, 0.5); box-shadow: rgba(139, 92, 246, 0.2) 0px 0px 8px;">
+                            <button type="button" class="block w-full cursor-pointer" title="Geração 6c01bb — clique para visualizar" onclick="document.getElementById('main-result-viewer').src=this.querySelector('img').src;">
+                              <img alt="" class="aspect-square w-full object-cover cursor-grab active:cursor-grabbing" loading="lazy" decoding="async" draggable="true" src="https://9b5acaa4fb5a7649b098778a4320abc3.r2.cloudflarestorage.com/designbuilder/thumbnails/6c01bbd7-c8d2-4442-b272-50c470824a4f/thumbnail.avif" onerror="this.onerror=null; this.src='/vitrine/ref-builder/ref-1.avif';">
+                            </button>
+                            <div class="pointer-events-none absolute left-1 top-1 z-10 flex items-center rounded border px-1 py-0.5 text-[8px] font-semibold leading-none shadow-sm backdrop-blur-sm opacity-0 transition-opacity duration-150 group-hover:opacity-100 border-amber-400/30 bg-amber-950/85 text-amber-200" title="Formato" aria-label="Formato">
+                              <span>Formato</span>
+                            </div>
+                            <button type="button" onclick="this.closest('[data-media-window]').remove()" class="absolute right-1 top-1 z-10 flex h-6 w-6 items-center justify-center rounded-md bg-black/70 text-zinc-300 ring-1 ring-white/10 backdrop-blur-sm opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-500/30 hover:text-red-300 focus-visible:opacity-100 cursor-pointer" title="Remover geração" aria-label="Remover geração">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash2 lucide-trash-2 h-3 w-3" aria-hidden="true"><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><path d="M3 6h18"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            </button>
+                          </div>
+                        </div>
+
+                        <!-- Item 2: Geração -->
+                        <div data-media-window="mounted" class="w-full [content-visibility:auto] [contain-intrinsic-size:auto_400px]">
+                          <div class="group relative w-full overflow-hidden rounded-lg border transition-all duration-200 border-white/[0.06] hover:border-white/[0.15] hover:shadow-[0_0_6px_rgba(139,92,246,0.08)]">
+                            <button type="button" class="block w-full cursor-pointer" title="Geração 08de75 — clique para visualizar" onclick="document.getElementById('main-result-viewer').src=this.querySelector('img').src;">
+                              <img alt="" class="aspect-square w-full object-cover cursor-grab active:cursor-grabbing" loading="lazy" decoding="async" draggable="true" src="https://9b5acaa4fb5a7649b098778a4320abc3.r2.cloudflarestorage.com/designbuilder/thumbnails/08de7540-386a-4458-a62c-0e6a16828c0e/thumbnail.avif" onerror="this.onerror=null; this.src='/vitrine/ref-builder/ref-2.avif';">
+                            </button>
+                            <div class="pointer-events-none absolute left-1 top-1 z-10 flex items-center rounded border px-1 py-0.5 text-[8px] font-semibold leading-none shadow-sm backdrop-blur-sm opacity-0 transition-opacity duration-150 group-hover:opacity-100 border-violet-400/30 bg-violet-950/85 text-violet-200" title="Geração" aria-label="Geração">
+                              <span>Geração</span>
+                            </div>
+                            <button type="button" onclick="this.closest('[data-media-window]').remove()" class="absolute right-1 top-1 z-10 flex h-6 w-6 items-center justify-center rounded-md bg-black/70 text-zinc-300 ring-1 ring-white/10 backdrop-blur-sm opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-500/30 hover:text-red-300 focus-visible:opacity-100 cursor-pointer" title="Remover geração" aria-label="Remover geração">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash2 lucide-trash-2 h-3 w-3" aria-hidden="true"><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><path d="M3 6h18"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            </button>
+                          </div>
+                        </div>
+
+                        <!-- Item 3: Geração -->
+                        <div data-media-window="mounted" class="w-full [content-visibility:auto] [contain-intrinsic-size:auto_400px]">
+                          <div class="group relative w-full overflow-hidden rounded-lg border transition-all duration-200 border-white/[0.06] hover:border-white/[0.15] hover:shadow-[0_0_6px_rgba(139,92,246,0.08)]">
+                            <button type="button" class="block w-full cursor-pointer" title="Geração b46f37 — clique para visualizar" onclick="document.getElementById('main-result-viewer').src=this.querySelector('img').src;">
+                              <img alt="" class="aspect-square w-full object-cover cursor-grab active:cursor-grabbing" loading="lazy" decoding="async" draggable="true" src="https://9b5acaa4fb5a7649b098778a4320abc3.r2.cloudflarestorage.com/designbuilder/thumbnails/b46f3712-ae81-4712-91f8-2144fb10fb4c/thumbnail.avif" onerror="this.onerror=null; this.src='/vitrine/ref-builder/ref-3.avif';">
+                            </button>
+                            <div class="pointer-events-none absolute left-1 top-1 z-10 flex items-center rounded border px-1 py-0.5 text-[8px] font-semibold leading-none shadow-sm backdrop-blur-sm opacity-0 transition-opacity duration-150 group-hover:opacity-100 border-violet-400/30 bg-violet-950/85 text-violet-200" title="Geração" aria-label="Geração">
+                              <span>Geração</span>
+                            </div>
+                            <button type="button" onclick="this.closest('[data-media-window]').remove()" class="absolute right-1 top-1 z-10 flex h-6 w-6 items-center justify-center rounded-md bg-black/70 text-zinc-300 ring-1 ring-white/10 backdrop-blur-sm opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-500/30 hover:text-red-300 focus-visible:opacity-100 cursor-pointer" title="Remover geração" aria-label="Remover geração">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash2 lucide-trash-2 h-3 w-3" aria-hidden="true"><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><path d="M3 6h18"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            </button>
+                          </div>
+                        </div>
+
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </section>
+            </div>
+
+          </main>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Visualizador de Imagem em Tela Cheia (role="dialog") -->
+    <div id="fullscreen-dialog" role="dialog" aria-modal="true" aria-label="Visualizar imagem em tela cheia" class="fixed inset-0 flex bg-black overflow-hidden transition-opacity duration-150" style="opacity: 0; pointer-events: none; z-index: 2147483647;">
+      <div class="relative flex h-full min-w-0 flex-1 items-center justify-center overflow-hidden">
+        <div class="flex h-full w-full items-center justify-center" style="cursor: grab;">
+          <img id="fullscreen-image" alt="Visualizacao em tela cheia" draggable="true" src="https://9b5acaa4fb5a7649b098778a4320abc3.r2.cloudflarestorage.com/designbuilder/results/6c01bbd7-c8d2-4442-b272-50c470824a4f/result.avif" style="max-width: 100%; max-height: 100%; object-fit: contain; transform: scale(1) translate(0px, 0px); transform-origin: center center; transition: transform 0.15s; user-select: none; cursor: grab;">
+        </div>
+      </div>
+      <aside class="flex h-full w-64 shrink-0 flex-col gap-2 border-l border-white/5 bg-zinc-950 overflow-y-auto">
+        <div class="flex items-center justify-between px-4 pt-4 pb-1">
+          <span class="text-xs font-semibold text-zinc-300">Detalhes</span>
+          <button type="button" id="btn-close-fullscreen" class="rounded-lg p-1 text-zinc-500 hover:bg-white/5 hover:text-white transition-colors" aria-label="Fechar visualizador">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x h-4 w-4" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+          </button>
+        </div>
+        <div class="flex flex-col gap-3"></div>
+        <div class="mx-4 border-t border-white/5"></div>
+        <div class="px-4 pb-2">
+          <p class="text-[10px] font-semibold uppercase tracking-wider text-zinc-600 mb-2">Exportar</p>
+          <div class="flex flex-col gap-1.5">
+            <button type="button" onclick="downloadCurrentViewer('avif')" class="flex items-center gap-2 rounded-lg border border-white/5 bg-zinc-900 px-3 py-2 text-left transition-all hover:border-violet-500/40 hover:bg-violet-500/5">
+              <div class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-white/5"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download h-3 w-3 text-zinc-400" aria-hidden="true"><path d="M12 15V3"></path><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path></svg></div>
+              <div class="min-w-0"><p class="text-[11px] font-semibold text-white">AVIF</p><p class="text-[9px] text-zinc-600">Original</p></div>
+            </button>
+            <button type="button" onclick="downloadCurrentViewer('png')" class="flex items-center gap-2 rounded-lg border border-white/5 bg-zinc-900 px-3 py-2 text-left transition-all hover:border-violet-500/40 hover:bg-violet-500/5">
+              <div class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-white/5"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download h-3 w-3 text-zinc-400" aria-hidden="true"><path d="M12 15V3"></path><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path></svg></div>
+              <div class="min-w-0"><p class="text-[11px] font-semibold text-white">PNG</p><p class="text-[9px] text-zinc-600">Sem perda</p></div>
+            </button>
+            <button type="button" onclick="downloadCurrentViewer('jpeg')" class="flex items-center gap-2 rounded-lg border border-white/5 bg-zinc-900 px-3 py-2 text-left transition-all hover:border-violet-500/40 hover:bg-violet-500/5">
+              <div class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-white/5"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download h-3 w-3 text-zinc-400" aria-hidden="true"><path d="M12 15V3"></path><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path></svg></div>
+              <div class="min-w-0"><p class="text-[11px] font-semibold text-white">JPEG</p><p class="text-[9px] text-zinc-600">Alta qualidade</p></div>
+            </button>
+            <button type="button" onclick="downloadCurrentViewer('webp')" class="flex items-center gap-2 rounded-lg border border-white/5 bg-zinc-900 px-3 py-2 text-left transition-all hover:border-violet-500/40 hover:bg-violet-500/5">
+              <div class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-white/5"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download h-3 w-3 text-zinc-400" aria-hidden="true"><path d="M12 15V3"></path><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path></svg></div>
+              <div class="min-w-0"><p class="text-[11px] font-semibold text-white">WebP</p><p class="text-[9px] text-zinc-600">Web</p></div>
+            </button>
+          </div>
+        </div>
+        <div class="px-4 pb-4">
+          <div class="flex items-center gap-1.5">
+            <button type="button" id="fs-zoom-out" class="flex h-7 w-7 items-center justify-center rounded-lg border border-white/5 bg-zinc-900 text-zinc-400 hover:text-white transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-zoom-out h-3.5 w-3.5" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" x2="16.65" y1="21" y2="16.65"></line><line x1="8" x2="14" y1="11" y2="11"></line></svg></button>
+            <span id="fs-zoom-val" class="flex-1 text-center text-[10px] font-medium text-zinc-400 tabular-nums">100%</span>
+            <button type="button" id="fs-zoom-in" class="flex h-7 w-7 items-center justify-center rounded-lg border border-white/5 bg-zinc-900 text-zinc-400 hover:text-white transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-zoom-in h-3.5 w-3.5" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" x2="16.65" y1="21" y2="16.65"></line><line x1="11" x2="11" y1="8" y2="14"></line><line x1="8" x2="14" y1="11" y2="11"></line></svg></button>
+            <button type="button" id="fs-zoom-reset" class="flex h-7 items-center justify-center gap-1 rounded-lg border border-white/5 bg-zinc-900 px-2 text-[9px] text-zinc-500 hover:text-zinc-300 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-rotate-ccw h-3 w-3" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg></button>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- Dropdown Menu Guia (role="menu") -->
+    <div id="guia-menu" role="menu" class="hidden fixed z-[10060] flex flex-col gap-0.5 rounded-2xl border border-white/10 bg-zinc-900 p-1.5 shadow-2xl shadow-black/60" style="width: 216px; top: 60px; right: 24px;">
+      <button type="button" role="menuitem" onclick="showToast('Iniciando Guia interativo...', 'info')" class="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-[13px] font-medium text-zinc-300 transition-colors hover:bg-white/[0.06] hover:text-white">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-book-open h-4 w-4 shrink-0" aria-hidden="true" style="color: rgb(139, 92, 246);"><path d="M12 7v14"></path><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"></path></svg>
+        Guia guiado
+      </button>
+      <button type="button" role="menuitem" data-tour="demo" onclick="showToast('Carregando vídeo de demonstração...', 'info')" class="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-[13px] font-medium text-zinc-300 transition-colors hover:bg-white/[0.06] hover:text-white">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play h-4 w-4 shrink-0" aria-hidden="true" style="color: rgb(139, 92, 246);"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"></path></svg>
+        Ver demonstração
+      </button>
+    </div>
+
+  </div>
+
+  <script>
+    // State & Interactive Logic
+    let currentDimension = "1:1";
+    let currentQuality = "1K";
+    let currentAlignment = "center";
+    let mainImageBase64 = null;
+    let refImageBase64 = null;
+    let isFavorited = false;
+    let fsZoom = 100;
+
+    function showToast(msg, type = 'info') {
+      const container = document.getElementById('db-toast-container');
+      const toast = document.createElement('div');
+      toast.className = 'db-toast db-toast-' + type;
+      toast.textContent = msg;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-10px)';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    function downloadCurrentViewer(format) {
+      const img = document.getElementById('main-result-viewer');
+      if (!img || !img.src) return;
+      const link = document.createElement('a');
+      link.href = img.src;
+      link.download = 'design-builder-' + Date.now() + '.' + format;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast('Download iniciado em ' + format.toUpperCase(), 'success');
+    }
+
+    // 1. Dimension Buttons
+    document.querySelectorAll('.dim-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.dim-btn').forEach(b => {
+          b.setAttribute('aria-pressed', 'false');
+          b.classList.remove('pb-ctrl-active', 'text-white');
+          b.classList.add('text-zinc-500');
+          const span = b.querySelector('span[aria-hidden="true"]');
+          if (span) {
+            span.className = 'block rounded-[3px] border border-zinc-600 bg-white/[0.025]';
+          }
+        });
+        btn.setAttribute('aria-pressed', 'true');
+        btn.classList.add('pb-ctrl-active', 'text-white');
+        btn.classList.remove('text-zinc-500');
+        const span = btn.querySelector('span[aria-hidden="true"]');
+        if (span) {
+          span.className = 'block rounded-[3px] border border-violet-300 bg-violet-400/20';
+        }
+        currentDimension = btn.getAttribute('data-dim');
+        updateResLabel();
+      });
+    });
+
+    // 2. Quality Buttons
+    document.querySelectorAll('.quality-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.quality-btn').forEach(b => {
+          b.setAttribute('aria-pressed', 'false');
+          b.style.background = 'linear-gradient(rgba(16, 10, 40, 0.4), rgba(10, 7, 28, 0.5)) padding-box padding-box, linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(139, 92, 246, 0.027)) border-box border-box';
+          b.style.border = '1px solid transparent';
+          b.style.boxShadow = 'none';
+          b.querySelectorAll('span').forEach(s => {
+            s.style.color = 'rgb(161, 161, 170)';
+          });
+        });
+        btn.setAttribute('aria-pressed', 'true');
+        btn.style.background = 'linear-gradient(rgba(30, 16, 70, 0.6), rgba(20, 10, 50, 0.7)) padding-box padding-box, linear-gradient(135deg, rgba(139, 92, 246, 0.447), rgba(139, 92, 246, 0.12) 50%, rgba(139, 92, 246, 0.28)) border-box border-box';
+        btn.style.border = '1px solid transparent';
+        btn.style.boxShadow = 'rgba(139, 92, 246, 0.19) 0px 0px 12px, rgba(139, 92, 246, 0.07) 0px 0px 28px';
+        btn.querySelectorAll('span').forEach(s => {
+          s.style.color = 'rgb(255, 255, 255)';
+        });
+        currentQuality = btn.getAttribute('data-quality');
+        updateResLabel();
+      });
+    });
+
+    function updateResLabel() {
+      const label = document.getElementById('quality-res-label');
+      let base = 1024;
+      if (currentQuality === '2K') base = 2048;
+      if (currentQuality === '4K') base = 4096;
+      if (currentDimension === '1:1') label.textContent = base + '×' + base;
+      else if (currentDimension === '4:5') label.textContent = Math.round(base * 0.8) + '×' + base;
+      else if (currentDimension === '9:16') label.textContent = Math.round(base * 0.5625) + '×' + base;
+      else if (currentDimension === '16:9') label.textContent = base + '×' + Math.round(base * 0.5625);
+    }
+
+    // 3. Alignment Buttons
+    const alignLeft = document.getElementById('align-left');
+    const alignCenter = document.getElementById('align-center');
+    const alignRight = document.getElementById('align-right');
+    function setAlign(align) {
+      currentAlignment = align;
+      [alignLeft, alignCenter, alignRight].forEach(b => {
+        b.className = 'flex h-7 w-7 items-center justify-center rounded-md border transition-colors border-white/10 bg-white/[0.04] text-zinc-500 hover:border-white/20 hover:text-zinc-300';
+        b.setAttribute('aria-pressed', 'false');
+      });
+      const active = align === 'left' ? alignLeft : (align === 'right' ? alignRight : alignCenter);
+      active.className = 'flex h-7 w-7 items-center justify-center rounded-md border transition-colors border-violet-500/60 bg-violet-500/25 text-violet-200';
+      active.setAttribute('aria-pressed', 'true');
+    }
+    alignLeft.onclick = () => setAlign('left');
+    alignCenter.onclick = () => setAlign('center');
+    alignRight.onclick = () => setAlign('right');
+
+    // 4. File uploads (Sujeito, Ref, Asset)
+    const inputFileSujeito = document.getElementById('input-file-sujeito');
+    const btnUploadSujeito = document.getElementById('btn-upload-sujeito');
+    const labelUploadSujeito = document.getElementById('label-upload-sujeito');
+    btnUploadSujeito.onclick = () => inputFileSujeito.click();
+    inputFileSujeito.onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        labelUploadSujeito.textContent = file.name;
+        const reader = new FileReader();
+        reader.onload = () => {
+          mainImageBase64 = reader.result;
+          showToast('Imagem principal carregada!', 'success');
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+
+    const inputFileRef = document.getElementById('input-file-ref');
+    const btnUploadRef = document.getElementById('btn-upload-ref');
+    const labelUploadRef = document.getElementById('label-upload-ref');
+    btnUploadRef.onclick = () => inputFileRef.click();
+    inputFileRef.onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        labelUploadRef.textContent = file.name;
+        const reader = new FileReader();
+        reader.onload = () => {
+          refImageBase64 = reader.result;
+          showToast('Inspiração de estilo carregada!', 'success');
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+
+    // 5. Close Publish alert
+    const btnClosePublishAlert = document.getElementById('btn-close-publish-alert');
+    const publishAlert = document.getElementById('publish-alert');
+    if (btnClosePublishAlert && publishAlert) {
+      btnClosePublishAlert.onclick = () => {
+        publishAlert.style.display = 'none';
+      };
+    }
+
+    // 6. Guia Dropdown Menu
+    const btnGuia = document.getElementById('btn-guia');
+    const guiaMenu = document.getElementById('guia-menu');
+    if (btnGuia && guiaMenu) {
+      btnGuia.onclick = (e) => {
+        e.stopPropagation();
+        const rect = btnGuia.getBoundingClientRect();
+        guiaMenu.style.top = (rect.bottom + 6) + 'px';
+        guiaMenu.style.left = (rect.right - 216) + 'px';
+        guiaMenu.classList.toggle('hidden');
+      };
+      document.addEventListener('click', () => {
+        guiaMenu.classList.add('hidden');
+      });
+    }
+
+    // 7. Fullscreen Dialog Viewer
+    const viewerContainer = document.getElementById('viewer-container');
+    const fullscreenDialog = document.getElementById('fullscreen-dialog');
+    const btnCloseFullscreen = document.getElementById('btn-close-fullscreen');
+    const fullscreenImage = document.getElementById('fullscreen-image');
+    const mainResultViewer = document.getElementById('main-result-viewer');
+
+    if (viewerContainer && fullscreenDialog) {
+      viewerContainer.onclick = () => {
+        fullscreenImage.src = mainResultViewer.src;
+        fullscreenDialog.style.opacity = '1';
+        fullscreenDialog.style.pointerEvents = 'auto';
+      };
+      btnCloseFullscreen.onclick = () => {
+        fullscreenDialog.style.opacity = '0';
+        fullscreenDialog.style.pointerEvents = 'none';
+      };
+    }
+
+    // Fullscreen zoom
+    const fsZoomIn = document.getElementById('fs-zoom-in');
+    const fsZoomOut = document.getElementById('fs-zoom-out');
+    const fsZoomReset = document.getElementById('fs-zoom-reset');
+    const fsZoomVal = document.getElementById('fs-zoom-val');
+    if (fsZoomIn) {
+      fsZoomIn.onclick = () => {
+        fsZoom = Math.min(300, fsZoom + 25);
+        applyFsZoom();
+      };
+      fsZoomOut.onclick = () => {
+        fsZoom = Math.max(50, fsZoom - 25);
+        applyFsZoom();
+      };
+      fsZoomReset.onclick = () => {
+        fsZoom = 100;
+        applyFsZoom();
+      };
+    }
+    function applyFsZoom() {
+      if (fullscreenImage) fullscreenImage.style.transform = 'scale(' + (fsZoom / 100) + ')';
+      if (fsZoomVal) fsZoomVal.textContent = fsZoom + '%';
+    }
+
+    // 8. Magic Bar Refine & Textarea expand
+    const campoDeRefino = document.getElementById('campo-de-refino');
+    const btnSendRefine = document.getElementById('btn-send-refine');
+    if (campoDeRefino && btnSendRefine) {
+      campoDeRefino.addEventListener('input', () => {
+        const val = campoDeRefino.value.trim();
+        btnSendRefine.disabled = !val;
+        if (val) {
+          btnSendRefine.classList.remove('bg-white/[0.06]', 'text-zinc-600', 'cursor-not-allowed');
+          btnSendRefine.classList.add('bg-violet-600', 'text-white', 'shadow-lg', 'shadow-violet-600/30');
+        } else {
+          btnSendRefine.classList.add('bg-white/[0.06]', 'text-zinc-600', 'cursor-not-allowed');
+          btnSendRefine.classList.remove('bg-violet-600', 'text-white', 'shadow-lg', 'shadow-violet-600/30');
+        }
+      });
+      btnSendRefine.onclick = () => {
+        const text = campoDeRefino.value.trim();
+        if (!text) return;
+        showToast('Enviando alteração mágica: "' + text + '"...', 'info');
+        campoDeRefino.value = '';
+        btnSendRefine.disabled = true;
+        btnSendRefine.classList.add('bg-white/[0.06]', 'text-zinc-600', 'cursor-not-allowed');
+        btnSendRefine.classList.remove('bg-violet-600', 'text-white', 'shadow-lg', 'shadow-violet-600/30');
+      };
+    }
+
+    // 9. Construir Action -> calls /api/gerar
+    const btnConstruir = document.getElementById('btn-construir');
+    const btnConstruirText = document.getElementById('btn-construir-text');
+    const btnConstruirSpinner = document.getElementById('btn-construir-spinner');
+
+    btnConstruir.onclick = async () => {
+      const descricao = document.getElementById('descricao_adicional').value;
+      const prompt = (descricao ? descricao + '. ' : '') + 'Alta definição, estúdio profissional, iluminação cinematográfica, 8k, proporção ' + currentDimension;
+
+      btnConstruir.disabled = true;
+      btnConstruirSpinner.classList.remove('hidden');
+      btnConstruirText.textContent = 'Construindo...';
+
+      try {
+        const res = await fetch('/api/gerar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: prompt,
+            dimension: currentDimension,
+            quality: currentQuality,
+            subject_position: currentAlignment,
+            agent: 'ref'
+          })
+        });
+        const data = await res.json();
+        const newImgUrl = data.imageUrl || data.url || data.result;
+        if (newImgUrl) {
+          mainResultViewer.src = newImgUrl;
+          showToast('Arte construída com sucesso!', 'success');
+          
+          // Adiciona ao histórico lateral
+          const container = document.getElementById('historico-items-container');
+          if (container) {
+            const item = document.createElement('div');
+            item.setAttribute('data-media-window', 'mounted');
+            item.className = 'w-full [content-visibility:auto] [contain-intrinsic-size:auto_400px]';
+            item.innerHTML = `
+              <div class="group relative w-full overflow-hidden rounded-lg border transition-all duration-200 border-violet-500/50 shadow-[0_0_8px_rgba(139,92,246,0.2)]">
+                <button type="button" class="block w-full" onclick="document.getElementById('main-result-viewer').src='${newImgUrl}'">
+                  <img alt="" class="aspect-square w-full object-cover cursor-grab" src="${newImgUrl}">
+                </button>
+                <div class="pointer-events-none absolute left-1 top-1 z-10 flex items-center rounded border px-1 py-0.5 text-[8px] font-semibold leading-none shadow-sm backdrop-blur-sm opacity-0 transition-opacity duration-150 group-hover:opacity-100 border-violet-400/30 bg-violet-950/85 text-violet-200">
+                  <span>Geração</span>
+                </div>
+                <button type="button" onclick="this.closest('[data-media-window]').remove()" class="absolute right-1 top-1 z-10 flex h-6 w-6 items-center justify-center rounded-md bg-black/70 text-zinc-300 ring-1 ring-white/10 backdrop-blur-sm opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-500/30 hover:text-red-300">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash2 h-3 w-3"><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><path d="M3 6h18"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
+              </div>
+            `;
+            container.insertBefore(item, container.firstChild);
+          }
+        } else {
+          showToast('Erro ao gerar: ' + (data.error || 'Tente novamente'), 'error');
+        }
+      } catch (err) {
+        console.error(err);
+        showToast('Falha na requisição de geração', 'error');
+      } finally {
+        btnConstruir.disabled = false;
+        btnConstruirSpinner.classList.add('hidden');
+        btnConstruirText.textContent = 'Construir';
+      }
+    };
+
+    // 10. Floating Actions (Report, Reuse, Fav, Publish, Format, Export, Base)
+    document.getElementById('btn-action-report').onclick = () => showToast('Reportar geração aberto', 'info');
+    document.getElementById('btn-action-reuse').onclick = () => showToast('Configurações reutilizadas no formulário', 'info');
+    document.getElementById('btn-action-fav').onclick = () => {
+      isFavorited = !isFavorited;
+      const favIcon = document.getElementById('fav-icon');
+      if (isFavorited) {
+        favIcon.setAttribute('fill', '#ef4444');
+        favIcon.setAttribute('stroke', '#ef4444');
+        showToast('Adicionado aos favoritos!', 'success');
+      } else {
+        favIcon.setAttribute('fill', 'none');
+        favIcon.setAttribute('stroke', 'currentColor');
+        showToast('Removido dos favoritos', 'info');
+      }
+    };
+    document.getElementById('btn-action-publish').onclick = () => showToast('Modal de publicação na Comunidade aberto', 'info');
+    document.getElementById('btn-banner-publish').onclick = () => showToast('Publicação na comunidade iniciada!', 'success');
+    document.getElementById('btn-action-format').onclick = () => showToast('Opções de formato ativadas', 'info');
+    document.getElementById('btn-action-export').onclick = () => {
+      fullscreenImage.src = mainResultViewer.src;
+      fullscreenDialog.style.opacity = '1';
+      fullscreenDialog.style.pointerEvents = 'auto';
+    };
+    document.getElementById('btn-action-base').onclick = () => {
+      mainImageBase64 = mainResultViewer.src;
+      labelUploadSujeito.textContent = 'Imagem base selecionada';
+      showToast('Imagem atual definida como Sujeito Principal!', 'success');
+    };
+  </script>
+</body>
+</html>
