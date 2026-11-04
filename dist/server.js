@@ -2628,6 +2628,9 @@ async function deductCredit(email, amount = 1) {
 import dotenv from "dotenv";
 import { GoogleAuth } from "google-auth-library";
 import { spawn } from "child_process";
+sharp.cache(false);
+sharp.concurrency(1);
+sharp.simd(true);
 var logPath = path3.join(os3.tmpdir(), "app.log");
 function syncLog(type, ...args) {
   try {
@@ -4702,7 +4705,7 @@ CRITICAL RULES:
               fit: Math.abs(inRatio - targetRatioVal) <= 0.08 ? "fill" : "cover",
               position: "center",
               kernel: sharp.kernel.lanczos3
-            }).toColorspace("srgb").png({ palette: false, compressionLevel: 0, quality: 100 }).toBuffer();
+            }).toColorspace("srgb").png({ palette: false, compressionLevel: 6 }).toBuffer();
             const processedAvifBuffer = await sharp(processedPngBuffer).avif({ quality: 85, effort: 1 }).toBuffer();
             fs3.writeFileSync(path3.join(resultDir, "result.avif"), processedAvifBuffer);
             fs3.writeFileSync(path3.join(resultDir, "result.png"), processedPngBuffer);
@@ -9670,7 +9673,7 @@ The subject reference image may be a compressed digital photo. DO NOT replicate 
               fit: Math.abs(inRatio - targetRatioVal) <= 0.08 ? "fill" : "cover",
               position: "center",
               kernel: sharp.kernel.lanczos3
-            }).toColorspace("srgb").png({ palette: false, compressionLevel: 0, quality: 100 }).toBuffer();
+            }).toColorspace("srgb").png({ palette: false, compressionLevel: 6 }).toBuffer();
             finalImageBase64 = `data:${rawB64Mime || "image/png"};base64,${resizedBuf.toString("base64")}`;
           }
         } catch (exactErr) {

@@ -4,6 +4,13 @@ import multer from "multer";
 import { GoogleGenAI, Modality } from "@google/genai";
 import { Jimp, ResizeStrategy, BlendMode } from "jimp";
 import sharp from "sharp";
+// Low-memory optimizations for free-tier hosting (Render / 512MB RAM):
+// 1. Disable internal libvips cache to free memory immediately after each operation
+// 2. Set concurrency to 1 thread to prevent memory multiplier across CPU cores
+// 3. Enable SIMD for fast vector processing without extra memory allocations
+sharp.cache(false);
+sharp.concurrency(1);
+sharp.simd(true);
 import path from "path";
 import fs from "fs";
 import os from "os";
@@ -2669,7 +2676,7 @@ CRITICAL RULES:
                 kernel: sharp.kernel.lanczos3
               })
               .toColorspace("srgb")
-              .png({ palette: false, compressionLevel: 0, quality: 100 })
+              .png({ palette: false, compressionLevel: 6 })
               .toBuffer();
 
             // Also encode exact AVIF buffer for fastest modern browser loading
@@ -8565,7 +8572,7 @@ The subject reference image may be a compressed digital photo. DO NOT replicate 
                 kernel: sharp.kernel.lanczos3
               })
               .toColorspace("srgb")
-              .png({ palette: false, compressionLevel: 0, quality: 100 })
+              .png({ palette: false, compressionLevel: 6 })
               .toBuffer();
             finalImageBase64 = `data:${rawB64Mime || "image/png"};base64,${resizedBuf.toString("base64")}`;
           }
