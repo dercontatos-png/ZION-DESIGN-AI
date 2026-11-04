@@ -6722,7 +6722,27 @@ Diretrizes rígidas:
           const genResult = await Promise.race([genPromise, timeoutPromise]) as any;
 
           if (genResult && genResult.imageBase64Url) {
-            finalEnhancedImage = genResult.imageBase64Url;
+            let enhancedB64 = genResult.imageBase64Url;
+            try {
+              const rawAiB64 = enhancedB64.includes(",") ? enhancedB64.split(",")[1] : enhancedB64;
+              const targetDims = getResolutionDimensions(sizeSelected, selectedRatio);
+              const inBuf = Buffer.from(rawAiB64, "base64");
+              console.log(`[enhancer-supir-magnific] Scaling AI reconstructed output to high-res target (${targetDims.width}x${targetDims.height}) with Lanczos3 + Sharpen...`);
+              const resizedBuf = await sharp(inBuf)
+                .resize(targetDims.width, targetDims.height, {
+                  fit: "cover",
+                  position: "center",
+                  kernel: sharp.kernel.lanczos3
+                })
+                .sharpen(sizeSelected === "4K" ? { sigma: 1.0, m1: 0.5, m2: 1.0 } : (sizeSelected === "2K" ? { sigma: 0.6, m1: 0.3, m2: 0.7 } : { sigma: 0.4, m1: 0.2, m2: 0.5 }))
+                .png({ compressionLevel: 4, adaptiveFiltering: true })
+                .toBuffer();
+              enhancedB64 = `data:image/png;base64,${resizedBuf.toString("base64")}`;
+              techLog.push(`Super-Resolução Óptica Lanczos3 4K aplicada com sucesso (${targetDims.width}x${targetDims.height}).`);
+            } catch (resizeErr) {
+              console.warn("[enhancer-supir-magnific] Sharp resize warning:", resizeErr?.message || resizeErr);
+            }
+            finalEnhancedImage = enhancedB64;
             techLog.push(`Reconstrução concluída com sucesso via ${genResult.modelUsed || "Gemini 3 Pro"}.`);
           }
         } catch (genErr: any) {

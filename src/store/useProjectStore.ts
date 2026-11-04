@@ -20,7 +20,7 @@ export const getDeletedImages = (): Set<string> => {
       try {
         const altList = JSON.parse(altSaved);
         if (Array.isArray(altList)) rawList.push(...altList);
-      } catch (_) {}
+      } catch (_) { }
     }
 
     // Sanitizar: nunca permitir nomes genericos que limpam a galeria inteira
@@ -46,7 +46,7 @@ export const addDeletedImage = (idOrUrl: string) => {
     const deleted = getDeletedImages();
     const clean = idOrUrl.trim();
     const cleanLower = clean.toLowerCase();
-    
+
     deleted.add(clean);
     deleted.add(cleanLower);
 
@@ -60,7 +60,7 @@ export const addDeletedImage = (idOrUrl: string) => {
         deleted.add(withoutExt.toLowerCase());
       }
     }
-    
+
     const matchId = clean.match(/(\d{13}_[a-z0-9]+)/i);
     if (matchId) {
       deleted.add(matchId[1]);
@@ -71,11 +71,11 @@ export const addDeletedImage = (idOrUrl: string) => {
       deleted.add(matchUuid[1]);
       deleted.add(matchUuid[1].toLowerCase());
     }
-    
+
     const serialized = JSON.stringify(Array.from(deleted));
     localStorage.setItem("zion_deleted_images", serialized);
     localStorage.setItem("zion_galeria_deleted_ids", serialized);
-  } catch (_) {}
+  } catch (_) { }
 };
 
 interface ProjectStoreState extends ProjectConfig {
@@ -369,7 +369,8 @@ const saveProjectsToLocalStorage = (list: any[]) => {
 
 let _saveProjectsTimer: any = null;
 const debouncedSaveProjectsToLocalStorage = (list: any[]) => {
-  if (_saveProjectsTimer) clearTimeout(_saveProjectsTimer);
+  if (_saveProjectsTimer) clearTime
+  out(_saveProjectsTimer);
   _saveProjectsTimer = setTimeout(() => {
     saveProjectsToLocalStorage(list);
   }, 500);
@@ -395,7 +396,7 @@ const getInitialProjectState = (): { list: any[]; activeId: string; activeConfig
           };
         }
       }
-    } catch (_) {}
+    } catch (_) { }
   }
   const defaultList = createDefaultProjects();
   return { list: defaultList, activeId: "proj_aba_1", activeConfig: defaultList[0].config };
@@ -444,12 +445,12 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
     }
     const nextState = { ...state, ...updates };
     const currentId = state.activeProjectId || (state.projectsList[0] ? state.projectsList[0].id : "proj_aba_1");
-    
+
     try {
       if (typeof window !== "undefined") {
         localStorage.setItem("zion_last_active_project_id", currentId);
       }
-    } catch (_) {}
+    } catch (_) { }
 
     const updatedProjects = state.projectsList.map((proj) => {
       if (proj.id === currentId) {
@@ -466,7 +467,7 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
   setSujeitoBase64: (base64) => {
     const list = base64 ? [base64] : [];
     if (base64) {
-      idbSet("zion_saved_sujeito", base64).catch(() => {});
+      idbSet("zion_saved_sujeito", base64).catch(() => { });
       // Se for base64, envia também ao servidor para persistência física permanente no disco
       if (typeof window !== "undefined" && base64.startsWith("data:")) {
         fetch("/api/upload", {
@@ -478,10 +479,10 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
           .then((data) => {
             if (data?.url) {
               get().updateConfig({ sujeitoBase64: data.url, sujeitosBase64List: [data.url] });
-              idbSet("zion_saved_sujeito", data.url).catch(() => {});
+              idbSet("zion_saved_sujeito", data.url).catch(() => { });
             }
           })
-          .catch(() => {});
+          .catch(() => { });
       }
     }
     get().updateConfig({ sujeitoBase64: base64, sujeitosBase64List: list });
@@ -632,7 +633,7 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
         }
       }
     }
-    
+
     const updatedProjects = state.projectsList.map((proj) => {
       if (proj.id === state.activeProjectId) {
         return { ...proj, galeria: uniqueImages };
@@ -815,7 +816,7 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
 
     const newList = [...updatedProjects, newProj];
     saveProjectsToLocalStorage(newList);
-    try { localStorage.setItem("zion_last_active_project_id", id); } catch {}
+    try { localStorage.setItem("zion_last_active_project_id", id); } catch { }
 
     set({
       projectsList: newList,
@@ -883,7 +884,7 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ images: targetProj.galeria || [] })
-      }).catch(() => {});
+      }).catch(() => { });
     }
 
     set((state) => {
@@ -950,7 +951,7 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
     const proj = projectsList.find((p) => p.id === id);
     if (!proj) return;
 
-    try { localStorage.setItem("zion_last_active_project_id", id); } catch {}
+    try { localStorage.setItem("zion_last_active_project_id", id); } catch { }
 
     // Snapshot current active project before switching tabs so user inputs are never lost
     let updatedProjectsList = projectsList;
@@ -1037,7 +1038,7 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
               get().syncGaleriaWithServer();
             }
           }, 2500);
-        } catch (_) {}
+        } catch (_) { }
       }
 
       // Busca histórico de imagens no disco do servidor para que nenhuma geração se perca
@@ -1071,7 +1072,7 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
           const jId = matchId ? matchId[1] : "";
           return !deletedSet.has(img) && !deletedSet.has(bname) && (!jId || !deletedSet.has(jId));
         });
-      
+
       if (list && Array.isArray(list) && list.length > 0) {
         const lastActiveId = typeof window !== "undefined" ? localStorage.getItem("zion_last_active_project_id") : null;
         const activeProj = list.find((p: any) => p.id === lastActiveId) || list[0];
@@ -1090,7 +1091,7 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
           try {
             const savedSuj = await idbGet("zion_saved_sujeito");
             if (savedSuj) restoredSujeito = savedSuj;
-          } catch (_) {}
+          } catch (_) { }
         }
 
         const filteredCombined = (combinedGallery.length > 0 ? combinedGallery : serverImages).filter((img) => {
@@ -1205,7 +1206,7 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
           bc.postMessage({ type: "NEW_IMAGE", imageUrl: imgUrl, ...meta });
           bc.close();
         }
-      } catch (_) {}
+      } catch (_) { }
     }
   },
 
@@ -1264,7 +1265,7 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
         galeriaImages: combined,
         projectsList: nextProjects
       });
-    } catch (_) {}
+    } catch (_) { }
   },
 
   deleteGaleriaImage: (idOrUrl: string) => {
@@ -1278,10 +1279,10 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
     const jobId = matchId ? matchId[1] : (idOrUrl.startsWith("http") || idOrUrl.startsWith("/") ? null : idOrUrl);
 
     if (jobId) {
-      fetch(`/api/bff/api/generations/${jobId}`, { method: "DELETE" }).catch(() => {});
+      fetch(`/api/bff/api/generations/${jobId}`, { method: "DELETE" }).catch(() => { });
     }
     if (basename && (basename.endsWith(".png") || basename.endsWith(".avif") || basename.endsWith(".webp") || basename.endsWith(".jpg"))) {
-      fetch(`/api/historico-imagens/${basename}`, { method: "DELETE" }).catch(() => {});
+      fetch(`/api/historico-imagens/${basename}`, { method: "DELETE" }).catch(() => { });
     }
 
     // 3. Remove de todas as abas e estado da galeria
