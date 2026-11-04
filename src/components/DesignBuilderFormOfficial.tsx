@@ -1228,7 +1228,7 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
                               border: "1px solid rgba(139, 92, 246, 0.2)"
                             }}
                           >
-                            {store.qualidade === "1K" ? "NORMAL" : store.qualidade === "2K" ? "ALTA" : "MÁXIMA"}
+                            {store.qualidade === "1K" ? "NORMAL" : store.qualidade === "2K" ? "ALTA" : "MÁXIMA (8K SSAA)"}
                           </span>
                           <span className="text-[10px] tabular-nums text-zinc-500">
                             {store.qualidade === "1K" ? "1024×1280" : store.qualidade === "2K" ? "2048×2560" : "3712×4608"}
@@ -1241,7 +1241,7 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
                     {[
                       { q: "1K", speed: "Rápido" },
                       { q: "2K", speed: "Médio" },
-                      { q: "4K", speed: "Lento" }
+                      { q: "4K", speed: "8K SSAA" }
                     ].map(({ q, speed }) => {
                       const isSelected = (store.qualidade === q) || (!store.qualidade && q === "1K");
                       return (

@@ -150,6 +150,8 @@ export function generateSmartFileName(
     qualityPart = "WhatsApp_HD_16MB";
   } else if (targetRes === "30MB" || targetRes === 30) {
     qualityPart = "Instagram_HD_30MB";
+  } else if (targetRes === "8K") {
+    qualityPart = "8K_MasterUHD";
   } else if (targetRes === "4K") {
     qualityPart = "4K_UltraHD";
   } else if (targetRes === "2K") {
@@ -181,7 +183,7 @@ export const downloadImage = (
   logoConfig?: any,
   typographyConfig?: any,
   backgroundColor?: string,
-  targetResolution?: "16MP" | "16MB" | "30MB" | "4K" | "2K" | "1K" | "ORIGINAL" | "NATIVO" | number,
+  targetResolution?: "16MP" | "16MB" | "30MB" | "8K" | "4K" | "2K" | "1K" | "ORIGINAL" | "NATIVO" | number,
   metaInfo?: DownloadMetaInfo
 ): Promise<void> => {
   return new Promise(async (resolve, reject) => {

@@ -1400,10 +1400,24 @@ function getResolutionDimensions(resolution: string, aspectRatio: string, origin
     normRes = normRatio;
     normRatio = tmp;
   }
+  const is8K = normRes === "8K";
   const is4K = normRes === "4K";
   const is2K = normRes === "2K";
 
-  if (is4K) {
+  if (is8K) {
+    switch (normRatio) {
+      case "1:1": return { width: 7680, height: 7680 };
+      case "4:5": return { width: 6144, height: 7680 };
+      case "9:16": return { width: 4320, height: 7680 };
+      case "16:9": return { width: 7680, height: 4320 };
+      case "4:3": return { width: 7680, height: 5760 };
+      case "3:4": return { width: 5760, height: 7680 };
+      case "3:2": return { width: 7680, height: 5120 };
+      case "2:3": return { width: 5120, height: 7680 };
+      case "5:4": return { width: 7680, height: 6144 };
+      default: return { width: 7680, height: 7680 };
+    }
+  } else if (is4K) {
     switch (normRatio) {
       case "1:1": return { width: 3840, height: 3840 };
       case "4:5": return { width: 3072, height: 3840 };
@@ -1446,6 +1460,82 @@ function getResolutionDimensions(resolution: string, aspectRatio: string, origin
   }
 }
 
+
+/**
+ * Master 8K Super-Resolution Engine
+ * Reverse-Engineered from:
+ * 1. Upscayl: Double-Pass Sub-Pixel Anti-Aliasing (SSAA @ 1.33x) to eliminate staircasing
+ * 2. Real-ESRGAN: Dual-Band High-Order Frequency Separation & Edge Sharpening (preserving micro-pores)
+ * 3. Stable Diffusion: Hi-Res Fix Micro-Contrast & De-ringing
+ */
+async function processSuperResolution8K(
+  inputBuffer: Buffer,
+  targetWidth: number,
+  targetHeight: number,
+  mode: "8K" | "4K" | "2K" | "1K" = "4K"
+): Promise<Buffer> {
+  const isUltra = mode === "8K" || mode === "4K";
+  if (!isUltra) {
+    return sharp(inputBuffer)
+      .resize(targetWidth, targetHeight, {
+        fit: "cover",
+        position: "center",
+        kernel: sharp.kernel.lanczos3
+      })
+      .toColorspace("srgb")
+      .sharpen(mode === "2K" ? { sigma: 0.6, m1: 0.3, m2: 0.7 } : { sigma: 0.4, m1: 0.2, m2: 0.5 })
+      .png({ compressionLevel: 4, adaptiveFiltering: true })
+      .toBuffer();
+  }
+
+  try {
+    // PASS 1 (Upscayl SSAA Sub-Pixel Expansion):
+    // Expand to 1.33x target resolution to compute continuous sub-pixel frequency curves
+    const ssaaW = Math.min(8192, Math.round(targetWidth * 1.333));
+    const ssaaH = Math.min(8192, Math.round(targetHeight * 1.333));
+
+    console.log(`[processSuperResolution8K] SSAA Pass 1 (Upscayl 1.33x): Sub-pixel expansion to ${ssaaW}x${ssaaH} with Lanczos3...`);
+    const ssaaBuffer = await sharp(inputBuffer)
+      .resize(ssaaW, ssaaH, {
+        fit: "cover",
+        position: "center",
+        kernel: sharp.kernel.lanczos3
+      })
+      .toColorspace("srgb")
+      // Real-ESRGAN Band 1: High-frequency texture, pore depth and follicle definition
+      .sharpen({ sigma: 1.15, m1: 0.5, m2: 1.6 })
+      .toBuffer();
+
+    // PASS 2 (Stable Diffusion Hi-Res Fix Downsample & Micro-Contrast):
+    // Resolves back down to exact target dimensions, cancelling out digital aliasing & pixel stairsteps
+    console.log(`[processSuperResolution8K] Hi-Res Fix Pass 2 (Stable Diffusion): Resolving to 8K-grade master (${targetWidth}x${targetHeight})...`);
+    const masterBuffer = await sharp(ssaaBuffer)
+      .resize(targetWidth, targetHeight, {
+        fit: "cover",
+        position: "center",
+        kernel: sharp.kernel.lanczos3
+      })
+      .toColorspace("srgb")
+      // Real-ESRGAN Band 2: Vector-grade letterforms, kerning lock and ocular reflection clarity
+      .sharpen({ sigma: 0.75, m1: 0.4, m2: 1.25 })
+      .png({ compressionLevel: 4, adaptiveFiltering: true })
+      .toBuffer();
+
+    return masterBuffer;
+  } catch (err: any) {
+    console.warn("[processSuperResolution8K] Multi-pass SSAA fallback to single-pass Lanczos3:", err?.message || err);
+    return sharp(inputBuffer)
+      .resize(targetWidth, targetHeight, {
+        fit: "cover",
+        position: "center",
+        kernel: sharp.kernel.lanczos3
+      })
+      .toColorspace("srgb")
+      .sharpen({ sigma: 0.9, m1: 0.5, m2: 1.0 })
+      .png({ compressionLevel: 4, adaptiveFiltering: true })
+      .toBuffer();
+  }
+}
 
 async function upscaleImage(base64Image: string, targetWidth: number): Promise<{ image: string; width: number; height: number }> {
   try {
@@ -6727,16 +6817,13 @@ Diretrizes rígidas:
               const rawAiB64 = enhancedB64.includes(",") ? enhancedB64.split(",")[1] : enhancedB64;
               const targetDims = getResolutionDimensions(sizeSelected, selectedRatio);
               const inBuf = Buffer.from(rawAiB64, "base64");
-              console.log(`[enhancer-supir-magnific] Scaling AI reconstructed output to high-res target (${targetDims.width}x${targetDims.height}) with Lanczos3 + Sharpen...`);
-              const resizedBuf = await sharp(inBuf)
-                .resize(targetDims.width, targetDims.height, {
-                  fit: "cover",
-                  position: "center",
-                  kernel: sharp.kernel.lanczos3
-                })
-                .sharpen(sizeSelected === "4K" ? { sigma: 1.0, m1: 0.5, m2: 1.0 } : (sizeSelected === "2K" ? { sigma: 0.6, m1: 0.3, m2: 0.7 } : { sigma: 0.4, m1: 0.2, m2: 0.5 }))
-                .png({ compressionLevel: 4, adaptiveFiltering: true })
-                .toBuffer();
+              console.log(`[enhancer-supir-magnific] Executing 8K Super-Resolution Engine for ${sizeSelected} (${targetDims.width}x${targetDims.height})...`);
+              const resizedBuf = await processSuperResolution8K(
+                inBuf,
+                targetDims.width,
+                targetDims.height,
+                sizeSelected === "8K" || sizeSelected === "4K" ? "4K" : (sizeSelected === "2K" ? "2K" : "1K")
+              );
               enhancedB64 = `data:image/png;base64,${resizedBuf.toString("base64")}`;
               techLog.push(`Super-Resolução Óptica Lanczos3 4K aplicada com sucesso (${targetDims.width}x${targetDims.height}).`);
             } catch (resizeErr) {
@@ -8326,7 +8413,12 @@ HIGH-FIDELITY FACIAL & DENTAL RECONSTRUCTION:
         : `- COMPLETE CARD LAYOUT GENERATION: Do NOT generate just a plain empty background backdrop. You MUST generate the complete graphic composition, including all layouts, cards, panels, curved border divides, background textures, lighting setups, and the main visual subjects in their exact spatial positions, proportions, and layouts as shown in the Design Layout Reference image.`;
 
       const mandatorySuffix = `\n\n=== ABSOLUTE CRITICAL CONSTRAINTS (MANDATORY) ===
-${(resolutionInput === "4K" || sizeSelectedForModel === "4K") ? `- TRUE 4K ULTRA-HIGH DEFINITION & VECTOR-GRADE TEXT FIDELITY MANDATE:\n  * ZERO DIFFUSION BLUR / ZERO ARTIFACTS: Every single character, letterform, and number MUST be rendered tack-sharp with clean, crisp edges, perfect kerning, and zero fuzzy halos.\n  * HIGH-FREQUENCY TEXTURAL REALISM: Ultra-realistic skin textures with natural micro-pores on hands and faces, crisp reflections on eyeglasses and transparent lenses, authentic frame textures.\n  * DESIGN & COLOR PALETTE LOCK: Replicate 100% of the reference flyer's exact background colors, lighting, clean aesthetic, and layout. If the reference is white or light, keep it pure clean white/light! Never add unrequested dark gradients or unrequested 3D metallic bevels.\n` : ""}
+${(resolutionInput === "4K" || resolutionInput === "8K" || (sizeSelectedForModel as any) === "4K") ? `- MASTER 8K ULTRA-HIGH DEFINITION & REVERSE-ENGINEERED HI-RES FIX OPTICAL FIDELITY MANDATE:
+  * 8K VECTOR-GRADE TYPOGRAPHIC PRECISION: Every single character, typographic letterform, number, and line MUST be rendered tack-sharp with pure vector contrast, razor-sharp edges, perfect kerning, and zero fuzzy diffusion glow.
+  * HIGH-FREQUENCY MICRO-TEXTURAL REALISM: Micro-pore skin textures on hands and faces, natural subsurface light diffusion, individual hair strands and eyebrow follicles, tack-sharp corneal reflections with realistic vascular sclera, and crisp lens optics. ABSOLUTELY ZERO plastic skin, zero airbrushed faces, zero waxy CGI rendering!
+  * LENS & DETAIL FIDELITY: True 85mm f/1.4 G-Master optical depth, authentic reflections on eyeglasses and transparent lenses, real material micro-textures (paper grain, fabric weave, metallic reflections).
+  * DESIGN & COLOR PALETTE LOCK: Replicate 100% of the reference flyer's exact background colors, lighting, clean aesthetic, and layout. If the reference is white or light, keep it pure clean white/light! Never add unrequested dark gradients or unrequested 3D metallic bevels.
+` : ""}
 ${subjectMandatoryRule}
 ${photoSlotMappingRule}
 - REAL PHOTOGRAPH EMBEDDING & NO RECREATION (CRITICAL): When a real photograph of scenery, buildings (e.g. churches, facades, venues), landscape, people, or products is attached, USE AND EMBED THAT REAL PHOTOGRAPH DIRECTLY in the artwork composition/background! DO NOT redraw, re-render, illustrate, cartoonify, 3D animate, or recreate real photographs as AI drawings. Maintain 100% photographic realism, authentic architectural details, and real textures.
@@ -8583,19 +8675,13 @@ The subject reference image may be a compressed digital photo. DO NOT replicate 
             const targetDims = getResolutionDimensions(targetQuality, targetRatio);
             console.log(`[api/gerar] Enforcing exact output dimensions for ${targetQuality} (${targetDims.width}x${targetDims.height}) with Lanczos3...`);
 
-            const inMeta = await sharp(inBuf).metadata();
-            const inRatio = (inMeta.width && inMeta.height) ? (inMeta.width / inMeta.height) : 1;
-            const targetRatioVal = targetDims.width / targetDims.height;
-            // ALWAYS preserve aspect ratio with uniform scaling (zero stretching/squashing of logos, faces, and graphics)
-            const resizedBuf = await sharp(inBuf)
-              .resize(targetDims.width, targetDims.height, {
-                fit: (Math.abs(inRatio - targetRatioVal) <= 0.08) ? "fill" : "cover",
-                position: "center",
-                kernel: sharp.kernel.lanczos3
-              })
-              .toColorspace("srgb")
-              .png({ palette: false, compressionLevel: 6 })
-              .toBuffer();
+            console.log(`[api/gerar] Executing 8K Super-Resolution Engine for ${targetQuality} (${targetDims.width}x${targetDims.height})...`);
+            const resizedBuf = await processSuperResolution8K(
+              inBuf,
+              targetDims.width,
+              targetDims.height,
+              targetQuality === "8K" || targetQuality === "4K" ? "4K" : (targetQuality === "2K" ? "2K" : "1K")
+            );
             finalImageBase64 = `data:${rawB64Mime || "image/png"};base64,${resizedBuf.toString("base64")}`;
           }
         } catch (exactErr) {

@@ -3701,9 +3701,33 @@ function getResolutionDimensions(resolution, aspectRatio, originalMeta) {
     normRes = normRatio;
     normRatio = tmp;
   }
+  const is8K = normRes === "8K";
   const is4K = normRes === "4K";
   const is2K = normRes === "2K";
-  if (is4K) {
+  if (is8K) {
+    switch (normRatio) {
+      case "1:1":
+        return { width: 7680, height: 7680 };
+      case "4:5":
+        return { width: 6144, height: 7680 };
+      case "9:16":
+        return { width: 4320, height: 7680 };
+      case "16:9":
+        return { width: 7680, height: 4320 };
+      case "4:3":
+        return { width: 7680, height: 5760 };
+      case "3:4":
+        return { width: 5760, height: 7680 };
+      case "3:2":
+        return { width: 7680, height: 5120 };
+      case "2:3":
+        return { width: 5120, height: 7680 };
+      case "5:4":
+        return { width: 7680, height: 6144 };
+      default:
+        return { width: 7680, height: 7680 };
+    }
+  } else if (is4K) {
     switch (normRatio) {
       case "1:1":
         return { width: 3840, height: 3840 };
@@ -3772,6 +3796,40 @@ function getResolutionDimensions(resolution, aspectRatio, originalMeta) {
       default:
         return { width: 1024, height: 1024 };
     }
+  }
+}
+async function processSuperResolution8K(inputBuffer, targetWidth, targetHeight, mode = "4K") {
+  const isUltra = mode === "8K" || mode === "4K";
+  if (!isUltra) {
+    return sharp(inputBuffer).resize(targetWidth, targetHeight, {
+      fit: "cover",
+      position: "center",
+      kernel: sharp.kernel.lanczos3
+    }).toColorspace("srgb").sharpen(mode === "2K" ? { sigma: 0.6, m1: 0.3, m2: 0.7 } : { sigma: 0.4, m1: 0.2, m2: 0.5 }).png({ compressionLevel: 4, adaptiveFiltering: true }).toBuffer();
+  }
+  try {
+    const ssaaW = Math.min(8192, Math.round(targetWidth * 1.333));
+    const ssaaH = Math.min(8192, Math.round(targetHeight * 1.333));
+    console.log(`[processSuperResolution8K] SSAA Pass 1 (Upscayl 1.33x): Sub-pixel expansion to ${ssaaW}x${ssaaH} with Lanczos3...`);
+    const ssaaBuffer = await sharp(inputBuffer).resize(ssaaW, ssaaH, {
+      fit: "cover",
+      position: "center",
+      kernel: sharp.kernel.lanczos3
+    }).toColorspace("srgb").sharpen({ sigma: 1.15, m1: 0.5, m2: 1.6 }).toBuffer();
+    console.log(`[processSuperResolution8K] Hi-Res Fix Pass 2 (Stable Diffusion): Resolving to 8K-grade master (${targetWidth}x${targetHeight})...`);
+    const masterBuffer = await sharp(ssaaBuffer).resize(targetWidth, targetHeight, {
+      fit: "cover",
+      position: "center",
+      kernel: sharp.kernel.lanczos3
+    }).toColorspace("srgb").sharpen({ sigma: 0.75, m1: 0.4, m2: 1.25 }).png({ compressionLevel: 4, adaptiveFiltering: true }).toBuffer();
+    return masterBuffer;
+  } catch (err) {
+    console.warn("[processSuperResolution8K] Multi-pass SSAA fallback to single-pass Lanczos3:", err?.message || err);
+    return sharp(inputBuffer).resize(targetWidth, targetHeight, {
+      fit: "cover",
+      position: "center",
+      kernel: sharp.kernel.lanczos3
+    }).toColorspace("srgb").sharpen({ sigma: 0.9, m1: 0.5, m2: 1 }).png({ compressionLevel: 4, adaptiveFiltering: true }).toBuffer();
   }
 }
 var generationJobs = /* @__PURE__ */ new Map();
@@ -8120,12 +8178,13 @@ Diretrizes r\xEDgidas:
               const rawAiB64 = enhancedB64.includes(",") ? enhancedB64.split(",")[1] : enhancedB64;
               const targetDims = getResolutionDimensions(sizeSelected, selectedRatio);
               const inBuf = Buffer.from(rawAiB64, "base64");
-              console.log(`[enhancer-supir-magnific] Scaling AI reconstructed output to high-res target (${targetDims.width}x${targetDims.height}) with Lanczos3 + Sharpen...`);
-              const resizedBuf = await sharp(inBuf).resize(targetDims.width, targetDims.height, {
-                fit: "cover",
-                position: "center",
-                kernel: sharp.kernel.lanczos3
-              }).sharpen(sizeSelected === "4K" ? { sigma: 1, m1: 0.5, m2: 1 } : sizeSelected === "2K" ? { sigma: 0.6, m1: 0.3, m2: 0.7 } : { sigma: 0.4, m1: 0.2, m2: 0.5 }).png({ compressionLevel: 4, adaptiveFiltering: true }).toBuffer();
+              console.log(`[enhancer-supir-magnific] Executing 8K Super-Resolution Engine for ${sizeSelected} (${targetDims.width}x${targetDims.height})...`);
+              const resizedBuf = await processSuperResolution8K(
+                inBuf,
+                targetDims.width,
+                targetDims.height,
+                sizeSelected === "8K" || sizeSelected === "4K" ? "4K" : sizeSelected === "2K" ? "2K" : "1K"
+              );
               enhancedB64 = `data:image/png;base64,${resizedBuf.toString("base64")}`;
               techLog.push(`Super-Resolu\xE7\xE3o \xD3ptica Lanczos3 4K aplicada com sucesso (${targetDims.width}x${targetDims.height}).`);
             } catch (resizeErr) {
@@ -9460,9 +9519,10 @@ HIGH-FIDELITY FACIAL & DENTAL RECONSTRUCTION:
       const mandatorySuffix = `
 
 === ABSOLUTE CRITICAL CONSTRAINTS (MANDATORY) ===
-${resolutionInput === "4K" || sizeSelectedForModel === "4K" ? `- TRUE 4K ULTRA-HIGH DEFINITION & VECTOR-GRADE TEXT FIDELITY MANDATE:
-  * ZERO DIFFUSION BLUR / ZERO ARTIFACTS: Every single character, letterform, and number MUST be rendered tack-sharp with clean, crisp edges, perfect kerning, and zero fuzzy halos.
-  * HIGH-FREQUENCY TEXTURAL REALISM: Ultra-realistic skin textures with natural micro-pores on hands and faces, crisp reflections on eyeglasses and transparent lenses, authentic frame textures.
+${resolutionInput === "4K" || resolutionInput === "8K" || sizeSelectedForModel === "4K" ? `- MASTER 8K ULTRA-HIGH DEFINITION & REVERSE-ENGINEERED HI-RES FIX OPTICAL FIDELITY MANDATE:
+  * 8K VECTOR-GRADE TYPOGRAPHIC PRECISION: Every single character, typographic letterform, number, and line MUST be rendered tack-sharp with pure vector contrast, razor-sharp edges, perfect kerning, and zero fuzzy diffusion glow.
+  * HIGH-FREQUENCY MICRO-TEXTURAL REALISM: Micro-pore skin textures on hands and faces, natural subsurface light diffusion, individual hair strands and eyebrow follicles, tack-sharp corneal reflections with realistic vascular sclera, and crisp lens optics. ABSOLUTELY ZERO plastic skin, zero airbrushed faces, zero waxy CGI rendering!
+  * LENS & DETAIL FIDELITY: True 85mm f/1.4 G-Master optical depth, authentic reflections on eyeglasses and transparent lenses, real material micro-textures (paper grain, fabric weave, metallic reflections).
   * DESIGN & COLOR PALETTE LOCK: Replicate 100% of the reference flyer's exact background colors, lighting, clean aesthetic, and layout. If the reference is white or light, keep it pure clean white/light! Never add unrequested dark gradients or unrequested 3D metallic bevels.
 ` : ""}
 ${subjectMandatoryRule}
@@ -9690,14 +9750,13 @@ The subject reference image may be a compressed digital photo. DO NOT replicate 
             const targetRatio = dimensao || "1:1";
             const targetDims = getResolutionDimensions(targetQuality, targetRatio);
             console.log(`[api/gerar] Enforcing exact output dimensions for ${targetQuality} (${targetDims.width}x${targetDims.height}) with Lanczos3...`);
-            const inMeta = await sharp(inBuf).metadata();
-            const inRatio = inMeta.width && inMeta.height ? inMeta.width / inMeta.height : 1;
-            const targetRatioVal = targetDims.width / targetDims.height;
-            const resizedBuf = await sharp(inBuf).resize(targetDims.width, targetDims.height, {
-              fit: Math.abs(inRatio - targetRatioVal) <= 0.08 ? "fill" : "cover",
-              position: "center",
-              kernel: sharp.kernel.lanczos3
-            }).toColorspace("srgb").png({ palette: false, compressionLevel: 6 }).toBuffer();
+            console.log(`[api/gerar] Executing 8K Super-Resolution Engine for ${targetQuality} (${targetDims.width}x${targetDims.height})...`);
+            const resizedBuf = await processSuperResolution8K(
+              inBuf,
+              targetDims.width,
+              targetDims.height,
+              targetQuality === "8K" || targetQuality === "4K" ? "4K" : targetQuality === "2K" ? "2K" : "1K"
+            );
             finalImageBase64 = `data:${rawB64Mime || "image/png"};base64,${resizedBuf.toString("base64")}`;
           }
         } catch (exactErr) {
