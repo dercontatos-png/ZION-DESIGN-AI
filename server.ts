@@ -968,6 +968,83 @@ function sanitizeLogMessage(msg: any): string {
   return sanitized;
 }
 
+
+/** Helper: Maps decimal ratio (width/height) to the closest supported Gemini/Vertex AI aspect ratio */
+function findClosestGeminiRatio(decimalRatio: number): string {
+  const standardRatios = [
+    { ratio: "9:16", val: 9 / 16 }, // ~0.5625
+    { ratio: "2:3", val: 2 / 3 },   // ~0.6666
+    { ratio: "3:4", val: 3 / 4 },   // ~0.75
+    { ratio: "4:5", val: 4 / 5 },   // ~0.80
+    { ratio: "1:1", val: 1.0 },     // 1.0
+    { ratio: "5:4", val: 5 / 4 },   // 1.25
+    { ratio: "4:3", val: 4 / 3 },   // ~1.3333
+    { ratio: "3:2", val: 3 / 2 },   // 1.50
+    { ratio: "16:9", val: 16 / 9 }, // ~1.7777
+    { ratio: "21:9", val: 21 / 9 }  // ~2.3333
+  ];
+  let best = standardRatios[0];
+  let minDiff = Math.abs(decimalRatio - best.val);
+  for (const item of standardRatios) {
+    const diff = Math.abs(decimalRatio - item.val);
+    if (diff < minDiff) {
+      minDiff = diff;
+      best = item;
+    }
+  }
+  return best.ratio;
+}
+
+/** Helper: Sanitizes any arbitrary aspect ratio string into an allowed Gemini API aspect ratio */
+function sanitizeGeminiAspectRatio(ratio: string, fallbackRatio: string = "4:5"): string {
+  const ALLOWED = ["1:1", "4:5", "3:4", "2:3", "9:16", "1:4", "1:8", "5:4", "4:3", "3:2", "16:9", "21:9", "4:1", "8:1"];
+  if (!ratio) return fallbackRatio;
+  const clean = ratio.trim().replace("/", ":").toLowerCase();
+
+  if (clean === "4:5" || clean === "feed vertical" || clean === "feed_vertical" || clean === "portrait" || clean === "feed") return "4:5";
+  if (clean === "9:16" || clean === "story" || clean === "stories" || clean === "reels" || clean === "vertical") return "9:16";
+  if (clean === "1:1" || clean === "square" || clean === "quadrado") return "1:1";
+  if (clean === "16:9" || clean === "cinema" || clean === "landscape" || clean === "horizontal" || clean === "banner") return "16:9";
+  if (clean === "3:4") return "3:4";
+  if (clean === "4:3") return "4:3";
+  if (clean === "2:3") return "2:3";
+  if (clean === "3:2") return "3:2";
+  if (clean === "21:9") return "21:9";
+
+  const upper = clean.toUpperCase();
+  if (ALLOWED.includes(clean)) return clean;
+  if (ALLOWED.includes(upper)) return upper;
+
+  return fallbackRatio;
+}
+
+/** Helper: Optimizes large user uploaded reference images before sending to AI vision models,
+ *  preventing request payload explosion beyond the 20MB Vertex AI ceiling while preserving 100% optical cues. */
+async function optimizeImageForAiVision(
+  base64Data: string,
+  mimeType: string = "image/jpeg",
+  maxDimension: number = 1280
+): Promise<{ data: string; mimeType: string }> {
+  try {
+    if (!base64Data) return { data: "", mimeType };
+    const inBuf = Buffer.from(base64Data, "base64");
+    if (inBuf.length < 300 * 1024) {
+      return { data: base64Data, mimeType };
+    }
+    const meta = await sharp(inBuf).metadata();
+    if (meta.width && meta.height && (meta.width > maxDimension || meta.height > maxDimension || inBuf.length > 500 * 1024)) {
+      const resizedBuf = await sharp(inBuf)
+        .resize(maxDimension, maxDimension, { fit: "inside", withoutEnlargement: true })
+        .jpeg({ quality: 82, progressive: true })
+        .toBuffer();
+      return { data: resizedBuf.toString("base64"), mimeType: "image/jpeg" };
+    }
+    return { data: base64Data, mimeType };
+  } catch (_) {
+    return { data: base64Data, mimeType };
+  }
+}
+
 async function executeImageGenerationWithFallbacks(
   client: GoogleGenAI,
   parts: any[],
@@ -983,6 +1060,24 @@ async function executeImageGenerationWithFallbacks(
   const entryWaitMs = getImageQuotaWaitMs();
   if (entryWaitMs > 0 && entryWaitMs <= 10000) {
     await new Promise(r => setTimeout(r, entryWaitMs));
+  }
+  // Guarantees 100% compliant aspect ratio string for Gemini & Vertex AI models
+  const safeRatio = sanitizeGeminiAspectRatio(selectedRatio, "4:5");
+
+  // Optimize reference images to prevent 20MB Vertex AI request payload overflow
+  const sanitizedParts: any[] = [];
+  for (const part of parts) {
+    if (part.inlineData && part.inlineData.data) {
+      const opt = await optimizeImageForAiVision(part.inlineData.data, part.inlineData.mimeType || "image/jpeg", 1280);
+      sanitizedParts.push({
+        inlineData: {
+          data: opt.data,
+          mimeType: opt.mimeType || "image/jpeg"
+        }
+      });
+    } else {
+      sanitizedParts.push(part);
+    }
   }
 
   let mappedModelId = modelId;
@@ -1067,7 +1162,7 @@ async function executeImageGenerationWithFallbacks(
 
         console.log(`[generate] Attempting ${strategy.name} on ${cItem.name}...`);
 
-        const strategyTimeoutMs = strategy.type === "generateContent" ? 240000 : 85000;
+        const strategyTimeoutMs = strategy.type === "generateContent" ? 65000 : 65000;
         const timeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error(`Model ${strategy.name} request timeout (${strategyTimeoutMs / 1000}s)`)), strategyTimeoutMs)
         );
@@ -1078,11 +1173,11 @@ async function executeImageGenerationWithFallbacks(
             try {
               return await curClient.models.generateContent({
                 model: strategy.name,
-                contents: [{ role: "user", parts }],
+                contents: [{ role: "user", parts: sanitizedParts }],
                 config: {
                   responseModalities: ["TEXT", "IMAGE"],
                   imageConfig: {
-                    aspectRatio: selectedRatio,
+                    aspectRatio: safeRatio,
                     imageSize: apiImageSize
                   }
                 }
@@ -1092,11 +1187,11 @@ async function executeImageGenerationWithFallbacks(
                 console.warn("[generate] Native 4K request failed or quota exceeded, falling back to 2K native + super-sampling upscale...", err4k?.message || err4k);
                 return await curClient.models.generateContent({
                   model: strategy.name,
-                  contents: [{ role: "user", parts }],
+                  contents: [{ role: "user", parts: sanitizedParts }],
                   config: {
                     responseModalities: ["TEXT", "IMAGE"],
                     imageConfig: {
-                      aspectRatio: selectedRatio,
+                      aspectRatio: safeRatio,
                       imageSize: "2K"
                     }
                   }
@@ -1114,7 +1209,7 @@ async function executeImageGenerationWithFallbacks(
             config: {
               numberOfImages: 1,
               outputMimeType: "image/jpeg",
-              aspectRatio: selectedRatio,
+              aspectRatio: safeRatio,
               personGeneration: "ALLOW_ADULT",
               ...(seedUsuario ? { seed: Number(seedUsuario) } : {})
             }
@@ -1144,6 +1239,7 @@ async function executeImageGenerationWithFallbacks(
               console.warn(`[generate] ${strategy.name} 429/cota no cliente '${cItem.name}' (tentativa ${attempt}/${maxAttempts}). Retentando após ${(sleptMs / 1000).toFixed(1)}s de backoff...`);
               continue;
             }
+            // Non-rate-limit errors (400 INVALID_ARGUMENT, 404, etc.): failover immediately without wasting 60s+ on futile retries
             throw attemptErr;
           }
         }
@@ -2709,7 +2805,7 @@ CRITICAL RULES:
 
             // Resolve aspect ratio
             let selectedRatio = body.dimensions || "1:1";
-            const validRatios = ["1:1", "3:4", "4:3", "9:16", "16:9"];
+            const validRatios = ["1:1", "4:5", "3:4", "4:3", "9:16", "16:9", "2:3", "3:2"];
             if (!validRatios.includes(selectedRatio)) {
               if (selectedRatio === "4:5" || selectedRatio === "2:3") selectedRatio = "3:4";
               else if (selectedRatio === "3:2") selectedRatio = "4:3";
@@ -6702,7 +6798,20 @@ Output ONLY the JSON object. Do not include conversational filler.`;
       }
 
       // CASE B: Photo Enhancement (Design Builder Enhance - hdr-pro, studio-retouch, hyper-realism)
-      const selectedRatio = dimensions || dimension || "1:1";
+      let selectedRatio = dimensions || dimension || "1:1";
+      if (selectedRatio.toLowerCase() === "original" || selectedRatio.toLowerCase() === "auto") {
+        try {
+          const meta = await sharp(Buffer.from(base64Data, "base64")).metadata();
+          if (meta.width && meta.height) {
+            selectedRatio = findClosestGeminiRatio(meta.width / meta.height);
+          } else {
+            selectedRatio = "4:5";
+          }
+        } catch (_) {
+          selectedRatio = "4:5";
+        }
+      }
+      selectedRatio = sanitizeGeminiAspectRatio(selectedRatio, "4:5");
       const sizeSelected = (quality || "2K").toUpperCase();
       const userDirectives = (instructions || instrucoes_adicionais || "").trim();
       let finalEnhancedImage = "";
@@ -7219,7 +7328,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
 
       // Adapt aspect ratios to official model standards (1:1, 3:4, 4:3, 9:16 or 16:9)
       let selectedRatio = aspectRatioOverride || imgConfig?.aspectRatio || "1:1";
-      const validRatios = ["1:1", "3:4", "4:3", "9:16", "16:9"];
+      const validRatios = ["1:1", "4:5", "3:4", "4:3", "9:16", "16:9", "2:3", "3:2"];
       if (!validRatios.includes(selectedRatio)) {
         if (selectedRatio === "2:3") selectedRatio = "3:4";
         else if (selectedRatio === "3:2") selectedRatio = "4:3";
@@ -7505,7 +7614,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
 
       // Adapt aspect ratios (1:1, 3:4, 9:16, 16:9)
       let selectedRatio = imgConfig?.aspectRatio || "1:1";
-      const validRatios = ["1:1", "3:4", "4:3", "9:16", "16:9"];
+      const validRatios = ["1:1", "4:5", "3:4", "4:3", "9:16", "16:9", "2:3", "3:2"];
       if (!validRatios.includes(selectedRatio)) {
         if (selectedRatio === "4:5" || selectedRatio === "2:3") selectedRatio = "3:4";
         else if (selectedRatio === "3:2") selectedRatio = "4:3";
@@ -7902,7 +8011,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
       const targetModel = "gemini-3-pro-image";
 
       let targetAspectRatio = "1:1";
-      const validRatios = ["1:1", "3:4", "4:3", "9:16", "16:9"];
+      const validRatios = ["1:1", "4:5", "3:4", "4:3", "9:16", "16:9", "2:3", "3:2"];
       let autoTargetDimensions: { width: number; height: number } | null = null;
 
       const parsedCustomWidth = Number(rawCustomWidth) > 0 ? Math.round(Number(rawCustomWidth)) : null;
@@ -7942,10 +8051,8 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         }
       } else if (validRatios.includes(dimensao)) {
         targetAspectRatio = dimensao;
-      } else if (dimensao === "4:5" || dimensao === "2:3") {
-        targetAspectRatio = "3:4";
-      } else if (dimensao === "3:2") {
-        targetAspectRatio = "4:3";
+      } else {
+        targetAspectRatio = sanitizeGeminiAspectRatio(dimensao, "4:5");
       }
 
       const isLogoOnlyRequest =
@@ -8508,22 +8615,7 @@ The subject reference image may be a compressed digital photo. DO NOT replicate 
         addImagePart(prevImgBase64, "Imagem Gerada Anterior a ser Editada/Refinada");
       }
 
-      // 3. Add Subject References with SWAP SLOT Identity Lock
-      if (!desativarSujeito) {
-        if (base64DoSujeito) {
-          const swapSlotDirective = `SWAP SLOT — Image 1 is the identity reference, and it owns the entire person. From image 1 come the face and all its features, the eye colour, the skin tone and every mark on it, the age, the gender, the build, and the hair's colour, length, texture, curl pattern and density along with any facial hair. None of those are described anywhere in this prompt and none of them are to be invented. Do not add or remove marks, lines or blemishes, do not smooth, retouch or rejuvenate anything, and do not reshape the face or its proportions. From image 1 take only the person; take nothing else — not the clothing, not the pose, not the expression, not the framing, not the lighting, not the background, not the colour palette. Preserve 100% authentic photographic fidelity.`;
-          addImagePart(base64DoSujeito, swapSlotDirective);
-        }
-        if (Array.isArray(sujeitosBase64List)) {
-          sujeitosBase64List.forEach((ref: any, idx: number) => {
-            if (ref) {
-              const swapSlotDirective = `SWAP SLOT — Image #${idx + 2} is identity reference #${idx + 2}. Extract 100% authentic facial features, bone structure, skin tone, eye color, and natural hair texture from this person. Preserve 100% authentic photographic fidelity.`;
-              addImagePart(ref, swapSlotDirective);
-            }
-          });
-        }
-      }
-
+      // (Duplicate Subject reference block safely removed to avoid 20MB payload overflow)
       // 4. Add Scenario References
       if (base64DoCenario) {
         addImagePart(base64DoCenario, "Referência de Cenário/Ambiente");
