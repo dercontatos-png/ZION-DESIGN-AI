@@ -3577,6 +3577,7 @@ async function executeGenerateContentWithFallbacks(client, customApiKey, modelNa
     return 0;
   });
   const fallbackList = [
+    "gemini-2.5-flash",
     "gemini-3.7-flash",
     // Priority #1: State-of-the-art multimodal vision & text
     "gemini-3.6-flash",
@@ -9298,7 +9299,7 @@ ${logoEmbeddedRule}
 
 Return ONLY the JSON object. Do not include any conversational text or markdown formatting except the json code block itself.`;
         expansionParts.push({ text: instructionPrompt });
-        const expModels = ["gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.1-pro-preview"];
+        const expModels = ["gemini-2.5-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.1-pro-preview"];
         let expText = "";
         let lastExpErr = null;
         try {

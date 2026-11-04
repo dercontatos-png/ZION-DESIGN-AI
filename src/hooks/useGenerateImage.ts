@@ -482,15 +482,15 @@ export const useGenerateImage = (
         let pollTimer: ReturnType<typeof setInterval> | null = null;
         const sseController = new AbortController();
 
-        // Timeout de segurança (3 min)
+        // Timeout de segurança expandido (7 min para artes ricas em texto/4K)
         const safetyTimeout = setTimeout(() => {
           if (!resolved) {
             resolved = true;
             sseController.abort();
             if (pollTimer) clearInterval(pollTimer);
-            reject(new Error("⏱️ Tempo limite de geração excedido (3 min). Tente novamente."));
+            reject(new Error("⏱️ Tempo limite de geração excedido (7 min). Tente novamente."));
           }
-        }, 180000);
+        }, 420000);
 
         const cleanup = () => {
           clearTimeout(safetyTimeout);

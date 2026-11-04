@@ -1257,6 +1257,7 @@ async function executeGenerateContentWithFallbacks(
 
   // Fallback models: Gemini 3.7 Flash & Gemini 3.6 Flash (Tested & Active)
   const fallbackList = [
+    "gemini-2.5-flash",
     "gemini-3.7-flash",         // Priority #1: State-of-the-art multimodal vision & text
     "gemini-3.6-flash",         // Priority #2: Ultra-fast 3.6 generation
     "gemini-3.1-pro-preview",   // Advanced reasoning & multimodal analysis
@@ -8135,7 +8136,7 @@ Return ONLY the JSON object. Do not include any conversational text or markdown 
 
         expansionParts.push({ text: instructionPrompt });
 
-        const expModels = ["gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.1-pro-preview"];
+        const expModels = ["gemini-2.5-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.1-pro-preview"];
         let expText = "";
         let lastExpErr: any = null;
         try {
