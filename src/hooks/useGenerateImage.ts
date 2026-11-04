@@ -710,6 +710,7 @@ export const useGenerateImage = (
         logoBase64: finalLogos[0] || "",
         logosList: allLogos.length > 1 ? allLogos.slice(1) : [],
         useLogo: finalLogos.length > 0,
+        logoInclusionType: store.logoInclusionType || "embedded",
         referenciasEstilo: store.referenciasEstilo || [],
         designRefBase64: store.designRefBase64 || "",
         promptTraduzido: masterPrompt,

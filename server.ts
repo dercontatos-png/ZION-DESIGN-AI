@@ -7726,7 +7726,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         logoBase64 = "",
         logosList = [],
         useLogo = false,
-        logoInclusionType = "overlay",
+        logoInclusionType = "embedded",
         logoPosOverlay = "top_center",
         logoSizeOverlay = 20,
         dimensao = "1:1",

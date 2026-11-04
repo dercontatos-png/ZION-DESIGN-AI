@@ -8932,7 +8932,7 @@ CRITICAL DESIGN SYSTEM HIERARCHY RULES FOR PERFECT OUTPUT:
         logoBase64 = "",
         logosList = [],
         useLogo = false,
-        logoInclusionType = "overlay",
+        logoInclusionType = "embedded",
         logoPosOverlay = "top_center",
         logoSizeOverlay = 20,
         dimensao = "1:1",

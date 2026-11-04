@@ -1862,6 +1862,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
           logoBase64: assetImages[0]?.url || assetsPhotoBase64 || "",
           logosList: assetImages.length > 1 ? assetImages.slice(1).map(i => i.url) : [],
           useLogo: !!(assetImages.length > 0 || assetsPhotoBase64),
+          logoInclusionType: "embedded",
           desativarSujeito: /n[aã]o\s*quero\s*pessoa|sem\s*pessoa|no\s*people/i.test(additionalDescription || ""),
           additionalPrompt: additionalDescription?.trim() || "",
           promptTraduzido: [
