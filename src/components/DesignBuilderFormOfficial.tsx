@@ -1024,32 +1024,26 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
                         </button>
                       </span>
                     </label>
-                    <div className="relative group">
+                    <div className="group relative">
                       <textarea
                         id="subject_description"
                         rows={3}
-                        value={poseDescription || ""}
-                        onChange={(e) => {
-                          setPoseDescription(e.target.value);
-                          store.updateConfig({ poseDescription: e.target.value });
-                        }}
                         placeholder="ex: homem de terno azul escuro, olhando confiante para a câmera"
-                        className="w-full rounded-xl border border-white/10 bg-zinc-950/60 p-3 text-sm text-zinc-200 placeholder-zinc-500 transition-all focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
+                        className="w-full rounded-2xl pb-glass-input px-4 py-3 pb-8 text-sm resize-none min-h-[80px] transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                        value={store.poseDescription || ""}
+                        onChange={(e) => store.updateConfig({ poseDescription: e.target.value })}
                       />
                       <button
                         type="button"
                         onClick={() => {
-                          setTempEditorValue(poseDescription || "");
+                          setTempEditorValue(store.poseDescription || "");
                           setExpandedEditor({
                             isOpen: true,
                             fieldId: "subject_description",
                             title: "Descrição do Sujeito",
                             placeholder: "ex: homem de terno azul escuro, olhando confiante para a câmera",
-                            value: poseDescription || "",
-                            onSave: (val) => {
-                              setPoseDescription(val);
-                              store.updateConfig({ poseDescription: val });
-                            }
+                            value: store.poseDescription || "",
+                            onSave: (val) => store.updateConfig({ poseDescription: val })
                           });
                         }}
                         className="absolute bottom-2 right-2 rounded-md p-1 text-zinc-600 transition-all opacity-0 group-hover:opacity-100 focus:opacity-100 hover:bg-white/5 hover:text-zinc-300 disabled:cursor-not-allowed disabled:opacity-0 cursor-pointer"

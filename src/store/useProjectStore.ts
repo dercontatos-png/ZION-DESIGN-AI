@@ -369,8 +369,7 @@ const saveProjectsToLocalStorage = (list: any[]) => {
 
 let _saveProjectsTimer: any = null;
 const debouncedSaveProjectsToLocalStorage = (list: any[]) => {
-  if (_saveProjectsTimer) clearTime
-  out(_saveProjectsTimer);
+  if (_saveProjectsTimer) clearTimeout(_saveProjectsTimer);
   _saveProjectsTimer = setTimeout(() => {
     saveProjectsToLocalStorage(list);
   }, 500);
