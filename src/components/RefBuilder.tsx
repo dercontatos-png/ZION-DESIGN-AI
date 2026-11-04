@@ -272,12 +272,15 @@ export const RefBuilder: React.FC<RefBuilderProps> = ({
   }, [activeTab]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem("zion_ref_tabs_data_v2", JSON.stringify(tabsData));
-      idbSet("zion_ref_tabs_data_idb", tabsData).catch(() => {});
-    } catch (e) {
-      idbSet("zion_ref_tabs_data_idb", tabsData).catch(() => {});
-    }
+    const timer = setTimeout(() => {
+      try {
+        localStorage.setItem("zion_ref_tabs_data_v2", JSON.stringify(tabsData));
+        idbSet("zion_ref_tabs_data_idb", tabsData).catch(() => {});
+      } catch (e) {
+        idbSet("zion_ref_tabs_data_idb", tabsData).catch(() => {});
+      }
+    }, 500);
+    return () => clearTimeout(timer);
   }, [tabsData]);
 
   // Recupera IndexedDB se localStorage estava vazio

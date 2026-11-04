@@ -1,23 +1,10 @@
 [
   {
-    "id": "img_1793795241270_870dp",
+    "id": "img_1793796978431_pulg1",
     "status": "done",
-    "result_url": "/generated-images/img_1793795241270_870dp.png",
-    "thumbnail_url": "/generated-images/img_1793795241270_870dp.png",
-    "created_at": "2026-11-04T12:27:21.308Z",
-    "agent_slug": "design-builder1-2",
-    "dimensions": "4:5",
-    "form_data": {
-      "quality": "4K",
-      "dimensions": "4:5"
-    }
-  },
-  {
-    "id": "img_1793794706817_kjuis",
-    "status": "done",
-    "result_url": "/generated-images/img_1793794706817_kjuis.png",
-    "thumbnail_url": "/generated-images/img_1793794706817_kjuis.png",
-    "created_at": "2026-11-04T12:18:26.820Z",
+    "result_url": "/generated-images/img_1793796978431_pulg1.png",
+    "thumbnail_url": "/generated-images/img_1793796978431_pulg1.png",
+    "created_at": "2026-11-04T12:56:18.438Z",
     "agent_slug": "design-builder1-2",
     "dimensions": "4:5",
     "form_data": {

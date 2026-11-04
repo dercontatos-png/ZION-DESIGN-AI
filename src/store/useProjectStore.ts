@@ -367,6 +367,14 @@ const saveProjectsToLocalStorage = (list: any[]) => {
   }
 };
 
+let _saveProjectsTimer: any = null;
+const debouncedSaveProjectsToLocalStorage = (list: any[]) => {
+  if (_saveProjectsTimer) clearTimeout(_saveProjectsTimer);
+  _saveProjectsTimer = setTimeout(() => {
+    saveProjectsToLocalStorage(list);
+  }, 500);
+};
+
 const getInitialProjectState = (): { list: any[]; activeId: string; activeConfig: Partial<ProjectConfig> } => {
   if (typeof window !== "undefined") {
     try {
@@ -451,7 +459,7 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
       return proj;
     });
 
-    saveProjectsToLocalStorage(updatedProjects);
+    debouncedSaveProjectsToLocalStorage(updatedProjects);
     return { ...updates, activeProjectId: currentId, projectsList: updatedProjects, lastGeneratedPrompt: "" };
   }),
 
@@ -631,7 +639,7 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
       }
       return proj;
     });
-    saveProjectsToLocalStorage(updatedProjects);
+    debouncedSaveProjectsToLocalStorage(updatedProjects);
 
     return { galeriaImages: uniqueImages, projectsList: updatedProjects };
   }),
@@ -702,7 +710,7 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
         }
         return proj;
       });
-      saveProjectsToLocalStorage(updatedProjects);
+      debouncedSaveProjectsToLocalStorage(updatedProjects);
 
       if (isActive) {
         const combined = [...images, ...state.galeriaImages];
@@ -1288,7 +1296,7 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
         return { ...p, galeria: pGal };
       });
 
-      saveProjectsToLocalStorage(updatedProjects);
+      debouncedSaveProjectsToLocalStorage(updatedProjects);
       return {
         galeriaImages: nextImages,
         activeImageIndex: nextIndex,
