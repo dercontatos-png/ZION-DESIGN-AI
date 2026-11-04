@@ -127,7 +127,7 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
     title: "",
     placeholder: "",
     value: "",
-    onSave: () => {}
+    onSave: () => { }
   });
   const [tempEditorValue, setTempEditorValue] = useState("");
 
@@ -584,9 +584,8 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
       ref={asideRef}
       data-aside-form-col=""
       data-tour="form"
-      className={`agent-form-col bg-black relative z-10 shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-white/5 scrollbar-hide scroll-smooth px-1.5 py-3 lg:p-6 transition-[filter,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] w-full lg:h-full lg:w-[var(--agent-form-col-w,420px)] lg:min-w-[280px] lg:max-w-[700px] lg:flex-shrink-0 ${
-        activePalcoMode && activePalcoMode !== "builder" && activePalcoMode !== "home" ? "hidden" : "flex max-lg:order-last max-lg:min-h-0 lg:flex"
-      }`}
+      className={`agent-form-col bg-black relative z-10 shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-white/5 scrollbar-hide scroll-smooth px-1.5 py-3 lg:p-6 transition-[filter,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] w-full lg:h-full lg:w-[var(--agent-form-col-w,420px)] lg:min-w-[280px] lg:max-w-[700px] lg:flex-shrink-0 ${activePalcoMode && activePalcoMode !== "builder" && activePalcoMode !== "home" ? "hidden" : "flex max-lg:order-last max-lg:min-h-0 lg:flex"
+        }`}
       style={{
         "--agent-form-col-w": `${agentColWidth || 420}px`,
         "--agent-color": isOrion ? "#ffd500" : (agentColor || "#8B5CF6"),
@@ -601,553 +600,480 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
       >
         {shouldRenderFormContent && (
           <>
-        {/* ── 1. SUJEITO / PRODUTO ── */}
-        <div id="section-sujeito" data-tour="form-sec-subject" className="scroll-mt-14">
-          <div className="flex flex-col gap-6 lg:gap-12">
+            {/* ── 1. SUJEITO / PRODUTO ── */}
+            <div id="section-sujeito" data-tour="form-sec-subject" className="scroll-mt-14">
+              <div className="flex flex-col gap-6 lg:gap-12">
 
-            {/* Categoria* (Órion Pro) */}
-            {isOrion && (
-              <div data-field-id="categoria" className="flex flex-col gap-2 campo-com-info">
-                <label className="flex items-center gap-1.5 text-sm font-semibold text-white">
-                  <span>Categoria*</span>
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {(["Pessoa", "Produto", "Livre"] as const).map((cat) => {
-                    const isSelected = (store.categoria || "Pessoa") === cat;
-                    return (
-                      <button
-                        key={cat}
-                        type="button"
-                        onClick={() => store.updateConfig({ categoria: cat as any })}
-                        className={`flex h-10 items-center justify-center rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                          isSelected
-                            ? "bg-[#2D2415] border-2 border-[#ffd500] text-[#ffd500] shadow-[0_0_12px_rgba(255,213,0,0.25)]"
-                            : "bg-white/[0.04] border border-white/10 text-zinc-400 hover:text-white hover:bg-white/[0.08]"
-                        }`}
-                      >
-                        {cat}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-            
-            {/* Fotos do Sujeito / Produto */}
-            {isSubjectManagerOpen ? (
-              /* Modo Gerenciar Imagens — Fotos do Sujeito / Produto */
-              <div data-field-id="fotos_do_sujeito_produto" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
-                <div className="flex flex-col gap-2 relative z-30 rounded-xl bg-[#0b0b0f] px-2 py-3 ring-1 ring-violet-500/40" data-image-field-id="fotos_do_sujeito_produto">
-                  <div className="flex min-w-0 items-center justify-between gap-2">
-                    <label className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-white">
-                      <span>Fotos do Sujeito / Produto</span>
+                {/* Categoria* (Órion Pro) */}
+                {isOrion && (
+                  <div data-field-id="categoria" className="flex flex-col gap-2 campo-com-info">
+                    <label className="flex items-center gap-1.5 text-sm font-semibold text-white">
+                      <span>Categoria*</span>
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {(["Pessoa", "Produto", "Livre"] as const).map((cat) => {
+                        const isSelected = (store.categoria || "Pessoa") === cat;
+                        return (
+                          <button
+                            key={cat}
+                            type="button"
+                            onClick={() => store.updateConfig({ categoria: cat as any })}
+                            className={`flex h-10 items-center justify-center rounded-xl text-xs font-bold transition-all cursor-pointer ${isSelected
+                                ? "bg-[#2D2415] border-2 border-[#ffd500] text-[#ffd500] shadow-[0_0_12px_rgba(255,213,0,0.25)]"
+                                : "bg-white/[0.04] border border-white/10 text-zinc-400 hover:text-white hover:bg-white/[0.08]"
+                              }`}
+                          >
+                            {cat}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Fotos do Sujeito / Produto */}
+                {isSubjectManagerOpen ? (
+                  /* Modo Gerenciar Imagens — Fotos do Sujeito / Produto */
+                  <div data-field-id="fotos_do_sujeito_produto" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
+                    <div className="flex flex-col gap-2 relative z-30 rounded-xl bg-[#0b0b0f] px-2 py-3 ring-1 ring-violet-500/40" data-image-field-id="fotos_do_sujeito_produto">
+                      <div className="flex min-w-0 items-center justify-between gap-2">
+                        <label className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-white">
+                          <span>Fotos do Sujeito / Produto</span>
+                          <span className="relative inline-flex items-center">
+                            <button
+                              type="button"
+                              data-field-info=""
+                              aria-label="Mais informações Fotos do Sujeito / Produto"
+                              className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 cursor-pointer"
+                              style={{ color: "rgb(124, 58, 237)" }}
+                            >
+                              <Info className="h-3.5 w-3.5" />
+                            </button>
+                          </span>
+                        </label>
+                      </div>
+
+                      <input
+                        ref={subjectInputRef}
+                        accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+                        multiple
+                        className="hidden"
+                        type="file"
+                        onChange={handleSubjectUpload}
+                      />
+
+                      <div className="flex items-center justify-center w-full" role="group" aria-label="Gerenciar imagens — Fotos do Sujeito / Produto">
+                        <div className="relative flex flex-col bg-[#0b0b0f] w-full">
+                          <div className="flex">
+                            <div className="flex flex-col w-full">
+                              <div className="py-3 px-2">
+                                <button
+                                  type="button"
+                                  onClick={() => subjectInputRef.current?.click()}
+                                  className="sub-area-entra mb-3 w-full rounded-xl border border-dashed px-3 py-5 text-center text-xs transition-colors border-white/15 text-zinc-500 hover:border-violet-500/50 hover:bg-violet-500/[0.05] hover:text-violet-300 cursor-pointer"
+                                  style={{ animationDelay: "0ms" }}
+                                >
+                                  {sujeitoList.length === 0
+                                    ? "Escolha ao lado, ou clique e arraste sua foto aqui"
+                                    : "Clique ou arraste para trazer mais"}
+                                </button>
+
+                                <div className="space-y-2.5" data-testid="lista-de-imagens">
+                                  {sujeitoList.map((imgUrl, i) => (
+                                    <div
+                                      key={i}
+                                      draggable="true"
+                                      className="sub-area-entra rounded-xl border border-white/[0.08] bg-white/[0.02] p-2 transition-opacity"
+                                      style={{ animationDelay: `${(i + 1) * 55}ms` }}
+                                    >
+                                      <div className="flex items-center gap-2.5">
+                                        <GripVertical className="h-4 w-4 shrink-0 cursor-grab text-zinc-600" />
+                                        <button
+                                          type="button"
+                                          aria-label={`Ampliar imagem ${i + 1}`}
+                                          title="Ampliar imagem"
+                                          onClick={() => setPreviewZoomImage(imgUrl)}
+                                          className="relative shrink-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 cursor-pointer"
+                                        >
+                                          <img
+                                            alt={`imagem ${i + 1}`}
+                                            className="h-14 w-14 rounded-lg border border-white/10 object-cover transition-colors hover:border-violet-500/60"
+                                            src={imgUrl}
+                                          />
+                                          <span
+                                            aria-hidden="true"
+                                            className="absolute -left-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-violet-600 text-[9px] font-bold text-white"
+                                          >
+                                            {i + 1}
+                                          </span>
+                                        </button>
+
+                                        <button
+                                          type="button"
+                                          aria-label={`Recortar imagem ${i + 1}`}
+                                          title="Recortar imagem"
+                                          onClick={() => onOpenCropModal && onOpenCropModal(imgUrl, (cUrl) => {
+                                            const next = [...sujeitoList];
+                                            next[i] = cUrl;
+                                            store.setSujeitoBase64List(next);
+                                            store.setSujeitoBase64(next[0]);
+                                          })}
+                                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-violet-500/10 hover:text-violet-300 disabled:opacity-40 cursor-pointer"
+                                        >
+                                          <Crop className="h-3.5 w-3.5" />
+                                        </button>
+
+                                        <div className="flex-1"></div>
+
+                                        <div className="flex shrink-0 items-center gap-1">
+                                          <button
+                                            type="button"
+                                            aria-label={`Remover imagem ${i + 1}`}
+                                            title="Remover"
+                                            onClick={() => handleRemoveSubject(i)}
+                                            className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-red-500/10 hover:text-red-400 cursor-pointer"
+                                          >
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() => setIsSubjectManagerOpen(false)}
+                                  className="sub-area-entra w-full rounded-xl bg-violet-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-violet-600/25 transition-colors hover:bg-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 mt-8 cursor-pointer"
+                                  style={{ animationDelay: `${(sujeitoList.length + 1) * 55}ms` }}
+                                >
+                                  Concluir
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                          <input accept="image/*" multiple className="hidden" type="file" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : sujeitoList.length === 0 ? (
+                  /* Modo Vazio — Fotos do Sujeito / Produto (h-40 grande) */
+                  <div data-field-id="fotos_do_sujeito_produto" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
+                    <div className="flex flex-col gap-3" data-image-field-id="fotos_do_sujeito_produto">
+                      <div className="flex flex-col gap-2" data-image-field-id="fotos_do_sujeito_produto">
+                        <div className="flex min-w-0 items-center justify-between gap-2">
+                          <label className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-white">
+                            <span>Fotos do Sujeito / Produto</span>
+                            <span className="relative inline-flex items-center">
+                              <button
+                                type="button"
+                                data-field-info=""
+                                aria-label="Mais informações Fotos do Sujeito / Produto"
+                                className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 cursor-pointer"
+                                style={{ color: "rgb(124, 58, 237)" }}
+                              >
+                                <Info className="h-3.5 w-3.5" />
+                              </button>
+                            </span>
+                          </label>
+                        </div>
+
+                        <div tabIndex={-1} className="relative flex flex-col outline-none gap-2">
+                          <div
+                            onClick={() => subjectInputRef.current?.click()}
+                            className="flex cursor-pointer items-center justify-center rounded-xl border-2 border-dashed transition-all flex-col gap-1.5 h-40 border-[rgba(139,92,246,0.20)] bg-[rgba(139,92,246,0.03)] hover:border-[rgba(139,92,246,0.38)] hover:bg-[rgba(139,92,246,0.07)]"
+                          >
+                            <div className="flex min-w-0 flex-1 items-center justify-center gap-2">
+                              <span className="font-light text-[#5c5278] text-4xl">+</span>
+                              <span className="truncate text-xs text-[#5c5278]">Clique, arraste ou cole (Ctrl+V)</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <input
+                          ref={subjectInputRef}
+                          accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+                          multiple
+                          className="hidden"
+                          type="file"
+                          onChange={handleSubjectUpload}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  /* Modo Compacto com Fotos e Botão Ajustar Fotos e Cena */
+                  <div data-field-id="fotos_do_sujeito_produto" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
+                    <div className="flex flex-col gap-3" data-image-field-id="fotos_do_sujeito_produto">
+                      <div className="flex flex-col gap-2" data-image-field-id="fotos_do_sujeito_produto">
+                        <div className="flex min-w-0 items-center justify-between gap-2">
+                          <label className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-white">
+                            <span>Fotos do Sujeito / Produto</span>
+                            <span className="relative inline-flex items-center">
+                              <button
+                                type="button"
+                                data-field-info=""
+                                aria-label="Mais informações Fotos do Sujeito / Produto"
+                                className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 cursor-pointer"
+                                style={{ color: "rgb(124, 58, 237)" }}
+                              >
+                                <Info className="h-3.5 w-3.5" />
+                              </button>
+                            </span>
+                          </label>
+                        </div>
+
+                        <div tabIndex={-1} className="relative flex flex-col outline-none gap-2">
+                          <div className="flex flex-wrap gap-2">
+                            {sujeitoList.map((imgUrl, i) => (
+                              <div key={i} className="relative group">
+                                <img
+                                  alt={`imagem ${i + 1}`}
+                                  className="h-20 w-20 rounded-lg object-cover cursor-pointer transition-all"
+                                  src={imgUrl}
+                                  style={{ border: "1px solid rgba(139, 92, 246, 0.22)" }}
+                                  onClick={() => onOpenCropModal && onOpenCropModal(imgUrl, (cUrl) => {
+                                    const next = [...sujeitoList];
+                                    next[i] = cUrl;
+                                    store.setSujeitoBase64List(next);
+                                    store.setSujeitoBase64(next[0]);
+                                  })}
+                                />
+                                <button
+                                  type="button"
+                                  aria-label={`Remover imagem ${i + 1}`}
+                                  title={`Remover imagem ${i + 1}`}
+                                  onClick={() => handleRemoveSubject(i)}
+                                  className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-zinc-800 border border-white/10 text-zinc-300 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 hover:text-white hover:border-red-500 z-10 cursor-pointer"
+                                >
+                                  <span aria-hidden="true">×</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  aria-label={`Recortar imagem ${i + 1}`}
+                                  title={`Recortar imagem ${i + 1}`}
+                                  onClick={() => onOpenCropModal && onOpenCropModal(imgUrl, (cUrl) => {
+                                    const next = [...sujeitoList];
+                                    next[i] = cUrl;
+                                    store.setSujeitoBase64List(next);
+                                    store.setSujeitoBase64(next[0]);
+                                  })}
+                                  className="absolute -top-1.5 -left-1.5 h-5 w-5 rounded-full bg-zinc-800 border border-white/10 text-zinc-300 flex items-center justify-center opacity-0 group-hover:opacity-100 max-lg:opacity-100 transition-opacity hover:bg-violet-600 hover:text-white hover:border-violet-500 z-10 cursor-pointer"
+                                >
+                                  <Crop className="h-2.5 w-2.5" />
+                                </button>
+                              </div>
+                            ))}
+
+                            {/* Add Button */}
+                            <div
+                              onClick={() => subjectInputRef.current?.click()}
+                              className="flex h-20 w-20 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed transition-all border-[rgba(139,92,246,0.20)] bg-[rgba(139,92,246,0.03)] hover:border-[rgba(139,92,246,0.38)] hover:bg-[rgba(139,92,246,0.07)]"
+                            >
+                              <span className="text-2xl font-light leading-none text-[#5c5278]">+</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <input
+                          ref={subjectInputRef}
+                          accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+                          multiple
+                          className="hidden"
+                          type="file"
+                          onChange={handleSubjectUpload}
+                        />
+
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setIsSubjectManagerOpen(true)}
+                            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-[#9d94bb] transition-colors pb-ctrl-btn hover:text-[#f0ecff] cursor-pointer"
+                          >
+                            <SlidersHorizontal className="h-3.5 w-3.5" />
+                            <span>Ajustar fotos e cena</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Quantidade */}
+                <div data-field-id="quantidade" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
+                  <div className="flex flex-col gap-3">
+                    <label className="flex items-center gap-1.5 text-sm font-semibold text-white">
+                      <span>Quantidade</span>
                       <span className="relative inline-flex items-center">
                         <button
                           type="button"
                           data-field-info=""
-                          aria-label="Mais informações Fotos do Sujeito / Produto"
+                          aria-label="Mais informações Quantidade"
+                          aria-expanded="false"
                           className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 cursor-pointer"
                           style={{ color: "rgb(124, 58, 237)" }}
                         >
-                          <Info className="h-3.5 w-3.5" />
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-info h-3.5 w-3.5" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
                         </button>
                       </span>
                     </label>
-                  </div>
-
-                  <input
-                    ref={subjectInputRef}
-                    accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
-                    multiple
-                    className="hidden"
-                    type="file"
-                    onChange={handleSubjectUpload}
-                  />
-
-                  <div className="flex items-center justify-center w-full" role="group" aria-label="Gerenciar imagens — Fotos do Sujeito / Produto">
-                    <div className="relative flex flex-col bg-[#0b0b0f] w-full">
-                      <div className="flex">
-                        <div className="flex flex-col w-full">
-                          <div className="py-3 px-2">
+                    <div role="group" aria-label="Quantidade" className="grid gap-2.5" style={{ gridTemplateColumns: "repeat(5, minmax(0px, 1fr))" }}>
+                      {[1, 2, 3, 4, 5].map((n) => {
+                        const isSelected = quantidade === n;
+                        return (
+                          <div key={n} className="group relative">
                             <button
                               type="button"
-                              onClick={() => subjectInputRef.current?.click()}
-                              className="sub-area-entra mb-3 w-full rounded-xl border border-dashed px-3 py-5 text-center text-xs transition-colors border-white/15 text-zinc-500 hover:border-violet-500/50 hover:bg-violet-500/[0.05] hover:text-violet-300 cursor-pointer"
-                              style={{ animationDelay: "0ms" }}
+                              aria-pressed={isSelected}
+                              onClick={() => {
+                                const next = isSelected ? 0 : n;
+                                setQuantidade(next);
+                                store.updateConfig({ quantidade: next as any });
+                              }}
+                              className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${isSelected ? "pb-ctrl-active text-white" : "text-zinc-200"
+                                }`}
                             >
-                              {sujeitoList.length === 0
-                                ? "Escolha ao lado, ou clique e arraste sua foto aqui"
-                                : "Clique ou arraste para trazer mais"}
-                            </button>
-
-                            <div className="space-y-2.5" data-testid="lista-de-imagens">
-                              {sujeitoList.map((imgUrl, i) => (
-                                <div
-                                  key={i}
-                                  draggable="true"
-                                  className="sub-area-entra rounded-xl border border-white/[0.08] bg-white/[0.02] p-2 transition-opacity"
-                                  style={{ animationDelay: `${(i + 1) * 55}ms` }}
-                                >
-                                  <div className="flex items-center gap-2.5">
-                                    <GripVertical className="h-4 w-4 shrink-0 cursor-grab text-zinc-600" />
-                                    <button
-                                      type="button"
-                                      aria-label={`Ampliar imagem ${i + 1}`}
-                                      title="Ampliar imagem"
-                                      onClick={() => setPreviewZoomImage(imgUrl)}
-                                      className="relative shrink-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 cursor-pointer"
-                                    >
-                                      <img
-                                        alt={`imagem ${i + 1}`}
-                                        className="h-14 w-14 rounded-lg border border-white/10 object-cover transition-colors hover:border-violet-500/60"
-                                        src={imgUrl}
-                                      />
-                                      <span
-                                        aria-hidden="true"
-                                        className="absolute -left-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-violet-600 text-[9px] font-bold text-white"
-                                      >
-                                        {i + 1}
-                                      </span>
-                                    </button>
-
-                                    <button
-                                      type="button"
-                                      aria-label={`Recortar imagem ${i + 1}`}
-                                      title="Recortar imagem"
-                                      onClick={() => onOpenCropModal && onOpenCropModal(imgUrl, (cUrl) => {
-                                        const next = [...sujeitoList];
-                                        next[i] = cUrl;
-                                        store.setSujeitoBase64List(next);
-                                        store.setSujeitoBase64(next[0]);
-                                      })}
-                                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-violet-500/10 hover:text-violet-300 disabled:opacity-40 cursor-pointer"
-                                    >
-                                      <Crop className="h-3.5 w-3.5" />
-                                    </button>
-
-                                    <div className="flex-1"></div>
-
-                                    <div className="flex shrink-0 items-center gap-1">
-                                      <button
-                                        type="button"
-                                        aria-label={`Remover imagem ${i + 1}`}
-                                        title="Remover"
-                                        onClick={() => handleRemoveSubject(i)}
-                                        className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-red-500/10 hover:text-red-400 cursor-pointer"
-                                      >
-                                        <Trash2 className="h-3.5 w-3.5" />
-                                      </button>
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-
-                            <button
-                              type="button"
-                              onClick={() => setIsSubjectManagerOpen(false)}
-                              className="sub-area-entra w-full rounded-xl bg-violet-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-violet-600/25 transition-colors hover:bg-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 mt-8 cursor-pointer"
-                              style={{ animationDelay: `${(sujeitoList.length + 1) * 55}ms` }}
-                            >
-                              Concluir
+                              <span className="font-medium text-sm">{n}</span>
                             </button>
                           </div>
-                        </div>
-                      </div>
-                      <input accept="image/*" multiple className="hidden" type="file" />
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
-              </div>
-            ) : sujeitoList.length === 0 ? (
-              /* Modo Vazio — Fotos do Sujeito / Produto (h-40 grande) */
-              <div data-field-id="fotos_do_sujeito_produto" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
-                <div className="flex flex-col gap-3" data-image-field-id="fotos_do_sujeito_produto">
-                  <div className="flex flex-col gap-2" data-image-field-id="fotos_do_sujeito_produto">
-                    <div className="flex min-w-0 items-center justify-between gap-2">
-                      <label className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-white">
-                        <span>Fotos do Sujeito / Produto</span>
-                        <span className="relative inline-flex items-center">
-                          <button
-                            type="button"
-                            data-field-info=""
-                            aria-label="Mais informações Fotos do Sujeito / Produto"
-                            className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 cursor-pointer"
-                            style={{ color: "rgb(124, 58, 237)" }}
-                          >
-                            <Info className="h-3.5 w-3.5" />
-                          </button>
-                        </span>
-                      </label>
-                    </div>
 
-                    <div tabIndex={-1} className="relative flex flex-col outline-none gap-2">
-                      <div
-                        onClick={() => subjectInputRef.current?.click()}
-                        className="flex cursor-pointer items-center justify-center rounded-xl border-2 border-dashed transition-all flex-col gap-1.5 h-40 border-[rgba(139,92,246,0.20)] bg-[rgba(139,92,246,0.03)] hover:border-[rgba(139,92,246,0.38)] hover:bg-[rgba(139,92,246,0.07)]"
-                      >
-                        <div className="flex min-w-0 flex-1 items-center justify-center gap-2">
-                          <span className="font-light text-[#5c5278] text-4xl">+</span>
-                          <span className="truncate text-xs text-[#5c5278]">Clique, arraste ou cole (Ctrl+V)</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <input
-                      ref={subjectInputRef}
-                      accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
-                      multiple
-                      className="hidden"
-                      type="file"
-                      onChange={handleSubjectUpload}
-                    />
-                  </div>
-                </div>
-              </div>
-            ) : (
-              /* Modo Compacto com Fotos e Botão Ajustar Fotos e Cena */
-              <div data-field-id="fotos_do_sujeito_produto" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
-                <div className="flex flex-col gap-3" data-image-field-id="fotos_do_sujeito_produto">
-                  <div className="flex flex-col gap-2" data-image-field-id="fotos_do_sujeito_produto">
-                    <div className="flex min-w-0 items-center justify-between gap-2">
-                      <label className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-white">
-                        <span>Fotos do Sujeito / Produto</span>
-                        <span className="relative inline-flex items-center">
-                          <button
-                            type="button"
-                            data-field-info=""
-                            aria-label="Mais informações Fotos do Sujeito / Produto"
-                            className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 cursor-pointer"
-                            style={{ color: "rgb(124, 58, 237)" }}
-                          >
-                            <Info className="h-3.5 w-3.5" />
-                          </button>
-                        </span>
-                      </label>
-                    </div>
-
-                    <div tabIndex={-1} className="relative flex flex-col outline-none gap-2">
-                      <div className="flex flex-wrap gap-2">
-                        {sujeitoList.map((imgUrl, i) => (
-                          <div key={i} className="relative group">
-                            <img
-                              alt={`imagem ${i + 1}`}
-                              className="h-20 w-20 rounded-lg object-cover cursor-pointer transition-all"
-                              src={imgUrl}
-                              style={{ border: "1px solid rgba(139, 92, 246, 0.22)" }}
-                              onClick={() => onOpenCropModal && onOpenCropModal(imgUrl, (cUrl) => {
-                                const next = [...sujeitoList];
-                                next[i] = cUrl;
-                                store.setSujeitoBase64List(next);
-                                store.setSujeitoBase64(next[0]);
-                              })}
-                            />
-                            <button
-                              type="button"
-                              aria-label={`Remover imagem ${i + 1}`}
-                              title={`Remover imagem ${i + 1}`}
-                              onClick={() => handleRemoveSubject(i)}
-                              className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-zinc-800 border border-white/10 text-zinc-300 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 hover:text-white hover:border-red-500 z-10 cursor-pointer"
-                            >
-                              <span aria-hidden="true">×</span>
-                            </button>
-                            <button
-                              type="button"
-                              aria-label={`Recortar imagem ${i + 1}`}
-                              title={`Recortar imagem ${i + 1}`}
-                              onClick={() => onOpenCropModal && onOpenCropModal(imgUrl, (cUrl) => {
-                                const next = [...sujeitoList];
-                                next[i] = cUrl;
-                                store.setSujeitoBase64List(next);
-                                store.setSujeitoBase64(next[0]);
-                              })}
-                              className="absolute -top-1.5 -left-1.5 h-5 w-5 rounded-full bg-zinc-800 border border-white/10 text-zinc-300 flex items-center justify-center opacity-0 group-hover:opacity-100 max-lg:opacity-100 transition-opacity hover:bg-violet-600 hover:text-white hover:border-violet-500 z-10 cursor-pointer"
-                            >
-                              <Crop className="h-2.5 w-2.5" />
-                            </button>
-                          </div>
-                        ))}
-
-                        {/* Add Button */}
-                        <div
-                          onClick={() => subjectInputRef.current?.click()}
-                          className="flex h-20 w-20 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed transition-all border-[rgba(139,92,246,0.20)] bg-[rgba(139,92,246,0.03)] hover:border-[rgba(139,92,246,0.38)] hover:bg-[rgba(139,92,246,0.07)]"
+                {/* Gênero */}
+                <div data-field-id="genero" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
+                  <div className="flex flex-col gap-3">
+                    <label className="flex items-center gap-1.5 text-sm font-semibold text-white">
+                      <span>Gênero</span>
+                      <span className="relative inline-flex items-center">
+                        <button
+                          type="button"
+                          data-field-info=""
+                          aria-label="Mais informações Gênero"
+                          aria-expanded="false"
+                          className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 cursor-pointer"
+                          style={{ color: "rgb(124, 58, 237)" }}
                         >
-                          <span className="text-2xl font-light leading-none text-[#5c5278]">+</span>
-                        </div>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-info h-3.5 w-3.5" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+                        </button>
+                      </span>
+                    </label>
+                    <div role="group" aria-label="Gênero" className="grid gap-2.5" style={{ gridTemplateColumns: "repeat(2, minmax(0px, 1fr))" }}>
+                      <div className="group relative">
+                        <button
+                          type="button"
+                          aria-pressed={genero === "Masculino"}
+                          onClick={() => {
+                            const next = genero === "Masculino" ? "" : "Masculino";
+                            setGenero(next as any);
+                            store.updateConfig({ gender: next as any });
+                          }}
+                          className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${genero === "Masculino" ? "pb-ctrl-active text-white" : "text-zinc-200"
+                            }`}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-mars h-5 w-5" aria-hidden="true">
+                            <path d="M16 3h5v5"></path>
+                            <path d="m21 3-6.75 6.75"></path>
+                            <circle cx="10" cy="14" r="6"></circle>
+                          </svg>
+                          <span className="font-medium text-sm">Masculino</span>
+                        </button>
+                      </div>
+                      <div className="group relative">
+                        <button
+                          type="button"
+                          aria-pressed={genero === "Feminino"}
+                          onClick={() => {
+                            const next = genero === "Feminino" ? "" : "Feminino";
+                            setGenero(next as any);
+                            store.updateConfig({ gender: next as any });
+                          }}
+                          className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${genero === "Feminino" ? "pb-ctrl-active text-white" : "text-zinc-200"
+                            }`}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-venus h-5 w-5" aria-hidden="true">
+                            <path d="M12 15v7"></path>
+                            <path d="M9 19h6"></path>
+                            <circle cx="12" cy="9" r="6"></circle>
+                          </svg>
+                          <span className="font-medium text-sm">Feminino</span>
+                        </button>
                       </div>
                     </div>
+                  </div>
+                </div>
 
-                    <input
-                      ref={subjectInputRef}
-                      accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
-                      multiple
-                      className="hidden"
-                      type="file"
-                      onChange={handleSubjectUpload}
-                    />
-
-                    <div className="flex flex-wrap items-center gap-2">
+                {/* Descrição do Sujeito */}
+                <div data-field-id="subject_description" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
+                  <div className="flex flex-col gap-2">
+                    <label htmlFor="subject_description" className="flex items-center gap-1.5 text-sm font-semibold text-white">
+                      <span>Descrição do Sujeito</span>
+                      <span className="relative inline-flex items-center">
+                        <button
+                          type="button"
+                          data-field-info=""
+                          aria-label="Mais informações Descrição do Sujeito"
+                          aria-expanded="false"
+                          className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 cursor-pointer"
+                          style={{ color: "rgb(124, 58, 237)" }}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-info h-3.5 w-3.5" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+                        </button>
+                      </span>
+                    </label>
+                    <div className="relative group">
+                      <textarea
+                        id="subject_description"
+                        rows={3}
+                        value={poseDescription || ""}
+                        onChange={(e) => {
+                          setPoseDescription(e.target.value);
+                          store.updateConfig({ poseDescription: e.target.value });
+                        }}
+                        placeholder="ex: homem de terno azul escuro, olhando confiante para a câmera"
+                        className="w-full rounded-xl border border-white/10 bg-zinc-950/60 p-3 text-sm text-zinc-200 placeholder-zinc-500 transition-all focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
+                      />
                       <button
                         type="button"
-                        onClick={() => setIsSubjectManagerOpen(true)}
-                        className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-[#9d94bb] transition-colors pb-ctrl-btn hover:text-[#f0ecff] cursor-pointer"
+                        onClick={() => {
+                          setTempEditorValue(poseDescription || "");
+                          setExpandedEditor({
+                            isOpen: true,
+                            fieldId: "subject_description",
+                            title: "Descrição do Sujeito",
+                            placeholder: "ex: homem de terno azul escuro, olhando confiante para a câmera",
+                            value: poseDescription || "",
+                            onSave: (val) => {
+                              setPoseDescription(val);
+                              store.updateConfig({ poseDescription: val });
+                            }
+                          });
+                        }}
+                        className="absolute bottom-2 right-2 rounded-md p-1 text-zinc-600 transition-all opacity-0 group-hover:opacity-100 focus:opacity-100 hover:bg-white/5 hover:text-zinc-300 disabled:cursor-not-allowed disabled:opacity-0 cursor-pointer"
+                        title="Expandir editor"
+                        aria-haspopup="dialog"
+                        aria-expanded={expandedEditor.isOpen && expandedEditor.fieldId === "subject_description"}
+                        data-state={expandedEditor.isOpen && expandedEditor.fieldId === "subject_description" ? "open" : "closed"}
                       >
-                        <SlidersHorizontal className="h-3.5 w-3.5" />
-                        <span>Ajustar fotos e cena</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-maximize2 lucide-maximize-2 h-3.5 w-3.5" aria-hidden="true"><path d="M15 3h6v6"></path><path d="m21 3-7 7"></path><path d="m3 21 7-7"></path><path d="M9 21H3v-6"></path></svg>
                       </button>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
 
-            {/* Quantidade */}
-            <div data-field-id="quantidade" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
-              <div className="flex flex-col gap-3">
-                <label className="flex items-center gap-1.5 text-sm font-semibold text-white">
-                  <span>Quantidade</span>
-                  <span className="relative inline-flex items-center">
-                    <button
-                      type="button"
-                      data-field-info=""
-                      aria-label="Mais informações Quantidade"
-                      aria-expanded="false"
-                      className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 cursor-pointer"
-                      style={{ color: "rgb(124, 58, 237)" }}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-info h-3.5 w-3.5" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
-                    </button>
-                  </span>
-                </label>
-                <div role="group" aria-label="Quantidade" className="grid gap-2.5" style={{ gridTemplateColumns: "repeat(5, minmax(0px, 1fr))" }}>
-                  {[1, 2, 3, 4, 5].map((n) => {
-                    const isSelected = quantidade === n;
-                    return (
-                      <div key={n} className="group relative">
-                        <button
-                          type="button"
-                          aria-pressed={isSelected}
-                          onClick={() => {
-                            const next = isSelected ? 0 : n;
-                            setQuantidade(next);
-                            store.updateConfig({ quantidade: next as any });
-                          }}
-                          className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${
-                            isSelected ? "pb-ctrl-active text-white" : "text-zinc-200"
-                          }`}
-                        >
-                          <span className="font-medium text-sm">{n}</span>
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* Gênero */}
-            <div data-field-id="genero" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
-              <div className="flex flex-col gap-3">
-                <label className="flex items-center gap-1.5 text-sm font-semibold text-white">
-                  <span>Gênero</span>
-                  <span className="relative inline-flex items-center">
-                    <button
-                      type="button"
-                      data-field-info=""
-                      aria-label="Mais informações Gênero"
-                      aria-expanded="false"
-                      className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 cursor-pointer"
-                      style={{ color: "rgb(124, 58, 237)" }}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-info h-3.5 w-3.5" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
-                    </button>
-                  </span>
-                </label>
-                <div role="group" aria-label="Gênero" className="grid gap-2.5" style={{ gridTemplateColumns: "repeat(2, minmax(0px, 1fr))" }}>
-                  <div className="group relative">
-                    <button
-                      type="button"
-                      aria-pressed={genero === "Masculino"}
-                      onClick={() => {
-                        const next = genero === "Masculino" ? "" : "Masculino";
-                        setGenero(next as any);
-                        store.updateConfig({ gender: next as any });
-                      }}
-                      className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${
-                        genero === "Masculino" ? "pb-ctrl-active text-white" : "text-zinc-200"
-                      }`}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-mars h-5 w-5" aria-hidden="true">
-                        <path d="M16 3h5v5"></path>
-                        <path d="m21 3-6.75 6.75"></path>
-                        <circle cx="10" cy="14" r="6"></circle>
-                      </svg>
-                      <span className="font-medium text-sm">Masculino</span>
-                    </button>
-                  </div>
-                  <div className="group relative">
-                    <button
-                      type="button"
-                      aria-pressed={genero === "Feminino"}
-                      onClick={() => {
-                        const next = genero === "Feminino" ? "" : "Feminino";
-                        setGenero(next as any);
-                        store.updateConfig({ gender: next as any });
-                      }}
-                      className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${
-                        genero === "Feminino" ? "pb-ctrl-active text-white" : "text-zinc-200"
-                      }`}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-venus h-5 w-5" aria-hidden="true">
-                        <path d="M12 15v7"></path>
-                        <path d="M9 19h6"></path>
-                        <circle cx="12" cy="9" r="6"></circle>
-                      </svg>
-                      <span className="font-medium text-sm">Feminino</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Descrição do Sujeito */}
-            <div data-field-id="subject_description" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
-              <div className="flex flex-col gap-2">
-                <label htmlFor="subject_description" className="flex items-center gap-1.5 text-sm font-semibold text-white">
-                  <span>Descrição do Sujeito</span>
-                  <span className="relative inline-flex items-center">
-                    <button
-                      type="button"
-                      data-field-info=""
-                      aria-label="Mais informações Descrição do Sujeito"
-                      aria-expanded="false"
-                      className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 cursor-pointer"
-                      style={{ color: "rgb(124, 58, 237)" }}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-info h-3.5 w-3.5" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
-                    </button>
-                  </span>
-                </label>
-                <div className="group relative">
-                  <textarea
-                    id="subject_description"
-                    rows={2}
-                    placeholder="Descreva a aparência, roupas, pose ou detalhes do produto..."
-                    className="w-full rounded-2xl pb-glass-input px-4 py-3 pb-8 text-sm resize-none min-h-[80px] transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-                    value={store.poseDescription || ""}
-                    onChange={(e) => store.updateConfig({ poseDescription: e.target.value })}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setTempEditorValue(store.poseDescription || "");
-                      setExpandedEditor({
-                        isOpen: true,
-                        fieldId: "subject_description",
-                        title: "Descrição do Sujeito",
-                        placeholder: "Descreva a aparência, roupas, pose ou detalhes do produto...",
-                        value: store.poseDescription || "",
-                        onSave: (val) => store.updateConfig({ poseDescription: val })
-                      });
-                    }}
-                    className="absolute bottom-2 right-2 rounded-md p-1 text-zinc-600 transition-all opacity-0 group-hover:opacity-100 focus:opacity-100 hover:bg-white/5 hover:text-zinc-300 disabled:cursor-not-allowed disabled:opacity-0 cursor-pointer"
-                    title="Expandir editor"
-                    aria-haspopup="dialog"
-                    aria-expanded={expandedEditor.isOpen && expandedEditor.fieldId === "subject_description"}
-                    data-state={expandedEditor.isOpen && expandedEditor.fieldId === "subject_description" ? "open" : "closed"}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-maximize2 lucide-maximize-2 h-3.5 w-3.5" aria-hidden="true"><path d="M15 3h6v6"></path><path d="m21 3-7 7"></path><path d="m3 21 7-7"></path><path d="M9 21H3v-6"></path></svg>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Posição do Sujeito */}
-            <div data-field-id="subject_position" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
-              <div className="flex flex-col gap-3">
-                <label className="flex items-center gap-1.5 text-sm font-semibold text-white">
-                  <span>Posição do Sujeito</span>
-                  <span className="relative inline-flex items-center">
-                    <button
-                      type="button"
-                      data-field-info=""
-                      aria-label="Mais informações Posição do Sujeito"
-                      aria-expanded="false"
-                      className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 cursor-pointer"
-                      style={{ color: "rgb(124, 58, 237)" }}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-info h-3.5 w-3.5" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
-                    </button>
-                  </span>
-                </label>
-                <div role="group" aria-label="Posição do Sujeito" className="grid gap-2.5" style={{ gridTemplateColumns: "repeat(3, minmax(0px, 1fr))" }}>
-                  <div className="group relative">
-                    <button
-                      type="button"
-                      aria-pressed={subjectPos === "Esquerda"}
-                      onClick={() => {
-                        const next = subjectPos === "Esquerda" ? ("" as any) : "Esquerda";
-                        setSubjectPos(next);
-                        store.updateConfig({ positioning: next });
-                      }}
-                      className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${
-                        subjectPos === "Esquerda" ? "pb-ctrl-active text-white" : "text-zinc-200"
-                      }`}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-text-align-start h-5 w-5" aria-hidden="true"><path d="M21 5H3"></path><path d="M15 12H3"></path><path d="M17 19H3"></path></svg>
-                      <span className="font-medium text-sm">Esquerda</span>
-                    </button>
-                  </div>
-                  <div className="group relative">
-                    <button
-                      type="button"
-                      aria-pressed={subjectPos === "Centro"}
-                      onClick={() => {
-                        const next = subjectPos === "Centro" ? ("" as any) : "Centro";
-                        setSubjectPos(next);
-                        store.updateConfig({ positioning: next });
-                      }}
-                      className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${
-                        subjectPos === "Centro" ? "pb-ctrl-active text-white" : "text-zinc-200"
-                      }`}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-text-align-center h-5 w-5" aria-hidden="true"><path d="M21 5H3"></path><path d="M17 12H7"></path><path d="M19 19H5"></path></svg>
-                      <span className="font-medium text-sm">Centro</span>
-                    </button>
-                  </div>
-                  <div className="group relative">
-                    <button
-                      type="button"
-                      aria-pressed={subjectPos === "Direita"}
-                      onClick={() => {
-                        const next = subjectPos === "Direita" ? ("" as any) : "Direita";
-                        setSubjectPos(next);
-                        store.updateConfig({ positioning: next });
-                      }}
-                      className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${
-                        subjectPos === "Direita" ? "pb-ctrl-active text-white" : "text-zinc-200"
-                      }`}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-text-align-end h-5 w-5" aria-hidden="true"><path d="M21 5H3"></path><path d="M21 12H9"></path><path d="M21 19H7"></path></svg>
-                      <span className="font-medium text-sm">Direita</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Dimensões */}
-            <div data-field-id="dimensions" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
-              <div className="flex flex-col gap-2.5">
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-semibold text-white text-sm">Dimensões</span>
+              {/* Posição do Sujeito */}
+              <div data-field-id="subject_position" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
+                <div className="flex flex-col gap-3">
+                  <label className="flex items-center gap-1.5 text-sm font-semibold text-white">
+                    <span>Posição do Sujeito</span>
                     <span className="relative inline-flex items-center">
                       <button
                         type="button"
                         data-field-info=""
-                        aria-label="Mais informações Dimensões"
+                        aria-label="Mais informações Posição do Sujeito"
                         aria-expanded="false"
                         className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 cursor-pointer"
                         style={{ color: "rgb(124, 58, 237)" }}
@@ -1155,145 +1081,215 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-info h-3.5 w-3.5" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
                       </button>
                     </span>
+                  </label>
+                  <div role="group" aria-label="Posição do Sujeito" className="grid gap-2.5" style={{ gridTemplateColumns: "repeat(3, minmax(0px, 1fr))" }}>
+                    <div className="group relative">
+                      <button
+                        type="button"
+                        aria-pressed={subjectPos === "Esquerda"}
+                        onClick={() => {
+                          const next = subjectPos === "Esquerda" ? ("" as any) : "Esquerda";
+                          setSubjectPos(next);
+                          store.updateConfig({ positioning: next });
+                        }}
+                        className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${subjectPos === "Esquerda" ? "pb-ctrl-active text-white" : "text-zinc-200"
+                          }`}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-text-align-start h-5 w-5" aria-hidden="true"><path d="M21 5H3"></path><path d="M15 12H3"></path><path d="M17 19H3"></path></svg>
+                        <span className="font-medium text-sm">Esquerda</span>
+                      </button>
+                    </div>
+                    <div className="group relative">
+                      <button
+                        type="button"
+                        aria-pressed={subjectPos === "Centro"}
+                        onClick={() => {
+                          const next = subjectPos === "Centro" ? ("" as any) : "Centro";
+                          setSubjectPos(next);
+                          store.updateConfig({ positioning: next });
+                        }}
+                        className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${subjectPos === "Centro" ? "pb-ctrl-active text-white" : "text-zinc-200"
+                          }`}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-text-align-center h-5 w-5" aria-hidden="true"><path d="M21 5H3"></path><path d="M17 12H7"></path><path d="M19 19H5"></path></svg>
+                        <span className="font-medium text-sm">Centro</span>
+                      </button>
+                    </div>
+                    <div className="group relative">
+                      <button
+                        type="button"
+                        aria-pressed={subjectPos === "Direita"}
+                        onClick={() => {
+                          const next = subjectPos === "Direita" ? ("" as any) : "Direita";
+                          setSubjectPos(next);
+                          store.updateConfig({ positioning: next });
+                        }}
+                        className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${subjectPos === "Direita" ? "pb-ctrl-active text-white" : "text-zinc-200"
+                          }`}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-text-align-end h-5 w-5" aria-hidden="true"><path d="M21 5H3"></path><path d="M21 12H9"></path><path d="M21 19H7"></path></svg>
+                        <span className="font-medium text-sm">Direita</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-[1fr_auto] gap-3 items-stretch">
-                  <div role="group" aria-label="Dimensões" className="flex flex-col gap-1.5">
+              </div>
+
+              {/* Dimensões */}
+              <div data-field-id="dimensions" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
+                <div className="flex flex-col gap-2.5">
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-semibold text-white text-sm">Dimensões</span>
+                      <span className="relative inline-flex items-center">
+                        <button
+                          type="button"
+                          data-field-info=""
+                          aria-label="Mais informações Dimensões"
+                          aria-expanded="false"
+                          className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 cursor-pointer"
+                          style={{ color: "rgb(124, 58, 237)" }}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-info h-3.5 w-3.5" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+                        </button>
+                      </span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-[1fr_auto] gap-3 items-stretch">
+                    <div role="group" aria-label="Dimensões" className="flex flex-col gap-1.5">
+                      {[
+                        { label: "Stories", ratio: "9:16" },
+                        { label: "Feed Vertical", ratio: "4:5" },
+                        { label: "Feed", ratio: "1:1" },
+                        { label: "Cinema", ratio: "16:9" }
+                      ].map((d) => {
+                        const isSelected = (store.dimensao === d.ratio) || (!store.dimensao && d.ratio === "4:5");
+                        return (
+                          <button
+                            key={d.ratio}
+                            type="button"
+                            aria-pressed={isSelected}
+                            onClick={() => store.updateConfig({ dimensao: d.ratio as any })}
+                            className={`group flex items-center gap-2 rounded-xl px-3 py-2 transition-all pb-ctrl-btn cursor-pointer ${isSelected ? "pb-ctrl-active text-white" : ""
+                              }`}
+                          >
+                            <span className={`text-[12px] font-semibold transition-colors ${isSelected ? "text-white" : "text-zinc-200 group-hover:text-white"}`}>
+                              {d.label}
+                            </span>
+                            <span
+                              className={`rounded-md px-1.5 py-0.5 text-[9px] font-bold tabular-nums tracking-wide transition-colors ${isSelected ? "text-white/80" : "text-zinc-300"
+                                }`}
+                              style={{ backgroundColor: isSelected ? "rgba(139, 92, 246, 0.133)" : "rgba(255, 255, 255, 0.04)" }}
+                            >
+                              {d.ratio}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Dynamic aspect ratio preview */}
+                    <div aria-hidden="true" className="hidden sm:flex h-[170px] w-[120px] items-center justify-center rounded-xl pb-ctrl-btn p-2">
+                      <div
+                        className="rounded-md transition-all duration-300"
+                        style={{
+                          width: "92%",
+                          maxHeight: "92%",
+                          aspectRatio: (store.dimensao || "4:5").replace(":", " / "),
+                          background: "linear-gradient(rgba(139, 92, 246, 0.19), rgba(139, 92, 246, 0.063))",
+                          border: "1.5px solid rgba(139, 92, 246, 0.333)",
+                          boxShadow: "rgba(139, 92, 246, 0.133) 0px 0px 16px inset",
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Qualidade de Renderização */}
+              <div data-field-id="quality" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
+                <div className="flex flex-col gap-2.5">
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-semibold text-white text-sm">Qualidade de Renderização</span>
+                      <span className="relative inline-flex items-center">
+                        <button
+                          type="button"
+                          data-field-info=""
+                          aria-label="Mais informações Qualidade de Renderização"
+                          aria-expanded="false"
+                          className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 cursor-pointer"
+                          style={{ color: "rgb(124, 58, 237)" }}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-info h-3.5 w-3.5" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+                        </button>
+                      </span>
+                      <div className="ml-auto text-[10px] tabular-nums text-white/60">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider"
+                            style={{
+                              backgroundColor: "rgba(139, 92, 246, 0.12)",
+                              color: "rgb(139, 92, 246)",
+                              border: "1px solid rgba(139, 92, 246, 0.2)"
+                            }}
+                          >
+                            {store.qualidade === "1K" ? "NORMAL" : store.qualidade === "2K" ? "ALTA" : "MÁXIMA"}
+                          </span>
+                          <span className="text-[10px] tabular-nums text-zinc-500">
+                            {store.qualidade === "1K" ? "1024×1280" : store.qualidade === "2K" ? "2048×2560" : "3712×4608"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div role="group" aria-label="Qualidade de Renderização" className="grid gap-2" style={{ gridTemplateColumns: "repeat(3, minmax(0px, 1fr))" }}>
                     {[
-                      { label: "Stories", ratio: "9:16" },
-                      { label: "Feed Vertical", ratio: "4:5" },
-                      { label: "Feed", ratio: "1:1" },
-                      { label: "Cinema", ratio: "16:9" }
-                    ].map((d) => {
-                      const isSelected = (store.dimensao === d.ratio) || (!store.dimensao && d.ratio === "4:5");
+                      { q: "1K", speed: "Rápido" },
+                      { q: "2K", speed: "Médio" },
+                      { q: "4K", speed: "Lento" }
+                    ].map(({ q, speed }) => {
+                      const isSelected = (store.qualidade === q) || (!store.qualidade && q === "1K");
                       return (
                         <button
-                          key={d.ratio}
+                          key={q}
                           type="button"
                           aria-pressed={isSelected}
-                          onClick={() => store.updateConfig({ dimensao: d.ratio as any })}
-                          className={`group flex items-center gap-2 rounded-xl px-3 py-2 transition-all pb-ctrl-btn cursor-pointer ${
-                            isSelected ? "pb-ctrl-active text-white" : ""
-                          }`}
+                          onClick={() => store.updateConfig({ qualidade: q as any, resolucao: q as any })}
+                          className="group flex items-center justify-center rounded-xl px-2 transition-all duration-200 cursor-pointer flex-col gap-1.5 py-3"
+                          style={
+                            isSelected
+                              ? {
+                                background: "linear-gradient(rgba(30, 16, 70, 0.6), rgba(20, 10, 50, 0.7)) padding-box padding-box, linear-gradient(135deg, rgba(139, 92, 246, 0.447), rgba(139, 92, 246, 0.12) 50%, rgba(139, 92, 246, 0.28)) border-box border-box",
+                                border: "1px solid transparent",
+                                boxShadow: "rgba(139, 92, 246, 0.19) 0px 0px 12px, rgba(139, 92, 246, 0.07) 0px 0px 28px"
+                              }
+                              : {
+                                background: "linear-gradient(rgba(16, 10, 40, 0.4), rgba(10, 7, 28, 0.5)) padding-box padding-box, linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(139, 92, 246, 0.027)) border-box border-box",
+                                border: "1px solid transparent"
+                              }
+                          }
                         >
-                          <span className={`text-[12px] font-semibold transition-colors ${isSelected ? "text-white" : "text-zinc-200 group-hover:text-white"}`}>
-                            {d.label}
+                          <span className="text-base font-bold leading-none tracking-tight transition-colors" style={{ color: isSelected ? "rgb(255, 255, 255)" : "rgb(161, 161, 170)" }}>
+                            {q}
                           </span>
-                          <span
-                            className={`rounded-md px-1.5 py-0.5 text-[9px] font-bold tabular-nums tracking-wide transition-colors ${
-                              isSelected ? "text-white/80" : "text-zinc-300"
-                            }`}
-                            style={{ backgroundColor: isSelected ? "rgba(139, 92, 246, 0.133)" : "rgba(255, 255, 255, 0.04)" }}
-                          >
-                            {d.ratio}
+                          <span className="font-medium uppercase tracking-[0.05em] transition-colors text-[10px]" style={{ color: isSelected ? "rgb(255, 255, 255)" : "rgb(161, 161, 170)" }}>
+                            {speed}
                           </span>
                         </button>
                       );
                     })}
                   </div>
-                  
-                  {/* Dynamic aspect ratio preview */}
-                  <div aria-hidden="true" className="hidden sm:flex h-[170px] w-[120px] items-center justify-center rounded-xl pb-ctrl-btn p-2">
-                    <div
-                      className="rounded-md transition-all duration-300"
-                      style={{
-                        width: "92%",
-                        maxHeight: "92%",
-                        aspectRatio: (store.dimensao || "4:5").replace(":", " / "),
-                        background: "linear-gradient(rgba(139, 92, 246, 0.19), rgba(139, 92, 246, 0.063))",
-                        border: "1.5px solid rgba(139, 92, 246, 0.333)",
-                        boxShadow: "rgba(139, 92, 246, 0.133) 0px 0px 16px inset",
-                      }}
-                    />
-                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Qualidade de Renderização */}
-            <div data-field-id="quality" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
-              <div className="flex flex-col gap-2.5">
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-semibold text-white text-sm">Qualidade de Renderização</span>
-                    <span className="relative inline-flex items-center">
-                      <button
-                        type="button"
-                        data-field-info=""
-                        aria-label="Mais informações Qualidade de Renderização"
-                        aria-expanded="false"
-                        className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 cursor-pointer"
-                        style={{ color: "rgb(124, 58, 237)" }}
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-info h-3.5 w-3.5" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
-                      </button>
-                    </span>
-                    <div className="ml-auto text-[10px] tabular-nums text-white/60">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider"
-                          style={{
-                            backgroundColor: "rgba(139, 92, 246, 0.12)",
-                            color: "rgb(139, 92, 246)",
-                            border: "1px solid rgba(139, 92, 246, 0.2)"
-                          }}
-                        >
-                          {store.qualidade === "1K" ? "NORMAL" : store.qualidade === "2K" ? "ALTA" : "MÁXIMA"}
-                        </span>
-                        <span className="text-[10px] tabular-nums text-zinc-500">
-                          {store.qualidade === "1K" ? "1024×1280" : store.qualidade === "2K" ? "2048×2560" : "3712×4608"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div role="group" aria-label="Qualidade de Renderização" className="grid gap-2" style={{ gridTemplateColumns: "repeat(3, minmax(0px, 1fr))" }}>
-                  {[
-                    { q: "1K", speed: "Rápido" },
-                    { q: "2K", speed: "Médio" },
-                    { q: "4K", speed: "Lento" }
-                  ].map(({ q, speed }) => {
-                    const isSelected = (store.qualidade === q) || (!store.qualidade && q === "1K");
-                    return (
-                      <button
-                        key={q}
-                        type="button"
-                        aria-pressed={isSelected}
-                        onClick={() => store.updateConfig({ qualidade: q as any, resolucao: q as any })}
-                        className="group flex items-center justify-center rounded-xl px-2 transition-all duration-200 cursor-pointer flex-col gap-1.5 py-3"
-                        style={
-                          isSelected
-                            ? {
-                                background: "linear-gradient(rgba(30, 16, 70, 0.6), rgba(20, 10, 50, 0.7)) padding-box padding-box, linear-gradient(135deg, rgba(139, 92, 246, 0.447), rgba(139, 92, 246, 0.12) 50%, rgba(139, 92, 246, 0.28)) border-box border-box",
-                                border: "1px solid transparent",
-                                boxShadow: "rgba(139, 92, 246, 0.19) 0px 0px 12px, rgba(139, 92, 246, 0.07) 0px 0px 28px"
-                              }
-                            : {
-                                background: "linear-gradient(rgba(16, 10, 40, 0.4), rgba(10, 7, 28, 0.5)) padding-box padding-box, linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(139, 92, 246, 0.027)) border-box border-box",
-                                border: "1px solid transparent"
-                              }
-                        }
-                      >
-                        <span className="text-base font-bold leading-none tracking-tight transition-colors" style={{ color: isSelected ? "rgb(255, 255, 255)" : "rgb(161, 161, 170)" }}>
-                          {q}
-                        </span>
-                        <span className="font-medium uppercase tracking-[0.05em] transition-colors text-[10px]" style={{ color: isSelected ? "rgb(255, 255, 255)" : "rgb(161, 161, 170)" }}>
-                          {speed}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
             </div>
-
           </div>
-        </div>
 
         {/* ── 2. CENÁRIO / CONTEXTO ── */}
         <div id="section-cenario" data-section-alias="contexto" data-tour="form-sec-context" className="scroll-mt-14">
           <div className="flex flex-col gap-6 lg:gap-12">
-            
+
             {/* Nicho/Projeto */}
             <div data-field-id="nicho_projeto" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
               <div className="flex flex-col gap-3">
@@ -1500,7 +1496,7 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
         {/* ── 3. TEXTOS DA IMAGEM ── */}
         <div id="section-texto" data-tour="form-sec-step_1773771934403_6" className="scroll-mt-14">
           <div className="flex flex-col gap-6 lg:gap-12">
-            
+
             {/* Textos da Imagem */}
             <div data-field-id="text_blocks" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
               <div className="flex flex-col gap-3">
@@ -1537,9 +1533,8 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
                         type="button"
                         aria-label={`Adicionar ${type}`}
                         onClick={() => addTextBlock(type)}
-                        className={`group/card relative flex flex-col items-center gap-2 rounded-xl px-3 py-3.5 text-center transition-all pb-ctrl-btn cursor-pointer ${
-                          count > 0 ? "pb-ctrl-active" : ""
-                        }`}
+                        className={`group/card relative flex flex-col items-center gap-2 rounded-xl px-3 py-3.5 text-center transition-all pb-ctrl-btn cursor-pointer ${count > 0 ? "pb-ctrl-active" : ""
+                          }`}
                       >
                         {count > 0 && (
                           <span className={`absolute -top-1.5 -right-1.5 flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[10px] font-bold leading-none ring-2 ring-zinc-900 ${badgeBg} ${colorText}`}>
@@ -1648,9 +1643,8 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
                                   type="button"
                                   aria-label={`Definir peso ${w}`}
                                   onClick={() => updateTextBlock(blk.id, { weight: w })}
-                                  className={`w-[4px] max-lg:w-2.5 rounded-full transition-all hover:opacity-80 max-lg:py-1.5 max-lg:box-content cursor-pointer ${
-                                    w <= blk.weight ? typeColors.bar : "bg-white/10"
-                                  }`}
+                                  className={`w-[4px] max-lg:w-2.5 rounded-full transition-all hover:opacity-80 max-lg:py-1.5 max-lg:box-content cursor-pointer ${w <= blk.weight ? typeColors.bar : "bg-white/10"
+                                    }`}
                                   style={{ height: `${8 + w * 2}px` }}
                                 />
                               ))}
@@ -1666,11 +1660,10 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
                                     type="button"
                                     title={`Alinhar bloco à ${pos}`}
                                     onClick={() => updateTextBlock(blk.id, { posicao: pos })}
-                                    className={`px-1.5 py-0.5 text-[8px] rounded transition-all cursor-pointer ${
-                                      isSel
+                                    className={`px-1.5 py-0.5 text-[8px] rounded transition-all cursor-pointer ${isSel
                                         ? "bg-violet-500/30 text-violet-200 border border-violet-500/50 font-bold"
                                         : "bg-white/5 text-[#5c5278] hover:bg-white/10 hover:text-zinc-300"
-                                    }`}
+                                      }`}
                                   >
                                     {pos === "Esquerda" ? "Esq" : pos === "Centro" ? "Cen" : "Dir"}
                                   </button>
@@ -1773,9 +1766,8 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
                           store.updateConfig({ positioning: "Direita" });
                         }
                       }}
-                      className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${
-                        posicaoTexto === "Esquerda" ? "pb-ctrl-active text-white" : "text-zinc-200"
-                      }`}
+                      className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${posicaoTexto === "Esquerda" ? "pb-ctrl-active text-white" : "text-zinc-200"
+                        }`}
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-text-align-start h-5 w-5" aria-hidden="true"><path d="M21 5H3"></path><path d="M15 12H3"></path><path d="M17 19H3"></path></svg>
                       <span className="font-medium text-sm">Esquerda</span>
@@ -1803,9 +1795,8 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
                         setPosicaoTexto("Centro");
                         setTextBlocks(prev => prev.map(b => ({ ...b, posicao: "Centro" })));
                       }}
-                      className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${
-                        posicaoTexto === "Centro" ? "pb-ctrl-active text-white" : "text-zinc-200"
-                      }`}
+                      className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${posicaoTexto === "Centro" ? "pb-ctrl-active text-white" : "text-zinc-200"
+                        }`}
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-text-align-center h-5 w-5" aria-hidden="true"><path d="M21 5H3"></path><path d="M17 12H7"></path><path d="M19 19H5"></path></svg>
                       <span className="font-medium text-sm">Centro</span>
@@ -1837,9 +1828,8 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
                           store.updateConfig({ positioning: "Esquerda" });
                         }
                       }}
-                      className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${
-                        posicaoTexto === "Direita" ? "pb-ctrl-active text-white" : "text-zinc-200"
-                      }`}
+                      className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${posicaoTexto === "Direita" ? "pb-ctrl-active text-white" : "text-zinc-200"
+                        }`}
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-text-align-end h-5 w-5" aria-hidden="true"><path d="M21 5H3"></path><path d="M21 12H9"></path><path d="M21 19H7"></path></svg>
                       <span className="font-medium text-sm">Direita</span>
@@ -1899,11 +1889,10 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
                         color: ambientColor,
                         onSelect: (c) => { setAmbientColor(c); if (!ambientColorActive) setAmbientColorActive(true); }
                       })}
-                      className={`group relative flex flex-col rounded-2xl overflow-hidden border transition-all duration-200 select-none cursor-pointer ${
-                        ambientColorActive
+                      className={`group relative flex flex-col rounded-2xl overflow-hidden border transition-all duration-200 select-none cursor-pointer ${ambientColorActive
                           ? "border-white/25 shadow-lg ring-1 ring-white/10"
                           : "border-white/10 opacity-50"
-                      }`}
+                        }`}
                     >
                       <div
                         className="relative h-16 w-full flex items-center justify-center transition-all duration-300"
@@ -1961,11 +1950,10 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
                         color: compLight,
                         onSelect: (c) => { setCompLight(c); if (!compLightActive) setCompLightActive(true); }
                       })}
-                      className={`group relative flex flex-col rounded-2xl overflow-hidden border transition-all duration-200 select-none cursor-pointer ${
-                        compLightActive
+                      className={`group relative flex flex-col rounded-2xl overflow-hidden border transition-all duration-200 select-none cursor-pointer ${compLightActive
                           ? "border-white/25 shadow-lg ring-1 ring-white/10"
                           : "border-white/10 opacity-50"
-                      }`}
+                        }`}
                     >
                       <div
                         className="relative h-16 w-full flex items-center justify-center transition-all duration-300"
@@ -2023,11 +2011,10 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
                         color: accentColor,
                         onSelect: (c) => { setAccentColor(c); if (!accentColorActive) setAccentColorActive(true); }
                       })}
-                      className={`group relative flex flex-col rounded-2xl overflow-hidden border transition-all duration-200 select-none cursor-pointer ${
-                        accentColorActive
+                      className={`group relative flex flex-col rounded-2xl overflow-hidden border transition-all duration-200 select-none cursor-pointer ${accentColorActive
                           ? "border-white/25 shadow-lg ring-1 ring-white/10"
                           : "border-white/10 opacity-50"
-                      }`}
+                        }`}
                     >
                       <div
                         className="relative h-16 w-full flex items-center justify-center transition-all duration-300"
@@ -2085,7 +2072,7 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
         {/* ── 5. COMPOSIÇÃO E ESTILO ── */}
         <div id="section-composicao" data-tour="form-sec-style" className="scroll-mt-14">
           <div className="flex flex-col gap-6 lg:gap-12">
-            
+
             {/* Plano */}
             <div data-field-id="plano" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
               <div className="flex flex-col gap-3">
@@ -2110,9 +2097,8 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
                       type="button"
                       aria-pressed={plano === "close-up"}
                       onClick={() => { setPlano("close-up"); store.updateConfig({ composicao: "Close-up (Rosto)" as any }); }}
-                      className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${
-                        plano === "close-up" ? "pb-ctrl-active text-white" : "text-zinc-200"
-                      }`}
+                      className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${plano === "close-up" ? "pb-ctrl-active text-white" : "text-zinc-200"
+                        }`}
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-circle-user h-5 w-5" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="10" r="3"></circle><path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"></path></svg>
                       <span className="font-medium text-sm">Close-up (Rosto)</span>
@@ -2137,9 +2123,8 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
                       type="button"
                       aria-pressed={plano === "medium"}
                       onClick={() => { setPlano("medium"); store.updateConfig({ composicao: "Plano Médio (Busto)" as any }); }}
-                      className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${
-                        plano === "medium" ? "pb-ctrl-active text-white" : "text-zinc-200"
-                      }`}
+                      className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${plano === "medium" ? "pb-ctrl-active text-white" : "text-zinc-200"
+                        }`}
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-user h-5 w-5" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                       <span className="font-medium text-sm">Plano Médio (Busto)</span>
@@ -2164,9 +2149,8 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
                       type="button"
                       aria-pressed={plano === "american"}
                       onClick={() => { setPlano("american"); store.updateConfig({ composicao: "Plano Americano" as any }); }}
-                      className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${
-                        plano === "american" ? "pb-ctrl-active text-white" : "text-zinc-200"
-                      }`}
+                      className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${plano === "american" ? "pb-ctrl-active text-white" : "text-zinc-200"
+                        }`}
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-square-user-round h-5 w-5" aria-hidden="true"><path d="M18 21a6 6 0 0 0-12 0"></path><circle cx="12" cy="11" r="4"></circle><rect width="18" height="18" x="3" y="3" rx="2"></rect></svg>
                       <span className="font-medium text-sm">Plano Americano</span>
@@ -2215,9 +2199,8 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
                     style={{ backgroundColor: elementosFlutuantesActive ? "rgb(124, 58, 237)" : "#3f3f46" }}
                   >
                     <span
-                      className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200 ${
-                        elementosFlutuantesActive ? "translate-x-5" : "translate-x-0"
-                      }`}
+                      className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200 ${elementosFlutuantesActive ? "translate-x-5" : "translate-x-0"
+                        }`}
                     />
                   </button>
                 </div>
@@ -2264,9 +2247,8 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
                           type="button"
                           aria-pressed={isSelected}
                           onClick={() => { setEstiloVisual(styleName); store.setEstilosVisuais([styleName]); }}
-                          className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${
-                            isSelected ? "pb-ctrl-active text-white" : "text-zinc-200"
-                          }`}
+                          className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${isSelected ? "pb-ctrl-active text-white" : "text-zinc-200"
+                            }`}
                         >
                           <span className="font-medium text-sm">{styleName}</span>
                         </button>
@@ -2574,9 +2556,8 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
             <button
               type="submit"
               disabled={isGenerating}
-              className={`flex w-full items-center justify-center gap-2 rounded-xl px-6 py-4 text-base font-semibold transition-all duration-300 hover:scale-[1.01] active:scale-95 shadow-lg disabled:cursor-not-allowed disabled:hover:scale-100 disabled:opacity-40 ${
-                isOrion ? "text-black shadow-[0_4px_24px_rgba(255,213,0,0.3)]" : "text-white"
-              }`}
+              className={`flex w-full items-center justify-center gap-2 rounded-xl px-6 py-4 text-base font-semibold transition-all duration-300 hover:scale-[1.01] active:scale-95 shadow-lg disabled:cursor-not-allowed disabled:hover:scale-100 disabled:opacity-40 ${isOrion ? "text-black shadow-[0_4px_24px_rgba(255,213,0,0.3)]" : "text-white"
+                }`}
               style={{
                 background: isOrion
                   ? "linear-gradient(135deg, rgb(255, 213, 0), rgba(255, 213, 0, 0.85))"
@@ -2584,9 +2565,8 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
               }}
             >
               <span>{isGenerating ? "Construindo..." : "Construir"}</span>
-              <span className={`ml-1.5 rounded-lg px-2 py-0.5 text-xs font-medium ${
-                isOrion ? "bg-black/15 text-black" : "bg-white/15 text-white"
-              }`}>1 crédito</span>
+              <span className={`ml-1.5 rounded-lg px-2 py-0.5 text-xs font-medium ${isOrion ? "bg-black/15 text-black" : "bg-white/15 text-white"
+                }`}>1 crédito</span>
             </button>
             <div className="mt-2 flex items-center justify-center gap-3 text-[11px] text-[#9d94bb]">
               <button
@@ -2656,213 +2636,219 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
         </button>
 
         <div className="h-20 shrink-0" aria-hidden="true"></div>
-          </>
+      </>
         )}
-      </form>
+    </form>
 
-      {/* Modal Ampliar Imagem do Sujeito */}
-      {previewZoomImage && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in"
-          onClick={() => setPreviewZoomImage(null)}
-        >
-          <div className="relative max-w-2xl max-h-[85vh]" onClick={(e) => e.stopPropagation()}>
-            <img
-              src={previewZoomImage}
-              alt="Ampliar imagem"
-              className="max-h-[85vh] max-w-full rounded-xl object-contain shadow-2xl border border-white/20"
-            />
-            <button
-              type="button"
-              onClick={() => setPreviewZoomImage(null)}
-              className="absolute -top-3 -right-3 h-8 w-8 rounded-full bg-zinc-800 border border-white/20 text-white flex items-center justify-center hover:bg-red-500 transition-colors cursor-pointer"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ── COLOR PICKER POPOVER ── */}
-      {activeColorPicker && (
-        <div className="fixed inset-0 z-[10050]" onClick={() => setActiveColorPicker(null)}>
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="fixed z-[10060] flex flex-col gap-3 rounded-2xl border border-white/10 bg-zinc-900 p-3 shadow-2xl shadow-black/60 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 min-w-[240px]"
+      {/* Modal Ampliar Imagem do Sujeito */ }
+  {
+    previewZoomImage && (
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in"
+        onClick={() => setPreviewZoomImage(null)}
+      >
+        <div className="relative max-w-2xl max-h-[85vh]" onClick={(e) => e.stopPropagation()}>
+          <img
+            src={previewZoomImage}
+            alt="Ampliar imagem"
+            className="max-h-[85vh] max-w-full rounded-xl object-contain shadow-2xl border border-white/20"
+          />
+          <button
+            type="button"
+            onClick={() => setPreviewZoomImage(null)}
+            className="absolute -top-3 -right-3 h-8 w-8 rounded-full bg-zinc-800 border border-white/20 text-white flex items-center justify-center hover:bg-red-500 transition-colors cursor-pointer"
           >
-            <div className="flex items-center justify-between pb-1 border-b border-white/10">
-              <span className="text-xs font-semibold text-white">{activeColorPicker.title}</span>
-              <button
-                type="button"
-                onClick={() => setActiveColorPicker(null)}
-                className="text-zinc-400 hover:text-white p-0.5 rounded cursor-pointer"
-              >
-                <X size={14} />
-              </button>
-            </div>
-            <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-zinc-800 px-3 py-2">
-              <span className="text-xs text-zinc-500 font-mono select-none">#</span>
-              <input
-                maxLength={6}
-                spellCheck="false"
-                placeholder="FFFFFF"
-                className="flex-1 bg-transparent text-sm font-mono text-white outline-none uppercase"
-                type="text"
-                value={activeColorPicker.color.replace("#", "")}
-                onChange={(e) => {
-                  const clean = e.target.value.replace(/[^0-9a-fA-F]/g, "").slice(0, 6);
-                  const fullHex = `#${clean}`;
-                  setActiveColorPicker((prev) => (prev ? { ...prev, color: fullHex } : null));
-                  if (clean.length === 3 || clean.length === 6) {
-                    activeColorPicker.onSelect(fullHex);
-                  }
-                }}
-              />
-              <label
-                className="relative h-6 w-6 rounded-md border border-white/20 shrink-0 cursor-pointer overflow-hidden hover:scale-105 transition-transform"
-                title="Abrir seletor de cores"
-              >
-                <input
-                  type="color"
-                  className="absolute inset-0 h-full w-full opacity-0 cursor-pointer"
-                  value={activeColorPicker.color.length === 7 ? activeColorPicker.color : "#ffffff"}
-                  onChange={(e) => {
-                    setActiveColorPicker((prev) => (prev ? { ...prev, color: e.target.value } : null));
-                    activeColorPicker.onSelect(e.target.value);
-                  }}
-                />
-                <div
-                  className="h-full w-full"
-                  style={{ backgroundColor: activeColorPicker.color }}
-                />
-              </label>
-            </div>
-            <div className="grid grid-cols-6 gap-1.5 pt-1">
-              {[
-                "#7C3AED", "#A855F7", "#EF4444", "#EAB308", "#22C55E", "#3B82F6",
-                "#EC4899", "#F97316", "#14B8A6", "#FFFFFF", "#94A3B8", "#000000"
-              ].map((sw) => (
-                <button
-                  key={sw}
-                  type="button"
-                  onClick={() => {
-                    setActiveColorPicker((prev) => (prev ? { ...prev, color: sw } : null));
-                    activeColorPicker.onSelect(sw);
-                  }}
-                  className="h-6 w-full rounded-md border border-white/20 hover:scale-105 transition-transform cursor-pointer"
-                  style={{ backgroundColor: sw }}
-                  title={sw}
-                />
-              ))}
-            </div>
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  {/* ── COLOR PICKER POPOVER ── */ }
+  {
+    activeColorPicker && (
+      <div className="fixed inset-0 z-[10050]" onClick={() => setActiveColorPicker(null)}>
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="fixed z-[10060] flex flex-col gap-3 rounded-2xl border border-white/10 bg-zinc-900 p-3 shadow-2xl shadow-black/60 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 min-w-[240px]"
+        >
+          <div className="flex items-center justify-between pb-1 border-b border-white/10">
+            <span className="text-xs font-semibold text-white">{activeColorPicker.title}</span>
             <button
               type="button"
               onClick={() => setActiveColorPicker(null)}
-              className="mt-1 w-full py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-xs font-semibold text-white transition-colors cursor-pointer"
+              className="text-zinc-400 hover:text-white p-0.5 rounded cursor-pointer"
             >
-              Aplicar Cor
+              <X size={14} />
             </button>
           </div>
-        </div>
-      )}
-
-      {/* ── EXPANDED TEXTAREA RADIX DIALOG MODAL ── */}
-      {expandedEditor.isOpen && (
-        <>
-          <div
-            data-state="open"
-            onClick={() => setExpandedEditor((prev) => ({ ...prev, isOpen: false }))}
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0"
-            style={{ pointerEvents: "auto" }}
-            aria-hidden="true"
-          />
-          <div
-            role="dialog"
-            id="radix-_r_8_"
-            data-state="open"
-            className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-2xl rounded-2xl border border-white/10 bg-zinc-900 shadow-2xl flex flex-col data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
-            tabIndex={-1}
-            aria-describedby="radix-_r_a_"
-            aria-labelledby="radix-_r_9_"
-            style={{ pointerEvents: "auto" }}
+          <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-zinc-800 px-3 py-2">
+            <span className="text-xs text-zinc-500 font-mono select-none">#</span>
+            <input
+              maxLength={6}
+              spellCheck="false"
+              placeholder="FFFFFF"
+              className="flex-1 bg-transparent text-sm font-mono text-white outline-none uppercase"
+              type="text"
+              value={activeColorPicker.color.replace("#", "")}
+              onChange={(e) => {
+                const clean = e.target.value.replace(/[^0-9a-fA-F]/g, "").slice(0, 6);
+                const fullHex = `#${clean}`;
+                setActiveColorPicker((prev) => (prev ? { ...prev, color: fullHex } : null));
+                if (clean.length === 3 || clean.length === 6) {
+                  activeColorPicker.onSelect(fullHex);
+                }
+              }}
+            />
+            <label
+              className="relative h-6 w-6 rounded-md border border-white/20 shrink-0 cursor-pointer overflow-hidden hover:scale-105 transition-transform"
+              title="Abrir seletor de cores"
+            >
+              <input
+                type="color"
+                className="absolute inset-0 h-full w-full opacity-0 cursor-pointer"
+                value={activeColorPicker.color.length === 7 ? activeColorPicker.color : "#ffffff"}
+                onChange={(e) => {
+                  setActiveColorPicker((prev) => (prev ? { ...prev, color: e.target.value } : null));
+                  activeColorPicker.onSelect(e.target.value);
+                }}
+              />
+              <div
+                className="h-full w-full"
+                style={{ backgroundColor: activeColorPicker.color }}
+              />
+            </label>
+          </div>
+          <div className="grid grid-cols-6 gap-1.5 pt-1">
+            {[
+              "#7C3AED", "#A855F7", "#EF4444", "#EAB308", "#22C55E", "#3B82F6",
+              "#EC4899", "#F97316", "#14B8A6", "#FFFFFF", "#94A3B8", "#000000"
+            ].map((sw) => (
+              <button
+                key={sw}
+                type="button"
+                onClick={() => {
+                  setActiveColorPicker((prev) => (prev ? { ...prev, color: sw } : null));
+                  activeColorPicker.onSelect(sw);
+                }}
+                className="h-6 w-full rounded-md border border-white/20 hover:scale-105 transition-transform cursor-pointer"
+                style={{ backgroundColor: sw }}
+                title={sw}
+              />
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => setActiveColorPicker(null)}
+            className="mt-1 w-full py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-xs font-semibold text-white transition-colors cursor-pointer"
           >
-            <p id="radix-_r_a_" className="sr-only">
-              Editor expandido para o campo {expandedEditor.title}. Use Ctrl+Enter para salvar, Esc para cancelar.
-            </p>
-            <div className="flex items-center justify-between border-b border-white/5 px-5 py-3">
-              <h2 id="radix-_r_9_" className="text-sm font-semibold text-white">
-                {expandedEditor.title}
-              </h2>
+            Aplicar Cor
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  {/* ── EXPANDED TEXTAREA RADIX DIALOG MODAL ── */ }
+  {
+    expandedEditor.isOpen && (
+      <>
+        <div
+          data-state="open"
+          onClick={() => setExpandedEditor((prev) => ({ ...prev, isOpen: false }))}
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0"
+          style={{ pointerEvents: "auto" }}
+          aria-hidden="true"
+        />
+        <div
+          role="dialog"
+          id="radix-_r_8_"
+          data-state="open"
+          className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-2xl rounded-2xl border border-white/10 bg-zinc-900 shadow-2xl flex flex-col data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
+          tabIndex={-1}
+          aria-describedby="radix-_r_a_"
+          aria-labelledby="radix-_r_9_"
+          style={{ pointerEvents: "auto" }}
+        >
+          <p id="radix-_r_a_" className="sr-only">
+            Editor expandido para o campo {expandedEditor.title}. Use Ctrl+Enter para salvar, Esc para cancelar.
+          </p>
+          <div className="flex items-center justify-between border-b border-white/5 px-5 py-3">
+            <h2 id="radix-_r_9_" className="text-sm font-semibold text-white">
+              {expandedEditor.title}
+            </h2>
+            <button
+              type="button"
+              onClick={() => setExpandedEditor((prev) => ({ ...prev, isOpen: false }))}
+              className="rounded-lg p-1 text-zinc-400 transition-colors hover:bg-white/5 hover:text-white cursor-pointer"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="lucide lucide-x h-4 w-4"
+                aria-hidden="true"
+              >
+                <path d="M18 6 6 18"></path>
+                <path d="m6 6 12 12"></path>
+              </svg>
+            </button>
+          </div>
+          <div className="flex-1 p-5">
+            <textarea
+              autoFocus
+              placeholder={expandedEditor.placeholder}
+              rows={12}
+              className="w-full rounded-xl border border-white/5 bg-zinc-950 px-4 py-3 text-sm text-white outline-none placeholder:text-zinc-600 transition-colors resize-y min-h-[200px] focus:border-violet-500/30"
+              value={tempEditorValue}
+              onChange={(e) => setTempEditorValue(e.target.value)}
+              onKeyDown={(e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+                  e.preventDefault();
+                  expandedEditor.onSave(tempEditorValue);
+                  setExpandedEditor((prev) => ({ ...prev, isOpen: false }));
+                  showToast("Texto salvo com sucesso!", "success");
+                }
+              }}
+            />
+          </div>
+          <div className="flex items-center justify-between border-t border-white/5 px-5 py-3">
+            <span className="text-xs text-zinc-500">Ctrl+Enter para salvar</span>
+            <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => setExpandedEditor((prev) => ({ ...prev, isOpen: false }))}
-                className="rounded-lg p-1 text-zinc-400 transition-colors hover:bg-white/5 hover:text-white cursor-pointer"
+                className="rounded-lg px-3 py-1.5 text-xs font-medium text-zinc-400 transition-colors hover:bg-white/5 hover:text-white cursor-pointer"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="lucide lucide-x h-4 w-4"
-                  aria-hidden="true"
-                >
-                  <path d="M18 6 6 18"></path>
-                  <path d="m6 6 12 12"></path>
-                </svg>
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  expandedEditor.onSave(tempEditorValue);
+                  setExpandedEditor((prev) => ({ ...prev, isOpen: false }));
+                  showToast("Texto salvo com sucesso!", "success");
+                }}
+                className="rounded-lg px-4 py-1.5 text-xs font-semibold text-white transition-colors cursor-pointer"
+                style={{ backgroundColor: "rgb(139, 92, 246)" }}
+              >
+                Salvar
               </button>
             </div>
-            <div className="flex-1 p-5">
-              <textarea
-                autoFocus
-                placeholder={expandedEditor.placeholder}
-                rows={12}
-                className="w-full rounded-xl border border-white/5 bg-zinc-950 px-4 py-3 text-sm text-white outline-none placeholder:text-zinc-600 transition-colors resize-y min-h-[200px] focus:border-violet-500/30"
-                value={tempEditorValue}
-                onChange={(e) => setTempEditorValue(e.target.value)}
-                onKeyDown={(e) => {
-                  if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
-                    e.preventDefault();
-                    expandedEditor.onSave(tempEditorValue);
-                    setExpandedEditor((prev) => ({ ...prev, isOpen: false }));
-                    showToast("Texto salvo com sucesso!", "success");
-                  }
-                }}
-              />
-            </div>
-            <div className="flex items-center justify-between border-t border-white/5 px-5 py-3">
-              <span className="text-xs text-zinc-500">Ctrl+Enter para salvar</span>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setExpandedEditor((prev) => ({ ...prev, isOpen: false }))}
-                  className="rounded-lg px-3 py-1.5 text-xs font-medium text-zinc-400 transition-colors hover:bg-white/5 hover:text-white cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    expandedEditor.onSave(tempEditorValue);
-                    setExpandedEditor((prev) => ({ ...prev, isOpen: false }));
-                    showToast("Texto salvo com sucesso!", "success");
-                  }}
-                  className="rounded-lg px-4 py-1.5 text-xs font-semibold text-white transition-colors cursor-pointer"
-                  style={{ backgroundColor: "rgb(139, 92, 246)" }}
-                >
-                  Salvar
-                </button>
-              </div>
-            </div>
           </div>
-        </>
-      )}
-    </aside>
+        </div>
+      </>
+    )
+  }
+    </aside >
   );
 };
