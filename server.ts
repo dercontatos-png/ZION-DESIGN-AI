@@ -1589,47 +1589,34 @@ async function processSuperResolution8K(
         kernel: sharp.kernel.lanczos3
       })
       .toColorspace("srgb")
-      .sharpen(mode === "2K" ? { sigma: 0.6, m1: 0.3, m2: 0.7 } : { sigma: 0.4, m1: 0.2, m2: 0.5 })
-      .png({ compressionLevel: 4, adaptiveFiltering: true })
+      .sharpen(mode === "2K" ? { sigma: 0.8, m1: 0.4, m2: 1.2 } : { sigma: 0.5, m1: 0.3, m2: 0.8 })
+      .png({ compressionLevel: 3, adaptiveFiltering: true })
       .toBuffer();
   }
 
   try {
-    // PASS 1 (Upscayl SSAA Sub-Pixel Expansion):
-    // Expand to 1.33x target resolution to compute continuous sub-pixel frequency curves
-    const ssaaW = Math.min(8192, Math.round(targetWidth * 1.333));
-    const ssaaH = Math.min(8192, Math.round(targetHeight * 1.333));
-
-    console.log(`[processSuperResolution8K] SSAA Pass 1 (Upscayl 1.33x): Sub-pixel expansion to ${ssaaW}x${ssaaH} with Lanczos3...`);
-    const ssaaBuffer = await sharp(inputBuffer)
-      .resize(ssaaW, ssaaH, {
-        fit: "cover",
-        position: "center",
-        kernel: sharp.kernel.lanczos3
-      })
-      .toColorspace("srgb")
-      // Real-ESRGAN Band 1: High-frequency texture, pore depth and follicle definition
-      .sharpen({ sigma: 1.15, m1: 0.5, m2: 1.6 })
-      .toBuffer();
-
-    // PASS 2 (Stable Diffusion Hi-Res Fix Downsample & Micro-Contrast):
-    // Resolves back down to exact target dimensions, cancelling out digital aliasing & pixel stairsteps
-    console.log(`[processSuperResolution8K] Hi-Res Fix Pass 2 (Stable Diffusion): Resolving to 8K-grade master (${targetWidth}x${targetHeight})...`);
-    const masterBuffer = await sharp(ssaaBuffer)
+    console.log(`[processSuperResolution8K] Ultra-Precision Master 8K Scaling to ${targetWidth}x${targetHeight} with Lanczos3 & Vector Edge Sharpening...`);
+    
+    // High-precision single-pass Lanczos3 preserving exact aspect ratio without distortion
+    const masterBuffer = await sharp(inputBuffer)
       .resize(targetWidth, targetHeight, {
         fit: "cover",
         position: "center",
         kernel: sharp.kernel.lanczos3
       })
       .toColorspace("srgb")
-      // Real-ESRGAN Band 2: Vector-grade letterforms, kerning lock and ocular reflection clarity
-      .sharpen({ sigma: 0.75, m1: 0.4, m2: 1.25 })
-      .png({ compressionLevel: 4, adaptiveFiltering: true })
+      // Calibrated unsharp mask: razor-sharp vector letter boundaries & micro-pore skin depth
+      .sharpen({
+        sigma: 1.3,
+        m1: 0.6,
+        m2: 2.3
+      })
+      .png({ compressionLevel: 3, adaptiveFiltering: true })
       .toBuffer();
 
     return masterBuffer;
   } catch (err: any) {
-    console.warn("[processSuperResolution8K] Multi-pass SSAA fallback to single-pass Lanczos3:", err?.message || err);
+    console.warn("[processSuperResolution8K] Scaling fallback:", err?.message || err);
     return sharp(inputBuffer)
       .resize(targetWidth, targetHeight, {
         fit: "cover",
@@ -1637,7 +1624,7 @@ async function processSuperResolution8K(
         kernel: sharp.kernel.lanczos3
       })
       .toColorspace("srgb")
-      .sharpen({ sigma: 0.9, m1: 0.5, m2: 1.0 })
+      .sharpen({ sigma: 0.9, m1: 0.5, m2: 1.5 })
       .png({ compressionLevel: 4, adaptiveFiltering: true })
       .toBuffer();
   }
@@ -8581,8 +8568,11 @@ Simulate high-end studio commercial product photography seamlessly integrated wi
    - Pure Crisp White: #FFFFFF (high-contrast headlines, icons, clean surface areas).
    - Luxury Gold Accent: #CCA038 (badges, checkmarks, highlights, CTA accents).
 
-5. VECTOR-SHARP 8K RESOLUTION:
-   - Every single letter, number, and icon must be razor-sharp with pure vector-like precision and zero fuzzy diffusion blur.
+5. CRISP VECTOR TYPOGRAPHY & ZERO DIFFUSION BLUR (8K MASTER FIDELITY):
+   - SOLID HIGH-CONTRAST VECTOR GLYPHS: Render all typography with 100% solid, opaque fill and razor-sharp, hard pixel-perfect boundaries.
+   - Letters must look like Illustrator vector graphics overlaid with supreme precision, NOT soft airbrushed paint.
+   - ZERO fuzzy diffusion halos, ZERO soft glow bleed around letter outlines, ZERO double strokes.
+   - High luminance contrast between text and background: white (#FFFFFF) and gold (#CCA038) text placed strictly over solid dark navy background (#0F1E36) or dedicated container cards so letters are completely legible and pin-sharp under 100% zoom.
    - Brazilian Portuguese text rendered 100% faithfully as requested without translating or hallucinating unrequested words.
 
 ${userNotes ? `[USER CUSTOM SPECIFICATIONS & CONTEXT]\n${userNotes}` : ""}

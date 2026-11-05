@@ -1871,6 +1871,12 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
     try {
       setLastUsedSettings(snapshot);
 
+      const isGraphicCardOrFlyer =
+        /(card|flyer|banner|post|cartaz|propaganda|anúncio|anuncio|ótica|otica|exame|consulta|promoção|promocao|desconto|preço|preco|título|titulo|cabeçalho|cabecalho|texto|legenda|layout|arte|design|sindicato|procedimentos|fundoscopia|acuidade|óculos|oculos)/i.test(additionalDescription || "") ||
+        /(card|flyer|banner|post|cartaz|propaganda|anúncio|anuncio|ótica|otica|exame|consulta|promoção|promocao|desconto|preço|preco|título|titulo|cabeçalho|cabecalho|texto|legenda|layout|arte|design|sindicato|procedimentos|fundoscopia|acuidade|óculos|oculos)/i.test(refPhotoDesc || "") ||
+        referenceImages.some(img => /(card|flyer|banner|post|cartaz|propaganda|anúncio|anuncio|ótica|otica|exame|consulta|promoção|promocao|desconto|preço|preco|título|titulo|cabeçalho|cabecalho|texto|legenda|layout|arte|design|sindicato|procedimentos|fundoscopia|acuidade|óculos|oculos)/i.test(img.desc || "")) ||
+        Boolean(refPhotoBase64 || referenceImages.length > 0);
+
       // Pre-optimize reference images to 1536px JPEG to eliminate 60MB+ network bottlenecks
       const effSubject = /n[aã]o\s*quero\s*pessoa|sem\s*pessoa|no\s*people/i.test(additionalDescription || "")
         ? ""
@@ -1903,8 +1909,8 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
           base64DoSujeito: optSubject,
           sujeitosBase64List: optSubjectList.length > 0 ? optSubjectList : (optSubject ? [optSubject] : []),
           referenciasEstilo: optRefList.length > 0 ? optRefList : (optPrimaryRef ? [optPrimaryRef] : []),
-          designRefBase64: isGraphicCardOrFlyer ? optPrimaryRef : "",
-          designRefsList: isGraphicCardOrFlyer ? (optRefList.length > 1 ? optRefList.slice(1) : (optPrimaryRef ? [optPrimaryRef] : [])) : [],
+          designRefBase64: optPrimaryRef || "",
+          designRefsList: optRefList.length > 1 ? optRefList.slice(1) : (optPrimaryRef ? [optPrimaryRef] : []),
           logoBase64: assetImages[0]?.url || assetsPhotoBase64 || "",
           logosList: assetImages.length > 1 ? assetImages.slice(1).map(i => i.url) : [],
           useLogo: !!(assetImages.length > 0 || assetsPhotoBase64),
