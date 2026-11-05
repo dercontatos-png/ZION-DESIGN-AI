@@ -400,7 +400,23 @@ export function resolveImageInput(input: any): { data: string; mimeType: string 
   }
 
   // 2. Local file path or URL handling (e.g., /generated-images/img_123.png)
-  if (str.includes("/generated-images/") || str.startsWith("/") || str.startsWith("./")) {
+  // 1.5 Raw Base64 string check (detect if it's already base64, including JPEG starting with /9j/)
+  if (
+    str.startsWith("/9j/") ||
+    str.startsWith("iVBORw0KGgo") ||
+    str.startsWith("UklGR") ||
+    (str.length > 500 && !str.includes(" ") && !str.includes("\n") && !str.includes("\r"))
+  ) {
+    let mimeType = "image/jpeg";
+    if (str.startsWith("iVBORw0KGgo")) {
+      mimeType = "image/png";
+    } else if (str.startsWith("UklGR")) {
+      mimeType = "image/webp";
+    }
+    return { data: str, mimeType };
+  }
+
+  if ((str.includes("/generated-images/") || str.startsWith("/") || str.startsWith("./")) && str.length < 500) {
     try {
       let filename = str;
       if (str.includes("/generated-images/")) {
@@ -431,7 +447,7 @@ export function resolveImageInput(input: any): { data: string; mimeType: string 
   }
 
   // 3. Raw Base64 string check (if it doesn't look like an unparsed file path or URL)
-  if (!str.startsWith("/") && !str.startsWith("http://") && !str.startsWith("https://")) {
+  if (str.startsWith("/9j/") || (!str.startsWith("http://") && !str.startsWith("https://") && (str.length > 500 || !str.startsWith("/")))) {
     return { data: str, mimeType: "image/jpeg" };
   }
 
@@ -1169,7 +1185,7 @@ async function executeImageGenerationWithFallbacks(
 
         const runStrategy = async (): Promise<any> => {
           if (strategy.type === "generateContent") {
-            const apiImageSize = sizeSelected === "4K" ? "4K" : (sizeSelected === "2K" ? "2K" : "1K");
+            const apiImageSize = (sizeSelected === "8K" || sizeSelected === "4K") ? "4K" : (sizeSelected === "2K" ? "2K" : "1K");
             try {
               return await curClient.models.generateContent({
                 model: strategy.name,
@@ -1370,10 +1386,17 @@ async function executeGenerateContentWithFallbacks(
       for (let attempt = 1; attempt <= maxContentAttempts; attempt++) {
         try {
           console.log(`[generateContent-fallback] Trying model ${modelName} on client: ${cItem.name}${attempt > 1 ? ` (attempt ${attempt})` : ''}...`);
-          const response = await curClient.models.generateContent({
-            ...generateParams,
-            model: modelName
-          });
+          const contentTimeoutMs = 15000;
+          const contentTimeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error(`Model ${modelName} request timeout (${contentTimeoutMs / 1000}s)`)), contentTimeoutMs)
+          );
+          const response: any = await Promise.race([
+            curClient.models.generateContent({
+              ...generateParams,
+              model: modelName
+            }),
+            contentTimeoutPromise
+          ]);
           if (response) {
             // Validate response has actual content — skip empty/blocked responses
             const hasCandidates = response?.candidates && response.candidates.length > 0;
@@ -1923,8 +1946,32 @@ async function startServer() {
       const fmt = String(format).toLowerCase().trim();
       let buffer: Buffer | null = null;
 
-      // 1. Local path /generated-images/ or /uploads/
-      if (url.startsWith("/generated-images/")) {
+      // 1. Storage results path /designbuilder/results/ or /results/ or thumbnails
+      if (url.includes("results/") || url.includes("thumbnails/")) {
+        const match = url.match(/(results|thumbnails)\/([^\/?#]+)\/([^\/?#]+)/);
+        if (match) {
+          const [_, folder, jId, fName] = match;
+          const baseName = fName.replace(/\.[a-zA-Z0-9]+$/, "");
+          const candidatePaths = [
+            path.join(STORAGE_BASE_DIR, folder, jId, `${baseName}.png`),
+            path.join(STORAGE_BASE_DIR, folder, jId, `${baseName}.avif`),
+            path.join(STORAGE_BASE_DIR, folder, jId, fName),
+            path.join(process.cwd(), "public", "generated-images", `img_${jId}.png`),
+            path.join(STORAGE_BASE_DIR, "generated-images", `img_${jId}.png`),
+            path.join(process.cwd(), "public", "generated-images", fName),
+            path.join(STORAGE_BASE_DIR, "generated-images", fName)
+          ];
+          for (const cp of candidatePaths) {
+            if (fs.existsSync(cp) && fs.statSync(cp).isFile()) {
+              buffer = fs.readFileSync(cp);
+              break;
+            }
+          }
+        }
+      }
+
+      // 2. Local path /generated-images/ or /uploads/
+      if (!buffer && url.includes("/generated-images/")) {
         const fname = path.basename(url.split("?")[0].split("#")[0]);
         const p1 = path.join(STORAGE_BASE_DIR, "generated-images", fname);
         const p2 = path.join(process.cwd(), "public", "generated-images", fname);
@@ -1934,27 +1981,52 @@ async function startServer() {
           const r2Obj = await downloadFromR2(`generated-images/${fname}`);
           if (r2Obj) buffer = r2Obj.data;
         }
-      } else if (url.startsWith("/uploads/")) {
+      } else if (!buffer && url.includes("/uploads/")) {
         const fname = path.basename(url.split("?")[0].split("#")[0]);
         const p1 = path.join(STORAGE_BASE_DIR, "uploads", fname);
         const p2 = path.join(process.cwd(), "public", "uploads", fname);
         if (fs.existsSync(p1) && fs.statSync(p1).isFile()) buffer = fs.readFileSync(p1);
         else if (fs.existsSync(p2) && fs.statSync(p2).isFile()) buffer = fs.readFileSync(p2);
-      } else if (url.startsWith("data:")) {
+      } else if (!buffer && url.startsWith("data:")) {
         const { data: b64Data } = resolveImageInput(url);
         if (b64Data) buffer = Buffer.from(b64Data, "base64");
-      } else if (url.startsWith("http://") || url.startsWith("https://")) {
+      } else if (!buffer && (url.startsWith("http://") || url.startsWith("https://"))) {
         const fetchRes = await fetch(url);
         buffer = Buffer.from(await fetchRes.arrayBuffer());
-      } else if (url.startsWith("/")) {
-        const localPath = path.join(process.cwd(), "public", url.split("?")[0].split("#")[0]);
-        if (fs.existsSync(localPath) && fs.statSync(localPath).isFile()) {
-          buffer = fs.readFileSync(localPath);
+      } else if (!buffer && url.startsWith("/")) {
+        const relPath = url.split("?")[0].split("#")[0].replace(/^\//, "");
+        const localPath1 = path.join(process.cwd(), "public", relPath);
+        const localPath2 = path.join(STORAGE_BASE_DIR, relPath);
+        if (fs.existsSync(localPath1) && fs.statSync(localPath1).isFile()) {
+          buffer = fs.readFileSync(localPath1);
+        } else if (fs.existsSync(localPath2) && fs.statSync(localPath2).isFile()) {
+          buffer = fs.readFileSync(localPath2);
         }
       }
 
       if (!buffer || buffer.length === 0) {
         return res.status(404).json({ error: "Image file not found on server." });
+      }
+
+      // Upscale if requested quality is 4K or 8K and file on disk is lower resolution
+      const requestedQuality = (req.query.quality || req.body?.quality || req.query.targetResolution || req.body?.targetResolution || "").toString().toUpperCase().trim();
+      if (requestedQuality === "8K" || requestedQuality === "4K") {
+        try {
+          const meta = await sharp(buffer).metadata();
+          if (meta.width && meta.height) {
+            const is8K = requestedQuality === "8K";
+            const minTargetW = is8K ? 6144 : 3072;
+            if (meta.width < minTargetW) {
+              console.log(`[/api/download-image] Upscaling image from ${meta.width}x${meta.height} to ${requestedQuality} via processSuperResolution8K...`);
+              const aspect = meta.width / meta.height;
+              const targetW = is8K ? (meta.width >= meta.height ? 7680 : Math.round(7680 * aspect)) : (meta.width >= meta.height ? 3840 : Math.round(3840 * aspect));
+              const targetH = is8K ? (meta.width >= meta.height ? Math.round(7680 / aspect) : 7680) : (meta.width >= meta.height ? Math.round(3840 / aspect) : 3840);
+              buffer = await processSuperResolution8K(buffer, targetW, targetH, is8K ? "8K" : "4K");
+            }
+          }
+        } catch (upscaleErr) {
+          console.warn("[/api/download-image] Upscaling attempt warning:", upscaleErr);
+        }
       }
 
       let outBuffer: Buffer = buffer;
@@ -2811,7 +2883,7 @@ CRITICAL RULES:
               else if (selectedRatio === "3:2") selectedRatio = "4:3";
               else selectedRatio = "1:1";
             }
-            const sizeSelected = (body.quality || "1K").toUpperCase();
+            const sizeSelected = (body.quality === "8K" || body.quality === "4K") ? "4K" : ((body.quality === "2K") ? "2K" : "1K");
 
             console.log(`[bff/generate ASYNC] Job ${jobId}: Calling executeImageGenerationWithFallbacks (ratio=${selectedRatio}, size=${sizeSelected})...`);
 
@@ -2848,21 +2920,14 @@ CRITICAL RULES:
 
             console.log(`[bff/generate ASYNC] Job ${jobId}: Enforcing exact target resolution ${targetQuality} (${targetDims.width}x${targetDims.height}) with Lanczos3 resampling...`);
 
-            // Apply high-quality Lanczos3 resize preserving 100% of image contents (no edge cropping)
-            const inMeta = await sharp(rawImgBuffer).metadata();
-            const inRatio = (inMeta.width && inMeta.height) ? (inMeta.width / inMeta.height) : 1;
-            const targetRatioVal = targetDims.width / targetDims.height;
-            // ALWAYS preserve aspect ratio with uniform scaling (zero stretching/squashing of logos, faces, and graphics)
-            const processedPngBuffer = await sharp(rawImgBuffer)
-              .resize(targetDims.width, targetDims.height, {
-                fit: (Math.abs(inRatio - targetRatioVal) <= 0.08) ? "fill" : "cover",
-                position: "center",
-                kernel: sharp.kernel.lanczos3
-              })
-              .toColorspace("srgb")
-              .sharpen(targetQuality === "4K" ? { sigma: 1.0, m1: 0.5, m2: 1.0 } : (targetQuality === "2K" ? { sigma: 0.6, m1: 0.3, m2: 0.7 } : undefined))
-                .png({ palette: false, compressionLevel: 2 })
-              .toBuffer();
+            // Apply Master 8K Super-Resolution Engine with Upscayl SSAA + Real-ESRGAN edge sharpening + SD Hi-Res Fix
+            console.log(`[bff/generate ASYNC] Job ${jobId}: Executing 8K Super-Resolution Engine for ${targetQuality} (${targetDims.width}x${targetDims.height})...`);
+            const processedPngBuffer = await processSuperResolution8K(
+              rawImgBuffer,
+              targetDims.width,
+              targetDims.height,
+              targetQuality === "8K" ? "8K" : (targetQuality === "4K" ? "4K" : (targetQuality === "2K" ? "2K" : "1K"))
+            );
 
             // Also encode exact AVIF buffer for fastest modern browser loading
             const processedAvifBuffer = await sharp(processedPngBuffer)
@@ -8007,7 +8072,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
       const isVertex = fs.existsSync(credentialsPath) || token.startsWith('AQ.') || debugInfo.isUsingVertex === true;
 
       // We use gemini-3-pro-image for high quality image generation
-      const sizeSelectedForModel = resolutionInput === "4K" ? "4K" : (resolutionInput === "2K" ? "2K" : "1K");
+      const sizeSelectedForModel = (resolutionInput === "8K" || resolutionInput === "4K") ? "4K" : (resolutionInput === "2K" ? "2K" : "1K");
       const targetModel = "gemini-3-pro-image";
 
       let targetAspectRatio = "1:1";
@@ -8055,12 +8120,34 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         targetAspectRatio = sanitizeGeminiAspectRatio(dimensao, "4:5");
       }
 
-      const isLogoOnlyRequest =
-        req.body.tipoPainel === "LOGO" ||
-        req.body.tipoPainel === "ICONE" ||
-        /(\blogo\b|\blogotipo\b|\b[íi]cone\b|\bs[íi]mbolo\b|mudar.*cor.*logo|cor.*da.*logo|trocar.*cor.*logo|apenas.*logo|somente.*logo|isolad[ao]|recolor)/i.test(promptTraduzido || "") ||
-        /(\blogo\b|\blogotipo\b|\b[íi]cone\b|\bs[íi]mbolo\b|mudar.*cor.*logo|cor.*da.*logo|trocar.*cor.*logo|apenas.*logo|somente.*logo|isolad[ao]|recolor)/i.test(req.body.additionalPrompt || "") ||
-        /(\blogo\b|\blogotipo\b|\b[íi]cone\b|\bs[íi]mbolo\b|mudar.*cor.*logo|cor.*da.*logo|trocar.*cor.*logo|apenas.*logo|somente.*logo|isolad[ao]|recolor)/i.test(req.body.editInstruction || "");
+      const isRefBuilder =
+        req.body.app === "ref" ||
+        req.body.isRefBuilder === true ||
+        req.body.agent_slug === "ref-builder" ||
+        req.body.tipoPainel === "REF" ||
+        req.body.tipoPainel === "REF_BUILDER";
+
+      const hasDesignLayoutRef = !!(
+        designRefBase64 ||
+        (Array.isArray(designRefsList) && designRefsList.some((r: any) => r && (typeof r === 'string' ? r.trim() !== '' : (r.data || r.url))))
+      );
+
+      const hasFlyerTypography =
+        /(cabeçalho|título|data|local|contato|horário|preço|oferta|apresenta|show|evento|ingresso|procedimentos|valores|exame|ótica|sindicato)/i.test(promptTraduzido || '') ||
+        /(cabeçalho|título|data|local|contato|horário|preço|oferta|apresenta|show|evento|ingresso|procedimentos|valores|exame|ótica|sindicato)/i.test(req.body.additionalPrompt || '');
+
+      const isExplicitLogoOnly =
+        !hasDesignLayoutRef &&
+        !hasFlyerTypography &&
+        (
+          req.body.tipoPainel === "LOGO" ||
+          req.body.tipoPainel === "ICONE" ||
+          /(apenas\s+(o\s+|a\s+)?(logo|logotipo|ícone|emblema)|somente\s+(o\s+|a\s+)?(logo|logotipo|ícone|emblema)|(logo|logotipo|ícone|emblema)\s+isolad[ao]|recolorir\s+(o\s+|a\s+)?(logo|logotipo)|criar\s+(um\s+)?(novo\s+)?(logo|logotipo)|gerar\s+(apenas\s+)?(um\s+)?(logo|logotipo)\s+isolad)/i.test(promptTraduzido || '') ||
+          /(apenas\s+(o\s+|a\s+)?(logo|logotipo|ícone|emblema)|somente\s+(o\s+|a\s+)?(logo|logotipo|ícone|emblema)|(logo|logotipo|ícone|emblema)\s+isolad[ao]|recolorir\s+(o\s+|a\s+)?(logo|logotipo)|criar\s+(um\s+)?(novo\s+)?(logo|logotipo)|gerar\s+(apenas\s+)?(um\s+)?(logo|logotipo)\s+isolad)/i.test(req.body.additionalPrompt || '') ||
+          /(apenas\s+(o\s+|a\s+)?(logo|logotipo|ícone|emblema)|somente\s+(o\s+|a\s+)?(logo|logotipo|ícone|emblema)|(logo|logotipo|ícone|emblema)\s+isolad[ao]|recolorir\s+(o\s+|a\s+)?(logo|logotipo)|criar\s+(um\s+)?(novo\s+)?(logo|logotipo)|gerar\s+(apenas\s+)?(um\s+)?(logo|logotipo)\s+isolad)/i.test(req.body.editInstruction || '')
+        );
+
+      const isLogoOnlyRequest = isExplicitLogoOnly;
 
       // --- START PROMPT & SYSTEM INSTRUCTION EXPANSION ---
       let expandedPrompt = promptTraduzido;
@@ -8095,13 +8182,20 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
 3. REFERENCE AS GOVERNING LAW: When a Design Layout Reference is provided, preserve its composition grid, panel hierarchy, lighting direction, and 3D depth. Erase all old reference texts and logos, rendering exclusively the client's provided text and brand logo.`;
 
       try {
-        console.log("[api/gerar] Initiating premium multimodal prompt & instruction expansion...");
+        if (!isRefBuilder) {
+          console.log("[api/gerar] Initiating premium multimodal prompt & instruction expansion...");
         const expansionParts: any[] = [];
+        let totalExpansionBytes = 0;
 
         // Helper to add clean base64 image part to prompt expansion
         const addImagePartToExpansion = (input: any, label: string) => {
           const parsed = parseBase64Part(input);
           if (parsed && parsed.data) {
+            if (totalExpansionBytes + parsed.data.length > 12 * 1024 * 1024) {
+              console.log(`[api/gerar] Skipping reference ${label} for prompt expansion (12MB ceiling reached)`);
+              return;
+            }
+            totalExpansionBytes += parsed.data.length;
             expansionParts.push({
               inlineData: {
                 data: parsed.data,
@@ -8419,6 +8513,7 @@ Return ONLY the JSON object. Do not include any conversational text or markdown 
             }
           }
         }
+        }
       } catch (expErr) {
         console.error("[api/gerar] Error generating premium prompt/system expansion with Gemini:", expErr);
       }
@@ -8462,7 +8557,125 @@ Return ONLY the JSON object. Do not include any conversational text or markdown 
         }
       };
 
-      if (prevImgBase64 && isExplicitEdit) {
+      if (isRefBuilder) {
+        console.log("[api/gerar] === REF BUILDER PHOTOGRAPHIC MASTER ENGINE (8K) ACTIVATED ===");
+        const refSubjectPosition = req.body.subjectPosition || "center";
+        const positionDirective = refSubjectPosition === "left"
+          ? "[COMPOSITION & FRAMING] Position and frame the main subject strictly on the LEFT THIRD of the composition following cinematic rule-of-thirds, leaving open negative space on the right side."
+          : refSubjectPosition === "right"
+          ? "[COMPOSITION & FRAMING] Position and frame the main subject strictly on the RIGHT THIRD of the composition following cinematic rule-of-thirds, leaving open negative space on the left side."
+          : "[COMPOSITION & FRAMING] Position and frame the main subject cleanly CENTERED with balanced, powerful medium-format commercial editorial symmetry.";
+
+        const userNotes = (req.body.additionalPrompt || promptTraduzido || "").trim();
+
+        fullPrompt = `=== REF MASTER EDITORIAL & COMMERCIAL PHOTOGRAPHY DIRECTIVE ===
+[ROLE & OPTICAL PLATFORM]
+You are an elite Director of Photography and World-Class Commercial Portraitist executing a master-grade editorial fashion and commercial photograph.
+Simulate a medium-format Hasselblad H6D-100c paired with a prime HC 100mm f/2.2 lens stopped down to f/2.8, ISO 64, or a Sony Alpha 1 with an FE 85mm f/1.4 GM prime lens.
+
+[ABSOLUTE MANDATORY PROHIBITION OF GRAPHIC FLYERS, CARDS & TEXT]
+STRICTLY FORBIDDEN: NEVER generate an advertising flyer, poster, graphic layout, floating rectangular cards, text boxes, split panels, banners, marketing headlines (H1/H2), bullet points, contact footers, phone numbers, @ social handles, or watermarks!
+Render EXCLUSIVELY a pure, unencumbered, high-fashion editorial photograph. Edge-to-edge full bleed photographic capture with authentic optical depth.
+
+[100% FACIAL IDENTITY LOCK — SUBJECT REFERENCE (SWAP SLOT)]
+Look at the attached Subject Identity Reference ("SWAP SLOT — Main Subject Identity Reference").
+You MUST replicate 100% of this exact person's anatomical facial geometry:
+1. Exact eye shape, eyelid creases, iris pigmentation, sclera tone, and gaze vector.
+2. Exact nose bridge, tip, nostril contours, and nasolabial proportions.
+3. Exact jawline, cheekbone structure, chin contours, ear shape, and skull proportions.
+4. Exact skin undertone, natural melanin balance, authentic freckles, and beauty marks.
+5. Exact natural hair texture, hairline, hair color, and facial hair pattern.
+ABSOLUTE LAW: Take ONLY the person and their identity from this reference. Do NOT contaminate, morph, or blend this person's facial features with any other reference!
+
+[STYLE, LIGHTING & ATMOSPHERE TRANSFER — STYLE INSPIRATION REFERENCE]
+Look at the attached Style Inspiration Reference ("STYLE & LIGHTING INSPIRATION REFERENCE").
+Extract ONLY the photographic and optical atmosphere:
+1. Directional lighting architecture (key light angle, softbox wrap, rim/hair light separation, subtle fill, chiaroscuro contrast, volumetric haze, or golden hour glow).
+2. Color grading and tonal curve (Kodak Portra 400 richness, rich blacks, natural warm skin tones, cinema print contrast).
+3. Camera angle, lens focal length perspective, authentic shallow depth of field (f/2.2-f/2.8) with creamy circular background bokeh.
+4. Body pose, torque, posture, and mood.
+STRICT MANDATE: COMPLETELY IGNORE the person's face, identity, ethnicity, and all text in the Style Reference! The face belongs 100% to the Subject Reference.
+
+[MACRO-LEVEL OPTICAL PORE REALISM & 3-LAYER SUBSURFACE SCATTERING]
+1. EPIDERMAL MICRO-PORES: Resolve microscopic skin pores on the nose, cheeks, forehead, chin, and neck under direct and grazing illumination. Micro-displacement skin grain must remain tack-sharp under zoom without pixel blur.
+2. 3-LAYER SUBSURFACE SCATTERING: True biological dermal translucency (epidermis, dermis, subcutaneous adipose) with natural warmth along shadow terminators.
+3. AUTHENTIC LIPS & ZERO PIGMENT BLEED: Render authentic human lip texture with fine vertical dermal creases, natural skin gradations, and neutral realistic lip color matching real human skin. ABSOLUTELY NO solid neon pink, NO artificial magenta lipstick, NO painted-on plastic lips, and NO color bleed or pink pigment leaking onto the mustache, philtrum, or surrounding skin.
+4. PRISTINE DENTAL ANATOMY: Render tack-sharp, anatomically distinct individual teeth with natural enamel translucency, realistic interdental depth, and subtle gumline shadows. ABSOLUTELY NO solid white chalk bars, NO flat white strips.
+5. OCULAR ENGAGEMENT: Pristine corneal catchlights reflecting the scene's key light, distinct iris striations, and delicate vascular sclera capillaries.
+6. HAIR & FOLLICLE DEFINITION: Individual crisp strands of hair, natural edge flyaways, and discrete eyebrow and eyelash follicles.
+7. FABRIC & TACTILE TEXTURE: Crisp optical weave on clothing fabrics, specular highlights on jewelry or leather, physical contact shadows.
+8. ABSOLUTE ZERO PLASTIC SMOOTHING: No airbrushing, no digital beauty filters, no waxy CGI sheen, no AI cartooning. Flawless 8K medium format optical clarity.
+
+${positionDirective}
+
+${userNotes ? `[USER CUSTOM SPECIFICATIONS & CONTEXT]\n${userNotes}` : ""}
+
+[NEGATIVE CONSTRAINTS]
+blurry, low resolution, soft focus, out of focus, motion blur, plastic skin, airbrushed skin, waxy skin, CGI rendering, 3D model, cartoon, anime, illustration, painting, flyer, poster, cards, text boxes, headlines, watermark, logo, split panels, contact info, deformed eyes, extra fingers, fused fingers, solid white chalk teeth, neon pink lips, lipstick bleed.`;
+
+        expandedSystemInstruction = `You are an elite medium-format editorial photographer. You render hyper-realistic commercial portrait photographs with Hasselblad H6D-100c medium-format optical clarity.
+RULES:
+1. Generate ONLY an authentic photograph. NEVER generate graphic design flyers, text cards, split panels, headlines, footers, or advertising overlays.
+2. 100% FACIAL IDENTITY LOCK: The subject's face MUST match the Subject Identity Reference with 100% anatomical fidelity.
+3. STYLE & LIGHTING: Take only lighting, color grading, pose, and background atmosphere from the Style Reference. COMPLETELY IGNORE the face and identity of the style reference.
+4. MICRO-PORES & TEXTURES: Resolve microscopic skin pores, individual hair strands, natural lip texture, authentic individual teeth, and corneal reflections. ZERO plastic AI smoothing, ZERO waxy skin.`;
+
+        parts.push({ text: fullPrompt });
+
+        // 1. Add Subject References (SWAP SLOT)
+        if (base64DoSujeito) {
+          addImagePart(
+            base64DoSujeito,
+            "SWAP SLOT — Main Subject Identity Reference. Replicate 100% of this person's exact face, eyes, nose, lips, jawline, skin tone, and natural micro-pore texture with flawless photographic fidelity."
+          );
+        }
+        if (Array.isArray(sujeitosBase64List)) {
+          sujeitosBase64List.forEach((ref: any, idx: number) => {
+            if (ref && ref !== base64DoSujeito) {
+              addImagePart(
+                ref,
+                `SWAP SLOT — Additional Subject Identity Reference #${idx + 1}. Replicate 100% of this person's facial features and micro-pore skin texture.`
+              );
+            }
+          });
+        }
+
+        // 2. Add Style / Lighting Inspiration References
+        if (Array.isArray(referenciasEstilo) && referenciasEstilo.length > 0) {
+          referenciasEstilo.forEach((ref: any, idx: number) => {
+            if (ref) {
+              addImagePart(
+                ref,
+                `STYLE & LIGHTING INSPIRATION REFERENCE #${idx + 1} — Extract ONLY lighting quality, color grading, camera angle, pose, and atmosphere. DO NOT copy this person's face; the face comes 100% from the Subject Identity Reference.`
+              );
+            }
+          });
+        } else if (designRefBase64) {
+          addImagePart(
+            designRefBase64,
+            "STYLE & LIGHTING INSPIRATION REFERENCE — Extract ONLY lighting quality, color grading, camera angle, pose, and atmosphere. DO NOT copy this person's face; the face comes 100% from the Subject Identity Reference."
+          );
+        }
+
+        // 3. Add Assets (if any)
+        if (logoBase64) {
+          addImagePart(
+            logoBase64,
+            "ASSET REFERENCE — Faithfully integrate this object/product/accessory into the photographic scene with physically accurate contact shadows and reflections."
+          );
+        }
+        if (Array.isArray(logosList)) {
+          logosList.forEach((asset: any, idx: number) => {
+            if (asset && asset !== logoBase64) {
+              addImagePart(
+                asset,
+                `ASSET REFERENCE #${idx + 1} — Faithfully integrate this object/product into the photographic scene with physically accurate contact shadows and reflections.`
+              );
+            }
+          });
+        }
+      } else {
+        if (prevImgBase64 && isExplicitEdit) {
         console.log(`[api/gerar] INPAINTING/EDIT MODE DETECTED: ${editInstruction}`);
         fullPrompt = `Modify this attached original image ('Imagem Gerada Anterior a ser Editada') by preserving 100% of its exact overall composition, subject identity, hair style, hair length, hair color, clothing, layout, text, logos, background, and style, and applying ONLY this requested change/refinement: ${editInstruction}.
 CRITICAL IDENTITY & WARDROBE LOCK:
@@ -8708,6 +8921,8 @@ The subject reference image may be a compressed digital photo. DO NOT replicate 
         }
       }
 
+      } // end non-isRefBuilder flyer logic
+
       if (somentePrompt) {
         const masterFullPrompt = (promptTraduzido && promptTraduzido.length > 50) ? promptTraduzido : (fullPrompt || expandedPrompt);
         return res.json({
@@ -8722,7 +8937,7 @@ The subject reference image may be a compressed digital photo. DO NOT replicate 
       }
 
       try {
-        const sizeSelected = resolutionInput === "4K" ? "4K" : (resolutionInput === "2K" ? "2K" : "1K");
+        const sizeSelected = resolutionInput === "8K" || resolutionInput === "4K" ? "4K" : (resolutionInput === "2K" ? "2K" : "1K");
         console.log(`[api/gerar] Executing image generation with multi-strategy fallbacks... Target size: ${sizeSelected}, aspect: ${targetAspectRatio}`);
 
         const genResult = await executeImageGenerationWithFallbacks(
@@ -8772,7 +8987,7 @@ The subject reference image may be a compressed digital photo. DO NOT replicate 
               inBuf,
               targetDims.width,
               targetDims.height,
-              targetQuality === "8K" || targetQuality === "4K" ? "4K" : (targetQuality === "2K" ? "2K" : "1K")
+              targetQuality === "8K" ? "8K" : (targetQuality === "4K" ? "4K" : (targetQuality === "2K" ? "2K" : "1K"))
             );
             finalImageBase64 = `data:${rawB64Mime || "image/png"};base64,${resizedBuf.toString("base64")}`;
           }
@@ -8805,7 +9020,7 @@ The subject reference image may be a compressed digital photo. DO NOT replicate 
         // Apply exact natural dimensions if AUTO aspect ratio is selected
         if (autoTargetDimensions && autoTargetDimensions.width && autoTargetDimensions.height) {
           try {
-            const maxDimTarget = resolutionInput === "4K" ? 3840 : (resolutionInput === "2K" ? 2048 : 1024);
+            const maxDimTarget = (resolutionInput === "8K" || (resolutionInput as any) === "8k") ? 7680 : (resolutionInput === "4K" ? 3840 : (resolutionInput === "2K" ? 2048 : 1024));
             let finalTargetW = autoTargetDimensions.width;
             let finalTargetH = autoTargetDimensions.height;
             if (autoTargetDimensions.width >= autoTargetDimensions.height) {

@@ -71,7 +71,7 @@ interface RefTabState {
   dimension: "9:16" | "4:5" | "1:1" | "16:9" | "3:4" | "4:3" | "custom";
   customWidth?: number;
   customHeight?: number;
-  quality: "1K" | "2K" | "4K";
+  quality: "1K" | "2K" | "4K" | "8K";
   assetsPhotoBase64: string | null;
   assetsPhotoDesc: string;
   assetsPhotos: SubjectImageItem[];
@@ -94,7 +94,7 @@ const defaultTabState: RefTabState = {
   dimension: "1:1",
   customWidth: 1200,
   customHeight: 630,
-  quality: "1K",
+  quality: "4K",
   assetsPhotoBase64: null,
   assetsPhotoDesc: "",
   assetsPhotos: [],
@@ -201,10 +201,11 @@ const normalizeDimension = (d: any): "9:16" | "4:5" | "1:1" | "16:9" => {
   return "1:1";
 };
 
-const normalizeQuality = (q: any): "1K" | "2K" | "4K" => {
-  if (!q) return "1K";
+const normalizeQuality = (q: any): "1K" | "2K" | "4K" | "8K" => {
+  if (!q) return "4K";
   const s = String(q).toUpperCase();
-  if (s.includes("4K") || s.includes("4096")) return "4K";
+  if (s.includes("8K") || s.includes("7680") || s.includes("6144")) return "8K";
+  if (s.includes("4K") || s.includes("4096") || s.includes("3840")) return "4K";
   if (s.includes("2K") || s.includes("2048")) return "2K";
   return "1K";
 };
@@ -871,7 +872,7 @@ export const RefBuilder: React.FC<RefBuilderProps> = ({
     updateActiveTab({ customHeight: val });
   };
 
-  const setQuality = (val: "1K" | "2K" | "4K") => {
+  const setQuality = (val: "1K" | "2K" | "4K" | "8K") => {
     updateActiveTab({ quality: val });
     store.updateConfig({ resolucao: val });
   };
@@ -1358,7 +1359,7 @@ export const RefBuilder: React.FC<RefBuilderProps> = ({
       isManagingReferencias: false,
       useRefOnBuild: true,
       dimension: "1:1",
-      quality: "1K",
+      quality: "4K",
       assetsPhotoBase64: null,
       assetsPhotoDesc: "",
       assetsPhotos: [],
@@ -1500,6 +1501,9 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          app: "ref",
+          isRefBuilder: true,
+          agent_slug: "ref-builder",
           assistantId: "ref-prompt",
           message: promptRequest,
           modelId: store.selectedAiModel,
@@ -1582,6 +1586,9 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
   const handleDownloadFormat = async (format: "avif" | "png" | "jpeg" | "webp") => {
     if (!generatedImage) return;
     try {
+      showToast(`Exportando em ${format.toUpperCase()} (${quality || "4K"})...`, "info");
+      await downloadImage(generatedImage, format, undefined, undefined, undefined, quality || "4K", { title: "arte_ref", aspectRatio: dimension, targetResolution: quality || "4K" });
+      return;
       const img = new Image();
       img.crossOrigin = "anonymous";
       img.onload = () => {
@@ -1672,6 +1679,9 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
         method: "POST",
         headers: { "Content-Type": "application/json", ...getAuthHeaders(apiKey) },
         body: JSON.stringify({
+          app: "ref",
+          isRefBuilder: true,
+          agent_slug: "ref-builder",
           previousImageBase64: currentImg,
           maskBase64: maskDataUrl,
           referenceImagesBase64: attachmentBase64s,
@@ -1750,6 +1760,9 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
         method: "POST",
         headers: { "Content-Type": "application/json", ...getAuthHeaders(apiKey) },
         body: JSON.stringify({
+          app: "ref",
+          isRefBuilder: true,
+          agent_slug: "ref-builder",
           previousImageBase64: currentImg,
           dimensao: targetDim,
           customWidth: effW,
@@ -1858,21 +1871,26 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
         method: "POST",
         headers: { "Content-Type": "application/json", ...getAuthHeaders(apiKey) },
         body: JSON.stringify({
+          app: "ref",
+          isRefBuilder: true,
+          agent_slug: "ref-builder",
           base64DoSujeito: /n[aã]o\s*quero\s*pessoa|sem\s*pessoa|no\s*people/i.test(additionalDescription || "") ? "" : (mainPhotoBase64 || subjectImages[0]?.url || ""),
           sujeitosBase64List: /n[aã]o\s*quero\s*pessoa|sem\s*pessoa|no\s*people/i.test(additionalDescription || "") ? [] : (subjectImages.length > 0 ? subjectImages.map(i => i.url) : (mainPhotoBase64 ? [mainPhotoBase64] : [])),
-          designRefBase64: referenceImages[0]?.url || refPhotoBase64 || "",
-          designRefsList: referenceImages.length > 0 ? referenceImages.map(i => i.url) : (refPhotoBase64 ? [refPhotoBase64] : []),
+          referenciasEstilo: referenceImages.length > 0 ? referenceImages.map(i => i.url) : (refPhotoBase64 ? [refPhotoBase64] : []),
+          designRefBase64: "",
+          designRefsList: [],
           logoBase64: assetImages[0]?.url || assetsPhotoBase64 || "",
           logosList: assetImages.length > 1 ? assetImages.slice(1).map(i => i.url) : [],
           useLogo: !!(assetImages.length > 0 || assetsPhotoBase64),
           logoInclusionType: "embedded",
           desativarSujeito: /n[aã]o\s*quero\s*pessoa|sem\s*pessoa|no\s*people/i.test(additionalDescription || ""),
+          subjectPosition: subjectPosition,
           additionalPrompt: additionalDescription?.trim() || "",
           promptTraduzido: [
             additionalDescription?.trim()
               ? `[USER DIRECT MANDATE - HIGHEST OVERRIDING PRIORITY]: ${additionalDescription.trim()}`
               : "",
-            "[CRITICAL SAFE MARGINS AND RESPIRO VISUAL MANDATE]: All typography, brand logos, headers, and contact information MUST maintain generous safe breathing room (at least 16% to 20% safe padding, minimum 550 to 700 pixels in 4K — NEVER touching or glued to top or bottom borders). The top brand logo MUST sit comfortably below the top edge with at least 16% to 20% headroom, and the footer contact bar MUST sit comfortably above the bottom edge with at least 16% to 20% footroom. ZERO elements touching borders.",
+            "[PHOTO ARCHITECTURE MANDATE]: Authentic medium-format commercial editorial portrait. ABSOLUTE PROHIBITION of graphic cards, banners, text boxes, or flyer layouts. Pure full-bleed photographic realism with authentic 3-layer SSS dermal micro-pores.",
             subjectPosition === "left"
               ? "[COMPOSITION MANDATE]: Main subject positioned strictly on the LEFT SIDE of the frame, leaving the right side open."
               : subjectPosition === "right"
@@ -2936,29 +2954,30 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                               border: "1px solid rgba(255, 255, 255, 0.08)"
                             }}
                           >
-                            {quality === "1K" ? "PADRÃO" : quality === "2K" ? "MÉDIO" : "LENTO"}
+                            {quality === "1K" ? "PADRÃO" : quality === "2K" ? "MÉDIO" : quality === "4K" ? "ALTO" : "MASTER 8K"}
                           </span>
                           <span className="text-[10px] tabular-nums text-zinc-500">
                             {dimension === "custom"
                               ? `${customWidth}×${customHeight}`
                               : dimension === "4:5"
-                              ? (quality === "4K" ? "3712×4608" : quality === "2K" ? "1856×2304" : "1024×1280")
+                              ? (quality === "8K" ? "6144×7680" : quality === "4K" ? "3072×3840" : quality === "2K" ? "2048×2560" : "1080×1350")
                               : dimension === "9:16"
-                              ? (quality === "4K" ? "2880×5120" : quality === "2K" ? "1440×2560" : "1024×1820")
+                              ? (quality === "8K" ? "4320×7680" : quality === "4K" ? "2160×3840" : quality === "2K" ? "1440×2560" : "1080×1920")
                               : dimension === "16:9"
-                              ? (quality === "4K" ? "5120×2880" : quality === "2K" ? "2560×1440" : "1820×1024")
-                              : (quality === "4K" ? "4096×4096" : quality === "2K" ? "2048×2048" : "1024×1024")}
+                              ? (quality === "8K" ? "7680×4320" : quality === "4K" ? "3840×2160" : quality === "2K" ? "2560×1440" : "1920×1080")
+                              : (quality === "8K" ? "7680×7680" : quality === "4K" ? "3840×3840" : quality === "2K" ? "2048×2048" : "1024×1024")}
                           </span>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  <div role="group" aria-label="Qualidade" className="grid gap-1.5" style={{ gridTemplateColumns: "repeat(3, minmax(0px, 1fr))" }}>
+                  <div role="group" aria-label="Qualidade" className="grid gap-1.5" style={{ gridTemplateColumns: "repeat(4, minmax(0px, 1fr))" }}>
                     {[
                       { id: "1K", sub: "Rápido" },
                       { id: "2K", sub: "Médio" },
-                      { id: "4K", sub: "Lento" }
+                      { id: "4K", sub: "Alto" },
+                      { id: "8K", sub: "Master" }
                     ].map((q) => {
                       const isSelected = quality === q.id;
                       return (
@@ -3727,7 +3746,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                                     onClick={() => {
                                       const currentUrl = generatedImage || refGalleryItems[0]?.url;
                                       if (currentUrl) {
-                                        downloadImage(currentUrl, fmt.id, undefined, undefined, undefined, "ORIGINAL");
+                                        downloadImage(currentUrl, fmt.id, undefined, undefined, undefined, quality || "4K", { title: "arte_ref", aspectRatio: dimension, targetResolution: quality || "4K" });
                                         showToast(`Exportando como ${fmt.label}...`, "info");
                                       }
                                     }}

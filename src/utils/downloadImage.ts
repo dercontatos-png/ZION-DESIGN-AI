@@ -227,13 +227,13 @@ export const downloadImage = (
           let fetchOptions: RequestInit | undefined;
 
           if (isUrl) {
-            serverDownloadUrl = `/api/download-image?url=${encodeURIComponent(resolvedSource)}&format=${requestedFmt}&name=${encodeURIComponent(smartName)}`;
+            serverDownloadUrl = `/api/download-image?url=${encodeURIComponent(resolvedSource)}&format=${requestedFmt}&name=${encodeURIComponent(smartName)}&quality=${encodeURIComponent(String(metaInfo?.targetResolution || targetResolution || "4K"))}`;
           } else {
             serverDownloadUrl = `/api/download-image`;
             fetchOptions = {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ url: resolvedSource, format: requestedFmt, name: smartName })
+              body: JSON.stringify({ url: resolvedSource, format: requestedFmt, name: smartName, quality: String(metaInfo?.targetResolution || targetResolution || "4K") })
             };
           }
 
@@ -280,10 +280,24 @@ export const downloadImage = (
             targetW = Math.round(Math.sqrt(totalPixels * aspectRatio));
             targetH = Math.round(Math.sqrt(totalPixels / aspectRatio));
           } else {
-            // Para preservar 100% da nitidez óptica sem distorção bilinear do canvas do browser,
-            // mantém exatamente a resolução real gerada pelo servidor
-            targetW = origW;
-            targetH = origH;
+            const effRes = (metaInfo?.targetResolution || targetResolution || "").toString().toUpperCase();
+            if (effRes === "8K") {
+              const maxDim = 7680;
+              targetW = origW >= origH ? maxDim : Math.round(maxDim * aspectRatio);
+              targetH = origW >= origH ? Math.round(maxDim / aspectRatio) : maxDim;
+            } else if (effRes === "4K") {
+              const maxDim = 3840;
+              targetW = origW >= origH ? maxDim : Math.round(maxDim * aspectRatio);
+              targetH = origW >= origH ? Math.round(maxDim / aspectRatio) : maxDim;
+            } else if (effRes === "2K") {
+              const maxDim = 2560;
+              targetW = origW >= origH ? maxDim : Math.round(maxDim * aspectRatio);
+              targetH = origW >= origH ? Math.round(maxDim / aspectRatio) : maxDim;
+            } else {
+              targetW = origW;
+              targetH = origH;
+            }
+            // Mantém resolução real gerada pelo servidor
           }
 
           // REGRA DE OURO DE QUALIDADE: NUNCA reduza a resolução de uma imagem gerada em 2K ou 4K!
