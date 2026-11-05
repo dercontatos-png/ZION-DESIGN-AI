@@ -162,7 +162,7 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
 
   // ── Section 6: Configurações
   const [dimensao, setDimensao] = useState<string>("16:9");
-  const [quality, setQuality] = useState<"1K" | "2K" | "4K" | "8K">("4K");
+  const [quality, setQuality] = useState<"1K" | "2K" | "4K">("4K");
 
   // File Input Refs
   const fileInputSujeitoRef = useRef<HTMLInputElement>(null);
@@ -174,7 +174,7 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
     if (!store.activeProjectId) return;
     if (store.dimensao) setDimensao(store.dimensao);
     if (store.qualidade || store.resolucao) {
-      const q = (store.qualidade || store.resolucao || "4K") as "1K" | "2K" | "4K" | "8K";
+      const q = (store.qualidade || store.resolucao || "4K") as "1K" | "2K" | "4K";
       setQuality(q === "8K" || q === "4K" || q === "2K" || q === "1K" ? q : "4K");
     }
     if ((store as any).categoria) setCategoria((store as any).categoria);
@@ -1069,7 +1069,7 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
                   <label className="flex items-center gap-1.5 text-sm font-semibold text-white">
                     <span>Dimensão da Arte</span>
                   </label>
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-3 gap-2">
                     {[
                       { id: "1:1", label: "1:1 Feed" },
                       { id: "9:16", label: "9:16 Story" },
@@ -1098,8 +1098,8 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
                   <label className="flex items-center gap-1.5 text-sm font-semibold text-white">
                     <span>Qualidade de Renderização</span>
                   </label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {(["1K", "2K", "4K", "8K"] as const).map((q) => {
+                  <div className="grid grid-cols-3 gap-2">
+                    {(["1K", "2K", "4K"] as const).map((q) => {
                       const active = quality === q;
                       return (
                         <button

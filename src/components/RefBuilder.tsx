@@ -8,6 +8,7 @@ import { ImageCropModal } from "./ImageCropModal";
 import { CarouselSlicerModal } from "./CarouselSlicerModal";
 import { ProjetosWorkspace } from "./ProjetosWorkspace";
 import { GenerationLoadingCanvas } from "./GenerationLoadingCanvas";
+import { optimizeBase64Image } from "../utils/compressBase64";
 
 import { REF_PINTEREST_CARDS } from "../data/refPinterestData";
 import { COMMUNITY_CARDS } from "../data/communityData";
@@ -71,7 +72,7 @@ interface RefTabState {
   dimension: "9:16" | "4:5" | "1:1" | "16:9" | "3:4" | "4:3" | "custom";
   customWidth?: number;
   customHeight?: number;
-  quality: "1K" | "2K" | "4K" | "8K";
+  quality: "1K" | "2K" | "4K";
   assetsPhotoBase64: string | null;
   assetsPhotoDesc: string;
   assetsPhotos: SubjectImageItem[];
@@ -201,7 +202,7 @@ const normalizeDimension = (d: any): "9:16" | "4:5" | "1:1" | "16:9" => {
   return "1:1";
 };
 
-const normalizeQuality = (q: any): "1K" | "2K" | "4K" | "8K" => {
+const normalizeQuality = (q: any): "1K" | "2K" | "4K" => {
   if (!q) return "4K";
   const s = String(q).toUpperCase();
   if (s.includes("8K") || s.includes("7680") || s.includes("6144")) return "8K";
@@ -1870,6 +1871,27 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
     try {
       setLastUsedSettings(snapshot);
 
+      // Pre-optimize reference images to 1536px JPEG to eliminate 60MB+ network bottlenecks
+      const effSubject = /n[aã]o\s*quero\s*pessoa|sem\s*pessoa|no\s*people/i.test(additionalDescription || "")
+        ? ""
+        : (mainPhotoBase64 || subjectImages[0]?.url || "");
+      const optSubject = effSubject ? await optimizeBase64Image(effSubject, 1536, 0.88) : "";
+
+      const optSubjectList: string[] = [];
+      if (!/n[aã]o\s*quero\s*pessoa|sem\s*pessoa|no\s*people/i.test(additionalDescription || "")) {
+        for (const img of subjectImages) {
+          if (img.url) optSubjectList.push(await optimizeBase64Image(img.url, 1536, 0.88));
+        }
+      }
+
+      const optRefList: string[] = [];
+      for (const img of referenceImages) {
+        if (img.url) optRefList.push(await optimizeBase64Image(img.url, 1536, 0.88));
+      }
+      const optPrimaryRef = refPhotoBase64
+        ? await optimizeBase64Image(refPhotoBase64, 1536, 0.88)
+        : (optRefList[0] || "");
+
       const apiKey = localStorage.getItem("custom_gemini_api_key") || "";
       const res = await fetch("/api/gerar", {
         method: "POST",
@@ -1878,11 +1900,11 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
           app: "ref",
           isRefBuilder: true,
           agent_slug: "ref-builder",
-          base64DoSujeito: /n[aã]o\s*quero\s*pessoa|sem\s*pessoa|no\s*people/i.test(additionalDescription || "") ? "" : (mainPhotoBase64 || subjectImages[0]?.url || ""),
-          sujeitosBase64List: /n[aã]o\s*quero\s*pessoa|sem\s*pessoa|no\s*people/i.test(additionalDescription || "") ? [] : (subjectImages.length > 0 ? subjectImages.map(i => i.url) : (mainPhotoBase64 ? [mainPhotoBase64] : [])),
-          referenciasEstilo: referenceImages.length > 0 ? referenceImages.map(i => i.url) : (refPhotoBase64 ? [refPhotoBase64] : []),
-          designRefBase64: isGraphicCardOrFlyer ? (refPhotoBase64 || referenceImages[0]?.url || "") : "",
-          designRefsList: isGraphicCardOrFlyer ? (referenceImages.length > 1 ? referenceImages.slice(1).map(i => i.url) : []) : [],
+          base64DoSujeito: optSubject,
+          sujeitosBase64List: optSubjectList.length > 0 ? optSubjectList : (optSubject ? [optSubject] : []),
+          referenciasEstilo: optRefList.length > 0 ? optRefList : (optPrimaryRef ? [optPrimaryRef] : []),
+          designRefBase64: isGraphicCardOrFlyer ? optPrimaryRef : "",
+          designRefsList: isGraphicCardOrFlyer ? (optRefList.length > 1 ? optRefList.slice(1) : (optPrimaryRef ? [optPrimaryRef] : [])) : [],
           logoBase64: assetImages[0]?.url || assetsPhotoBase64 || "",
           logosList: assetImages.length > 1 ? assetImages.slice(1).map(i => i.url) : [],
           useLogo: !!(assetImages.length > 0 || assetsPhotoBase64),
@@ -2966,24 +2988,24 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                             {dimension === "custom"
                               ? `${customWidth}×${customHeight}`
                               : dimension === "4:5"
-                              ? (quality === "8K" ? "6144×7680" : quality === "4K" ? "3072×3840" : quality === "2K" ? "2048×2560" : "1080×1350")
+                              ? (quality === "4K" ? "6144×7680" : quality === "2K" ? "2048×2560" : "1080×1350")
                               : dimension === "9:16"
-                              ? (quality === "8K" ? "4320×7680" : quality === "4K" ? "2160×3840" : quality === "2K" ? "1440×2560" : "1080×1920")
+                              ? (quality === "4K" ? "4320×7680" : quality === "2K" ? "1440×2560" : "1080×1920")
                               : dimension === "16:9"
-                              ? (quality === "8K" ? "7680×4320" : quality === "4K" ? "3840×2160" : quality === "2K" ? "2560×1440" : "1920×1080")
-                              : (quality === "8K" ? "7680×7680" : quality === "4K" ? "3840×3840" : quality === "2K" ? "2048×2048" : "1024×1024")}
+                              ? (quality === "4K" ? "7680×4320" : quality === "2K" ? "2560×1440" : "1920×1080")
+                              : (quality === "4K" ? "7680×7680" : quality === "2K" ? "2048×2048" : "1024×1024")}
                           </span>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  <div role="group" aria-label="Qualidade" className="grid gap-1.5" style={{ gridTemplateColumns: "repeat(4, minmax(0px, 1fr))" }}>
+                  <div role="group" aria-label="Qualidade" className="grid gap-1.5" style={{ gridTemplateColumns: "repeat(3, minmax(0px, 1fr))" }}>
                     {[
                       { id: "1K", sub: "Rápido" },
                       { id: "2K", sub: "Médio" },
                       { id: "4K", sub: "Alto" },
-                      { id: "8K", sub: "Master" }
+                      
                     ].map((q) => {
                       const isSelected = quality === q.id;
                       return (

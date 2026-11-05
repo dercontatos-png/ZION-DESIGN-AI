@@ -1519,11 +1519,11 @@ function getResolutionDimensions(resolution: string, aspectRatio: string, origin
     normRes = normRatio;
     normRatio = tmp;
   }
-  const is8K = normRes === "8K";
-  const is4K = normRes === "4K";
+  const is4K = normRes === "4K" || normRes === "8K";
   const is2K = normRes === "2K";
 
-  if (is8K) {
+  if (is4K) {
+    // 4K outputs the master 8K ultra-resolution (6144x7680 in 4:5, 7680x7680 in 1:1) with micro-textures & vector typography
     switch (normRatio) {
       case "1:1": return { width: 7680, height: 7680 };
       case "4:5": return { width: 6144, height: 7680 };
@@ -1535,19 +1535,6 @@ function getResolutionDimensions(resolution: string, aspectRatio: string, origin
       case "2:3": return { width: 5120, height: 7680 };
       case "5:4": return { width: 7680, height: 6144 };
       default: return { width: 7680, height: 7680 };
-    }
-  } else if (is4K) {
-    switch (normRatio) {
-      case "1:1": return { width: 3840, height: 3840 };
-      case "4:5": return { width: 3072, height: 3840 };
-      case "9:16": return { width: 2160, height: 3840 };
-      case "16:9": return { width: 3840, height: 2160 };
-      case "4:3": return { width: 3840, height: 2880 };
-      case "3:4": return { width: 2880, height: 3840 };
-      case "3:2": return { width: 3840, height: 2560 };
-      case "2:3": return { width: 2560, height: 3840 };
-      case "5:4": return { width: 3840, height: 3072 };
-      default: return { width: 3840, height: 3840 };
     }
   } else if (is2K) {
     switch (normRatio) {
@@ -2014,14 +2001,13 @@ async function startServer() {
         try {
           const meta = await sharp(buffer).metadata();
           if (meta.width && meta.height) {
-            const is8K = requestedQuality === "8K";
-            const minTargetW = is8K ? 6144 : 3072;
+            const minTargetW = 6144;
             if (meta.width < minTargetW) {
-              console.log(`[/api/download-image] Upscaling image from ${meta.width}x${meta.height} to ${requestedQuality} via processSuperResolution8K...`);
+              console.log(`[/api/download-image] Upscaling image from ${meta.width}x${meta.height} to 8K-grade Master via processSuperResolution8K...`);
               const aspect = meta.width / meta.height;
-              const targetW = is8K ? (meta.width >= meta.height ? 7680 : Math.round(7680 * aspect)) : (meta.width >= meta.height ? 3840 : Math.round(3840 * aspect));
-              const targetH = is8K ? (meta.width >= meta.height ? Math.round(7680 / aspect) : 7680) : (meta.width >= meta.height ? Math.round(3840 / aspect) : 3840);
-              buffer = await processSuperResolution8K(buffer, targetW, targetH, is8K ? "8K" : "4K");
+              const targetW = meta.width >= meta.height ? 7680 : Math.round(7680 * aspect);
+              const targetH = meta.width >= meta.height ? Math.round(7680 / aspect) : 7680;
+              buffer = await processSuperResolution8K(buffer, targetW, targetH, "4K");
             }
           }
         } catch (upscaleErr) {
@@ -9145,7 +9131,7 @@ The subject reference image may be a compressed digital photo. DO NOT replicate 
         // Apply exact natural dimensions if AUTO aspect ratio is selected
         if (autoTargetDimensions && autoTargetDimensions.width && autoTargetDimensions.height) {
           try {
-            const maxDimTarget = (resolutionInput === "8K" || (resolutionInput as any) === "8k") ? 7680 : (resolutionInput === "4K" ? 3840 : (resolutionInput === "2K" ? 2048 : 1024));
+            const maxDimTarget = (resolutionInput === "8K" || (resolutionInput as any) === "8k" || resolutionInput === "4K") ? 7680 : (resolutionInput === "2K" ? 2048 : 1024);
             let finalTargetW = autoTargetDimensions.width;
             let finalTargetH = autoTargetDimensions.height;
             if (autoTargetDimensions.width >= autoTargetDimensions.height) {
