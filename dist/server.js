@@ -3587,17 +3587,27 @@ async function executeImageGenerationWithFallbacks(client, parts, promptText2, s
         }
         if (strategy.type === "generateContent") {
           if (res?.candidates?.[0]?.content?.parts) {
+            let bestPart = null;
+            let maxByteLength = 0;
             for (const part of res.candidates[0].content.parts) {
               if (part.inlineData && part.inlineData.data) {
-                const rawData = part.inlineData.data;
-                const rawMime = part.inlineData.mimeType || "image/png";
-                return {
-                  imageBase64Url: `data:${rawMime};base64,${rawData}`,
-                  rawData,
-                  rawMime,
-                  modelUsed: `${strategy.name} (${cItem.name})`
-                };
+                const len = part.inlineData.data.length;
+                if (len > maxByteLength) {
+                  maxByteLength = len;
+                  bestPart = part;
+                }
               }
+            }
+            if (bestPart) {
+              const rawData = bestPart.inlineData.data;
+              const rawMime = bestPart.inlineData.mimeType || "image/png";
+              console.log(`[generate] \u2705 Successfully captured native high-resolution master part (${(maxByteLength / 1024 / 1024).toFixed(2)} MB, candidate parts: ${res.candidates[0].content.parts.length})`);
+              return {
+                imageBase64Url: `data:${rawMime};base64,${rawData}`,
+                rawData,
+                rawMime,
+                modelUsed: `${strategy.name} (${cItem.name})`
+              };
             }
           }
         } else {
@@ -3881,31 +3891,27 @@ async function processSuperResolution8K(inputBuffer, targetWidth, targetHeight, 
       fit: "cover",
       position: "center",
       kernel: sharp.kernel.lanczos3
-    }).toColorspace("srgb").sharpen(mode === "2K" ? { sigma: 0.6, m1: 0.3, m2: 0.7 } : { sigma: 0.4, m1: 0.2, m2: 0.5 }).png({ compressionLevel: 4, adaptiveFiltering: true }).toBuffer();
+    }).toColorspace("srgb").sharpen(mode === "2K" ? { sigma: 0.8, m1: 0.4, m2: 1.2 } : { sigma: 0.5, m1: 0.3, m2: 0.8 }).png({ compressionLevel: 3, adaptiveFiltering: true }).toBuffer();
   }
   try {
-    const ssaaW = Math.min(8192, Math.round(targetWidth * 1.333));
-    const ssaaH = Math.min(8192, Math.round(targetHeight * 1.333));
-    console.log(`[processSuperResolution8K] SSAA Pass 1 (Upscayl 1.33x): Sub-pixel expansion to ${ssaaW}x${ssaaH} with Lanczos3...`);
-    const ssaaBuffer = await sharp(inputBuffer).resize(ssaaW, ssaaH, {
+    console.log(`[processSuperResolution8K] Ultra-Precision Master 8K Scaling to ${targetWidth}x${targetHeight} with Lanczos3 & Vector Edge Sharpening...`);
+    const masterBuffer = await sharp(inputBuffer).resize(targetWidth, targetHeight, {
       fit: "cover",
       position: "center",
       kernel: sharp.kernel.lanczos3
-    }).toColorspace("srgb").sharpen({ sigma: 1.15, m1: 0.5, m2: 1.6 }).toBuffer();
-    console.log(`[processSuperResolution8K] Hi-Res Fix Pass 2 (Stable Diffusion): Resolving to 8K-grade master (${targetWidth}x${targetHeight})...`);
-    const masterBuffer = await sharp(ssaaBuffer).resize(targetWidth, targetHeight, {
-      fit: "cover",
-      position: "center",
-      kernel: sharp.kernel.lanczos3
-    }).toColorspace("srgb").sharpen({ sigma: 0.75, m1: 0.4, m2: 1.25 }).png({ compressionLevel: 4, adaptiveFiltering: true }).toBuffer();
+    }).toColorspace("srgb").sharpen({
+      sigma: 1.3,
+      m1: 0.6,
+      m2: 2.3
+    }).png({ compressionLevel: 3, adaptiveFiltering: true }).toBuffer();
     return masterBuffer;
   } catch (err) {
-    console.warn("[processSuperResolution8K] Multi-pass SSAA fallback to single-pass Lanczos3:", err?.message || err);
+    console.warn("[processSuperResolution8K] Scaling fallback:", err?.message || err);
     return sharp(inputBuffer).resize(targetWidth, targetHeight, {
       fit: "cover",
       position: "center",
       kernel: sharp.kernel.lanczos3
-    }).toColorspace("srgb").sharpen({ sigma: 0.9, m1: 0.5, m2: 1 }).png({ compressionLevel: 4, adaptiveFiltering: true }).toBuffer();
+    }).toColorspace("srgb").sharpen({ sigma: 0.9, m1: 0.5, m2: 1.5 }).png({ compressionLevel: 4, adaptiveFiltering: true }).toBuffer();
   }
 }
 var generationJobs = /* @__PURE__ */ new Map();
@@ -5174,11 +5180,16 @@ CRITICAL RULES:
                   contents
                 });
                 if (response && response.candidates && response.candidates[0]?.content?.parts) {
+                  let bestPart = null;
+                  let maxLen = 0;
                   for (const part of response.candidates[0].content.parts) {
-                    if (part.inlineData?.data) {
-                      rawBuffer = Buffer.from(part.inlineData.data, "base64");
-                      break;
+                    if (part.inlineData?.data && part.inlineData.data.length > maxLen) {
+                      maxLen = part.inlineData.data.length;
+                      bestPart = part;
                     }
+                  }
+                  if (bestPart) {
+                    rawBuffer = Buffer.from(bestPart.inlineData.data, "base64");
                   }
                 }
               } catch (geminiErr) {
@@ -7409,10 +7420,11 @@ Preserve 100% of the unmasked BLACK region without any changes.`;
       }
       let rawGeneratedBase64 = "";
       if (response?.candidates?.[0]?.content?.parts) {
+        let maxLen = 0;
         for (const part of response.candidates[0].content.parts) {
-          if (part.inlineData && part.inlineData.data) {
+          if (part.inlineData && part.inlineData.data && part.inlineData.data.length > maxLen) {
+            maxLen = part.inlineData.data.length;
             rawGeneratedBase64 = part.inlineData.data;
-            break;
           }
         }
       }
@@ -8994,6 +9006,25 @@ CRITICAL DESIGN SYSTEM HIERARCHY RULES FOR PERFECT OUTPUT:
           const rawMime = genResult.rawMime;
           let finalImageBase64 = rawData ? `data:${rawMime};base64,${rawData}` : genResult.imageBase64Url;
           console.log(`[api/generate] Applying post-processing details/upscale via sharp for size: ${sizeSelected}...`);
+          try {
+            const { data: rawB64Data, mimeType: rawB64Mime } = resolveImageInput(finalImageBase64);
+            if (rawB64Data) {
+              const inBuf = Buffer.from(rawB64Data, "base64");
+              const targetQuality = (sizeSelected || "1K").toUpperCase();
+              const targetRatio = selectedRatio || "1:1";
+              const targetDims = getResolutionDimensions(targetQuality, targetRatio);
+              console.log(`[api/generate] Enforcing exact output dimensions for ${targetQuality} (${targetDims.width}x${targetDims.height}) with Lanczos3...`);
+              const resizedBuf = await processSuperResolution8K(
+                inBuf,
+                targetDims.width,
+                targetDims.height,
+                targetQuality === "8K" ? "8K" : targetQuality === "4K" ? "4K" : targetQuality === "2K" ? "2K" : "1K"
+              );
+              finalImageBase64 = `data:${rawB64Mime || "image/png"};base64,${resizedBuf.toString("base64")}`;
+            }
+          } catch (resErr) {
+            console.warn("[api/generate] Resolution enforcement warning:", resErr);
+          }
           const hasLogo = imgConfig?.useLogo || logoRefs?.length > 0;
           const logoInclusionType = imgConfig?.logoInclusionType || "embedded";
           const finalParsed = resolveImageInput(finalImageBase64);
@@ -9622,7 +9653,24 @@ Return ONLY the JSON object. Do not include any conversational text or markdown 
           });
         }
       };
-      if (isRefBuilder) {
+      const isReformatRequest = Boolean(
+        prevImgBase64 && (req.body.isReformat === true || req.body.action === "reformat" || typeof promptTraduzido === "string" && /reformat|adapt|outpaint|proporção|formato/i.test(promptTraduzido) || typeof req.body.additionalPrompt === "string" && /reformat|adapt|outpaint|proporção|formato/i.test(req.body.additionalPrompt))
+      );
+      if (isReformatRequest && prevImgBase64) {
+        console.log(`[api/gerar] === UNIVERSAL REFORMAT & OUTPAINT ENGINE TO ${targetAspectRatio} ACTIVATED ===`);
+        fullPrompt = `=== MASTER REFORMAT & OUTPAINT DIRECTIVE TO ${targetAspectRatio} ===
+You are adapting and reformatting the attached master artwork ('IMAGEM MASTER ANTERIOR A SER REFORMATADA') to the exact canvas aspect ratio: ${targetAspectRatio}.
+MANDATORY REFORMATTING RULES:
+1. 100% CONTENT & VISUAL FIDELITY: Replicate 100% of the elements, typography, headlines, subtitles, text blocks, numbers, brand logos, colors, models/subjects, products (glasses/frames), reflections, and lighting directly from the attached master image.
+2. NATURAL OUTPAINTING & EXTENSION: Seamlessly continue and outpaint the scene, geometric podiums/dividers, background atmosphere, and gradients to fill the complete ${targetAspectRatio} canvas.
+3. SACRED SAFE MARGINS: Center the layout harmoniously and guarantee ample breathing room (minimum 12% padding) so no text or critical features touch or get cut off by borders.
+4. ZERO DISTORTION: Do NOT stretch, squeeze, or warp the text or subject. Expand the canvas naturally.`;
+        expandedSystemInstruction = `You are a world-class digital graphic designer and outpainting specialist. You adapt existing high-resolution commercial artwork to new aspect ratios (${targetAspectRatio}) with 100% fidelity to the original design, expanding the environment seamlessly without altering or distorting any text, logo, or subject.`;
+        parts.push({ text: fullPrompt });
+        addImagePart(prevImgBase64, "IMAGEM MASTER ANTERIOR A SER REFORMATADA AO NOVO FORMATO");
+        if (designRefBase64) addImagePart(designRefBase64, "Refer\xEAncia de Design Auxiliar");
+        if (logoBase64) addImagePart(logoBase64, "Refer\xEAncia de Logotipo Oficial");
+      } else if (isRefBuilder) {
         const isGraphicCardOrFlyer = hasFlyerTypography || /(card|flyer|banner|post|cartaz|propaganda|anúncio|anuncio|ótica|otica|exame|consulta|promoção|promocao|desconto|preço|preco|título|titulo|cabeçalho|cabecalho|texto|legenda|layout|arte|design|sindicato|procedimentos|fundoscopia|acuidade|óculos|oculos)/i.test(promptTraduzido || "") || /(card|flyer|banner|post|cartaz|propaganda|anúncio|anuncio|ótica|otica|exame|consulta|promoção|promocao|desconto|preço|preco|título|titulo|cabeçalho|cabecalho|texto|legenda|layout|arte|design|sindicato|procedimentos|fundoscopia|acuidade|óculos|oculos)/i.test(req.body.additionalPrompt || "");
         if (isGraphicCardOrFlyer) {
           console.log("[api/gerar] === REF BUILDER GRAPHIC DESIGN & COMMERCIAL AD MASTER ENGINE (8K) ACTIVATED ===");
@@ -9655,8 +9703,11 @@ Simulate high-end studio commercial product photography seamlessly integrated wi
    - Pure Crisp White: #FFFFFF (high-contrast headlines, icons, clean surface areas).
    - Luxury Gold Accent: #CCA038 (badges, checkmarks, highlights, CTA accents).
 
-5. VECTOR-SHARP 8K RESOLUTION:
-   - Every single letter, number, and icon must be razor-sharp with pure vector-like precision and zero fuzzy diffusion blur.
+5. CRISP VECTOR TYPOGRAPHY & ZERO DIFFUSION BLUR (8K MASTER FIDELITY):
+   - SOLID HIGH-CONTRAST VECTOR GLYPHS: Render all typography with 100% solid, opaque fill and razor-sharp, hard pixel-perfect boundaries.
+   - Letters must look like Illustrator vector graphics overlaid with supreme precision, NOT soft airbrushed paint.
+   - ZERO fuzzy diffusion halos, ZERO soft glow bleed around letter outlines, ZERO double strokes.
+   - High luminance contrast between text and background: white (#FFFFFF) and gold (#CCA038) text placed strictly over solid dark navy background (#0F1E36) or dedicated container cards so letters are completely legible and pin-sharp under 100% zoom.
    - Brazilian Portuguese text rendered 100% faithfully as requested without translating or hallucinating unrequested words.
 
 ${userNotes ? `[USER CUSTOM SPECIFICATIONS & CONTEXT]
@@ -9715,6 +9766,9 @@ RULES:
                 addImagePart(asset, `BRAND ASSET REFERENCE #${idx + 1}`);
               }
             });
+          }
+          if (prevImgBase64) {
+            addImagePart(prevImgBase64, "IMAGEM MASTER ANTERIOR A SER REFINADA / ADAPTADA");
           }
         } else {
           console.log("[api/gerar] === REF BUILDER PHOTOGRAPHIC MASTER ENGINE (8K) ACTIVATED ===");
@@ -9820,6 +9874,9 @@ RULES:
               }
             });
           }
+          if (prevImgBase64) {
+            addImagePart(prevImgBase64, "IMAGEM MASTER ANTERIOR A SER REFINADA / ADAPTADA");
+          }
         }
       } else {
         if (prevImgBase64 && isExplicitEdit) {
@@ -9858,7 +9915,7 @@ HIGH-FIDELITY FACIAL & DENTAL RECONSTRUCTION:
         const subjectMandatoryRule = hasSujeito ? `- SUBJECT / CASTING INTEGRATION (MANDATORY RULE): When reference photos are attached, preserve the exact person/people, faces, expressions, and clothing UNLESS the prompt explicitly specifies a casting replacement (e.g. "mude a mulher", "trocar modelo"). When a casting replacement is requested, render the new professional model with authentic skin textures, natural joint anatomy, and requested wardrobe matching the brand palette, placing her in the designated layout area.` : `- NO UNREQUESTED SUBJECT ALTERATIONS: Do not invent or alter subjects if not requested.`;
         const flyerVsLogoDisambiguation = isLogoOnlyRequest ? `- ISOLATED LOGO / EMBLEM PRESENTATION MANDATE (CRITICAL): The user requested an isolated logo or logo color edit. You MUST generate ONLY the clean isolated logo emblem centered on a clean background. YOU ARE STRICTLY FORBIDDEN FROM GENERATING A FLYER, POSTER, REAL ESTATE AD, HUMAN MODELS, 3D DOLLAR SIGNS, OR UNREQUESTED ADVERTISING CARDS. Replicate the exact geometric shapes of the provided logo with 100% vector fidelity, applying only the requested color.` : `- CRITICAL MULTIMODAL FLYER VS LOGO DISAMBIGUATION (ABSOLUTE MANDATORY RULE): When a Design Layout Reference (flyer/card) AND a Client Brand Logo reference are both attached, you MUST generate the FULL GRAPHIC CARD LAYOUT (with all headlines, subtitles, 3D elements, subjects, and panel hierarchy from the Design Reference) AND embed the logo emblem cleanly at the exact corresponding location (e.g. bottom-left footer). YOU ARE STRICTLY FORBIDDEN FROM GENERATING AN ISOLATED LOGO OR AN EMPTY BACKGROUND. Render the complete, rich, professional flyer card with all typography and subjects.`;
         const layoutCardRule = isLogoOnlyRequest ? `- ISOLATED EMBLEM COMPOSITION: Render the logo cleanly centered with generous padding on a clean, solid dark or neutral backdrop. DO NOT generate cards, panels, or unrequested backgrounds.` : `- COMPLETE CARD LAYOUT GENERATION: Do NOT generate just a plain empty background backdrop. You MUST generate the complete graphic composition, including all layouts, cards, panels, curved border divides, background textures, lighting setups, and the main visual subjects in their exact spatial positions, proportions, and layouts as shown in the Design Layout Reference image.`;
-        const mandatorySuffix2 = `
+        const mandatorySuffix = `
 
 === ABSOLUTE CRITICAL CONSTRAINTS (MANDATORY) ===
 ${resolutionInput === "4K" || resolutionInput === "8K" || sizeSelectedForModel === "4K" ? `- MASTER 8K ULTRA-HIGH DEFINITION & REVERSE-ENGINEERED HI-RES FIX OPTICAL FIDELITY MANDATE:
@@ -9916,7 +9973,7 @@ ${fullPrompt}`;
 
 ${fullPrompt}`;
         }
-        fullPrompt += mandatorySuffix2;
+        fullPrompt += mandatorySuffix;
         parts.push({ text: fullPrompt });
         if (!desativarSujeito) {
           if (base64DoSujeito) {
@@ -10034,7 +10091,7 @@ The subject reference image may be a compressed digital photo. DO NOT replicate 
         return res.json({
           image: "",
           prompt: masterFullPrompt,
-          systemInstruction: expandedSystemInstruction || mandatorySuffix,
+          systemInstruction: expandedSystemInstruction || "",
           modelUsed: "Zion AI (Master Prompt Generator)",
           requestedResolution: resolutionInput,
           returnedWidth: 0,
