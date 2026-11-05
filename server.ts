@@ -9044,7 +9044,7 @@ The subject reference image may be a compressed digital photo. DO NOT replicate 
         return res.json({
           image: "",
           prompt: masterFullPrompt,
-          systemInstruction: expandedSystemInstruction || mandatorySuffix,
+          systemInstruction: expandedSystemInstruction || "",
           modelUsed: "Zion AI (Master Prompt Generator)",
           requestedResolution: resolutionInput,
           returnedWidth: 0,

@@ -174,8 +174,8 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
     if (!store.activeProjectId) return;
     if (store.dimensao) setDimensao(store.dimensao);
     if (store.qualidade || store.resolucao) {
-      const q = (store.qualidade || store.resolucao || "4K") as "1K" | "2K" | "4K";
-      setQuality(q === "8K" || q === "4K" || q === "2K" || q === "1K" ? q : "4K");
+      const q = String(store.qualidade || store.resolucao || "4K").toUpperCase();
+      setQuality(q.includes("1K") ? "1K" : q.includes("2K") ? "2K" : "4K");
     }
     if ((store as any).categoria) setCategoria((store as any).categoria);
     if (store.quantidade) setQuantidade(String(store.quantidade));
@@ -1056,7 +1056,7 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
                   <label className="flex items-center gap-1.5 text-sm font-semibold text-white">
                     <span>Dimensão da Arte</span>
                   </label>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-4 gap-2">
                     {[
                       { id: "1:1", label: "1:1 Feed" },
                       { id: "9:16", label: "9:16 Story" },
@@ -1069,20 +1069,60 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
                           key={d.id}
                           type="button"
                           onClick={() => setDimensao(d.id)}
-                          className={`flex h-11 flex-col items-center justify-center text-center transition-colors pb-ctrl-btn rounded-xl p-1 cursor-pointer ${active ? "pb-ctrl-active text-white" : "text-zinc-200"
-                            }`}
+                          className={`flex h-11 flex-col items-center justify-center text-center transition-colors pb-ctrl-btn rounded-xl p-1 cursor-pointer ${
+                            active ? "pb-ctrl-active text-white" : "text-zinc-200"
+                          }`}
                         >
                           <span className="text-xs font-semibold">{d.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
 
+                {/* Qualidade */}
+                <div className="flex flex-col gap-2">
+                  <label className="flex items-center gap-1.5 text-sm font-semibold text-white">
+                    <span>Qualidade de Renderização</span>
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(["1K", "2K", "4K"] as const).map((q) => {
+                      const active = quality === q;
+                      return (
+                        <button
+                          key={q}
+                          type="button"
+                          onClick={() => setQuality(q)}
+                          className={`flex h-11 items-center justify-center text-center transition-colors pb-ctrl-btn rounded-xl text-sm font-semibold cursor-pointer ${
+                            active ? "pb-ctrl-active text-white" : "text-zinc-200"
+                          }`}
+                        >
+                          {q}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
 
-                          placeholder="Instruções adicionais personalizadas..."
-                          className="w-full bg-transparent text-sm text-zinc-100 placeholder-[#5c5278] outline-none resize-none leading-relaxed"
+                {/* Prompt Adicional */}
+                <div className="flex flex-col gap-2">
+                  <label className="flex items-center gap-1.5 text-sm font-semibold text-white">
+                    <span>Prompt Adicional</span>
+                    <FieldInfo tooltip="Comandos técnicos e instruções livres para a engine" />
+                  </label>
+                  <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3 transition-colors focus-within:border-purple-500/40">
+                    <textarea
+                      rows={2}
+                      value={promptAdicional}
+                      onChange={(e) => setPromptAdicional(e.target.value)}
+                      placeholder="Instruções adicionais personalizadas..."
+                      className="w-full bg-transparent text-sm text-zinc-100 placeholder-[#5c5278] outline-none resize-none leading-relaxed"
                     />
-                        </div>
+                  </div>
                 </div>
-                </div>
-            )}
               </div>
+            )}
+          </div>
         </div>
 
           {/* ═══════════════════════════════════════════════════════════════════ */}

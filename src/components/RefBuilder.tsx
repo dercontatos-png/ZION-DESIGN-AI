@@ -205,7 +205,7 @@ const normalizeDimension = (d: any): "9:16" | "4:5" | "1:1" | "16:9" => {
 const normalizeQuality = (q: any): "1K" | "2K" | "4K" => {
   if (!q) return "4K";
   const s = String(q).toUpperCase();
-  if (s.includes("8K") || s.includes("7680") || s.includes("6144")) return "8K";
+  if (s.includes("8K") || s.includes("7680") || s.includes("6144")) return "4K";
   if (s.includes("4K") || s.includes("4096") || s.includes("3840")) return "4K";
   if (s.includes("2K") || s.includes("2048")) return "2K";
   return "1K";
@@ -873,7 +873,7 @@ export const RefBuilder: React.FC<RefBuilderProps> = ({
     updateActiveTab({ customHeight: val });
   };
 
-  const setQuality = (val: "1K" | "2K" | "4K" | "8K") => {
+  const setQuality = (val: "1K" | "2K" | "4K") => {
     updateActiveTab({ quality: val });
     store.updateConfig({ resolucao: val });
   };
