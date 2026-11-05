@@ -104,7 +104,7 @@ const FieldInfo: React.FC<{ tooltip?: string }> = ({ tooltip }) => (
 );
 
 export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
-  showToast = () => {},
+  showToast = () => { },
   isGenerating = false,
   generatePremiumImage,
   onCloseMobileCategory
@@ -425,7 +425,7 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
       style={{ "--agent-form-col-w": "420px", "--agent-color": "#ffd500" } as any}
     >
       <form className="flex flex-col gap-4 lg:gap-5 pb-6" onSubmit={(e) => e.preventDefault()}>
-        
+
         {/* ═══════════════════════════════════════════════════════════════════ */}
         {/* 1. PRINCIPAL                                                        */}
         {/* ═══════════════════════════════════════════════════════════════════ */}
@@ -444,15 +444,14 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
                 <span className="truncate text-left text-base font-normal text-[#e2d9ff]">Principal</span>
               </span>
               <ChevronDown
-                className={`h-4 w-4 shrink-0 text-zinc-500 transition-transform duration-200 ease-out ${
-                  openSections.principal ? "rotate-180" : ""
-                }`}
+                className={`h-4 w-4 shrink-0 text-zinc-500 transition-transform duration-200 ease-out ${openSections.principal ? "rotate-180" : ""
+                  }`}
               />
             </button>
 
             {openSections.principal && (
               <div className="px-2 pb-3 lg:px-4 lg:pb-4 pt-1 flex flex-col gap-4 animate-in fade-in duration-150">
-                
+
                 {/* Categoria* */}
                 <div data-field-id="categoria" className="flex flex-col gap-2">
                   <label className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-white">
@@ -472,9 +471,8 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
                           key={cat.id}
                           type="button"
                           onClick={() => setCategoria(cat.id as any)}
-                          className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${
-                            active ? "pb-ctrl-active text-white" : "text-zinc-200"
-                          }`}
+                          className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${active ? "pb-ctrl-active text-white" : "text-zinc-200"
+                            }`}
                         >
                           <cat.Icon className="h-5 w-5" />
                           <span className="font-medium text-sm">{cat.label}</span>
@@ -490,7 +488,7 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
                     <span>Fotos do Sujeito / Produto</span>
                     <FieldInfo tooltip="Envie foto do sujeito ou produto para preservar identidade" />
                   </label>
-                  
+
                   {fotosList.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
                       {fotosList.map((photo, idx) => (
@@ -548,9 +546,8 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
                           key={num}
                           type="button"
                           onClick={() => setQuantidade(num)}
-                          className={`flex h-11 items-center justify-center text-center transition-colors pb-ctrl-btn rounded-xl text-sm font-semibold cursor-pointer ${
-                            active ? "pb-ctrl-active text-white" : "text-zinc-200"
-                          }`}
+                          className={`flex h-11 items-center justify-center text-center transition-colors pb-ctrl-btn rounded-xl text-sm font-semibold cursor-pointer ${active ? "pb-ctrl-active text-white" : "text-zinc-200"
+                            }`}
                         >
                           {num}
                         </button>
@@ -593,9 +590,8 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
                           key={pos.id}
                           type="button"
                           onClick={() => setSubjectPosition(pos.id as any)}
-                          className={`flex h-16 flex-col items-center justify-center gap-1.5 text-center transition-colors pb-ctrl-btn rounded-xl p-2 cursor-pointer ${
-                            active ? "pb-ctrl-active text-white" : "text-zinc-200"
-                          }`}
+                          className={`flex h-16 flex-col items-center justify-center gap-1.5 text-center transition-colors pb-ctrl-btn rounded-xl p-2 cursor-pointer ${active ? "pb-ctrl-active text-white" : "text-zinc-200"
+                            }`}
                         >
                           <pos.Icon className="h-4 w-4" />
                           <span className="text-xs font-medium">{pos.label}</span>
@@ -623,9 +619,8 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
                           key={p.id}
                           type="button"
                           onClick={() => setPlano(p.id)}
-                          className={`flex h-16 flex-col items-center justify-center gap-1.5 text-center transition-colors pb-ctrl-btn rounded-xl p-2 cursor-pointer ${
-                            active ? "pb-ctrl-active text-white" : "text-zinc-200"
-                          }`}
+                          className={`flex h-16 flex-col items-center justify-center gap-1.5 text-center transition-colors pb-ctrl-btn rounded-xl p-2 cursor-pointer ${active ? "pb-ctrl-active text-white" : "text-zinc-200"
+                            }`}
                         >
                           <p.Icon className="h-4 w-4" />
                           <span className="text-xs font-medium">{p.label}</span>
@@ -658,15 +653,14 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
                 <span className="truncate text-left text-base font-normal text-[#e2d9ff]">Marca e estilo</span>
               </span>
               <ChevronDown
-                className={`h-4 w-4 shrink-0 text-zinc-500 transition-transform duration-200 ease-out ${
-                  openSections.marca_estilo ? "rotate-180" : ""
-                }`}
+                className={`h-4 w-4 shrink-0 text-zinc-500 transition-transform duration-200 ease-out ${openSections.marca_estilo ? "rotate-180" : ""
+                  }`}
               />
             </button>
 
             {openSections.marca_estilo && (
               <div className="px-2 pb-3 lg:px-4 lg:pb-4 pt-1 flex flex-col gap-4 animate-in fade-in duration-150">
-                
+
                 {/* Cores da Marca */}
                 <div className="flex flex-col gap-2">
                   <label className="flex items-center gap-1.5 text-sm font-semibold text-white">
@@ -727,9 +721,8 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
                           key={est.value}
                           type="button"
                           onClick={() => setEstiloVisual(est.value)}
-                          className={`flex items-center gap-2.5 p-3 rounded-xl text-left transition-colors pb-ctrl-btn cursor-pointer ${
-                            active ? "pb-ctrl-active text-white" : "text-zinc-200"
-                          }`}
+                          className={`flex items-center gap-2.5 p-3 rounded-xl text-left transition-colors pb-ctrl-btn cursor-pointer ${active ? "pb-ctrl-active text-white" : "text-zinc-200"
+                            }`}
                         >
                           <est.Icon className="h-4 w-4 shrink-0 text-zinc-400" />
                           <span className="text-xs font-medium truncate">{est.label}</span>
@@ -803,15 +796,14 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
                 <span className="truncate text-left text-base font-normal text-[#e2d9ff]">Cenário</span>
               </span>
               <ChevronDown
-                className={`h-4 w-4 shrink-0 text-zinc-500 transition-transform duration-200 ease-out ${
-                  openSections.cenario ? "rotate-180" : ""
-                }`}
+                className={`h-4 w-4 shrink-0 text-zinc-500 transition-transform duration-200 ease-out ${openSections.cenario ? "rotate-180" : ""
+                  }`}
               />
             </button>
 
             {openSections.cenario && (
               <div className="px-2 pb-3 lg:px-4 lg:pb-4 pt-1 flex flex-col gap-4 animate-in fade-in duration-150">
-                
+
                 {/* Nicho */}
                 <div className="flex flex-col gap-2">
                   <label className="flex items-center gap-1.5 text-sm font-semibold text-white">
@@ -914,9 +906,8 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
                 experimental
               </span>
               <ChevronDown
-                className={`h-4 w-4 shrink-0 text-zinc-500 transition-transform duration-200 ease-out ${
-                  openSections.texto_imagem ? "rotate-180" : ""
-                }`}
+                className={`h-4 w-4 shrink-0 text-zinc-500 transition-transform duration-200 ease-out ${openSections.texto_imagem ? "rotate-180" : ""
+                  }`}
               />
             </button>
 
@@ -985,9 +976,8 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
                 <span className="truncate text-left text-base font-normal text-[#e2d9ff]">Ajustes</span>
               </span>
               <ChevronDown
-                className={`h-4 w-4 shrink-0 text-zinc-500 transition-transform duration-200 ease-out ${
-                  openSections.ajustes ? "rotate-180" : ""
-                }`}
+                className={`h-4 w-4 shrink-0 text-zinc-500 transition-transform duration-200 ease-out ${openSections.ajustes ? "rotate-180" : ""
+                  }`}
               />
             </button>
 
@@ -1015,9 +1005,8 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
                   <button
                     type="button"
                     onClick={() => setUsarBlur(!usarBlur)}
-                    className={`flex items-center justify-between p-3 rounded-xl transition-colors pb-ctrl-btn cursor-pointer ${
-                      usarBlur ? "pb-ctrl-active text-white" : "text-zinc-200"
-                    }`}
+                    className={`flex items-center justify-between p-3 rounded-xl transition-colors pb-ctrl-btn cursor-pointer ${usarBlur ? "pb-ctrl-active text-white" : "text-zinc-200"
+                      }`}
                   >
                     <span className="text-xs font-medium">Desfoque Fundo</span>
                     <span className={`h-2 w-2 rounded-full ${usarBlur ? "bg-purple-400 shadow-[0_0_8px_#c084fc]" : "bg-zinc-600"}`} />
@@ -1025,9 +1014,8 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
                   <button
                     type="button"
                     onClick={() => setDegradeTexto(!degradeTexto)}
-                    className={`flex items-center justify-between p-3 rounded-xl transition-colors pb-ctrl-btn cursor-pointer ${
-                      degradeTexto ? "pb-ctrl-active text-white" : "text-zinc-200"
-                    }`}
+                    className={`flex items-center justify-between p-3 rounded-xl transition-colors pb-ctrl-btn cursor-pointer ${degradeTexto ? "pb-ctrl-active text-white" : "text-zinc-200"
+                      }`}
                   >
                     <span className="text-xs font-medium">Degradê Suave</span>
                     <span className={`h-2 w-2 rounded-full ${degradeTexto ? "bg-purple-400 shadow-[0_0_8px_#c084fc]" : "bg-zinc-600"}`} />
@@ -1056,9 +1044,8 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
                 <span className="truncate text-left text-base font-normal text-[#e2d9ff]">Configurações</span>
               </span>
               <ChevronDown
-                className={`h-4 w-4 shrink-0 text-zinc-500 transition-transform duration-200 ease-out ${
-                  openSections.configuracoes ? "rotate-180" : ""
-                }`}
+                className={`h-4 w-4 shrink-0 text-zinc-500 transition-transform duration-200 ease-out ${openSections.configuracoes ? "rotate-180" : ""
+                  }`}
               />
             </button>
 
@@ -1082,114 +1069,74 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
                           key={d.id}
                           type="button"
                           onClick={() => setDimensao(d.id)}
-                          className={`flex h-11 flex-col items-center justify-center text-center transition-colors pb-ctrl-btn rounded-xl p-1 cursor-pointer ${
-                            active ? "pb-ctrl-active text-white" : "text-zinc-200"
-                          }`}
+                          className={`flex h-11 flex-col items-center justify-center text-center transition-colors pb-ctrl-btn rounded-xl p-1 cursor-pointer ${active ? "pb-ctrl-active text-white" : "text-zinc-200"
+                            }`}
                         >
                           <span className="text-xs font-semibold">{d.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
 
-                {/* Qualidade */}
-                <div className="flex flex-col gap-2">
-                  <label className="flex items-center gap-1.5 text-sm font-semibold text-white">
-                    <span>Qualidade de Renderização</span>
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {(["1K", "2K", "4K"] as const).map((q) => {
-                      const active = quality === q;
-                      return (
-                        <button
-                          key={q}
-                          type="button"
-                          onClick={() => setQuality(q)}
-                          className={`flex h-11 items-center justify-center text-center transition-colors pb-ctrl-btn rounded-xl text-sm font-semibold cursor-pointer ${
-                            active ? "pb-ctrl-active text-white" : "text-zinc-200"
-                          }`}
-                        >
-                          {q}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
 
-                {/* Prompt Adicional */}
-                <div className="flex flex-col gap-2">
-                  <label className="flex items-center gap-1.5 text-sm font-semibold text-white">
-                    <span>Prompt Adicional</span>
-                    <FieldInfo tooltip="Comandos técnicos e instruções livres para a engine" />
-                  </label>
-                  <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3 transition-colors focus-within:border-purple-500/40">
-                    <textarea
-                      rows={2}
-                      value={promptAdicional}
-                      onChange={(e) => setPromptAdicional(e.target.value)}
-                      placeholder="Instruções adicionais personalizadas..."
-                      className="w-full bg-transparent text-sm text-zinc-100 placeholder-[#5c5278] outline-none resize-none leading-relaxed"
+                          placeholder="Instruções adicionais personalizadas..."
+                          className="w-full bg-transparent text-sm text-zinc-100 placeholder-[#5c5278] outline-none resize-none leading-relaxed"
                     />
-                  </div>
+                        </div>
                 </div>
-              </div>
+                </div>
             )}
-          </div>
+              </div>
         </div>
 
-        {/* ═══════════════════════════════════════════════════════════════════ */}
-        {/* STICKY BOTTOM: CONSTRUIR (1 CRÉDITO) & DUPLICAR · RESETAR           */}
-        {/* ═══════════════════════════════════════════════════════════════════ */}
-        <div className="sticky bottom-3 z-30 -mx-1 animate-in fade-in slide-in-from-bottom-2 duration-200 mt-2">
-          <div className="rounded-2xl border border-white/10 bg-black/70 px-2 py-2 shadow-2xl backdrop-blur-md">
-            <div className="w-full">
-              <button
-                type="button"
-                onClick={handleConstruirClick}
-                disabled={isGenerating}
-                className="flex w-full items-center justify-center gap-2 text-black rounded-xl px-6 py-4 text-base font-bold transition-all duration-300 hover:scale-[1.01] active:scale-95 shadow-lg disabled:cursor-not-allowed disabled:hover:scale-100 disabled:opacity-40 cursor-pointer"
-                style={{
-                  background: "linear-gradient(to right, rgb(255, 213, 0), rgba(255, 213, 0, 0.8))"
-                }}
-              >
-                <span>{isGenerating ? "Construindo..." : "Construir"}</span>
-                <span className="ml-1.5 rounded-lg bg-black/15 px-2 py-0.5 text-xs font-semibold">
-                  1 crédito
-                </span>
-              </button>
-            </div>
-            <div className="mt-2 px-1 pb-0.5">
-              <div className="flex items-center justify-center gap-3 text-[11px] text-[#9d94bb]">
+          {/* ═══════════════════════════════════════════════════════════════════ */}
+          {/* STICKY BOTTOM: CONSTRUIR (1 CRÉDITO) & DUPLICAR · RESETAR           */}
+          {/* ═══════════════════════════════════════════════════════════════════ */}
+          <div className="sticky bottom-3 z-30 -mx-1 animate-in fade-in slide-in-from-bottom-2 duration-200 mt-2">
+            <div className="rounded-2xl border border-white/10 bg-black/70 px-2 py-2 shadow-2xl backdrop-blur-md">
+              <div className="w-full">
                 <button
                   type="button"
-                  title="Duplicar configurações para uma nova aba"
-                  onClick={() => {
-                    store.createProject();
-                    showToast?.("Configurações duplicadas em uma nova aba!", "success");
+                  onClick={handleConstruirClick}
+                  disabled={isGenerating}
+                  className="flex w-full items-center justify-center gap-2 text-black rounded-xl px-6 py-4 text-base font-bold transition-all duration-300 hover:scale-[1.01] active:scale-95 shadow-lg disabled:cursor-not-allowed disabled:hover:scale-100 disabled:opacity-40 cursor-pointer"
+                  style={{
+                    background: "linear-gradient(to right, rgb(255, 213, 0), rgba(255, 213, 0, 0.8))"
                   }}
-                  className="inline-flex items-center gap-1 transition-colors hover:text-[#f0ecff] cursor-pointer"
                 >
-                  <Copy className="h-3.5 w-3.5" />
-                  <span>Duplicar</span>
+                  <span>{isGenerating ? "Construindo..." : "Construir"}</span>
+                  <span className="ml-1.5 rounded-lg bg-black/15 px-2 py-0.5 text-xs font-semibold">
+                    1 crédito
+                  </span>
                 </button>
-                <span className="text-white/20">·</span>
-                <button
-                  type="button"
-                  title="Resetar configurações para o padrão"
-                  onClick={() => {
-                    store.resetConfig();
-                    showToast?.("Configurações resetadas com sucesso!", "info");
-                  }}
-                  className="inline-flex items-center gap-1 transition-colors hover:text-[#f0ecff] cursor-pointer"
-                >
-                  <RotateCcw className="h-3.5 w-3.5" />
-                  <span>Resetar</span>
-                </button>
+              </div>
+              <div className="mt-2 px-1 pb-0.5">
+                <div className="flex items-center justify-center gap-3 text-[11px] text-[#9d94bb]">
+                  <button
+                    type="button"
+                    title="Duplicar configurações para uma nova aba"
+                    onClick={() => {
+                      store.createProject();
+                      showToast?.("Configurações duplicadas em uma nova aba!", "success");
+                    }}
+                    className="inline-flex items-center gap-1 transition-colors hover:text-[#f0ecff] cursor-pointer"
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                    <span>Duplicar</span>
+                  </button>
+                  <span className="text-white/20">·</span>
+                  <button
+                    type="button"
+                    title="Resetar configurações para o padrão"
+                    onClick={() => {
+                      store.resetConfig();
+                      showToast?.("Configurações resetadas com sucesso!", "info");
+                    }}
+                    className="inline-flex items-center gap-1 transition-colors hover:text-[#f0ecff] cursor-pointer"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    <span>Resetar</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
       </form>
     </aside>

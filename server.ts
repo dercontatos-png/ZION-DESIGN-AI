@@ -1262,17 +1262,32 @@ async function executeImageGenerationWithFallbacks(
 
         if (strategy.type === "generateContent") {
           if (res?.candidates?.[0]?.content?.parts) {
+            // CRITICAL NATIVE QUALITY FIX:
+            // Gemini 3 Pro Image (Nano Banana Pro) returns multiple parts:
+            // - Part 0 is typically a fast low-res thumbnail preview (928x1152 / 1024x576).
+            // - Part 1 is the full native high-resolution master (e.g. 3712x4608 in 4K, 1856x2304 in 2K).
+            // We MUST select the part with the LARGEST data payload to ensure true native 4K/2K resolution!
+            let bestPart: any = null;
+            let maxByteLength = 0;
             for (const part of res.candidates[0].content.parts) {
               if (part.inlineData && part.inlineData.data) {
-                const rawData = part.inlineData.data;
-                const rawMime = part.inlineData.mimeType || "image/png";
-                return {
-                  imageBase64Url: `data:${rawMime};base64,${rawData}`,
-                  rawData,
-                  rawMime,
-                  modelUsed: `${strategy.name} (${cItem.name})`
-                };
+                const len = part.inlineData.data.length;
+                if (len > maxByteLength) {
+                  maxByteLength = len;
+                  bestPart = part;
+                }
               }
+            }
+            if (bestPart) {
+              const rawData = bestPart.inlineData.data;
+              const rawMime = bestPart.inlineData.mimeType || "image/png";
+              console.log(`[generate] ✅ Successfully captured native high-resolution master part (${(maxByteLength / 1024 / 1024).toFixed(2)} MB, candidate parts: ${res.candidates[0].content.parts.length})`);
+              return {
+                imageBase64Url: `data:${rawMime};base64,${rawData}`,
+                rawData,
+                rawMime,
+                modelUsed: `${strategy.name} (${cItem.name})`
+              };
             }
           }
         } else {
@@ -3239,11 +3254,16 @@ CRITICAL RULES:
                 });
 
                 if (response && response.candidates && response.candidates[0]?.content?.parts) {
+                  let bestPart: any = null;
+                  let maxLen = 0;
                   for (const part of response.candidates[0].content.parts) {
-                    if (part.inlineData?.data) {
-                      rawBuffer = Buffer.from(part.inlineData.data, "base64");
-                      break;
+                    if (part.inlineData?.data && part.inlineData.data.length > maxLen) {
+                      maxLen = part.inlineData.data.length;
+                      bestPart = part;
                     }
+                  }
+                  if (bestPart) {
+                    rawBuffer = Buffer.from(bestPart.inlineData.data, "base64");
                   }
                 }
               } catch (geminiErr) {
@@ -5783,10 +5803,11 @@ Preserve 100% of the unmasked BLACK region without any changes.`;
 
       let rawGeneratedBase64 = "";
       if (response?.candidates?.[0]?.content?.parts) {
+        let maxLen = 0;
         for (const part of response.candidates[0].content.parts) {
-          if (part.inlineData && part.inlineData.data) {
+          if (part.inlineData && part.inlineData.data && part.inlineData.data.length > maxLen) {
+            maxLen = part.inlineData.data.length;
             rawGeneratedBase64 = part.inlineData.data;
-            break;
           }
         }
       }
@@ -7795,8 +7816,25 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
           let finalImageBase64 = rawData ? `data:${rawMime};base64,${rawData}` : genResult.imageBase64Url;
 
           console.log(`[api/generate] Applying post-processing details/upscale via sharp for size: ${sizeSelected}...`);
-          // finalImageBase64 = await applyUpscaleAndRefinement(finalImageBase64, sizeSelected, {...});
-
+          try {
+            const { data: rawB64Data, mimeType: rawB64Mime } = resolveImageInput(finalImageBase64);
+            if (rawB64Data) {
+              const inBuf = Buffer.from(rawB64Data, "base64");
+              const targetQuality = (sizeSelected || "1K").toUpperCase();
+              const targetRatio = selectedRatio || "1:1";
+              const targetDims = getResolutionDimensions(targetQuality, targetRatio);
+              console.log(`[api/generate] Enforcing exact output dimensions for ${targetQuality} (${targetDims.width}x${targetDims.height}) with Lanczos3...`);
+              const resizedBuf = await processSuperResolution8K(
+                inBuf,
+                targetDims.width,
+                targetDims.height,
+                targetQuality === "8K" ? "8K" : (targetQuality === "4K" ? "4K" : (targetQuality === "2K" ? "2K" : "1K"))
+              );
+              finalImageBase64 = `data:${rawB64Mime || "image/png"};base64,${resizedBuf.toString("base64")}`;
+            }
+          } catch (resErr) {
+            console.warn("[api/generate] Resolution enforcement warning:", resErr);
+          }
 
           const hasLogo = (imgConfig?.useLogo || logoRefs?.length > 0);
           const logoInclusionType = imgConfig?.logoInclusionType || "embedded";
