@@ -1674,6 +1674,10 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
         } catch {}
       }
 
+      const isGraphicCardOrFlyer =
+        /(card|flyer|banner|post|cartaz|propaganda|anúncio|anuncio|ótica|otica|exame|consulta|promoção|promocao|desconto|preço|preco|título|titulo|cabeçalho|cabecalho|texto|legenda|layout|arte|design|sindicato|procedimentos|fundoscopia|acuidade|óculos|oculos)/i.test(additionalDescription || "") ||
+        /(card|flyer|banner|post|cartaz|propaganda|anúncio|anuncio|ótica|otica|exame|consulta|promoção|promocao|desconto|preço|preco|título|titulo|cabeçalho|cabecalho|texto|legenda|layout|arte|design|sindicato|procedimentos|fundoscopia|acuidade|óculos|oculos)/i.test(refPhotoDesc || "");
+
       const apiKey = localStorage.getItem("custom_gemini_api_key") || "";
       const res = await fetch("/api/gerar", {
         method: "POST",
@@ -1877,8 +1881,8 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
           base64DoSujeito: /n[aã]o\s*quero\s*pessoa|sem\s*pessoa|no\s*people/i.test(additionalDescription || "") ? "" : (mainPhotoBase64 || subjectImages[0]?.url || ""),
           sujeitosBase64List: /n[aã]o\s*quero\s*pessoa|sem\s*pessoa|no\s*people/i.test(additionalDescription || "") ? [] : (subjectImages.length > 0 ? subjectImages.map(i => i.url) : (mainPhotoBase64 ? [mainPhotoBase64] : [])),
           referenciasEstilo: referenceImages.length > 0 ? referenceImages.map(i => i.url) : (refPhotoBase64 ? [refPhotoBase64] : []),
-          designRefBase64: "",
-          designRefsList: [],
+          designRefBase64: isGraphicCardOrFlyer ? (refPhotoBase64 || referenceImages[0]?.url || "") : "",
+          designRefsList: isGraphicCardOrFlyer ? (referenceImages.length > 1 ? referenceImages.slice(1).map(i => i.url) : []) : [],
           logoBase64: assetImages[0]?.url || assetsPhotoBase64 || "",
           logosList: assetImages.length > 1 ? assetImages.slice(1).map(i => i.url) : [],
           useLogo: !!(assetImages.length > 0 || assetsPhotoBase64),
@@ -1890,7 +1894,9 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
             additionalDescription?.trim()
               ? `[USER DIRECT MANDATE - HIGHEST OVERRIDING PRIORITY]: ${additionalDescription.trim()}`
               : "",
-            "[PHOTO ARCHITECTURE MANDATE]: Authentic medium-format commercial editorial portrait. ABSOLUTE PROHIBITION of graphic cards, banners, text boxes, or flyer layouts. Pure full-bleed photographic realism with authentic 3-layer SSS dermal micro-pores.",
+            isGraphicCardOrFlyer
+              ? "[GRAPHIC DESIGN & COMMERCIAL AD MANDATE]: Master-grade commercial graphic design card layout and advertising post. Vector-sharp typographic clarity, clean visual hierarchy, modern geometric shapes (pill badges, product podiums, curved footer banner with location and contact icons), and authentic studio product lighting with realistic depth and reflections. Generous visual breathing room and safe margins."
+              : "[PHOTO ARCHITECTURE MANDATE]: Authentic medium-format commercial editorial portrait. Pure full-bleed photographic realism with authentic 3-layer SSS dermal micro-pores.",
             subjectPosition === "left"
               ? "[COMPOSITION MANDATE]: Main subject positioned strictly on the LEFT SIDE of the frame, leaving the right side open."
               : subjectPosition === "right"

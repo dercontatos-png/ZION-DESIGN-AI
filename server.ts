@@ -8558,6 +8558,107 @@ Return ONLY the JSON object. Do not include any conversational text or markdown 
       };
 
       if (isRefBuilder) {
+        const isGraphicCardOrFlyer =
+          hasFlyerTypography ||
+          /(card|flyer|banner|post|cartaz|propaganda|anúncio|anuncio|ótica|otica|exame|consulta|promoção|promocao|desconto|preço|preco|título|titulo|cabeçalho|cabecalho|texto|legenda|layout|arte|design|sindicato|procedimentos|fundoscopia|acuidade|óculos|oculos)/i.test(promptTraduzido || '') ||
+          /(card|flyer|banner|post|cartaz|propaganda|anúncio|anuncio|ótica|otica|exame|consulta|promoção|promocao|desconto|preço|preco|título|titulo|cabeçalho|cabecalho|texto|legenda|layout|arte|design|sindicato|procedimentos|fundoscopia|acuidade|óculos|oculos)/i.test(req.body.additionalPrompt || '');
+
+        if (isGraphicCardOrFlyer) {
+          console.log("[api/gerar] === REF BUILDER GRAPHIC DESIGN & COMMERCIAL AD MASTER ENGINE (8K) ACTIVATED ===");
+          const userNotes = (req.body.additionalPrompt || promptTraduzido || "").trim();
+
+          fullPrompt = `=== REF MASTER GRAPHIC DESIGN & COMMERCIAL ADVERTISING DIRECTIVE (8K) ===
+[ROLE & EXPERTISE]
+You are an elite Creative Director and World-Class Commercial Graphic Designer executing an award-winning, agency-grade commercial advertising post and marketing card layout.
+Simulate high-end studio commercial product photography seamlessly integrated with vector-sharp typographic hierarchy, clean geometric framing, and pristine luxury brand art direction.
+
+[GRAPHIC ARCHITECTURE & COMPOSITION HIERARCHY]
+1. HERO PRODUCT & 3D FOCAL ELEMENT:
+   - Centerpiece product (e.g. stylish designer glasses, eyewear frames, or featured subject) rendered with authentic optical reflections on lenses, crisp frame textures (acetate, tortoise-shell, metal), and realistic soft contact shadows resting gracefully on a geometric platform, podium, or circular framing backdrop.
+   - Clean 3D depth layering with perfect visual separation between background, geometric cards/podiums, hero product, and foreground text.
+
+2. TYPOGRAPHIC MASTERY & VECTOR CLARITY:
+   - HEADLINE / HEADER: Dominant, bold, modern geometric sans-serif typography (like Montserrat, Inter, Poppins, Outfit) with high contrast. Use elegant pill badges, rounded container buttons, or highlight ribbons for key phrases.
+   - ORGANIZED CONTENT BLOCKS: Group procedure checklists, bullet points, conditions, dates, and locations into clean, beautifully spaced graphic blocks with modern checkmark icons (✔), elegant dividers, or card badges.
+   - FOOTER / BRANDING BANNER: A cohesive, elegant curved or structured footer banner in deep rich brand navy (#0F1E36) featuring:
+     * Location pin icon with address.
+     * Brand logo / mark ("Ótica Progresso").
+     * WhatsApp / contact icon with phone number and call to action.
+
+3. SACRED SAFE MARGINS & VISUAL BREATHING ROOM (RESPIRO):
+   - TOP MARGIN: Minimum 16% safe headroom from top border (never glued to top).
+   - BOTTOM MARGIN: Minimum 16% safe footroom from bottom border (never glued to bottom).
+   - SIDES: Minimum 10% padding. Zero elements touching or glued to canvas edges. Everything floats with luxury breathing space.
+
+4. BRAND COLOR PALETTE LOCK:
+   - Primary Deep Navy Blue: #0F1E36 (rich, authoritative background and footer panels).
+   - Pure Crisp White: #FFFFFF (high-contrast headlines, icons, clean surface areas).
+   - Luxury Gold Accent: #CCA038 (badges, checkmarks, highlights, CTA accents).
+
+5. VECTOR-SHARP 8K RESOLUTION:
+   - Every single letter, number, and icon must be razor-sharp with pure vector-like precision and zero fuzzy diffusion blur.
+   - Brazilian Portuguese text rendered 100% faithfully as requested without translating or hallucinating unrequested words.
+
+${userNotes ? `[USER CUSTOM SPECIFICATIONS & CONTEXT]\n${userNotes}` : ""}
+
+[NEGATIVE CONSTRAINTS]
+blurry, low resolution, soft focus, out of focus, motion blur, plastic skin, airbrushed, cartoon, anime, 3D model, messy layout, overlapping text, illegible font, unrequested English words, missing text, cut-off borders, glued-to-edge text.`;
+
+          expandedSystemInstruction = `You are an elite commercial graphic designer and art director. You execute pristine advertising posters, social media cards, and commercial marketing layouts with vector-sharp typographic precision and commercial studio product photography.
+RULES:
+1. RENDER COMPLETE GRAPHIC DESIGN CARD: Generate the full advertising card with clean typography, headlines, checklist blocks, hero product with studio lighting, and elegant footer banner with icons.
+2. SACRED SAFE MARGINS: Maintain at least 16% to 20% safe breathing room from top and bottom borders.
+3. BRAZILIAN PORTUGUESE ONLY: Render all text exactly in Brazilian Portuguese as provided.
+4. VECTOR SHARPNESS: Every letter, number, and icon must be crisp, high contrast, and perfectly legible.`;
+
+          parts.push({ text: fullPrompt });
+
+          if (base64DoSujeito) {
+            addImagePart(
+              base64DoSujeito,
+              "HERO PRODUCT / MAIN SUBJECT REFERENCE — Faithfully feature this exact product/subject as the centerpiece with realistic lighting, shadows, and reflections."
+            );
+          }
+          if (Array.isArray(sujeitosBase64List)) {
+            sujeitosBase64List.forEach((ref: any, idx: number) => {
+              if (ref && ref !== base64DoSujeito) {
+                addImagePart(
+                  ref,
+                  `ADDITIONAL PRODUCT/SUBJECT REFERENCE #${idx + 1}`
+                );
+              }
+            });
+          }
+          if (Array.isArray(referenciasEstilo) && referenciasEstilo.length > 0) {
+            referenciasEstilo.forEach((ref: any, idx: number) => {
+              if (ref) {
+                addImagePart(
+                  ref,
+                  `DESIGN LAYOUT & STYLE INSPIRATION REFERENCE #${idx + 1} — Replicate this layout hierarchy, composition grid, geometric cards, pill badges, and clean studio aesthetic. Replace text with the new requested text.`
+                );
+              }
+            });
+          }
+          if (designRefBase64) {
+            addImagePart(
+              designRefBase64,
+              "PRIMARY DESIGN LAYOUT REFERENCE — Replicate this graphic composition, spatial layout, badges, and hierarchy."
+            );
+          }
+          if (logoBase64) {
+            addImagePart(
+              logoBase64,
+              "BRAND LOGO REFERENCE — Embed this brand logo cleanly into the layout or footer banner."
+            );
+          }
+          if (Array.isArray(logosList)) {
+            logosList.forEach((asset: any, idx: number) => {
+              if (asset && asset !== logoBase64) {
+                addImagePart(asset, `BRAND ASSET REFERENCE #${idx + 1}`);
+              }
+            });
+          }
+        } else {
         console.log("[api/gerar] === REF BUILDER PHOTOGRAPHIC MASTER ENGINE (8K) ACTIVATED ===");
         const refSubjectPosition = req.body.subjectPosition || "center";
         const positionDirective = refSubjectPosition === "left"
@@ -8674,6 +8775,7 @@ RULES:
             }
           });
         }
+        } // end of !isGraphicCardOrFlyer portrait branch
       } else {
         if (prevImgBase64 && isExplicitEdit) {
         console.log(`[api/gerar] INPAINTING/EDIT MODE DETECTED: ${editInstruction}`);
@@ -8938,6 +9040,29 @@ The subject reference image may be a compressed digital photo. DO NOT replicate 
 
       try {
         const sizeSelected = resolutionInput === "8K" || resolutionInput === "4K" ? "4K" : (resolutionInput === "2K" ? "2K" : "1K");
+
+        // Optimize any massive inlineData images in `parts` to max 2048px JPEG to prevent 59MB upload bottlenecks & Vertex AI timeouts
+        for (const part of parts) {
+          if (part?.inlineData?.data && typeof part.inlineData.data === "string" && part.inlineData.data.length > 1.5 * 1024 * 1024) {
+            try {
+              const buf = Buffer.from(part.inlineData.data, "base64");
+              const meta = await sharp(buf).metadata();
+              if (meta.width && (meta.width > 2048 || meta.height > 2048 || part.inlineData.data.length > 2 * 1024 * 1024)) {
+                const prevLen = part.inlineData.data.length;
+                const optimizedBuf = await sharp(buf)
+                  .resize(2048, 2048, { fit: "inside", withoutEnlargement: true })
+                  .jpeg({ quality: 88 })
+                  .toBuffer();
+                part.inlineData.data = optimizedBuf.toString("base64");
+                part.inlineData.mimeType = "image/jpeg";
+                console.log(`[api/gerar] Multimodal vision payload optimized: shrunk from ${(prevLen / (1024 * 1024)).toFixed(1)}MB down to ${(part.inlineData.data.length / (1024 * 1024)).toFixed(2)}MB`);
+              }
+            } catch (e) {
+              // Retain original if optimization fails
+            }
+          }
+        }
+
         console.log(`[api/gerar] Executing image generation with multi-strategy fallbacks... Target size: ${sizeSelected}, aspect: ${targetAspectRatio}`);
 
         const genResult = await executeImageGenerationWithFallbacks(

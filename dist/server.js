@@ -2945,7 +2945,16 @@ function resolveImageInput(input) {
       return { data, mimeType };
     }
   }
-  if (str.includes("/generated-images/") || str.startsWith("/") || str.startsWith("./")) {
+  if (str.startsWith("/9j/") || str.startsWith("iVBORw0KGgo") || str.startsWith("UklGR") || str.length > 500 && !str.includes(" ") && !str.includes("\n") && !str.includes("\r")) {
+    let mimeType = "image/jpeg";
+    if (str.startsWith("iVBORw0KGgo")) {
+      mimeType = "image/png";
+    } else if (str.startsWith("UklGR")) {
+      mimeType = "image/webp";
+    }
+    return { data: str, mimeType };
+  }
+  if ((str.includes("/generated-images/") || str.startsWith("/") || str.startsWith("./")) && str.length < 500) {
     try {
       let filename = str;
       if (str.includes("/generated-images/")) {
@@ -2972,7 +2981,7 @@ function resolveImageInput(input) {
       console.error(`[resolveImageInput] Error resolving local image:`, err?.message || err);
     }
   }
-  if (!str.startsWith("/") && !str.startsWith("http://") && !str.startsWith("https://")) {
+  if (str.startsWith("/9j/") || !str.startsWith("http://") && !str.startsWith("https://") && (str.length > 500 || !str.startsWith("/"))) {
     return { data: str, mimeType: "image/jpeg" };
   }
   console.warn(`[resolveImageInput] Could not resolve image path/URL "${str.substring(0, 80)}" to base64.`);
@@ -3364,10 +3373,94 @@ function sanitizeLogMessage(msg) {
   sanitized = sanitized.replace(/unhandled/gi, "handled");
   return sanitized;
 }
+function findClosestGeminiRatio(decimalRatio) {
+  const standardRatios = [
+    { ratio: "9:16", val: 9 / 16 },
+    // ~0.5625
+    { ratio: "2:3", val: 2 / 3 },
+    // ~0.6666
+    { ratio: "3:4", val: 3 / 4 },
+    // ~0.75
+    { ratio: "4:5", val: 4 / 5 },
+    // ~0.80
+    { ratio: "1:1", val: 1 },
+    // 1.0
+    { ratio: "5:4", val: 5 / 4 },
+    // 1.25
+    { ratio: "4:3", val: 4 / 3 },
+    // ~1.3333
+    { ratio: "3:2", val: 3 / 2 },
+    // 1.50
+    { ratio: "16:9", val: 16 / 9 },
+    // ~1.7777
+    { ratio: "21:9", val: 21 / 9 }
+    // ~2.3333
+  ];
+  let best = standardRatios[0];
+  let minDiff = Math.abs(decimalRatio - best.val);
+  for (const item of standardRatios) {
+    const diff = Math.abs(decimalRatio - item.val);
+    if (diff < minDiff) {
+      minDiff = diff;
+      best = item;
+    }
+  }
+  return best.ratio;
+}
+function sanitizeGeminiAspectRatio(ratio, fallbackRatio = "4:5") {
+  const ALLOWED = ["1:1", "4:5", "3:4", "2:3", "9:16", "1:4", "1:8", "5:4", "4:3", "3:2", "16:9", "21:9", "4:1", "8:1"];
+  if (!ratio) return fallbackRatio;
+  const clean = ratio.trim().replace("/", ":").toLowerCase();
+  if (clean === "4:5" || clean === "feed vertical" || clean === "feed_vertical" || clean === "portrait" || clean === "feed") return "4:5";
+  if (clean === "9:16" || clean === "story" || clean === "stories" || clean === "reels" || clean === "vertical") return "9:16";
+  if (clean === "1:1" || clean === "square" || clean === "quadrado") return "1:1";
+  if (clean === "16:9" || clean === "cinema" || clean === "landscape" || clean === "horizontal" || clean === "banner") return "16:9";
+  if (clean === "3:4") return "3:4";
+  if (clean === "4:3") return "4:3";
+  if (clean === "2:3") return "2:3";
+  if (clean === "3:2") return "3:2";
+  if (clean === "21:9") return "21:9";
+  const upper = clean.toUpperCase();
+  if (ALLOWED.includes(clean)) return clean;
+  if (ALLOWED.includes(upper)) return upper;
+  return fallbackRatio;
+}
+async function optimizeImageForAiVision(base64Data, mimeType = "image/jpeg", maxDimension = 1280) {
+  try {
+    if (!base64Data) return { data: "", mimeType };
+    const inBuf = Buffer.from(base64Data, "base64");
+    if (inBuf.length < 300 * 1024) {
+      return { data: base64Data, mimeType };
+    }
+    const meta = await sharp(inBuf).metadata();
+    if (meta.width && meta.height && (meta.width > maxDimension || meta.height > maxDimension || inBuf.length > 500 * 1024)) {
+      const resizedBuf = await sharp(inBuf).resize(maxDimension, maxDimension, { fit: "inside", withoutEnlargement: true }).jpeg({ quality: 82, progressive: true }).toBuffer();
+      return { data: resizedBuf.toString("base64"), mimeType: "image/jpeg" };
+    }
+    return { data: base64Data, mimeType };
+  } catch (_) {
+    return { data: base64Data, mimeType };
+  }
+}
 async function executeImageGenerationWithFallbacks(client, parts, promptText2, selectedRatio, sizeSelected, customApiKey, modelId, seedUsuario) {
   const entryWaitMs = getImageQuotaWaitMs();
   if (entryWaitMs > 0 && entryWaitMs <= 1e4) {
     await new Promise((r) => setTimeout(r, entryWaitMs));
+  }
+  const safeRatio = sanitizeGeminiAspectRatio(selectedRatio, "4:5");
+  const sanitizedParts = [];
+  for (const part of parts) {
+    if (part.inlineData && part.inlineData.data) {
+      const opt = await optimizeImageForAiVision(part.inlineData.data, part.inlineData.mimeType || "image/jpeg", 1280);
+      sanitizedParts.push({
+        inlineData: {
+          data: opt.data,
+          mimeType: opt.mimeType || "image/jpeg"
+        }
+      });
+    } else {
+      sanitizedParts.push(part);
+    }
   }
   let mappedModelId = modelId;
   const normModel = (modelId || "").toLowerCase();
@@ -3420,21 +3513,21 @@ async function executeImageGenerationWithFallbacks(client, parts, promptText2, s
           continue;
         }
         console.log(`[generate] Attempting ${strategy.name} on ${cItem.name}...`);
-        const strategyTimeoutMs = strategy.type === "generateContent" ? 24e4 : 85e3;
+        const strategyTimeoutMs = strategy.type === "generateContent" ? 65e3 : 65e3;
         const timeoutPromise = new Promise(
           (_, reject) => setTimeout(() => reject(new Error(`Model ${strategy.name} request timeout (${strategyTimeoutMs / 1e3}s)`)), strategyTimeoutMs)
         );
         const runStrategy = async () => {
           if (strategy.type === "generateContent") {
-            const apiImageSize = sizeSelected === "4K" ? "4K" : sizeSelected === "2K" ? "2K" : "1K";
+            const apiImageSize = sizeSelected === "8K" || sizeSelected === "4K" ? "4K" : sizeSelected === "2K" ? "2K" : "1K";
             try {
               return await curClient.models.generateContent({
                 model: strategy.name,
-                contents: [{ role: "user", parts }],
+                contents: [{ role: "user", parts: sanitizedParts }],
                 config: {
                   responseModalities: ["TEXT", "IMAGE"],
                   imageConfig: {
-                    aspectRatio: selectedRatio,
+                    aspectRatio: safeRatio,
                     imageSize: apiImageSize
                   }
                 }
@@ -3444,11 +3537,11 @@ async function executeImageGenerationWithFallbacks(client, parts, promptText2, s
                 console.warn("[generate] Native 4K request failed or quota exceeded, falling back to 2K native + super-sampling upscale...", err4k?.message || err4k);
                 return await curClient.models.generateContent({
                   model: strategy.name,
-                  contents: [{ role: "user", parts }],
+                  contents: [{ role: "user", parts: sanitizedParts }],
                   config: {
                     responseModalities: ["TEXT", "IMAGE"],
                     imageConfig: {
-                      aspectRatio: selectedRatio,
+                      aspectRatio: safeRatio,
                       imageSize: "2K"
                     }
                   }
@@ -3464,7 +3557,7 @@ async function executeImageGenerationWithFallbacks(client, parts, promptText2, s
             config: {
               numberOfImages: 1,
               outputMimeType: "image/jpeg",
-              aspectRatio: selectedRatio,
+              aspectRatio: safeRatio,
               personGeneration: "ALLOW_ADULT",
               ...seedUsuario ? { seed: Number(seedUsuario) } : {}
             }
@@ -3594,10 +3687,17 @@ async function executeGenerateContentWithFallbacks(client, customApiKey, modelNa
       for (let attempt = 1; attempt <= maxContentAttempts; attempt++) {
         try {
           console.log(`[generateContent-fallback] Trying model ${modelName} on client: ${cItem.name}${attempt > 1 ? ` (attempt ${attempt})` : ""}...`);
-          const response = await curClient.models.generateContent({
-            ...generateParams,
-            model: modelName
-          });
+          const contentTimeoutMs = 15e3;
+          const contentTimeoutPromise = new Promise(
+            (_, reject) => setTimeout(() => reject(new Error(`Model ${modelName} request timeout (${contentTimeoutMs / 1e3}s)`)), contentTimeoutMs)
+          );
+          const response = await Promise.race([
+            curClient.models.generateContent({
+              ...generateParams,
+              model: modelName
+            }),
+            contentTimeoutPromise
+          ]);
           if (response) {
             const hasCandidates = response?.candidates && response.candidates.length > 0;
             const hasParts = hasCandidates && response.candidates[0]?.content?.parts?.length > 0;
@@ -4011,7 +4111,29 @@ async function startServer() {
       }
       const fmt = String(format).toLowerCase().trim();
       let buffer = null;
-      if (url.startsWith("/generated-images/")) {
+      if (url.includes("results/") || url.includes("thumbnails/")) {
+        const match = url.match(/(results|thumbnails)\/([^\/?#]+)\/([^\/?#]+)/);
+        if (match) {
+          const [_, folder, jId, fName] = match;
+          const baseName = fName.replace(/\.[a-zA-Z0-9]+$/, "");
+          const candidatePaths = [
+            path3.join(STORAGE_BASE_DIR, folder, jId, `${baseName}.png`),
+            path3.join(STORAGE_BASE_DIR, folder, jId, `${baseName}.avif`),
+            path3.join(STORAGE_BASE_DIR, folder, jId, fName),
+            path3.join(process.cwd(), "public", "generated-images", `img_${jId}.png`),
+            path3.join(STORAGE_BASE_DIR, "generated-images", `img_${jId}.png`),
+            path3.join(process.cwd(), "public", "generated-images", fName),
+            path3.join(STORAGE_BASE_DIR, "generated-images", fName)
+          ];
+          for (const cp of candidatePaths) {
+            if (fs3.existsSync(cp) && fs3.statSync(cp).isFile()) {
+              buffer = fs3.readFileSync(cp);
+              break;
+            }
+          }
+        }
+      }
+      if (!buffer && url.includes("/generated-images/")) {
         const fname = path3.basename(url.split("?")[0].split("#")[0]);
         const p1 = path3.join(STORAGE_BASE_DIR, "generated-images", fname);
         const p2 = path3.join(process.cwd(), "public", "generated-images", fname);
@@ -4021,26 +4143,49 @@ async function startServer() {
           const r2Obj = await downloadFromR2(`generated-images/${fname}`);
           if (r2Obj) buffer = r2Obj.data;
         }
-      } else if (url.startsWith("/uploads/")) {
+      } else if (!buffer && url.includes("/uploads/")) {
         const fname = path3.basename(url.split("?")[0].split("#")[0]);
         const p1 = path3.join(STORAGE_BASE_DIR, "uploads", fname);
         const p2 = path3.join(process.cwd(), "public", "uploads", fname);
         if (fs3.existsSync(p1) && fs3.statSync(p1).isFile()) buffer = fs3.readFileSync(p1);
         else if (fs3.existsSync(p2) && fs3.statSync(p2).isFile()) buffer = fs3.readFileSync(p2);
-      } else if (url.startsWith("data:")) {
+      } else if (!buffer && url.startsWith("data:")) {
         const { data: b64Data } = resolveImageInput(url);
         if (b64Data) buffer = Buffer.from(b64Data, "base64");
-      } else if (url.startsWith("http://") || url.startsWith("https://")) {
+      } else if (!buffer && (url.startsWith("http://") || url.startsWith("https://"))) {
         const fetchRes = await fetch(url);
         buffer = Buffer.from(await fetchRes.arrayBuffer());
-      } else if (url.startsWith("/")) {
-        const localPath = path3.join(process.cwd(), "public", url.split("?")[0].split("#")[0]);
-        if (fs3.existsSync(localPath) && fs3.statSync(localPath).isFile()) {
-          buffer = fs3.readFileSync(localPath);
+      } else if (!buffer && url.startsWith("/")) {
+        const relPath = url.split("?")[0].split("#")[0].replace(/^\//, "");
+        const localPath1 = path3.join(process.cwd(), "public", relPath);
+        const localPath2 = path3.join(STORAGE_BASE_DIR, relPath);
+        if (fs3.existsSync(localPath1) && fs3.statSync(localPath1).isFile()) {
+          buffer = fs3.readFileSync(localPath1);
+        } else if (fs3.existsSync(localPath2) && fs3.statSync(localPath2).isFile()) {
+          buffer = fs3.readFileSync(localPath2);
         }
       }
       if (!buffer || buffer.length === 0) {
         return res.status(404).json({ error: "Image file not found on server." });
+      }
+      const requestedQuality = (req.query.quality || req.body?.quality || req.query.targetResolution || req.body?.targetResolution || "").toString().toUpperCase().trim();
+      if (requestedQuality === "8K" || requestedQuality === "4K") {
+        try {
+          const meta = await sharp(buffer).metadata();
+          if (meta.width && meta.height) {
+            const is8K = requestedQuality === "8K";
+            const minTargetW = is8K ? 6144 : 3072;
+            if (meta.width < minTargetW) {
+              console.log(`[/api/download-image] Upscaling image from ${meta.width}x${meta.height} to ${requestedQuality} via processSuperResolution8K...`);
+              const aspect = meta.width / meta.height;
+              const targetW = is8K ? meta.width >= meta.height ? 7680 : Math.round(7680 * aspect) : meta.width >= meta.height ? 3840 : Math.round(3840 * aspect);
+              const targetH = is8K ? meta.width >= meta.height ? Math.round(7680 / aspect) : 7680 : meta.width >= meta.height ? Math.round(3840 / aspect) : 3840;
+              buffer = await processSuperResolution8K(buffer, targetW, targetH, is8K ? "8K" : "4K");
+            }
+          }
+        } catch (upscaleErr) {
+          console.warn("[/api/download-image] Upscaling attempt warning:", upscaleErr);
+        }
       }
       let outBuffer = buffer;
       let outMime = "image/png";
@@ -4726,13 +4871,13 @@ CRITICAL RULES:
             jobRecord.message = "Renderizando arte com intelig\xEAncia artificial...";
             jobRecord.updated_at = Date.now();
             let selectedRatio = body.dimensions || "1:1";
-            const validRatios = ["1:1", "3:4", "4:3", "9:16", "16:9"];
+            const validRatios = ["1:1", "4:5", "3:4", "4:3", "9:16", "16:9", "2:3", "3:2"];
             if (!validRatios.includes(selectedRatio)) {
               if (selectedRatio === "4:5" || selectedRatio === "2:3") selectedRatio = "3:4";
               else if (selectedRatio === "3:2") selectedRatio = "4:3";
               else selectedRatio = "1:1";
             }
-            const sizeSelected = (body.quality || "1K").toUpperCase();
+            const sizeSelected = body.quality === "8K" || body.quality === "4K" ? "4K" : body.quality === "2K" ? "2K" : "1K";
             console.log(`[bff/generate ASYNC] Job ${jobId}: Calling executeImageGenerationWithFallbacks (ratio=${selectedRatio}, size=${sizeSelected})...`);
             const genResult = await executeImageGenerationWithFallbacks(
               client,
@@ -4757,14 +4902,13 @@ CRITICAL RULES:
             const targetRatio = body.dimensions || "1:1";
             const targetDims = getResolutionDimensions(targetQuality2, targetRatio);
             console.log(`[bff/generate ASYNC] Job ${jobId}: Enforcing exact target resolution ${targetQuality2} (${targetDims.width}x${targetDims.height}) with Lanczos3 resampling...`);
-            const inMeta = await sharp(rawImgBuffer).metadata();
-            const inRatio = inMeta.width && inMeta.height ? inMeta.width / inMeta.height : 1;
-            const targetRatioVal = targetDims.width / targetDims.height;
-            const processedPngBuffer = await sharp(rawImgBuffer).resize(targetDims.width, targetDims.height, {
-              fit: Math.abs(inRatio - targetRatioVal) <= 0.08 ? "fill" : "cover",
-              position: "center",
-              kernel: sharp.kernel.lanczos3
-            }).toColorspace("srgb").sharpen(targetQuality2 === "4K" ? { sigma: 1, m1: 0.5, m2: 1 } : targetQuality2 === "2K" ? { sigma: 0.6, m1: 0.3, m2: 0.7 } : void 0).png({ palette: false, compressionLevel: 2 }).toBuffer();
+            console.log(`[bff/generate ASYNC] Job ${jobId}: Executing 8K Super-Resolution Engine for ${targetQuality2} (${targetDims.width}x${targetDims.height})...`);
+            const processedPngBuffer = await processSuperResolution8K(
+              rawImgBuffer,
+              targetDims.width,
+              targetDims.height,
+              targetQuality2 === "8K" ? "8K" : targetQuality2 === "4K" ? "4K" : targetQuality2 === "2K" ? "2K" : "1K"
+            );
             const processedAvifBuffer = await sharp(processedPngBuffer).avif({ quality: 85, effort: 1 }).toBuffer();
             fs3.writeFileSync(path3.join(resultDir, "result.avif"), processedAvifBuffer);
             fs3.writeFileSync(path3.join(resultDir, "result.png"), processedPngBuffer);
@@ -8076,7 +8220,20 @@ Output ONLY the JSON object. Do not include conversational filler.`;
           console.warn("[enhancer-supir-magnific] Remodela\xE7\xE3o de fundo falhou:", bgErr.message || bgErr);
         }
       }
-      const selectedRatio = dimensions || dimension || "1:1";
+      let selectedRatio = dimensions || dimension || "1:1";
+      if (selectedRatio.toLowerCase() === "original" || selectedRatio.toLowerCase() === "auto") {
+        try {
+          const meta = await sharp(Buffer.from(base64Data, "base64")).metadata();
+          if (meta.width && meta.height) {
+            selectedRatio = findClosestGeminiRatio(meta.width / meta.height);
+          } else {
+            selectedRatio = "4:5";
+          }
+        } catch (_) {
+          selectedRatio = "4:5";
+        }
+      }
+      selectedRatio = sanitizeGeminiAspectRatio(selectedRatio, "4:5");
       const sizeSelected = (quality || "2K").toUpperCase();
       const userDirectives = (instructions || instrucoes_adicionais || "").trim();
       let finalEnhancedImage = "";
@@ -8499,7 +8656,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
       const results = [];
       const variationsCount = Math.min(Math.max(imgConfig?.variations || 1, 1), 4);
       let selectedRatio = aspectRatioOverride || imgConfig?.aspectRatio || "1:1";
-      const validRatios = ["1:1", "3:4", "4:3", "9:16", "16:9"];
+      const validRatios = ["1:1", "4:5", "3:4", "4:3", "9:16", "16:9", "2:3", "3:2"];
       if (!validRatios.includes(selectedRatio)) {
         if (selectedRatio === "2:3") selectedRatio = "3:4";
         else if (selectedRatio === "3:2") selectedRatio = "4:3";
@@ -8741,7 +8898,7 @@ AVOID (Negative Prompt constraints): ${imgConfig.negativePrompt}.`;
       const finalPrompt = promptBuilder;
       console.log("Hidden Prompt Motor Output:", finalPrompt);
       let selectedRatio = imgConfig?.aspectRatio || "1:1";
-      const validRatios = ["1:1", "3:4", "4:3", "9:16", "16:9"];
+      const validRatios = ["1:1", "4:5", "3:4", "4:3", "9:16", "16:9", "2:3", "3:2"];
       if (!validRatios.includes(selectedRatio)) {
         if (selectedRatio === "4:5" || selectedRatio === "2:3") selectedRatio = "3:4";
         else if (selectedRatio === "3:2") selectedRatio = "4:3";
@@ -9060,10 +9217,10 @@ CRITICAL DESIGN SYSTEM HIERARCHY RULES FOR PERFECT OUTPUT:
       const token = customApiKey?.trim() || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
       const credentialsPath = path3.join(process.cwd(), "chave-vertex.json");
       const isVertex = fs3.existsSync(credentialsPath) || token.startsWith("AQ.") || debugInfo.isUsingVertex === true;
-      const sizeSelectedForModel = resolutionInput === "4K" ? "4K" : resolutionInput === "2K" ? "2K" : "1K";
+      const sizeSelectedForModel = resolutionInput === "8K" || resolutionInput === "4K" ? "4K" : resolutionInput === "2K" ? "2K" : "1K";
       const targetModel = "gemini-3-pro-image";
       let targetAspectRatio = "1:1";
-      const validRatios = ["1:1", "3:4", "4:3", "9:16", "16:9"];
+      const validRatios = ["1:1", "4:5", "3:4", "4:3", "9:16", "16:9", "2:3", "3:2"];
       let autoTargetDimensions = null;
       const parsedCustomWidth = Number(rawCustomWidth) > 0 ? Math.round(Number(rawCustomWidth)) : null;
       const parsedCustomHeight = Number(rawCustomHeight) > 0 ? Math.round(Number(rawCustomHeight)) : null;
@@ -9101,12 +9258,14 @@ CRITICAL DESIGN SYSTEM HIERARCHY RULES FOR PERFECT OUTPUT:
         }
       } else if (validRatios.includes(dimensao)) {
         targetAspectRatio = dimensao;
-      } else if (dimensao === "4:5" || dimensao === "2:3") {
-        targetAspectRatio = "3:4";
-      } else if (dimensao === "3:2") {
-        targetAspectRatio = "4:3";
+      } else {
+        targetAspectRatio = sanitizeGeminiAspectRatio(dimensao, "4:5");
       }
-      const isLogoOnlyRequest = req.body.tipoPainel === "LOGO" || req.body.tipoPainel === "ICONE" || /(\blogo\b|\blogotipo\b|\b[íi]cone\b|\bs[íi]mbolo\b|mudar.*cor.*logo|cor.*da.*logo|trocar.*cor.*logo|apenas.*logo|somente.*logo|isolad[ao]|recolor)/i.test(promptTraduzido || "") || /(\blogo\b|\blogotipo\b|\b[íi]cone\b|\bs[íi]mbolo\b|mudar.*cor.*logo|cor.*da.*logo|trocar.*cor.*logo|apenas.*logo|somente.*logo|isolad[ao]|recolor)/i.test(req.body.additionalPrompt || "") || /(\blogo\b|\blogotipo\b|\b[íi]cone\b|\bs[íi]mbolo\b|mudar.*cor.*logo|cor.*da.*logo|trocar.*cor.*logo|apenas.*logo|somente.*logo|isolad[ao]|recolor)/i.test(req.body.editInstruction || "");
+      const isRefBuilder = req.body.app === "ref" || req.body.isRefBuilder === true || req.body.agent_slug === "ref-builder" || req.body.tipoPainel === "REF" || req.body.tipoPainel === "REF_BUILDER";
+      const hasDesignLayoutRef = !!(designRefBase64 || Array.isArray(designRefsList) && designRefsList.some((r) => r && (typeof r === "string" ? r.trim() !== "" : r.data || r.url)));
+      const hasFlyerTypography = /(cabeçalho|título|data|local|contato|horário|preço|oferta|apresenta|show|evento|ingresso|procedimentos|valores|exame|ótica|sindicato)/i.test(promptTraduzido || "") || /(cabeçalho|título|data|local|contato|horário|preço|oferta|apresenta|show|evento|ingresso|procedimentos|valores|exame|ótica|sindicato)/i.test(req.body.additionalPrompt || "");
+      const isExplicitLogoOnly = !hasDesignLayoutRef && !hasFlyerTypography && (req.body.tipoPainel === "LOGO" || req.body.tipoPainel === "ICONE" || /(apenas\s+(o\s+|a\s+)?(logo|logotipo|ícone|emblema)|somente\s+(o\s+|a\s+)?(logo|logotipo|ícone|emblema)|(logo|logotipo|ícone|emblema)\s+isolad[ao]|recolorir\s+(o\s+|a\s+)?(logo|logotipo)|criar\s+(um\s+)?(novo\s+)?(logo|logotipo)|gerar\s+(apenas\s+)?(um\s+)?(logo|logotipo)\s+isolad)/i.test(promptTraduzido || "") || /(apenas\s+(o\s+|a\s+)?(logo|logotipo|ícone|emblema)|somente\s+(o\s+|a\s+)?(logo|logotipo|ícone|emblema)|(logo|logotipo|ícone|emblema)\s+isolad[ao]|recolorir\s+(o\s+|a\s+)?(logo|logotipo)|criar\s+(um\s+)?(novo\s+)?(logo|logotipo)|gerar\s+(apenas\s+)?(um\s+)?(logo|logotipo)\s+isolad)/i.test(req.body.additionalPrompt || "") || /(apenas\s+(o\s+|a\s+)?(logo|logotipo|ícone|emblema)|somente\s+(o\s+|a\s+)?(logo|logotipo|ícone|emblema)|(logo|logotipo|ícone|emblema)\s+isolad[ao]|recolorir\s+(o\s+|a\s+)?(logo|logotipo)|criar\s+(um\s+)?(novo\s+)?(logo|logotipo)|gerar\s+(apenas\s+)?(um\s+)?(logo|logotipo)\s+isolad)/i.test(req.body.editInstruction || ""));
+      const isLogoOnlyRequest = isExplicitLogoOnly;
       let expandedPrompt = promptTraduzido;
       let expandedSystemInstruction = isLogoOnlyRequest ? `=== ZION MASTER ART DIRECTION & AI RENDERING DIRECTIVE (ISOLATED LOGO / EMBLEM MODE) ===
 [ROLE & EXPERTISE] You are an elite Vector & 3D Brand Logo Designer. Your mandate is to render or recolor ONLY the isolated brand logo/emblem centered on a clean background with 100% preservation of its authentic geometric shapes and contours.
@@ -9136,36 +9295,43 @@ CRITICAL DESIGN SYSTEM HIERARCHY RULES FOR PERFECT OUTPUT:
 2. FONT NAMES ARE STYLE COMMANDS: Font family names (Montserrat, Bebas Neue, Outfit, Anton, Cinzel) are typographic styling directives ONLY and must NEVER be printed or rendered as words on the canvas.
 3. REFERENCE AS GOVERNING LAW: When a Design Layout Reference is provided, preserve its composition grid, panel hierarchy, lighting direction, and 3D depth. Erase all old reference texts and logos, rendering exclusively the client's provided text and brand logo.`;
       try {
-        console.log("[api/gerar] Initiating premium multimodal prompt & instruction expansion...");
-        const expansionParts = [];
-        const addImagePartToExpansion = (input, label) => {
-          const parsed = parseBase64Part(input);
-          if (parsed && parsed.data) {
-            expansionParts.push({
-              inlineData: {
-                data: parsed.data,
-                mimeType: parsed.mimeType || "image/jpeg"
+        if (!isRefBuilder) {
+          console.log("[api/gerar] Initiating premium multimodal prompt & instruction expansion...");
+          const expansionParts = [];
+          let totalExpansionBytes = 0;
+          const addImagePartToExpansion = (input, label) => {
+            const parsed = parseBase64Part(input);
+            if (parsed && parsed.data) {
+              if (totalExpansionBytes + parsed.data.length > 12 * 1024 * 1024) {
+                console.log(`[api/gerar] Skipping reference ${label} for prompt expansion (12MB ceiling reached)`);
+                return;
               }
-            });
-            expansionParts.push({ text: `[Multimodal Visual Reference for ${label}]` });
-          }
-        };
-        if (prevImgBase64) {
-          addImagePartToExpansion(prevImgBase64, "PREVIOUSLY GENERATED IMAGE TO BE EDITED/REFINED");
-          const hasCountReduction = expandedPrompt.includes("REDUCE THE LAYOUT") || expandedPrompt.includes("EXACTLY ONE (1)") || expandedPrompt.includes("deixar uma") || expandedPrompt.includes("remover uma") || expandedPrompt.includes("uma s\xF3") || expandedPrompt.includes("uma so");
-          if (hasCountReduction) {
-            expandedSystemInstruction += `
+              totalExpansionBytes += parsed.data.length;
+              expansionParts.push({
+                inlineData: {
+                  data: parsed.data,
+                  mimeType: parsed.mimeType || "image/jpeg"
+                }
+              });
+              expansionParts.push({ text: `[Multimodal Visual Reference for ${label}]` });
+            }
+          };
+          if (prevImgBase64) {
+            addImagePartToExpansion(prevImgBase64, "PREVIOUSLY GENERATED IMAGE TO BE EDITED/REFINED");
+            const hasCountReduction = expandedPrompt.includes("REDUCE THE LAYOUT") || expandedPrompt.includes("EXACTLY ONE (1)") || expandedPrompt.includes("deixar uma") || expandedPrompt.includes("remover uma") || expandedPrompt.includes("uma s\xF3") || expandedPrompt.includes("uma so");
+            if (hasCountReduction) {
+              expandedSystemInstruction += `
 
 === ABSOLUTE IMAGE COUNT REDUCTION MODE ===
 The user is requesting to REDUCE the layout from multiple images down to EXACTLY ONE (1) SINGLE MAIN IMAGE PANEL. You MUST command the generator to ERASE AND REMOVE ALL SECONDARY IMAGE PANELS AND EXTRA CARDS COMPLETELY. Render ONLY ONE (1) main subject/photo panel on the entire layout. ZERO extra cards, ZERO secondary image panels.`;
-          } else {
-            expandedSystemInstruction += `
+            } else {
+              expandedSystemInstruction += `
 
 === ABSOLUTE IMAGE CORRECTION MODE ===
 The user is requesting a precise local edit on the attached 'PREVIOUSLY GENERATED IMAGE TO BE EDITED/REFINED'. You MUST command the generator to perform a strict image-to-image edit: keep 100% of the previous image's layout, composition grid, typography, faces, subjects, background, and colors completely identical, and apply ONLY the user's specific requested correction. Do NOT redesign or generate a different image. NEVER repeat or duplicate the same photo across the background and a card box.`;
+            }
           }
-        }
-        expandedSystemInstruction += `
+          expandedSystemInstruction += `
 
 === SUPREME SAFE MARGINS & RESPIRO VISUAL LAW (CRITICAL MANDATORY RULE) ===
 1. TOP SAFE MARGIN (HEADROOM): The brand logo, top headers, and headline elements MUST maintain at least 16% to 20% safe breathing room down from the top canvas border (minimum 550 to 700 pixels in 4K resolution). Under NO circumstances should any part of the logo, shield, or text touch or be glued to the top edge!
@@ -9177,122 +9343,122 @@ The user is requesting a precise local edit on the attached 'PREVIOUSLY GENERATE
 1. NO REPEATED PHOTOS: You MUST NOT repeat or duplicate the same photo or image across multiple panels, cards, or background. Each panel/card MUST show a different, unique photo.
 2. DISTINCT BACKGROUND: The background image MUST BE COMPLETELY DISTINCT and DIFFERENT from any image inside a card panel, subject box, or frame. Never use the same photo for both background and a card panel.
 3. UNIQUE PHOTO PER BOX: Every card panel or image box on the layout MUST contain a DIFFERENT, unique reference photo with ZERO repetition.`;
-        let addedDesignCount = 0;
-        if (designRefBase64) {
-          addImagePartToExpansion(designRefBase64, "Primary Design Layout Reference");
-          addedDesignCount++;
-        }
-        if (Array.isArray(designRefsList)) {
-          for (const ref of designRefsList) {
-            if (addedDesignCount >= 3) break;
-            if (ref) {
-              addImagePartToExpansion(ref, `Design Layout Reference #${addedDesignCount + 1}`);
-              addedDesignCount++;
+          let addedDesignCount = 0;
+          if (designRefBase64) {
+            addImagePartToExpansion(designRefBase64, "Primary Design Layout Reference");
+            addedDesignCount++;
+          }
+          if (Array.isArray(designRefsList)) {
+            for (const ref of designRefsList) {
+              if (addedDesignCount >= 3) break;
+              if (ref) {
+                addImagePartToExpansion(ref, `Design Layout Reference #${addedDesignCount + 1}`);
+                addedDesignCount++;
+              }
             }
           }
-        }
-        if (Array.isArray(referenciasEstilo)) {
-          referenciasEstilo.forEach((ref, idx) => {
-            addImagePartToExpansion(ref, `Style Reference #${idx + 1}`);
-          });
-        }
-        if (tipografiaRefBase64) {
-          addImagePartToExpansion(tipografiaRefBase64, "Typography Reference");
-        }
-        if (Array.isArray(tipografiaRefsList)) {
-          tipografiaRefsList.forEach((ref, idx) => {
-            if (ref) addImagePartToExpansion(ref, `Typography Reference #${idx + 1}`);
-          });
-        }
-        if (base64DoSujeito) {
-          addImagePartToExpansion(base64DoSujeito, "Subject/Person Reference");
-        }
-        if (Array.isArray(sujeitosBase64List)) {
-          sujeitosBase64List.forEach((ref, idx) => {
-            if (ref) addImagePartToExpansion(ref, `Additional Subject Reference #${idx + 1}`);
-          });
-        }
-        if (base64DoCenario) {
-          addImagePartToExpansion(base64DoCenario, "Scenario/Environment Reference");
-        }
-        if (Array.isArray(cenariosBase64List)) {
-          cenariosBase64List.forEach((ref, idx) => {
-            if (ref) addImagePartToExpansion(ref, `Additional Scenario Reference #${idx + 1}`);
-          });
-        }
-        const normalizeLogoKey = (str) => {
-          if (!str) return "";
-          let s = typeof str === "string" ? str.trim() : (str?.url || str?.data || "").trim();
-          if (!s) return "";
-          if (s.startsWith("data:")) {
-            const comma = s.indexOf(",");
-            if (comma !== -1) s = s.slice(comma + 1).trim();
+          if (Array.isArray(referenciasEstilo)) {
+            referenciasEstilo.forEach((ref, idx) => {
+              addImagePartToExpansion(ref, `Style Reference #${idx + 1}`);
+            });
           }
-          if (s.includes("/") || s.includes("\\")) {
-            const parts2 = s.split(/[/\\]/);
-            return parts2[parts2.length - 1].split("?")[0].toLowerCase();
+          if (tipografiaRefBase64) {
+            addImagePartToExpansion(tipografiaRefBase64, "Typography Reference");
           }
-          return s.slice(0, 100) + "_" + s.length;
-        };
-        const uniqueExpansionLogos = [];
-        const seenExpLogos = /* @__PURE__ */ new Set();
-        const addExpLogo = (raw) => {
-          if (!raw) return;
-          const val = typeof raw === "string" ? raw.trim() : (raw?.url || raw?.data || "").trim();
-          if (!val) return;
-          const key = normalizeLogoKey(val);
-          if (key && !seenExpLogos.has(key)) {
-            seenExpLogos.add(key);
-            uniqueExpansionLogos.push(val);
+          if (Array.isArray(tipografiaRefsList)) {
+            tipografiaRefsList.forEach((ref, idx) => {
+              if (ref) addImagePartToExpansion(ref, `Typography Reference #${idx + 1}`);
+            });
           }
-        };
-        if (logoBase64) addExpLogo(logoBase64);
-        if (Array.isArray(logosList)) {
-          for (const item of logosList) {
-            addExpLogo(item);
+          if (base64DoSujeito) {
+            addImagePartToExpansion(base64DoSujeito, "Subject/Person Reference");
           }
-        }
-        const finalExpansionLogos = uniqueExpansionLogos.slice(0, 1);
-        finalExpansionLogos.forEach((ref) => {
-          addImagePartToExpansion(ref, "Brand Logo Reference");
-        });
-        const hasLogo = uniqueExpansionLogos.length > 0;
-        const hasSujeito2 = !isLogoOnlyRequest && !desativarSujeito && (!!base64DoSujeito || Array.isArray(sujeitosBase64List) && sujeitosBase64List.some((s) => s && (typeof s === "string" ? s.trim() !== "" : s.data || s.url)) || !!designRefBase64 || Array.isArray(designRefsList) && designRefsList.length > 0 || !!prevImgBase64);
-        const subjectInclusionRule = hasSujeito2 ? `
+          if (Array.isArray(sujeitosBase64List)) {
+            sujeitosBase64List.forEach((ref, idx) => {
+              if (ref) addImagePartToExpansion(ref, `Additional Subject Reference #${idx + 1}`);
+            });
+          }
+          if (base64DoCenario) {
+            addImagePartToExpansion(base64DoCenario, "Scenario/Environment Reference");
+          }
+          if (Array.isArray(cenariosBase64List)) {
+            cenariosBase64List.forEach((ref, idx) => {
+              if (ref) addImagePartToExpansion(ref, `Additional Scenario Reference #${idx + 1}`);
+            });
+          }
+          const normalizeLogoKey = (str) => {
+            if (!str) return "";
+            let s = typeof str === "string" ? str.trim() : (str?.url || str?.data || "").trim();
+            if (!s) return "";
+            if (s.startsWith("data:")) {
+              const comma = s.indexOf(",");
+              if (comma !== -1) s = s.slice(comma + 1).trim();
+            }
+            if (s.includes("/") || s.includes("\\")) {
+              const parts2 = s.split(/[/\\]/);
+              return parts2[parts2.length - 1].split("?")[0].toLowerCase();
+            }
+            return s.slice(0, 100) + "_" + s.length;
+          };
+          const uniqueExpansionLogos = [];
+          const seenExpLogos = /* @__PURE__ */ new Set();
+          const addExpLogo = (raw) => {
+            if (!raw) return;
+            const val = typeof raw === "string" ? raw.trim() : (raw?.url || raw?.data || "").trim();
+            if (!val) return;
+            const key = normalizeLogoKey(val);
+            if (key && !seenExpLogos.has(key)) {
+              seenExpLogos.add(key);
+              uniqueExpansionLogos.push(val);
+            }
+          };
+          if (logoBase64) addExpLogo(logoBase64);
+          if (Array.isArray(logosList)) {
+            for (const item of logosList) {
+              addExpLogo(item);
+            }
+          }
+          const finalExpansionLogos = uniqueExpansionLogos.slice(0, 1);
+          finalExpansionLogos.forEach((ref) => {
+            addImagePartToExpansion(ref, "Brand Logo Reference");
+          });
+          const hasLogo = uniqueExpansionLogos.length > 0;
+          const hasSujeito2 = !isLogoOnlyRequest && !desativarSujeito && (!!base64DoSujeito || Array.isArray(sujeitosBase64List) && sujeitosBase64List.some((s) => s && (typeof s === "string" ? s.trim() !== "" : s.data || s.url)) || !!designRefBase64 || Array.isArray(designRefsList) && designRefsList.length > 0 || !!prevImgBase64);
+          const subjectInclusionRule = hasSujeito2 ? `
 5. SUBJECT / PERSON FIDELITY & CASTING CONTROL: You MUST analyze all attached reference photos ("Refer\xEAncia do Sujeito Principal", "Refer\xEAncia de Design/Layout", "Refer\xEAncia de Cen\xE1rio", "Imagem Gerada Anterior").
 - If the client's prompt requests to KEEP/USE the reference person, preserve the EXACT face, expressions, eyes, hair, skin tone, clothing, and body pose.
 - If the client's prompt explicitly requests to CHANGE/REPLACE the person/model (e.g. "mude a mulher", "coloque outra mulher", "trocar modelo"), GENERATE A NEW HYPER-REALISTIC MODEL with the requested characteristics (ethnicity, modern hair, corporate outfit matching the brand palette), placing her in the EXACT spatial area and pose (e.g. bottom-right quadrant with phone) indicated in the layout reference.` : "";
-        const subjectCompositionRule = hasSujeito2 ? `
+          const subjectCompositionRule = hasSujeito2 ? `
 10. FULL COMPOSITION WITH HIGH-FIDELITY SUBJECT INTEGRATION: Generate the complete graphic composition with the subject seamlessly integrated into the lighting. If preserving the reference person, keep 100% facial identity; if replacing casting as requested by the client, render the new professional model with authentic skin textures and anatomical perfection.` : "";
-        const subjectPromptRule = hasSujeito2 ? `
+          const subjectPromptRule = hasSujeito2 ? `
 5. Subject Integration: Direct the generator to integrate the subject with photographic precision, respecting casting replacement requests when explicitly specified by the client.` : "";
-        const subjectPrintRule = hasSujeito2 ? `
+          const subjectPrintRule = hasSujeito2 ? `
 9. EXACT SUBJECT PLACEMENT: Direct the generator to position the subject in the exact quadrant indicated in the layout reference, seamlessly blending with the background lighting and color palette.` : "";
-        const subjectSysInstructionRule = hasSujeito2 ? `
+          const subjectSysInstructionRule = hasSujeito2 ? `
 5. Subject Placement & Casting: Direct the generator to place the subject in the designated layout area with 100% photographic realism, honoring casting changes when specified.` : "";
-        const subjectEmbeddedRule = hasSujeito2 ? `
+          const subjectEmbeddedRule = hasSujeito2 ? `
 9. STRICT SUBJECT PLACEMENT RULE: Dictate that the image generator must render the subject in the correct spatial quadrant with natural anatomy, authentic skin texture (3-layer SSS), and flawless lighting integration.` : "";
-        const logoInclusionRule = hasLogo ? `
+          const logoInclusionRule = hasLogo ? `
 5. EXACT LOGO SUBSTITUTION IN PLACE (SPATIAL MIRRORING): You MUST examine the attached "Refer\xEAncia de Design/Layout" and identify the EXACT SPATIAL LOCATION of the logo.
 - If the reference flyer has the logo in the BOTTOM-LEFT or BOTTOM-RIGHT FOOTER, render the client's brand logo ("Refer\xEAncia de Logotipo") AT THE EXACT SAME FOOTER POSITION!
 - If the reference flyer has the logo in the TOP-LEFT, TOP-RIGHT, or TOP-CENTER HEADER, render the brand logo in that corresponding header position.
 - MANDATORY RULE: NEVER move a footer logo to the top header unless explicitly requested by the user. Completely erase any old logo from the reference and embed the client's provided brand logo NATIVELY on the canvas with 100% shape and color fidelity, without artificial black container boxes.` : "";
-        const logoCompositionRule = hasLogo ? `
+          const logoCompositionRule = hasLogo ? `
 10. FULL COMPOSITION WITH HIGH-FIDELITY EMBEDDED LOGO: Generate the complete graphic composition WITH the client's original brand logo ("Refer\xEAncia de Logotipo") placed natively in the upper institutional header zone with a MANDATORY generous safe margin of at least 16% to 20% down from the absolute top edge of the canvas (minimum 550 to 700 pixels down in 4K \u2014 NEVER touching, hugging, or glued to the top border). Render cleanly without artificial container boxes or color alterations.` : "";
-        const logoPromptRule = hasLogo ? `
+          const logoPromptRule = hasLogo ? `
 5. Text & Logo Integration: Explicitly instruct the generator to analyze and replicate the provided brand logo ("Refer\xEAncia de Logotipo") with ABSOLUTE 100% EXACT image-to-image fidelity at the EXACT SAME SPATIAL LOCATION where the original logo appeared in the Design Reference. Direct the generator to bake this logo natively onto the canvas, replacing old logos cleanly.` : "";
-        const logoPrintRule = hasLogo ? `
+          const logoPrintRule = hasLogo ? `
 9. EXACT TEXT & LOGO REPLACEMENT: Explicitly instruct the generator to render the brand logo reference directly on the flyer at the exact corresponding location of the original logo (e.g. bottom-left footer), ensuring old logos are completely erased.` : "";
-        const logoSysInstructionRule = hasLogo ? `
+          const logoSysInstructionRule = hasLogo ? `
 5. Logo & Text Replacement: Instruct the generator to completely erase old brand logos and render ONLY the client's provided "Refer\xEAncia de Logotipo" NATIVELY at the exact spatial position of the original logo, without modifying shapes or colors.` : "";
-        const logoEmbeddedRule = hasLogo ? `
+          const logoEmbeddedRule = hasLogo ? `
 9. STRICT LOGO SUBSTITUTION RULE: Dictate that the image generator MUST embed the provided brand logo ("Refer\xEAncia de Logotipo") NATIVELY at the exact spatial location (e.g. bottom-left footer) where the reference logo was situated, with 100% shape and color fidelity.` : "";
-        const masterRoleDesc = isLogoOnlyRequest ? `You are an elite Vector & 3D Brand Logo Designer specializing in Isolated Brand Logos, Emblems, and Vector Symbols.
+          const masterRoleDesc = isLogoOnlyRequest ? `You are an elite Vector & 3D Brand Logo Designer specializing in Isolated Brand Logos, Emblems, and Vector Symbols.
 CRITICAL MANDATE: The client has provided a logo / symbol reference and wants to render, recolor, or modify ONLY the isolated logo emblem on a clean, solid dark or neutral background!
 ABSOLUTE PROHIBITION AGAINST FLYERS: You are STRICTLY FORBIDDEN from generating an advertising flyer, poster, human beings, real estate ads, dollar signs, floating coins, marketing headlines, subtitles, cards, or complex layout compositions!
 Render ONLY the isolated logo mark / emblem centered on the canvas with 100% preservation of its original geometric contours, shapes, and lines, applying ONLY the requested color/metallic material (e.g. golden, metallic gold, #...).` : `You are the absolute ultimate master Generative AI Image Prompt Engineer, Art Director, and Elite Graphic Designer specializing in High-End Brazilian Flyers (Flyer BR Style / "Design de Eventos e Shows brasileiro").`;
-        const cardDesignPreservationRule = isLogoOnlyRequest ? `11. ISOLATED EMBLEM ONLY: Render strictly the isolated logo/emblem centered on the canvas. DO NOT generate cards, flyers, panels, or advertising layouts.` : `11. FULL-BLEED COMPOSITION & ABSOLUTE BAN ON FLOATING RECTANGULAR CARDS (CRITICAL): The artwork must fill the entire canvas edge-to-edge. STRICT MANDATORY BAN: NEVER draw a floating rounded rectangular card, white box container, or framed outline panel in the center or middle enclosing text! All typography, headlines, bullet points, and logos MUST float seamlessly and cleanly directly over the scene background with natural contrast and subtle ambient depth, exactly like top-tier commercial advertising.`;
-        const instructionPrompt = `${masterRoleDesc}
+          const cardDesignPreservationRule = isLogoOnlyRequest ? `11. ISOLATED EMBLEM ONLY: Render strictly the isolated logo/emblem centered on the canvas. DO NOT generate cards, flyers, panels, or advertising layouts.` : `11. FULL-BLEED COMPOSITION & ABSOLUTE BAN ON FLOATING RECTANGULAR CARDS (CRITICAL): The artwork must fill the entire canvas edge-to-edge. STRICT MANDATORY BAN: NEVER draw a floating rounded rectangular card, white box container, or framed outline panel in the center or middle enclosing text! All typography, headlines, bullet points, and logos MUST float seamlessly and cleanly directly over the scene background with natural contrast and subtle ambient depth, exactly like top-tier commercial advertising.`;
+          const instructionPrompt = `${masterRoleDesc}
 Your job is to analyze the attached visual references (especially the Design Layout Reference images and Style References) along with the following initial layout and composition specification:
 "${promptTraduzido}"
 
@@ -9375,72 +9541,73 @@ ${subjectEmbeddedRule}
 ${logoEmbeddedRule}
 
 Return ONLY the JSON object. Do not include any conversational text or markdown formatting except the json code block itself.`;
-        expansionParts.push({ text: instructionPrompt });
-        const expModels = ["gemini-2.5-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.1-pro-preview"];
-        let expText = "";
-        let lastExpErr = null;
-        try {
-          console.log(`[api/gerar] Expanding prompt with model fallback flow...`);
-          const fallbackRes = await executeGenerateContentWithFallbacks(
-            client,
-            customApiKey,
-            expModels,
-            {
-              contents: [{ role: "user", parts: expansionParts }],
-              config: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                  type: "object",
-                  properties: {
-                    prompt: { type: "string" },
-                    systemInstruction: { type: "string" }
-                  },
-                  required: ["prompt", "systemInstruction"]
+          expansionParts.push({ text: instructionPrompt });
+          const expModels = ["gemini-2.5-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.1-pro-preview"];
+          let expText = "";
+          let lastExpErr = null;
+          try {
+            console.log(`[api/gerar] Expanding prompt with model fallback flow...`);
+            const fallbackRes = await executeGenerateContentWithFallbacks(
+              client,
+              customApiKey,
+              expModels,
+              {
+                contents: [{ role: "user", parts: expansionParts }],
+                config: {
+                  responseMimeType: "application/json",
+                  responseSchema: {
+                    type: "object",
+                    properties: {
+                      prompt: { type: "string" },
+                      systemInstruction: { type: "string" }
+                    },
+                    required: ["prompt", "systemInstruction"]
+                  }
                 }
               }
+            );
+            expText = fallbackRes.response?.text || "";
+          } catch (expErr) {
+            lastExpErr = expErr;
+            console.warn(`[api/gerar] Gemini Prompt expansion failed, trying DeepSeek V4 fallback:`, expErr?.message || expErr);
+            try {
+              const dsExp = await callBaiChatCompletion({
+                model: designRefBase64 || base64DoSujeito || base64DoCenario ? "deepseek-v4-flash-vision-exp" : "deepseek-v4-flash",
+                contents: [{ role: "user", parts: expansionParts }],
+                systemInstruction: "You are the ultimate Prompt Expansion Engine for high-end graphic design. Return JSON with 'prompt' and 'systemInstruction'.",
+                customApiKey
+              });
+              expText = dsExp.text;
+            } catch (dsExpErr) {
+              console.warn("[api/gerar] DeepSeek prompt expansion also failed:", dsExpErr?.message || dsExpErr);
             }
-          );
-          expText = fallbackRes.response?.text || "";
-        } catch (expErr) {
-          lastExpErr = expErr;
-          console.warn(`[api/gerar] Gemini Prompt expansion failed, trying DeepSeek V4 fallback:`, expErr?.message || expErr);
-          try {
-            const dsExp = await callBaiChatCompletion({
-              model: designRefBase64 || base64DoSujeito || base64DoCenario ? "deepseek-v4-flash-vision-exp" : "deepseek-v4-flash",
-              contents: [{ role: "user", parts: expansionParts }],
-              systemInstruction: "You are the ultimate Prompt Expansion Engine for high-end graphic design. Return JSON with 'prompt' and 'systemInstruction'.",
-              customApiKey
-            });
-            expText = dsExp.text;
-          } catch (dsExpErr) {
-            console.warn("[api/gerar] DeepSeek prompt expansion also failed:", dsExpErr?.message || dsExpErr);
           }
-        }
-        if (!expText) {
-          console.warn("[api/gerar] AI Prompt expansion unavailable, proceeding with raw prompt.");
-        } else {
-          let cleanedExpText = expText.trim();
-          if (cleanedExpText.startsWith("```")) {
-            cleanedExpText = cleanedExpText.replace(/^```[a-zA-Z]*\n?/, "").replace(/\n?```$/, "").trim();
-          }
-          try {
-            const parsed = JSON.parse(cleanedExpText);
-            if (parsed.prompt && parsed.prompt.trim() !== "") {
-              expandedPrompt = parsed.prompt.trim();
+          if (!expText) {
+            console.warn("[api/gerar] AI Prompt expansion unavailable, proceeding with raw prompt.");
+          } else {
+            let cleanedExpText = expText.trim();
+            if (cleanedExpText.startsWith("```")) {
+              cleanedExpText = cleanedExpText.replace(/^```[a-zA-Z]*\n?/, "").replace(/\n?```$/, "").trim();
             }
-            if (parsed.systemInstruction && parsed.systemInstruction.trim() !== "") {
-              expandedSystemInstruction = parsed.systemInstruction.trim();
-            }
-            console.log("[api/gerar] JSON parsed successfully. Expanded prompt length:", expandedPrompt.length, "Expanded instruction length:", expandedSystemInstruction.length);
-          } catch (jsonErr) {
-            console.warn("[api/gerar] Failed to parse expanded JSON, trying regex...", jsonErr);
-            const promptMatch = expText.match(/"prompt"\s*:\s*"([^"]+)"/);
-            const sysMatch = expText.match(/"systemInstruction"\s*:\s*"([^"]+)"/);
-            if (promptMatch && promptMatch[1]) {
-              expandedPrompt = promptMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"');
-            }
-            if (sysMatch && sysMatch[1]) {
-              expandedSystemInstruction = sysMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"');
+            try {
+              const parsed = JSON.parse(cleanedExpText);
+              if (parsed.prompt && parsed.prompt.trim() !== "") {
+                expandedPrompt = parsed.prompt.trim();
+              }
+              if (parsed.systemInstruction && parsed.systemInstruction.trim() !== "") {
+                expandedSystemInstruction = parsed.systemInstruction.trim();
+              }
+              console.log("[api/gerar] JSON parsed successfully. Expanded prompt length:", expandedPrompt.length, "Expanded instruction length:", expandedSystemInstruction.length);
+            } catch (jsonErr) {
+              console.warn("[api/gerar] Failed to parse expanded JSON, trying regex...", jsonErr);
+              const promptMatch = expText.match(/"prompt"\s*:\s*"([^"]+)"/);
+              const sysMatch = expText.match(/"systemInstruction"\s*:\s*"([^"]+)"/);
+              if (promptMatch && promptMatch[1]) {
+                expandedPrompt = promptMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"');
+              }
+              if (sysMatch && sysMatch[1]) {
+                expandedSystemInstruction = sysMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"');
+              }
             }
           }
         }
@@ -9480,9 +9647,209 @@ Return ONLY the JSON object. Do not include any conversational text or markdown 
           });
         }
       };
-      if (prevImgBase64 && isExplicitEdit) {
-        console.log(`[api/gerar] INPAINTING/EDIT MODE DETECTED: ${editInstruction}`);
-        fullPrompt = `Modify this attached original image ('Imagem Gerada Anterior a ser Editada') by preserving 100% of its exact overall composition, subject identity, hair style, hair length, hair color, clothing, layout, text, logos, background, and style, and applying ONLY this requested change/refinement: ${editInstruction}.
+      if (isRefBuilder) {
+        const isGraphicCardOrFlyer = hasFlyerTypography || /(card|flyer|banner|post|cartaz|propaganda|anúncio|anuncio|ótica|otica|exame|consulta|promoção|promocao|desconto|preço|preco|título|titulo|cabeçalho|cabecalho|texto|legenda|layout|arte|design|sindicato|procedimentos|fundoscopia|acuidade|óculos|oculos)/i.test(promptTraduzido || "") || /(card|flyer|banner|post|cartaz|propaganda|anúncio|anuncio|ótica|otica|exame|consulta|promoção|promocao|desconto|preço|preco|título|titulo|cabeçalho|cabecalho|texto|legenda|layout|arte|design|sindicato|procedimentos|fundoscopia|acuidade|óculos|oculos)/i.test(req.body.additionalPrompt || "");
+        if (isGraphicCardOrFlyer) {
+          console.log("[api/gerar] === REF BUILDER GRAPHIC DESIGN & COMMERCIAL AD MASTER ENGINE (8K) ACTIVATED ===");
+          const userNotes = (req.body.additionalPrompt || promptTraduzido || "").trim();
+          fullPrompt = `=== REF MASTER GRAPHIC DESIGN & COMMERCIAL ADVERTISING DIRECTIVE (8K) ===
+[ROLE & EXPERTISE]
+You are an elite Creative Director and World-Class Commercial Graphic Designer executing an award-winning, agency-grade commercial advertising post and marketing card layout.
+Simulate high-end studio commercial product photography seamlessly integrated with vector-sharp typographic hierarchy, clean geometric framing, and pristine luxury brand art direction.
+
+[GRAPHIC ARCHITECTURE & COMPOSITION HIERARCHY]
+1. HERO PRODUCT & 3D FOCAL ELEMENT:
+   - Centerpiece product (e.g. stylish designer glasses, eyewear frames, or featured subject) rendered with authentic optical reflections on lenses, crisp frame textures (acetate, tortoise-shell, metal), and realistic soft contact shadows resting gracefully on a geometric platform, podium, or circular framing backdrop.
+   - Clean 3D depth layering with perfect visual separation between background, geometric cards/podiums, hero product, and foreground text.
+
+2. TYPOGRAPHIC MASTERY & VECTOR CLARITY:
+   - HEADLINE / HEADER: Dominant, bold, modern geometric sans-serif typography (like Montserrat, Inter, Poppins, Outfit) with high contrast. Use elegant pill badges, rounded container buttons, or highlight ribbons for key phrases.
+   - ORGANIZED CONTENT BLOCKS: Group procedure checklists, bullet points, conditions, dates, and locations into clean, beautifully spaced graphic blocks with modern checkmark icons (\u2714), elegant dividers, or card badges.
+   - FOOTER / BRANDING BANNER: A cohesive, elegant curved or structured footer banner in deep rich brand navy (#0F1E36) featuring:
+     * Location pin icon with address.
+     * Brand logo / mark ("\xD3tica Progresso").
+     * WhatsApp / contact icon with phone number and call to action.
+
+3. SACRED SAFE MARGINS & VISUAL BREATHING ROOM (RESPIRO):
+   - TOP MARGIN: Minimum 16% safe headroom from top border (never glued to top).
+   - BOTTOM MARGIN: Minimum 16% safe footroom from bottom border (never glued to bottom).
+   - SIDES: Minimum 10% padding. Zero elements touching or glued to canvas edges. Everything floats with luxury breathing space.
+
+4. BRAND COLOR PALETTE LOCK:
+   - Primary Deep Navy Blue: #0F1E36 (rich, authoritative background and footer panels).
+   - Pure Crisp White: #FFFFFF (high-contrast headlines, icons, clean surface areas).
+   - Luxury Gold Accent: #CCA038 (badges, checkmarks, highlights, CTA accents).
+
+5. VECTOR-SHARP 8K RESOLUTION:
+   - Every single letter, number, and icon must be razor-sharp with pure vector-like precision and zero fuzzy diffusion blur.
+   - Brazilian Portuguese text rendered 100% faithfully as requested without translating or hallucinating unrequested words.
+
+${userNotes ? `[USER CUSTOM SPECIFICATIONS & CONTEXT]
+${userNotes}` : ""}
+
+[NEGATIVE CONSTRAINTS]
+blurry, low resolution, soft focus, out of focus, motion blur, plastic skin, airbrushed, cartoon, anime, 3D model, messy layout, overlapping text, illegible font, unrequested English words, missing text, cut-off borders, glued-to-edge text.`;
+          expandedSystemInstruction = `You are an elite commercial graphic designer and art director. You execute pristine advertising posters, social media cards, and commercial marketing layouts with vector-sharp typographic precision and commercial studio product photography.
+RULES:
+1. RENDER COMPLETE GRAPHIC DESIGN CARD: Generate the full advertising card with clean typography, headlines, checklist blocks, hero product with studio lighting, and elegant footer banner with icons.
+2. SACRED SAFE MARGINS: Maintain at least 16% to 20% safe breathing room from top and bottom borders.
+3. BRAZILIAN PORTUGUESE ONLY: Render all text exactly in Brazilian Portuguese as provided.
+4. VECTOR SHARPNESS: Every letter, number, and icon must be crisp, high contrast, and perfectly legible.`;
+          parts.push({ text: fullPrompt });
+          if (base64DoSujeito) {
+            addImagePart(
+              base64DoSujeito,
+              "HERO PRODUCT / MAIN SUBJECT REFERENCE \u2014 Faithfully feature this exact product/subject as the centerpiece with realistic lighting, shadows, and reflections."
+            );
+          }
+          if (Array.isArray(sujeitosBase64List)) {
+            sujeitosBase64List.forEach((ref, idx) => {
+              if (ref && ref !== base64DoSujeito) {
+                addImagePart(
+                  ref,
+                  `ADDITIONAL PRODUCT/SUBJECT REFERENCE #${idx + 1}`
+                );
+              }
+            });
+          }
+          if (Array.isArray(referenciasEstilo) && referenciasEstilo.length > 0) {
+            referenciasEstilo.forEach((ref, idx) => {
+              if (ref) {
+                addImagePart(
+                  ref,
+                  `DESIGN LAYOUT & STYLE INSPIRATION REFERENCE #${idx + 1} \u2014 Replicate this layout hierarchy, composition grid, geometric cards, pill badges, and clean studio aesthetic. Replace text with the new requested text.`
+                );
+              }
+            });
+          }
+          if (designRefBase64) {
+            addImagePart(
+              designRefBase64,
+              "PRIMARY DESIGN LAYOUT REFERENCE \u2014 Replicate this graphic composition, spatial layout, badges, and hierarchy."
+            );
+          }
+          if (logoBase64) {
+            addImagePart(
+              logoBase64,
+              "BRAND LOGO REFERENCE \u2014 Embed this brand logo cleanly into the layout or footer banner."
+            );
+          }
+          if (Array.isArray(logosList)) {
+            logosList.forEach((asset, idx) => {
+              if (asset && asset !== logoBase64) {
+                addImagePart(asset, `BRAND ASSET REFERENCE #${idx + 1}`);
+              }
+            });
+          }
+        } else {
+          console.log("[api/gerar] === REF BUILDER PHOTOGRAPHIC MASTER ENGINE (8K) ACTIVATED ===");
+          const refSubjectPosition = req.body.subjectPosition || "center";
+          const positionDirective = refSubjectPosition === "left" ? "[COMPOSITION & FRAMING] Position and frame the main subject strictly on the LEFT THIRD of the composition following cinematic rule-of-thirds, leaving open negative space on the right side." : refSubjectPosition === "right" ? "[COMPOSITION & FRAMING] Position and frame the main subject strictly on the RIGHT THIRD of the composition following cinematic rule-of-thirds, leaving open negative space on the left side." : "[COMPOSITION & FRAMING] Position and frame the main subject cleanly CENTERED with balanced, powerful medium-format commercial editorial symmetry.";
+          const userNotes = (req.body.additionalPrompt || promptTraduzido || "").trim();
+          fullPrompt = `=== REF MASTER EDITORIAL & COMMERCIAL PHOTOGRAPHY DIRECTIVE ===
+[ROLE & OPTICAL PLATFORM]
+You are an elite Director of Photography and World-Class Commercial Portraitist executing a master-grade editorial fashion and commercial photograph.
+Simulate a medium-format Hasselblad H6D-100c paired with a prime HC 100mm f/2.2 lens stopped down to f/2.8, ISO 64, or a Sony Alpha 1 with an FE 85mm f/1.4 GM prime lens.
+
+[ABSOLUTE MANDATORY PROHIBITION OF GRAPHIC FLYERS, CARDS & TEXT]
+STRICTLY FORBIDDEN: NEVER generate an advertising flyer, poster, graphic layout, floating rectangular cards, text boxes, split panels, banners, marketing headlines (H1/H2), bullet points, contact footers, phone numbers, @ social handles, or watermarks!
+Render EXCLUSIVELY a pure, unencumbered, high-fashion editorial photograph. Edge-to-edge full bleed photographic capture with authentic optical depth.
+
+[100% FACIAL IDENTITY LOCK \u2014 SUBJECT REFERENCE (SWAP SLOT)]
+Look at the attached Subject Identity Reference ("SWAP SLOT \u2014 Main Subject Identity Reference").
+You MUST replicate 100% of this exact person's anatomical facial geometry:
+1. Exact eye shape, eyelid creases, iris pigmentation, sclera tone, and gaze vector.
+2. Exact nose bridge, tip, nostril contours, and nasolabial proportions.
+3. Exact jawline, cheekbone structure, chin contours, ear shape, and skull proportions.
+4. Exact skin undertone, natural melanin balance, authentic freckles, and beauty marks.
+5. Exact natural hair texture, hairline, hair color, and facial hair pattern.
+ABSOLUTE LAW: Take ONLY the person and their identity from this reference. Do NOT contaminate, morph, or blend this person's facial features with any other reference!
+
+[STYLE, LIGHTING & ATMOSPHERE TRANSFER \u2014 STYLE INSPIRATION REFERENCE]
+Look at the attached Style Inspiration Reference ("STYLE & LIGHTING INSPIRATION REFERENCE").
+Extract ONLY the photographic and optical atmosphere:
+1. Directional lighting architecture (key light angle, softbox wrap, rim/hair light separation, subtle fill, chiaroscuro contrast, volumetric haze, or golden hour glow).
+2. Color grading and tonal curve (Kodak Portra 400 richness, rich blacks, natural warm skin tones, cinema print contrast).
+3. Camera angle, lens focal length perspective, authentic shallow depth of field (f/2.2-f/2.8) with creamy circular background bokeh.
+4. Body pose, torque, posture, and mood.
+STRICT MANDATE: COMPLETELY IGNORE the person's face, identity, ethnicity, and all text in the Style Reference! The face belongs 100% to the Subject Reference.
+
+[MACRO-LEVEL OPTICAL PORE REALISM & 3-LAYER SUBSURFACE SCATTERING]
+1. EPIDERMAL MICRO-PORES: Resolve microscopic skin pores on the nose, cheeks, forehead, chin, and neck under direct and grazing illumination. Micro-displacement skin grain must remain tack-sharp under zoom without pixel blur.
+2. 3-LAYER SUBSURFACE SCATTERING: True biological dermal translucency (epidermis, dermis, subcutaneous adipose) with natural warmth along shadow terminators.
+3. AUTHENTIC LIPS & ZERO PIGMENT BLEED: Render authentic human lip texture with fine vertical dermal creases, natural skin gradations, and neutral realistic lip color matching real human skin. ABSOLUTELY NO solid neon pink, NO artificial magenta lipstick, NO painted-on plastic lips, and NO color bleed or pink pigment leaking onto the mustache, philtrum, or surrounding skin.
+4. PRISTINE DENTAL ANATOMY: Render tack-sharp, anatomically distinct individual teeth with natural enamel translucency, realistic interdental depth, and subtle gumline shadows. ABSOLUTELY NO solid white chalk bars, NO flat white strips.
+5. OCULAR ENGAGEMENT: Pristine corneal catchlights reflecting the scene's key light, distinct iris striations, and delicate vascular sclera capillaries.
+6. HAIR & FOLLICLE DEFINITION: Individual crisp strands of hair, natural edge flyaways, and discrete eyebrow and eyelash follicles.
+7. FABRIC & TACTILE TEXTURE: Crisp optical weave on clothing fabrics, specular highlights on jewelry or leather, physical contact shadows.
+8. ABSOLUTE ZERO PLASTIC SMOOTHING: No airbrushing, no digital beauty filters, no waxy CGI sheen, no AI cartooning. Flawless 8K medium format optical clarity.
+
+${positionDirective}
+
+${userNotes ? `[USER CUSTOM SPECIFICATIONS & CONTEXT]
+${userNotes}` : ""}
+
+[NEGATIVE CONSTRAINTS]
+blurry, low resolution, soft focus, out of focus, motion blur, plastic skin, airbrushed skin, waxy skin, CGI rendering, 3D model, cartoon, anime, illustration, painting, flyer, poster, cards, text boxes, headlines, watermark, logo, split panels, contact info, deformed eyes, extra fingers, fused fingers, solid white chalk teeth, neon pink lips, lipstick bleed.`;
+          expandedSystemInstruction = `You are an elite medium-format editorial photographer. You render hyper-realistic commercial portrait photographs with Hasselblad H6D-100c medium-format optical clarity.
+RULES:
+1. Generate ONLY an authentic photograph. NEVER generate graphic design flyers, text cards, split panels, headlines, footers, or advertising overlays.
+2. 100% FACIAL IDENTITY LOCK: The subject's face MUST match the Subject Identity Reference with 100% anatomical fidelity.
+3. STYLE & LIGHTING: Take only lighting, color grading, pose, and background atmosphere from the Style Reference. COMPLETELY IGNORE the face and identity of the style reference.
+4. MICRO-PORES & TEXTURES: Resolve microscopic skin pores, individual hair strands, natural lip texture, authentic individual teeth, and corneal reflections. ZERO plastic AI smoothing, ZERO waxy skin.`;
+          parts.push({ text: fullPrompt });
+          if (base64DoSujeito) {
+            addImagePart(
+              base64DoSujeito,
+              "SWAP SLOT \u2014 Main Subject Identity Reference. Replicate 100% of this person's exact face, eyes, nose, lips, jawline, skin tone, and natural micro-pore texture with flawless photographic fidelity."
+            );
+          }
+          if (Array.isArray(sujeitosBase64List)) {
+            sujeitosBase64List.forEach((ref, idx) => {
+              if (ref && ref !== base64DoSujeito) {
+                addImagePart(
+                  ref,
+                  `SWAP SLOT \u2014 Additional Subject Identity Reference #${idx + 1}. Replicate 100% of this person's facial features and micro-pore skin texture.`
+                );
+              }
+            });
+          }
+          if (Array.isArray(referenciasEstilo) && referenciasEstilo.length > 0) {
+            referenciasEstilo.forEach((ref, idx) => {
+              if (ref) {
+                addImagePart(
+                  ref,
+                  `STYLE & LIGHTING INSPIRATION REFERENCE #${idx + 1} \u2014 Extract ONLY lighting quality, color grading, camera angle, pose, and atmosphere. DO NOT copy this person's face; the face comes 100% from the Subject Identity Reference.`
+                );
+              }
+            });
+          } else if (designRefBase64) {
+            addImagePart(
+              designRefBase64,
+              "STYLE & LIGHTING INSPIRATION REFERENCE \u2014 Extract ONLY lighting quality, color grading, camera angle, pose, and atmosphere. DO NOT copy this person's face; the face comes 100% from the Subject Identity Reference."
+            );
+          }
+          if (logoBase64) {
+            addImagePart(
+              logoBase64,
+              "ASSET REFERENCE \u2014 Faithfully integrate this object/product/accessory into the photographic scene with physically accurate contact shadows and reflections."
+            );
+          }
+          if (Array.isArray(logosList)) {
+            logosList.forEach((asset, idx) => {
+              if (asset && asset !== logoBase64) {
+                addImagePart(
+                  asset,
+                  `ASSET REFERENCE #${idx + 1} \u2014 Faithfully integrate this object/product into the photographic scene with physically accurate contact shadows and reflections.`
+                );
+              }
+            });
+          }
+        }
+      } else {
+        if (prevImgBase64 && isExplicitEdit) {
+          console.log(`[api/gerar] INPAINTING/EDIT MODE DETECTED: ${editInstruction}`);
+          fullPrompt = `Modify this attached original image ('Imagem Gerada Anterior a ser Editada') by preserving 100% of its exact overall composition, subject identity, hair style, hair length, hair color, clothing, layout, text, logos, background, and style, and applying ONLY this requested change/refinement: ${editInstruction}.
 CRITICAL IDENTITY & WARDROBE LOCK:
 - DO NOT change the person's hair style, hair length, or hair color! Keep the exact haircut and hair color from the original image! DO NOT add wigs, afro hair, or neon colors!
 - DO NOT change or remove their clothing or add unrequested logos!
@@ -9490,19 +9857,19 @@ CRITICAL IDENTITY & WARDROBE LOCK:
 HIGH-FIDELITY FACIAL & DENTAL RECONSTRUCTION:
 1. DENTAL ANATOMY & NATURAL SMILE: Render tack-sharp, anatomically distinct individual teeth with natural enamel translucency, realistic interdental depth, and subtle gumline shadows. ABSOLUTELY NO solid white chalk bars, NO flat white strips.
 2. NATURAL LIPS & ZERO PIGMENT BLEED: Render authentic human lip texture with fine vertical dermal creases, natural skin gradations, and neutral realistic lip color matching real human skin. ABSOLUTELY NO solid neon pink, NO artificial magenta lipstick, NO painted-on plastic lips, and NO color bleed or pink pigment leaking onto the mustache, philtrum, or surrounding skin.`;
-      } else {
-        fullPrompt = expandedPrompt;
-      }
-      const typoMatch = (typeof promptTraduzido === "string" ? promptTraduzido : "").match(/=== TYPOGRAPHY & TEXT LAYOUT ===[\s\S]*?(?=\n===|$)/);
-      if (typoMatch && typoMatch[0]) {
-        fullPrompt += "\n\n" + typoMatch[0];
-      }
-      const colorMatch = (typeof promptTraduzido === "string" ? promptTraduzido : "").match(/Color Palette: [^\n]*/);
-      if (colorMatch && colorMatch[0]) {
-        fullPrompt += "\n\n" + colorMatch[0];
-      }
-      const isLogoOverlayMode = logoInclusionType === "overlay" && (useLogo || logoBase64 || logosList && logosList.length > 0);
-      const logoMandatoryRule = useLogo || logoBase64 || logosList && logosList.length > 0 ? isLogoOverlayMode ? `- DIGITAL LOGO OVERLAY MODE (EXACT POST-PROCESS INSTALLATION): The client's brand logo ("Refer\xEAncia de Logotipo") will be installed digitally with 100% pixel-exact fidelity AFTER the image generation.
+        } else {
+          fullPrompt = expandedPrompt;
+        }
+        const typoMatch = (typeof promptTraduzido === "string" ? promptTraduzido : "").match(/=== TYPOGRAPHY & TEXT LAYOUT ===[\s\S]*?(?=\n===|$)/);
+        if (typoMatch && typoMatch[0]) {
+          fullPrompt += "\n\n" + typoMatch[0];
+        }
+        const colorMatch = (typeof promptTraduzido === "string" ? promptTraduzido : "").match(/Color Palette: [^\n]*/);
+        if (colorMatch && colorMatch[0]) {
+          fullPrompt += "\n\n" + colorMatch[0];
+        }
+        const isLogoOverlayMode = logoInclusionType === "overlay" && (useLogo || logoBase64 || logosList && logosList.length > 0);
+        const logoMandatoryRule = useLogo || logoBase64 || logosList && logosList.length > 0 ? isLogoOverlayMode ? `- DIGITAL LOGO OVERLAY MODE (EXACT POST-PROCESS INSTALLATION): The client's brand logo ("Refer\xEAncia de Logotipo") will be installed digitally with 100% pixel-exact fidelity AFTER the image generation.
   1. ABSOLUTE NO-LOGO RENDERING MANDATE (CRITICAL): YOU ARE STRICTLY FORBIDDEN FROM DRAWING, RENDERING, PAINTING, OR HALLUCINATING ANY LOGO, BRAND EMBLEM, SYMBOL, OR WATERMARK ANYWHERE ON THE CANVAS!
   2. REFERENCE OLD LOGO ERASE MANDATE (CRITICAL): You MUST COMPLETELY ERASE, OMIT, AND REMOVE 100% OF ANY OLD LOGO, BRAND EMBLEM, OR SYMBOL PRESENT IN THE DESIGN LAYOUT REFERENCE PHOTO! DO NOT COPY, TRACE, DRAW, OR KEEP ANY LOGO FROM THE REFERENCE CARD PHOTO!
   3. RESERVED CLEAN LOGO SPACE (CRITICAL): Leave the designated logo area completely empty, clean, and unobstructed with continuous background, so the digital logo can be installed there without visual collision.` : `- NATIVE BRAND LOGO INTEGRATION (MANDATORY EXACT SPATIAL MIRRORING): You MUST embed and draw the client's provided brand logo ("Refer\xEAncia de Logotipo") natively directly onto the image canvas.
@@ -9510,13 +9877,13 @@ HIGH-FIDELITY FACIAL & DENTAL RECONSTRUCTION:
   2. HAIR/FACE AVOIDANCE (ABSOLUTE MANDATORY RULE): The brand logo MUST NEVER be rendered on top of the subject's hair, head, face, or body.
   3. SEAMLESS BLENDING (NO ARTIFICIAL BLACK BOXES): Render the logo cleanly and seamlessly onto the background canvas. DO NOT draw an artificial black box, dark container rectangle, or inverted color background behind the logo unless those shapes are part of the original logo file itself.
   4. 100% VISUAL & COLOR FIDELITY: Replicate 100% of the original logo's emblem shapes, typography, numbers, and true colors with perfect image-to-image accuracy. Do NOT print the logo's name as a separate text layer in typography.` : `- NO RANDOM LOGOS: Do not invent or hallucinate logos if not provided. Erase any existing logos from the reference image.`;
-      const totalSujeitos = (sujeitosBase64List && sujeitosBase64List.length) + (base64DoSujeito ? 1 : 0);
-      const temLayoutRef = !!(designRefBase64 || designRefsList && designRefsList.length > 0);
-      const photoSlotMappingRule = temLayoutRef && totalSujeitos >= 1 ? `- EXACT PHOTO-TO-SLOT MAPPING MANDATE (CRITICAL - MULTI-PHOTO LAYOUTS): The Design Layout Reference contains ONE OR MORE photo slots/frames where individual photos appear. Assign EVERY attached subject photo to its own SLOT, in strict left-to-right, top-to-bottom reading order: the FIRST subject photo ('FOTO DE PESSOA #1'/'Refer\xEAncia do Sujeito Principal') goes in the FIRST/leftmost/topmost photo slot, the SECOND subject photo ('FOTO DE PESSOA #2') goes in the NEXT slot, and so on. Each slot MUST show a DIFFERENT photo with ZERO repetition or duplication. Determine the exact number of photo slots by counting the photo frames visibly present in the Design Layout Reference. If there are MORE photos than slots, keep the most important ones (in order); if there are FEWER photos than slots, keep the remaining slots with the exact same empty style as in the reference. Embed each REAL photograph fully inside its slot, preserving each person's face, expression, pose, and clothing 100% identical to its source photo. NEVER redraw, re-paint, or recreate the people as illustrations \u2014 USE the real photos.` : "";
-      const subjectMandatoryRule = hasSujeito ? `- SUBJECT / CASTING INTEGRATION (MANDATORY RULE): When reference photos are attached, preserve the exact person/people, faces, expressions, and clothing UNLESS the prompt explicitly specifies a casting replacement (e.g. "mude a mulher", "trocar modelo"). When a casting replacement is requested, render the new professional model with authentic skin textures, natural joint anatomy, and requested wardrobe matching the brand palette, placing her in the designated layout area.` : `- NO UNREQUESTED SUBJECT ALTERATIONS: Do not invent or alter subjects if not requested.`;
-      const flyerVsLogoDisambiguation = isLogoOnlyRequest ? `- ISOLATED LOGO / EMBLEM PRESENTATION MANDATE (CRITICAL): The user requested an isolated logo or logo color edit. You MUST generate ONLY the clean isolated logo emblem centered on a clean background. YOU ARE STRICTLY FORBIDDEN FROM GENERATING A FLYER, POSTER, REAL ESTATE AD, HUMAN MODELS, 3D DOLLAR SIGNS, OR UNREQUESTED ADVERTISING CARDS. Replicate the exact geometric shapes of the provided logo with 100% vector fidelity, applying only the requested color.` : `- CRITICAL MULTIMODAL FLYER VS LOGO DISAMBIGUATION (ABSOLUTE MANDATORY RULE): When a Design Layout Reference (flyer/card) AND a Client Brand Logo reference are both attached, you MUST generate the FULL GRAPHIC CARD LAYOUT (with all headlines, subtitles, 3D elements, subjects, and panel hierarchy from the Design Reference) AND embed the logo emblem cleanly at the exact corresponding location (e.g. bottom-left footer). YOU ARE STRICTLY FORBIDDEN FROM GENERATING AN ISOLATED LOGO OR AN EMPTY BACKGROUND. Render the complete, rich, professional flyer card with all typography and subjects.`;
-      const layoutCardRule = isLogoOnlyRequest ? `- ISOLATED EMBLEM COMPOSITION: Render the logo cleanly centered with generous padding on a clean, solid dark or neutral backdrop. DO NOT generate cards, panels, or unrequested backgrounds.` : `- COMPLETE CARD LAYOUT GENERATION: Do NOT generate just a plain empty background backdrop. You MUST generate the complete graphic composition, including all layouts, cards, panels, curved border divides, background textures, lighting setups, and the main visual subjects in their exact spatial positions, proportions, and layouts as shown in the Design Layout Reference image.`;
-      const mandatorySuffix = `
+        const totalSujeitos = (sujeitosBase64List && sujeitosBase64List.length) + (base64DoSujeito ? 1 : 0);
+        const temLayoutRef = !!(designRefBase64 || designRefsList && designRefsList.length > 0);
+        const photoSlotMappingRule = temLayoutRef && totalSujeitos >= 1 ? `- EXACT PHOTO-TO-SLOT MAPPING MANDATE (CRITICAL - MULTI-PHOTO LAYOUTS): The Design Layout Reference contains ONE OR MORE photo slots/frames where individual photos appear. Assign EVERY attached subject photo to its own SLOT, in strict left-to-right, top-to-bottom reading order: the FIRST subject photo ('FOTO DE PESSOA #1'/'Refer\xEAncia do Sujeito Principal') goes in the FIRST/leftmost/topmost photo slot, the SECOND subject photo ('FOTO DE PESSOA #2') goes in the NEXT slot, and so on. Each slot MUST show a DIFFERENT photo with ZERO repetition or duplication. Determine the exact number of photo slots by counting the photo frames visibly present in the Design Layout Reference. If there are MORE photos than slots, keep the most important ones (in order); if there are FEWER photos than slots, keep the remaining slots with the exact same empty style as in the reference. Embed each REAL photograph fully inside its slot, preserving each person's face, expression, pose, and clothing 100% identical to its source photo. NEVER redraw, re-paint, or recreate the people as illustrations \u2014 USE the real photos.` : "";
+        const subjectMandatoryRule = hasSujeito ? `- SUBJECT / CASTING INTEGRATION (MANDATORY RULE): When reference photos are attached, preserve the exact person/people, faces, expressions, and clothing UNLESS the prompt explicitly specifies a casting replacement (e.g. "mude a mulher", "trocar modelo"). When a casting replacement is requested, render the new professional model with authentic skin textures, natural joint anatomy, and requested wardrobe matching the brand palette, placing her in the designated layout area.` : `- NO UNREQUESTED SUBJECT ALTERATIONS: Do not invent or alter subjects if not requested.`;
+        const flyerVsLogoDisambiguation = isLogoOnlyRequest ? `- ISOLATED LOGO / EMBLEM PRESENTATION MANDATE (CRITICAL): The user requested an isolated logo or logo color edit. You MUST generate ONLY the clean isolated logo emblem centered on a clean background. YOU ARE STRICTLY FORBIDDEN FROM GENERATING A FLYER, POSTER, REAL ESTATE AD, HUMAN MODELS, 3D DOLLAR SIGNS, OR UNREQUESTED ADVERTISING CARDS. Replicate the exact geometric shapes of the provided logo with 100% vector fidelity, applying only the requested color.` : `- CRITICAL MULTIMODAL FLYER VS LOGO DISAMBIGUATION (ABSOLUTE MANDATORY RULE): When a Design Layout Reference (flyer/card) AND a Client Brand Logo reference are both attached, you MUST generate the FULL GRAPHIC CARD LAYOUT (with all headlines, subtitles, 3D elements, subjects, and panel hierarchy from the Design Reference) AND embed the logo emblem cleanly at the exact corresponding location (e.g. bottom-left footer). YOU ARE STRICTLY FORBIDDEN FROM GENERATING AN ISOLATED LOGO OR AN EMPTY BACKGROUND. Render the complete, rich, professional flyer card with all typography and subjects.`;
+        const layoutCardRule = isLogoOnlyRequest ? `- ISOLATED EMBLEM COMPOSITION: Render the logo cleanly centered with generous padding on a clean, solid dark or neutral backdrop. DO NOT generate cards, panels, or unrequested backgrounds.` : `- COMPLETE CARD LAYOUT GENERATION: Do NOT generate just a plain empty background backdrop. You MUST generate the complete graphic composition, including all layouts, cards, panels, curved border divides, background textures, lighting setups, and the main visual subjects in their exact spatial positions, proportions, and layouts as shown in the Design Layout Reference image.`;
+        const mandatorySuffix2 = `
 
 === ABSOLUTE CRITICAL CONSTRAINTS (MANDATORY) ===
 ${resolutionInput === "4K" || resolutionInput === "8K" || sizeSelectedForModel === "4K" ? `- MASTER 8K ULTRA-HIGH DEFINITION & REVERSE-ENGINEERED HI-RES FIX OPTICAL FIDELITY MANDATE:
@@ -9548,155 +9915,142 @@ ${layoutCardRule}
 - EMBEDDED TYPOGRAPHY (MANDATORY): You MUST print, write, embed, and render all actual written texts, titles, words, acronyms, letters, numbers, and website URLs directly onto the image canvas. Style them with beautiful, modern, extremely crisp, and highly-legible typography matching the alignments and visual style of the reference design. All social media usernames or handles (starting with "@") explicitly provided by the user must be printed strictly in lowercase letters. IF NO HANDLE WAS PROVIDED BY THE USER, DO NOT INVENT OR RENDER ANY "@" HANDLE OR PROFILE NAME.
 ${corDominante && corDominante !== "transparent" ? "- SOLID BACKGROUND REQUIREMENT FOR CUTOUT: Because the client requested a solid background color, YOU MUST GENERATE ALL TEXTS AND ELEMENTS OVER A PURE WHITE OR HIGHLY CONTRASTING FLAT SOLID BACKGROUND. Do not generate ANY background textures, scenes, or gradients. Just the subjects and text floating over a blank, flat solid color canvas. This is critical so we can cleanly cut them out." : ""}
 ${logoMandatoryRule}`;
-      let antiDuplicateLogosAndIcons = "duplicate logos, double logos, twin logos, multiple logos, repeated brand logos, extra logo placements, unrequested social media icons, tiktok icon, tiktok logo, musical.ly logo, invented @ handles, unrequested instagram handles, @perfil, @seu.perfil, unrequested profile usernames, duplicate photos, repeated background image, repeating same image in multiple panels, same subject repeated in background and card, duplicate image boxes";
-      if (userWantsNoPeople) {
-        fullPrompt += `
+        let antiDuplicateLogosAndIcons = "duplicate logos, double logos, twin logos, multiple logos, repeated brand logos, extra logo placements, unrequested social media icons, tiktok icon, tiktok logo, musical.ly logo, invented @ handles, unrequested instagram handles, @perfil, @seu.perfil, unrequested profile usernames, duplicate photos, repeated background image, repeating same image in multiple panels, same subject repeated in background and card, duplicate image boxes";
+        if (userWantsNoPeople) {
+          fullPrompt += `
 - ABSOLUTE PROHIBITION OF PEOPLE (HIGHEST PRIORITY): The client explicitly specified NO PEOPLE. DO NOT RENDER ANY HUMAN BEINGS, MODELS, FACES, OR PEOPLE! Replace any human subject area with clean layout elements, product, or large graphic space as requested.`;
-        antiDuplicateLogosAndIcons += ", people, person, human, model, man, woman, face, hands, body";
-      }
-      if (negativePrompt && negativePrompt.trim() !== "") {
-        fullPrompt += `
+          antiDuplicateLogosAndIcons += ", people, person, human, model, man, woman, face, hands, body";
+        }
+        if (negativePrompt && negativePrompt.trim() !== "") {
+          fullPrompt += `
 Avoid / Negative constraints: old logos, original reference text, original reference text words, original reference titles, hallucinated words, blurry, pixelated, distorted, low resolution, bad colors, color banding, jpeg artifacts, low quality, glitch, out of focus, noise, visual bugs, ${antiDuplicateLogosAndIcons}, ${negativePrompt.trim()}`;
-      } else {
-        fullPrompt += `
+        } else {
+          fullPrompt += `
 Avoid / Negative constraints: old logos, original reference text, original reference text words, original reference titles, original reference logos, hallucinated words, incorrect spelling, blurry, pixelated, distorted, low resolution, bad colors, color banding, jpeg artifacts, low quality, glitch, out of focus, noise, visual bugs, ${antiDuplicateLogosAndIcons}`;
-      }
-      if (typeof promptTraduzido === "string" && promptTraduzido.includes("[USER DIRECT MANDATE")) {
-        const mandateMatch = promptTraduzido.match(/\[USER DIRECT MANDATE[^\]]*\]:[^\n]*/);
-        if (mandateMatch && mandateMatch[0]) {
-          fullPrompt = `${mandateMatch[0]}
+        }
+        if (typeof promptTraduzido === "string" && promptTraduzido.includes("[USER DIRECT MANDATE")) {
+          const mandateMatch = promptTraduzido.match(/\[USER DIRECT MANDATE[^\]]*\]:[^\n]*/);
+          if (mandateMatch && mandateMatch[0]) {
+            fullPrompt = `${mandateMatch[0]}
+
+${fullPrompt}`;
+          }
+        }
+        if (userWantsNoPeople) {
+          fullPrompt = `[ABSOLUTE MANDATE - NO PEOPLE / ZERO PESSOAS]: DO NOT RENDER ANY PEOPLE, HUMANS, FACES OR MODELS! Replace any person area with clean spacious layout panels as requested.
 
 ${fullPrompt}`;
         }
-      }
-      if (userWantsNoPeople) {
-        fullPrompt = `[ABSOLUTE MANDATE - NO PEOPLE / ZERO PESSOAS]: DO NOT RENDER ANY PEOPLE, HUMANS, FACES OR MODELS! Replace any person area with clean spacious layout panels as requested.
-
-${fullPrompt}`;
-      }
-      fullPrompt += mandatorySuffix;
-      parts.push({ text: fullPrompt });
-      if (!desativarSujeito) {
-        if (base64DoSujeito) {
-          const swapSlotDirective = `SWAP SLOT \u2014 Image 1 is the identity reference, and it owns the entire person. From image 1 come the face and all its features, the eye colour, the skin tone and every mark on it, the age, the gender, the build, and the hair's colour, length, texture, curl pattern and density along with any facial hair. None of those are to be invented or altered. From image 1 take only the person; take nothing else \u2014 not the clothing, not the pose, not the expression, not the framing, not the lighting, not the background, not the colour palette. Preserve 100% authentic photographic fidelity.
+        fullPrompt += mandatorySuffix2;
+        parts.push({ text: fullPrompt });
+        if (!desativarSujeito) {
+          if (base64DoSujeito) {
+            const swapSlotDirective = `SWAP SLOT \u2014 Image 1 is the identity reference, and it owns the entire person. From image 1 come the face and all its features, the eye colour, the skin tone and every mark on it, the age, the gender, the build, and the hair's colour, length, texture, curl pattern and density along with any facial hair. None of those are to be invented or altered. From image 1 take only the person; take nothing else \u2014 not the clothing, not the pose, not the expression, not the framing, not the lighting, not the background, not the colour palette. Preserve 100% authentic photographic fidelity.
 CRITICAL HIGH-FIDELITY FACIAL & DENTAL RECONSTRUCTION MANDATE:
 The subject reference image may be a compressed digital photo. DO NOT replicate low-resolution JPEG artifacts, pixelated mouths, or blurry teeth! Reconstruct razor-sharp 4K photographic micro-details:
 1. DENTAL ANATOMY & NATURAL SMILE: Render tack-sharp, anatomically distinct individual teeth with natural enamel translucency, realistic interdental depth, and subtle gumline shadows. ABSOLUTELY NO solid white chalk bars, NO flat white strips.
 2. NATURAL LIPS & ZERO PIGMENT BLEED: Render authentic human lip texture with fine vertical dermal creases, natural skin gradations, and neutral realistic lip color matching real human skin. ABSOLUTELY NO solid neon pink, NO artificial magenta lipstick, NO painted-on plastic lips, and NO color bleed or pink pigment leaking onto the mustache, philtrum, or surrounding skin.
 3. PRISTINE SKIN & FACIAL HAIR: Ultra-sharp individual beard hairs, authentic skin pores, and natural catchlights in pupils. ZERO painted patches, ZERO stippling dots, and ZERO plastic blur. Flawless commercial studio portrait finish.`;
-          addImagePart(base64DoSujeito, swapSlotDirective);
-        }
-        if (Array.isArray(sujeitosBase64List)) {
-          sujeitosBase64List.forEach((ref, idx) => {
-            if (ref) {
-              const swapSlotDirective = `SWAP SLOT \u2014 Image #${idx + 2} is identity reference #${idx + 2}. Extract 100% authentic facial features, bone structure, skin tone, eye color, and natural hair texture from this person. Preserve 100% authentic photographic fidelity.`;
-              addImagePart(ref, swapSlotDirective);
-            }
-          });
-        }
-      }
-      if (designRefBase64) {
-        const logoEraseDirective = useLogo || logoBase64 || Array.isArray(logosList) && logosList.length > 0 ? " CRITICAL LOGO ERASE MANDATE: If this design reference photo contains an old logo, brand emblem, or symbol, YOU MUST COMPLETELY ERASE AND OMIT THAT OLD LOGO! DO NOT COPY, TRACE, OR KEEP THE LOGO FROM THIS PHOTO. RENDER ONLY THE CLIENT'S BRAND LOGO ATTACHED AS 'LOGOTIPO DA MARCA DO CLIENTE'." : "";
-        const layoutRefPromptText = isLogoOnlyRequest ? `BRAND LOGO REFERENCE TO RECOLOR/RENDER (MANDATORY: Replicate this EXACT symbol geometry, shapes, and contours. Apply the requested colors faithfully. DO NOT generate a flyer or poster!)` : `PRIMARY DESIGN CARD LAYOUT & COMPOSITION GRID REFERENCE (MANDATORY: Replicate this entire flyer layout composition, cards, split-panels, text block positions, visual hierarchy, lighting effects, and 3D depth. DO NOT generate an empty canvas or just an isolated logo!${logoEraseDirective})`;
-        addImagePart(designRefBase64, layoutRefPromptText);
-      }
-      if (Array.isArray(designRefsList)) {
-        designRefsList.forEach((ref, idx) => {
-          if (ref) addImagePart(ref, `Refer\xEAncia de Design/Layout Adicional ${idx + 1}`);
-        });
-      }
-      if (prevImgBase64) {
-        addImagePart(prevImgBase64, "Imagem Gerada Anterior a ser Editada/Refinada");
-      }
-      if (!desativarSujeito) {
-        if (base64DoSujeito) {
-          const swapSlotDirective = `SWAP SLOT \u2014 Image 1 is the identity reference, and it owns the entire person. From image 1 come the face and all its features, the eye colour, the skin tone and every mark on it, the age, the gender, the build, and the hair's colour, length, texture, curl pattern and density along with any facial hair. None of those are described anywhere in this prompt and none of them are to be invented. Do not add or remove marks, lines or blemishes, do not smooth, retouch or rejuvenate anything, and do not reshape the face or its proportions. From image 1 take only the person; take nothing else \u2014 not the clothing, not the pose, not the expression, not the framing, not the lighting, not the background, not the colour palette. Preserve 100% authentic photographic fidelity.`;
-          addImagePart(base64DoSujeito, swapSlotDirective);
-        }
-        if (Array.isArray(sujeitosBase64List)) {
-          sujeitosBase64List.forEach((ref, idx) => {
-            if (ref) {
-              const swapSlotDirective = `SWAP SLOT \u2014 Image #${idx + 2} is identity reference #${idx + 2}. Extract 100% authentic facial features, bone structure, skin tone, eye color, and natural hair texture from this person. Preserve 100% authentic photographic fidelity.`;
-              addImagePart(ref, swapSlotDirective);
-            }
-          });
-        }
-      }
-      if (base64DoCenario) {
-        addImagePart(base64DoCenario, "Refer\xEAncia de Cen\xE1rio/Ambiente");
-      }
-      if (Array.isArray(cenariosBase64List)) {
-        cenariosBase64List.forEach((ref, idx) => {
-          if (ref) addImagePart(ref, `Refer\xEAncia de Cen\xE1rio Adicional ${idx + 1}`);
-        });
-      }
-      if (tipografiaRefBase64) {
-        addImagePart(tipografiaRefBase64, "Refer\xEAncia de Tipografia");
-      }
-      if (Array.isArray(tipografiaRefsList)) {
-        tipografiaRefsList.forEach((ref, idx) => {
-          if (ref) addImagePart(ref, `Refer\xEAncia de Tipografia Adicional ${idx + 1}`);
-        });
-      }
-      if (Array.isArray(referenciasEstilo)) {
-        referenciasEstilo.forEach((ref, idx) => {
-          if (ref) addImagePart(ref, `Refer\xEAncia de Estilo ${idx + 1}`);
-        });
-      }
-      const normalizeGenLogoKey = (str) => {
-        if (!str) return "";
-        let s = typeof str === "string" ? str.trim() : (str?.url || str?.data || "").trim();
-        if (!s) return "";
-        if (s.startsWith("data:")) {
-          const comma = s.indexOf(",");
-          if (comma !== -1) s = s.slice(comma + 1).trim();
-        }
-        if (s.includes("/") || s.includes("\\")) {
-          const parts2 = s.split(/[/\\]/);
-          return parts2[parts2.length - 1].split("?")[0].toLowerCase();
-        }
-        return s.slice(0, 100) + "_" + s.length;
-      };
-      const uniqueGenerationLogos = [];
-      const seenGenLogos = /* @__PURE__ */ new Set();
-      const addGenLogo = (raw) => {
-        if (!raw) return;
-        const val = typeof raw === "string" ? raw.trim() : (raw?.url || raw?.data || "").trim();
-        if (!val) return;
-        const key = normalizeGenLogoKey(val);
-        if (key && !seenGenLogos.has(key)) {
-          seenGenLogos.add(key);
-          uniqueGenerationLogos.push(val);
-        }
-      };
-      if (logoBase64) addGenLogo(logoBase64);
-      if (Array.isArray(logosList)) {
-        for (const item of logosList) {
-          addGenLogo(item);
-        }
-      }
-      const finalGenerationLogos = uniqueGenerationLogos.slice(0, 1);
-      if (useLogo || finalGenerationLogos.length > 0) {
-        if (isLogoOverlayMode) {
-          finalGenerationLogos.forEach((ref) => {
-            addImagePart(ref, "LOGOTIPO DA MARCA DO CLIENTE (MODO OVERLAY DIGITAL: N\xC3O DESENHE ESTA LOGO NO CANVAS. Apenas reserve um espa\xE7o limpo e vazio no canto superior esquerdo/direito para a inclus\xE3o digital. APAGUE COMPLETAMENTE QUALQUER LOGO ANTIGO DA FOTO DE REFER\xCANCIA DE DESIGN!).");
-          });
-        } else {
-          for (let idx = 0; idx < finalGenerationLogos.length; idx++) {
-            const rawRef = finalGenerationLogos[idx];
-            let preparedLogoInput = rawRef;
-            try {
-              const rawParsed = parseBase64Part(rawRef);
-              if (rawParsed && rawParsed.data) {
-                const prepared = await prepareLogoForGeminiVision(Buffer.from(rawParsed.data, "base64"), rawParsed.mimeType);
-                preparedLogoInput = `data:${prepared.mime};base64,${prepared.buffer.toString("base64")}`;
+            addImagePart(base64DoSujeito, swapSlotDirective);
+          }
+          if (Array.isArray(sujeitosBase64List)) {
+            sujeitosBase64List.forEach((ref, idx) => {
+              if (ref) {
+                const swapSlotDirective = `SWAP SLOT \u2014 Image #${idx + 2} is identity reference #${idx + 2}. Extract 100% authentic facial features, bone structure, skin tone, eye color, and natural hair texture from this person. Preserve 100% authentic photographic fidelity.`;
+                addImagePart(ref, swapSlotDirective);
               }
-            } catch (e) {
-              console.warn("[/api/gerar] prepareLogoForGeminiVision warning:", e);
-            }
-            addImagePart(preparedLogoInput, `LOGOTIPO DA MARCA DO CLIENTE (MANDAT\xD3RIO \u2014 IDENTIDADE VISUAL EXATA):
+            });
+          }
+        }
+        if (designRefBase64) {
+          const logoEraseDirective = useLogo || logoBase64 || Array.isArray(logosList) && logosList.length > 0 ? " CRITICAL LOGO ERASE MANDATE: If this design reference photo contains an old logo, brand emblem, or symbol, YOU MUST COMPLETELY ERASE AND OMIT THAT OLD LOGO! DO NOT COPY, TRACE, OR KEEP THE LOGO FROM THIS PHOTO. RENDER ONLY THE CLIENT'S BRAND LOGO ATTACHED AS 'LOGOTIPO DA MARCA DO CLIENTE'." : "";
+          const layoutRefPromptText = isLogoOnlyRequest ? `BRAND LOGO REFERENCE TO RECOLOR/RENDER (MANDATORY: Replicate this EXACT symbol geometry, shapes, and contours. Apply the requested colors faithfully. DO NOT generate a flyer or poster!)` : `PRIMARY DESIGN CARD LAYOUT & COMPOSITION GRID REFERENCE (MANDATORY: Replicate this entire flyer layout composition, cards, split-panels, text block positions, visual hierarchy, lighting effects, and 3D depth. DO NOT generate an empty canvas or just an isolated logo!${logoEraseDirective})`;
+          addImagePart(designRefBase64, layoutRefPromptText);
+        }
+        if (Array.isArray(designRefsList)) {
+          designRefsList.forEach((ref, idx) => {
+            if (ref) addImagePart(ref, `Refer\xEAncia de Design/Layout Adicional ${idx + 1}`);
+          });
+        }
+        if (prevImgBase64) {
+          addImagePart(prevImgBase64, "Imagem Gerada Anterior a ser Editada/Refinada");
+        }
+        if (base64DoCenario) {
+          addImagePart(base64DoCenario, "Refer\xEAncia de Cen\xE1rio/Ambiente");
+        }
+        if (Array.isArray(cenariosBase64List)) {
+          cenariosBase64List.forEach((ref, idx) => {
+            if (ref) addImagePart(ref, `Refer\xEAncia de Cen\xE1rio Adicional ${idx + 1}`);
+          });
+        }
+        if (tipografiaRefBase64) {
+          addImagePart(tipografiaRefBase64, "Refer\xEAncia de Tipografia");
+        }
+        if (Array.isArray(tipografiaRefsList)) {
+          tipografiaRefsList.forEach((ref, idx) => {
+            if (ref) addImagePart(ref, `Refer\xEAncia de Tipografia Adicional ${idx + 1}`);
+          });
+        }
+        if (Array.isArray(referenciasEstilo)) {
+          referenciasEstilo.forEach((ref, idx) => {
+            if (ref) addImagePart(ref, `Refer\xEAncia de Estilo ${idx + 1}`);
+          });
+        }
+        const normalizeGenLogoKey = (str) => {
+          if (!str) return "";
+          let s = typeof str === "string" ? str.trim() : (str?.url || str?.data || "").trim();
+          if (!s) return "";
+          if (s.startsWith("data:")) {
+            const comma = s.indexOf(",");
+            if (comma !== -1) s = s.slice(comma + 1).trim();
+          }
+          if (s.includes("/") || s.includes("\\")) {
+            const parts2 = s.split(/[/\\]/);
+            return parts2[parts2.length - 1].split("?")[0].toLowerCase();
+          }
+          return s.slice(0, 100) + "_" + s.length;
+        };
+        const uniqueGenerationLogos = [];
+        const seenGenLogos = /* @__PURE__ */ new Set();
+        const addGenLogo = (raw) => {
+          if (!raw) return;
+          const val = typeof raw === "string" ? raw.trim() : (raw?.url || raw?.data || "").trim();
+          if (!val) return;
+          const key = normalizeGenLogoKey(val);
+          if (key && !seenGenLogos.has(key)) {
+            seenGenLogos.add(key);
+            uniqueGenerationLogos.push(val);
+          }
+        };
+        if (logoBase64) addGenLogo(logoBase64);
+        if (Array.isArray(logosList)) {
+          for (const item of logosList) {
+            addGenLogo(item);
+          }
+        }
+        const finalGenerationLogos = uniqueGenerationLogos.slice(0, 1);
+        if (useLogo || finalGenerationLogos.length > 0) {
+          if (isLogoOverlayMode) {
+            finalGenerationLogos.forEach((ref) => {
+              addImagePart(ref, "LOGOTIPO DA MARCA DO CLIENTE (MODO OVERLAY DIGITAL: N\xC3O DESENHE ESTA LOGO NO CANVAS. Apenas reserve um espa\xE7o limpo e vazio no canto superior esquerdo/direito para a inclus\xE3o digital. APAGUE COMPLETAMENTE QUALQUER LOGO ANTIGO DA FOTO DE REFER\xCANCIA DE DESIGN!).");
+            });
+          } else {
+            for (let idx = 0; idx < finalGenerationLogos.length; idx++) {
+              const rawRef = finalGenerationLogos[idx];
+              let preparedLogoInput = rawRef;
+              try {
+                const rawParsed = parseBase64Part(rawRef);
+                if (rawParsed && rawParsed.data) {
+                  const prepared = await prepareLogoForGeminiVision(Buffer.from(rawParsed.data, "base64"), rawParsed.mimeType);
+                  preparedLogoInput = `data:${prepared.mime};base64,${prepared.buffer.toString("base64")}`;
+                }
+              } catch (e) {
+                console.warn("[/api/gerar] prepareLogoForGeminiVision warning:", e);
+              }
+              addImagePart(preparedLogoInput, `LOGOTIPO DA MARCA DO CLIENTE (MANDAT\xD3RIO \u2014 IDENTIDADE VISUAL EXATA):
 - Render EXACTLY ONE single instance of this brand logo cleanly positioned (typically in the header corner).
 - PROHIBITION: NEVER duplicate, clone, or place multiple copies of the logo. Do NOT keep any old logos or emblems from the design reference image. Replicate ONLY this exact brand logo provided, preserving its authentic symbols, typography, and colors.`);
+            }
           }
         }
       }
@@ -9713,7 +10067,23 @@ The subject reference image may be a compressed digital photo. DO NOT replicate 
         });
       }
       try {
-        const sizeSelected = resolutionInput === "4K" ? "4K" : resolutionInput === "2K" ? "2K" : "1K";
+        const sizeSelected = resolutionInput === "8K" || resolutionInput === "4K" ? "4K" : resolutionInput === "2K" ? "2K" : "1K";
+        for (const part of parts) {
+          if (part?.inlineData?.data && typeof part.inlineData.data === "string" && part.inlineData.data.length > 1.5 * 1024 * 1024) {
+            try {
+              const buf = Buffer.from(part.inlineData.data, "base64");
+              const meta = await sharp(buf).metadata();
+              if (meta.width && (meta.width > 2048 || meta.height > 2048 || part.inlineData.data.length > 2 * 1024 * 1024)) {
+                const prevLen = part.inlineData.data.length;
+                const optimizedBuf = await sharp(buf).resize(2048, 2048, { fit: "inside", withoutEnlargement: true }).jpeg({ quality: 88 }).toBuffer();
+                part.inlineData.data = optimizedBuf.toString("base64");
+                part.inlineData.mimeType = "image/jpeg";
+                console.log(`[api/gerar] Multimodal vision payload optimized: shrunk from ${(prevLen / (1024 * 1024)).toFixed(1)}MB down to ${(part.inlineData.data.length / (1024 * 1024)).toFixed(2)}MB`);
+              }
+            } catch (e) {
+            }
+          }
+        }
         console.log(`[api/gerar] Executing image generation with multi-strategy fallbacks... Target size: ${sizeSelected}, aspect: ${targetAspectRatio}`);
         const genResult = await executeImageGenerationWithFallbacks(
           client,
@@ -9755,7 +10125,7 @@ The subject reference image may be a compressed digital photo. DO NOT replicate 
               inBuf,
               targetDims.width,
               targetDims.height,
-              targetQuality === "8K" || targetQuality === "4K" ? "4K" : targetQuality === "2K" ? "2K" : "1K"
+              targetQuality === "8K" ? "8K" : targetQuality === "4K" ? "4K" : targetQuality === "2K" ? "2K" : "1K"
             );
             finalImageBase64 = `data:${rawB64Mime || "image/png"};base64,${resizedBuf.toString("base64")}`;
           }
@@ -9781,7 +10151,7 @@ The subject reference image may be a compressed digital photo. DO NOT replicate 
         }
         if (autoTargetDimensions && autoTargetDimensions.width && autoTargetDimensions.height) {
           try {
-            const maxDimTarget = resolutionInput === "4K" ? 3840 : resolutionInput === "2K" ? 2048 : 1024;
+            const maxDimTarget = resolutionInput === "8K" || resolutionInput === "8k" ? 7680 : resolutionInput === "4K" ? 3840 : resolutionInput === "2K" ? 2048 : 1024;
             let finalTargetW = autoTargetDimensions.width;
             let finalTargetH = autoTargetDimensions.height;
             if (autoTargetDimensions.width >= autoTargetDimensions.height) {
