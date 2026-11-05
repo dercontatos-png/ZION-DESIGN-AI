@@ -1068,7 +1068,15 @@ export const OrionProBuilder: React.FC<OrionProBuilderProps> = ({
                         <button
                           key={d.id}
                           type="button"
-                          onClick={() => setDimensao(d.id)}
+                          onClick={() => {
+                            setDimensao(d.id);
+                            store.updateConfig({ dimensao: d.id as any });
+                            const currentImg = store.galeriaImages?.[store.activeImageIndex];
+                            if (currentImg && generatePremiumImage) {
+                              showToast?.(`Gerando imagem no formato ${d.label}...`, "info");
+                              generatePremiumImage({ previousImageBase64: currentImg, isRefinement: true });
+                            }
+                          }}
                           className={`flex h-11 flex-col items-center justify-center text-center transition-colors pb-ctrl-btn rounded-xl p-1 cursor-pointer ${
                             active ? "pb-ctrl-active text-white" : "text-zinc-200"
                           }`}

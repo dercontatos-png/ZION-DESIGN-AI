@@ -586,15 +586,16 @@ const AlteraFacilBuilder: React.FC<AlteraFacilBuilderProps> = ({
     return () => window.removeEventListener("paste", handlePaste);
   }, [showToast]);
 
-  const handleExecute = async () => {
+  const handleExecute = async (overrideAspect?: "9:16" | "4:5" | "1:1" | "16:9" | any) => {
     if (!photoBase64) {
       showToast?.("Adicione uma foto para alterar primeiro.", "warning");
       return;
     }
 
+    const effAspect = typeof overrideAspect === "string" ? overrideAspect : aspectRatio;
     setIsProcessing(true);
     setMobileView("palco");
-    showToast?.("Alterando imagem com precisão de identidade...", "info");
+    showToast?.(`Alterando imagem no formato ${effAspect}...`, "info");
 
     try {
       const selectedPose = POSES_LIST[poseIndex];
@@ -614,6 +615,8 @@ const AlteraFacilBuilder: React.FC<AlteraFacilBuilderProps> = ({
           body: JSON.stringify({
           base64DoSujeito: photoBase64,
           sujeitosBase64List: [photoBase64],
+          previousImageBase64: generatedImage || undefined,
+          isReformat: Boolean(generatedImage),
           promptTraduzido: [
             `SWAP SLOT — Image 1 is the identity reference, and it owns the entire person. From image 1 come the face, bone structure, eye colour, skin tone, pores, ethnicity, and authentic facial features. None of those are to be altered or invented.`,
             `THE PICTURE — Elite commercial studio portrait transformation of the subject with sovereign identity lock.`,
@@ -627,7 +630,7 @@ const AlteraFacilBuilder: React.FC<AlteraFacilBuilderProps> = ({
             negativePrompt ? `NEGATIVE DIRECTIVES: ${negativePrompt}` : ""
           ].filter(Boolean).join("\n\n"),
           resolutionInput: quality,
-          dimensao: aspectRatio,
+          dimensao: effAspect,
           formato: "PNG",
           modelId: "default",
           customApiKey: apiKey
@@ -1472,8 +1475,14 @@ const AlteraFacilBuilder: React.FC<AlteraFacilBuilderProps> = ({
                             type="button"
                             onClick={() => {
                               setIsFormatoPopoverOpen(false);
-                              setAspectRatio(r === "3:4" ? "4:5" : r === "4:3" ? "16:9" : (r as any));
-                              showToast?.(`Formato ${r} selecionado!`, "info");
+                              const targetRatio = r === "3:4" ? "4:5" : r === "4:3" ? "16:9" : (r as any);
+                              setAspectRatio(targetRatio);
+                              if (photoBase64 || generatedImage) {
+                                showToast?.(`Gerando imagem no formato ${r}...`, "info");
+                                handleExecute(targetRatio);
+                              } else {
+                                showToast?.(`Formato ${r} selecionado!`, "info");
+                              }
                             }}
                             className="group flex flex-col items-center gap-1 rounded-lg p-1.5 transition-all duration-150 hover:bg-white/[0.06] cursor-pointer"
                             title={t}

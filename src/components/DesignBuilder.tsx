@@ -945,6 +945,63 @@ const hasFotoDot = Boolean(
     }
   };
 
+  // ── REFORMATAR / ADAPTAR PROPORÇÃO DA ARTE (IGUAL AO SITE ORIGINAL) ──
+  const handleReformatDesign = async (targetDim: string) => {
+    store.updateConfig({ dimensao: targetDim as any });
+    setIsFormatDropdownOpen(false);
+
+    const currentImg = activeImage || store.galeriaImages?.[store.activeImageIndex];
+    if (currentImg) {
+      showToast(`🔄 Adaptando formato para ${targetDim}...`, "info");
+      store.setIsGenerating(true);
+      try {
+        const apiKey = localStorage.getItem("custom_gemini_api_key") || customApiKey || "";
+        const promptReformat = `Reformat and adapt this previously generated artwork to the exact ${targetDim} aspect ratio. Extend and outpaint the scene naturally to fill the new canvas dimensions while maintaining 100% fidelity to the main subject, typography, visual hierarchy, lighting, colors, styling, and background of the original artwork. Do not stretch, warp, or distort the original content.`;
+
+        const res = await fetch("/api/gerar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...getAuthHeaders(apiKey) },
+          body: JSON.stringify({
+            app: isOrion ? "orion-pro" : "design-builder",
+            tipoPainel: isOrion ? "ORION_PRO" : "FLYER",
+            previousImageBase64: currentImg,
+            dimensao: targetDim,
+            resolutionInput: store.qualidade || store.resolucao || "4K",
+            formato: "PNG",
+            promptTraduzido: promptReformat,
+            isReformat: true,
+            customApiKey: apiKey,
+            modelId: store.selectedAiModel
+          })
+        });
+
+        const data = await res.json();
+        const finalImg = data.image || data.imageUrl;
+        if (finalImg) {
+          store.setGaleriaImages([finalImg, ...(store.galeriaImages || [])]);
+          store.addGaleriaImage(finalImg, { app: isOrion ? "orion-pro" : "design-builder" });
+          store.setActiveImageIndex(0);
+          if (store.activeProjectId) {
+            store.addImagesToProjectGallery(store.activeProjectId, [finalImg]);
+          }
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("zion-generation-done", { detail: { imageUrl: finalImg, app: isOrion ? "orion-pro" : "design-builder" } }));
+          }
+          showToast(`Formato adaptado para ${targetDim} com sucesso!`, "success");
+        } else {
+          showToast(data.error || "Erro ao adaptar formato da arte.", "error");
+        }
+      } catch (err: any) {
+        console.error("Erro ao reformatar no DesignBuilder:", err);
+        showToast("Erro ao conectar com o servidor para adaptar o formato.", "error");
+      } finally {
+        store.setIsGenerating(false);
+      }
+    } else {
+      showToast(`Formato definido para ${targetDim}!`, "success");
+    }
+  };
+
   // Reutilizar configuracoes instantaneamente a partir de qualquer imagem
   const handleReuseGeneration = async (imageUrlOrItem: any) => {
     try {
@@ -2285,11 +2342,7 @@ const hasFotoDot = Boolean(
                             <button
                               key={dim}
                               type="button"
-                              onClick={() => {
-                                store.updateConfig({ dimensao: dim as any });
-                                setIsFormatDropdownOpen(false);
-                                showToast(`Formato alterado para ${dim}`, "info");
-                              }}
+                              onClick={() => handleReformatDesign(dim)}
                               className={`flex h-8 items-center justify-center rounded-lg text-xs font-semibold cursor-pointer ${
                                 store.dimensao === dim ? "bg-violet-600 text-white" : "text-zinc-400 hover:bg-white/[0.06] hover:text-white"
                               }`}
@@ -3224,10 +3277,7 @@ const hasFotoDot = Boolean(
                   <button
                     key={fmt.id}
                     type="button"
-                    onClick={() => {
-                      store.updateConfig({ dimensao: fmt.id as any });
-                      showToast(`Formato alterado para ${fmt.id}`, "success");
-                    }}
+                    onClick={() => handleReformatDesign(fmt.id)}
                     className={`flex flex-col items-center justify-center p-3 rounded-2xl transition-all cursor-pointer ${
                       store.dimensao === fmt.id
                         ? "bg-violet-600/30 text-white border border-violet-500/50"

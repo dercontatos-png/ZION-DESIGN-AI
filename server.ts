@@ -8568,7 +8568,32 @@ Return ONLY the JSON object. Do not include any conversational text or markdown 
         }
       };
 
-      if (isRefBuilder) {
+      const isReformatRequest = Boolean(
+        prevImgBase64 && (
+          req.body.isReformat === true ||
+          req.body.action === "reformat" ||
+          (typeof promptTraduzido === "string" && /reformat|adapt|outpaint|proporção|formato/i.test(promptTraduzido)) ||
+          (typeof req.body.additionalPrompt === "string" && /reformat|adapt|outpaint|proporção|formato/i.test(req.body.additionalPrompt))
+        )
+      );
+
+      if (isReformatRequest && prevImgBase64) {
+        console.log(`[api/gerar] === UNIVERSAL REFORMAT & OUTPAINT ENGINE TO ${targetAspectRatio} ACTIVATED ===`);
+        fullPrompt = `=== MASTER REFORMAT & OUTPAINT DIRECTIVE TO ${targetAspectRatio} ===
+You are adapting and reformatting the attached master artwork ('IMAGEM MASTER ANTERIOR A SER REFORMATADA') to the exact canvas aspect ratio: ${targetAspectRatio}.
+MANDATORY REFORMATTING RULES:
+1. 100% CONTENT & VISUAL FIDELITY: Replicate 100% of the elements, typography, headlines, subtitles, text blocks, numbers, brand logos, colors, models/subjects, products (glasses/frames), reflections, and lighting directly from the attached master image.
+2. NATURAL OUTPAINTING & EXTENSION: Seamlessly continue and outpaint the scene, geometric podiums/dividers, background atmosphere, and gradients to fill the complete ${targetAspectRatio} canvas.
+3. SACRED SAFE MARGINS: Center the layout harmoniously and guarantee ample breathing room (minimum 12% padding) so no text or critical features touch or get cut off by borders.
+4. ZERO DISTORTION: Do NOT stretch, squeeze, or warp the text or subject. Expand the canvas naturally.`;
+
+        expandedSystemInstruction = `You are a world-class digital graphic designer and outpainting specialist. You adapt existing high-resolution commercial artwork to new aspect ratios (${targetAspectRatio}) with 100% fidelity to the original design, expanding the environment seamlessly without altering or distorting any text, logo, or subject.`;
+
+        parts.push({ text: fullPrompt });
+        addImagePart(prevImgBase64, "IMAGEM MASTER ANTERIOR A SER REFORMATADA AO NOVO FORMATO");
+        if (designRefBase64) addImagePart(designRefBase64, "Referência de Design Auxiliar");
+        if (logoBase64) addImagePart(logoBase64, "Referência de Logotipo Oficial");
+      } else if (isRefBuilder) {
         const isGraphicCardOrFlyer =
           hasFlyerTypography ||
           /(card|flyer|banner|post|cartaz|propaganda|anúncio|anuncio|ótica|otica|exame|consulta|promoção|promocao|desconto|preço|preco|título|titulo|cabeçalho|cabecalho|texto|legenda|layout|arte|design|sindicato|procedimentos|fundoscopia|acuidade|óculos|oculos)/i.test(promptTraduzido || '') ||
@@ -8671,6 +8696,9 @@ RULES:
                 addImagePart(asset, `BRAND ASSET REFERENCE #${idx + 1}`);
               }
             });
+          }
+          if (prevImgBase64) {
+            addImagePart(prevImgBase64, "IMAGEM MASTER ANTERIOR A SER REFINADA / ADAPTADA");
           }
         } else {
         console.log("[api/gerar] === REF BUILDER PHOTOGRAPHIC MASTER ENGINE (8K) ACTIVATED ===");
@@ -8788,6 +8816,9 @@ RULES:
               );
             }
           });
+        }
+        if (prevImgBase64) {
+          addImagePart(prevImgBase64, "IMAGEM MASTER ANTERIOR A SER REFINADA / ADAPTADA");
         }
         } // end of !isGraphicCardOrFlyer portrait branch
       } else {
@@ -9949,6 +9980,7 @@ SUAS CAPACIDADES E CONHECIMENTO ESPECÍFICO:
           systemInstruction += `\n\nVocê é o Diretor Criativo Especialista em Design Builder 1.2 (Social Media, Campanhas Publicitárias & Flyers de Alta Conversão).
 SUAS CAPACIDADES E CONHECIMENTO ESPECÍFICO:
 1. DESIGN PUBLICITÁRIO & SOCIAL MEDIA: Você cria campanhas completas para feeds, stories e banners de tráfego pago (Instagram, Facebook, Google Ads).
+2. HIERARQUI
 2. HIERARQUIA VISUAL E TIPOGRAFIA DOMINANTE:
    - Títulos monumentais e magnéticos (Headline) que prendem o scroll nos primeiros 2 segundos.
    - Subtítulos claros e blocos de leitura organizados com espaçamento e contraste ideais.
