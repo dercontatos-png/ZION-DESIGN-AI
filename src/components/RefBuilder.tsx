@@ -3482,10 +3482,12 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                 <div className="relative flex flex-1 min-h-0 flex-col items-center justify-center overflow-hidden">
                   <div className="flex items-center justify-center overflow-hidden h-full w-full">
                     <div className="palco-da-arte relative flex h-full min-h-0 w-full min-w-0 overflow-hidden">
-                      <div className="flex h-full min-h-0 min-w-0 flex-1 items-center justify-center gap-3 p-4 pb-24">
+                      <div className="flex h-full min-h-0 min-w-0 flex-1 items-center justify-center gap-3 p-4 pb-36">
                         <div className="group/viewer relative flex h-full min-h-0 min-w-0 flex-1 overflow-hidden">
                           <div
+                            data-testid="result-viewer-surface"
                             className="relative flex h-full min-h-0 w-full min-w-0 items-center justify-center overflow-hidden"
+                            style={{ cursor: "pointer" }}
                           >
                             {isProcessing ? (
                               <div className="relative flex h-full min-h-0 min-w-0 flex-1 overflow-hidden items-center justify-center p-3 pb-28 sm:pb-32 animate-in fade-in zoom-in-95 duration-300">
@@ -3517,7 +3519,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                                   draggable={true}
                                   decoding="async"
                                   fetchPriority="high"
-                                  className="block h-auto w-auto max-h-full max-w-full shrink rounded-2xl object-contain shadow-2xl"
+                                  className="block h-auto w-auto max-h-full max-w-full shrink rounded-2xl object-contain"
                                   onError={(e) => {
                                     const img = e.currentTarget;
                                     if (!img.dataset.fallbackApplied && img.src) {

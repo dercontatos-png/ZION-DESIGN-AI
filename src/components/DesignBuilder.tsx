@@ -2239,7 +2239,7 @@ const hasFotoDot = Boolean(
                       style={{ cursor: "pointer" }}
                     >
                       <img
-                        alt="design-builder-result"
+                        alt={`design-builder-${(activeImage || "").slice(-8)}`}
                         data-testid="result-viewer"
                         draggable="true"
                         decoding="async"
@@ -2254,7 +2254,7 @@ const hasFotoDot = Boolean(
                             }
                           }
                         }}
-                        className="block h-auto w-auto max-h-full max-w-full shrink rounded-2xl object-contain object-center shadow-2xl shadow-black/80 hover:scale-[1.01] transition-transform"
+                        className="block h-auto w-auto max-h-full max-w-full shrink rounded-2xl object-contain"
                       />
                       {/* Botão de Ações no Canto Superior Esquerdo da Arte (3 pontinhos no Mobile) */}
                       <button
