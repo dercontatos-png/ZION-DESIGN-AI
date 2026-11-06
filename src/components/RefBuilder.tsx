@@ -3541,7 +3541,16 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                                   data-testid="result-viewer"
                                   draggable={false}
                                   decoding="async"
-                                  className="block h-auto w-auto max-h-[calc(100vh-280px)] max-w-[calc(100vw-500px)] shrink rounded-2xl object-contain shadow-2xl"
+                                  className="block h-auto w-auto max-h-[72vh] lg:max-h-[calc(100vh-280px)] max-w-full lg:max-w-[calc(100vw-500px)] shrink rounded-2xl object-contain shadow-2xl"
+                                  onError={(e) => {
+                                    const img = e.currentTarget;
+                                    if (!img.dataset.fallbackApplied && img.src) {
+                                      img.dataset.fallbackApplied = "true";
+                                      if (img.src.startsWith("http")) {
+                                        img.src = `/api/image-proxy?url=${encodeURIComponent(img.src)}&format=jpeg&maxDim=3840`;
+                                      }
+                                    }
+                                  }}
                                   src={generatedImage}
                                   onLoad={updateCanvasDimensions}
                                   onClick={() => {

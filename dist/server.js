@@ -4206,6 +4206,107 @@ async function startServer() {
       return res.status(500).json({ error: "Failed to convert and download image." });
     }
   });
+  app.get("/api/image-proxy", async (req, res) => {
+    try {
+      const url = req.query.url || req.query.src;
+      if (!url || typeof url !== "string") {
+        return res.status(400).json({ error: "Missing required 'url' parameter" });
+      }
+      const format = String(req.query.format || "jpeg").toLowerCase().trim();
+      const maxDim = parseInt(String(req.query.maxDim || "3840"), 10) || 3840;
+      let buffer = null;
+      if (url.includes("results/") || url.includes("thumbnails/")) {
+        const match = url.match(/(results|thumbnails)\/([^\/?#]+)\/([^\/?#]+)/);
+        if (match) {
+          const [_, folder, jId, fName] = match;
+          const baseName = fName.replace(/\.[a-zA-Z0-9]+$/, "");
+          const candidatePaths = [
+            path3.join(STORAGE_BASE_DIR, folder, jId, `${baseName}.png`),
+            path3.join(STORAGE_BASE_DIR, folder, jId, `${baseName}.avif`),
+            path3.join(STORAGE_BASE_DIR, folder, jId, fName),
+            path3.join(process.cwd(), "public", "generated-images", `img_${jId}.png`),
+            path3.join(STORAGE_BASE_DIR, "generated-images", `img_${jId}.png`),
+            path3.join(process.cwd(), "public", "generated-images", fName),
+            path3.join(STORAGE_BASE_DIR, "generated-images", fName)
+          ];
+          for (const cp of candidatePaths) {
+            if (fs3.existsSync(cp) && fs3.statSync(cp).isFile()) {
+              buffer = fs3.readFileSync(cp);
+              break;
+            }
+          }
+        }
+      }
+      if (!buffer && url.includes("/generated-images/")) {
+        const fname = path3.basename(url.split("?")[0].split("#")[0]);
+        const p1 = path3.join(STORAGE_BASE_DIR, "generated-images", fname);
+        const p2 = path3.join(process.cwd(), "public", "generated-images", fname);
+        if (fs3.existsSync(p1) && fs3.statSync(p1).isFile()) buffer = fs3.readFileSync(p1);
+        else if (fs3.existsSync(p2) && fs3.statSync(p2).isFile()) buffer = fs3.readFileSync(p2);
+        else if (isR2Active()) {
+          const r2Obj = await downloadFromR2(`generated-images/${fname}`);
+          if (r2Obj) buffer = r2Obj.data;
+        }
+      } else if (!buffer && url.includes("/uploads/")) {
+        const fname = path3.basename(url.split("?")[0].split("#")[0]);
+        const p1 = path3.join(STORAGE_BASE_DIR, "uploads", fname);
+        const p2 = path3.join(process.cwd(), "public", "uploads", fname);
+        if (fs3.existsSync(p1) && fs3.statSync(p1).isFile()) buffer = fs3.readFileSync(p1);
+        else if (fs3.existsSync(p2) && fs3.statSync(p2).isFile()) buffer = fs3.readFileSync(p2);
+      } else if (!buffer && url.startsWith("data:")) {
+        const { data: b64Data } = resolveImageInput(url);
+        if (b64Data) buffer = Buffer.from(b64Data, "base64");
+      } else if (!buffer && (url.startsWith("http://") || url.startsWith("https://"))) {
+        const fetchRes = await fetch(url);
+        if (fetchRes.ok) {
+          buffer = Buffer.from(await fetchRes.arrayBuffer());
+        }
+      } else if (!buffer && url.startsWith("/")) {
+        const relPath = url.split("?")[0].split("#")[0].replace(/^\//, "");
+        const localPath1 = path3.join(process.cwd(), "public", relPath);
+        const localPath2 = path3.join(STORAGE_BASE_DIR, relPath);
+        if (fs3.existsSync(localPath1) && fs3.statSync(localPath1).isFile()) {
+          buffer = fs3.readFileSync(localPath1);
+        } else if (fs3.existsSync(localPath2) && fs3.statSync(localPath2).isFile()) {
+          buffer = fs3.readFileSync(localPath2);
+        }
+      }
+      if (!buffer || buffer.length === 0) {
+        return res.status(404).json({ error: "Image file not found." });
+      }
+      let pipeline = sharp(buffer);
+      const meta = await pipeline.metadata();
+      if (meta.width && meta.height) {
+        if (meta.width > maxDim || meta.height > maxDim) {
+          pipeline = pipeline.resize({
+            width: meta.width >= meta.height ? maxDim : void 0,
+            height: meta.height > meta.width ? maxDim : void 0,
+            fit: "inside",
+            withoutEnlargement: true
+          });
+        }
+      }
+      let outBuffer;
+      let contentType = "image/jpeg";
+      if (format === "png") {
+        outBuffer = await pipeline.png({ compressionLevel: 6 }).toBuffer();
+        contentType = "image/png";
+      } else if (format === "webp") {
+        outBuffer = await pipeline.webp({ quality: 90 }).toBuffer();
+        contentType = "image/webp";
+      } else {
+        outBuffer = await pipeline.jpeg({ quality: 92, mozjpeg: true }).toBuffer();
+        contentType = "image/jpeg";
+      }
+      res.setHeader("Content-Type", contentType);
+      res.setHeader("Cache-Control", "public, max-age=86400, immutable");
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      return res.send(outBuffer);
+    } catch (err) {
+      console.error("[/api/image-proxy] Proxy error:", err);
+      return res.status(500).json({ error: "Failed to proxy image." });
+    }
+  });
   const tempUpload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 10 * 1024 * 1024 }

@@ -2245,6 +2245,15 @@ const hasFotoDot = Boolean(
                         decoding="async"
                         fetchPriority="high"
                         src={activeImage}
+                        onError={(e) => {
+                          const img = e.currentTarget;
+                          if (!img.dataset.fallbackApplied && img.src) {
+                            img.dataset.fallbackApplied = "true";
+                            if (img.src.startsWith("http")) {
+                              img.src = `/api/image-proxy?url=${encodeURIComponent(img.src)}&format=jpeg&maxDim=3840`;
+                            }
+                          }
+                        }}
                         className="block h-auto w-auto max-h-full max-w-full shrink rounded-2xl object-contain object-center shadow-2xl shadow-black/80 hover:scale-[1.01] transition-transform"
                       />
                       {/* Botão de Ações no Canto Superior Esquerdo da Arte (3 pontinhos no Mobile) */}
