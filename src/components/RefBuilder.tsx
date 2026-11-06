@@ -700,7 +700,26 @@ export const RefBuilder: React.FC<RefBuilderProps> = ({
     ];
   });
 
-  const [mobileView, setMobileView] = useState<"form" | "palco">("form");
+  const [mobileView, setMobileView] = useState<"form" | "palco">("palco");
+  const [mobileActiveCategory, setMobileActiveCategory] = useState<"foto" | "estilo" | "saida" | null>(null);
+
+  const handleSelectMobileCategory = (cat: "foto" | "estilo" | "saida") => {
+    setMobileActiveCategory((prev) => {
+      const next = prev === cat ? null : cat;
+      if (next) {
+        setTimeout(() => {
+          const selectorMap: Record<string, string> = {
+            foto: '[data-field-id="sujeitos"]',
+            estilo: '[data-field-id="referencias"]',
+            saida: '[data-field-id="dimensions"], [data-field-id="quality"]'
+          };
+          const target = document.querySelector(selectorMap[next]);
+          target?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 120);
+      }
+      return next;
+    });
+  };
   const [isMobileHistoryOpen, setIsMobileHistoryOpen] = useState(false);
 
   const allRefHistory = React.useMemo(() => {
@@ -1985,7 +2004,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
       <main
         data-builder-workspace-shell=""
         className={`relative flex h-full min-h-0 overflow-hidden bg-transparent lg:flex-row max-lg:grid max-lg:overflow-hidden max-lg:transition-[grid-template-rows] max-lg:duration-300 max-lg:ease-in-out flex-1 ${
-          (mobileView === "form" && !isProcessing) ? "max-lg:grid-rows-[0fr_1fr]" : "max-lg:grid-rows-[1fr_0fr]"
+          (mobileActiveCategory && !isProcessing) ? "max-lg:grid-rows-[0fr_1fr]" : "max-lg:grid-rows-[1fr_0fr]"
         }`}
       >
         {/* ── COLUNA DO FORMULÁRIO REF (LAYOUT 100% ORIGINAL) ── */}
@@ -5318,6 +5337,147 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
           </div>
         </div>
       )}
+
+      {/* Barra Inferior Mobile Oficial: Do Agente Container (100% IDÊNTICA AO APP.DESIGNBUILDER.CO) */}
+      <div className="lg:hidden fixed bottom-0 inset-x-0 z-30 flex flex-col bg-[rgba(10,7,25,0.92)] backdrop-blur-md border-t border-white/10 pb-[env(safe-area-inset-bottom,0px)]">
+        <div
+          role="tablist"
+          aria-label="Categorias do agente"
+          className="flex items-stretch gap-0.5 overflow-x-auto scrollbar-hide px-2 py-1.5 [scroll-snap-type:x_proximity] justify-center"
+        >
+          {/* Início */}
+          <button
+            type="button"
+            aria-label="Sair para o início"
+            onClick={() => {
+              setMobileActiveCategory(null);
+              if (onOpenVitrine) onOpenVitrine();
+              else if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("db:go_home"));
+            }}
+            className="group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 text-zinc-300 cursor-pointer"
+          >
+            <span className="flex h-7 w-12 items-center justify-center rounded-full transition-colors bg-white/[0.05] ring-1 ring-white/15 group-hover:bg-white/[0.10]">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-house lucide-home h-[22px] w-[22px]" aria-hidden="true">
+                <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"></path>
+                <path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+              </svg>
+            </span>
+            <span className="whitespace-nowrap text-[10px] leading-none font-semibold">
+              Início
+            </span>
+          </button>
+
+          <span aria-hidden="true" className="mx-1 my-2 w-px shrink-0 self-stretch bg-white/10"></span>
+
+          {/* Foto */}
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mobileActiveCategory === "foto"}
+            onClick={() => handleSelectMobileCategory("foto")}
+            className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
+              mobileActiveCategory === "foto" ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+            }`}
+          >
+            <span className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
+              mobileActiveCategory === "foto" ? "bg-violet-600/30 ring-1 ring-violet-500" : "group-hover:bg-white/[0.06]"
+            }`}>
+              <span className="relative">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-image h-[22px] w-[22px]" aria-hidden="true">
+                  <rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect>
+                  <circle cx="9" cy="9" r="2"></circle>
+                  <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
+                </svg>
+              </span>
+            </span>
+            <span className="whitespace-nowrap text-[10px] font-medium leading-none">
+              Foto
+            </span>
+          </button>
+
+          {/* Estilo */}
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mobileActiveCategory === "estilo"}
+            onClick={() => handleSelectMobileCategory("estilo")}
+            className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
+              mobileActiveCategory === "estilo" ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+            }`}
+          >
+            <span className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
+              mobileActiveCategory === "estilo" ? "bg-violet-600/30 ring-1 ring-violet-500" : "group-hover:bg-white/[0.06]"
+            }`}>
+              <span className="relative">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-sparkles lucide-stars h-[22px] w-[22px]" aria-hidden="true">
+                  <path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"></path>
+                  <path d="M20 2v4"></path>
+                  <path d="M22 4h-4"></path>
+                  <circle cx="4" cy="20" r="2"></circle>
+                </svg>
+              </span>
+            </span>
+            <span className="whitespace-nowrap text-[10px] font-medium leading-none">
+              Estilo
+            </span>
+          </button>
+
+          {/* Saída */}
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mobileActiveCategory === "saida"}
+            onClick={() => handleSelectMobileCategory("saida")}
+            className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
+              mobileActiveCategory === "saida" ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+            }`}
+          >
+            <span className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
+              mobileActiveCategory === "saida" ? "bg-violet-600/30 ring-1 ring-violet-500" : "group-hover:bg-white/[0.06]"
+            }`}>
+              <span className="relative">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-sliders-horizontal h-[22px] w-[22px]" aria-hidden="true">
+                  <path d="M10 5H3"></path>
+                  <path d="M12 19H3"></path>
+                  <path d="M14 3v4"></path>
+                  <path d="M16 17v4"></path>
+                  <path d="M21 12h-9"></path>
+                  <path d="M21 19h-5"></path>
+                  <path d="M21 5h-7"></path>
+                  <path d="M8 10v4"></path>
+                  <path d="M8 12H3"></path>
+                </svg>
+              </span>
+            </span>
+            <span className="whitespace-nowrap text-[10px] font-medium leading-none">
+              Saída
+            </span>
+          </button>
+
+          <span aria-hidden="true" className="mx-1 my-2 w-px shrink-0 self-stretch bg-white/10"></span>
+
+          {/* Construir */}
+          <button
+            type="button"
+            aria-label="Construir"
+            disabled={isProcessing}
+            onClick={() => {
+              setMobileActiveCategory(null);
+              handleBuild();
+            }}
+            className="group ml-0.5 flex min-h-[52px] min-w-[78px] shrink-0 snap-start flex-col items-center justify-center gap-1 rounded-2xl px-3 text-white transition-transform duration-100 ease-out active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+            style={{
+              color: "rgb(255, 255, 255)",
+              background: "linear-gradient(to right, rgb(139, 92, 246), rgba(139, 92, 246, 0.8))",
+              boxShadow: "rgba(139, 92, 246, 0.35) 0px 4px 16px"
+            }}
+          >
+            <span className="whitespace-nowrap text-sm font-extrabold leading-tight">
+              Construir
+            </span>
+          </button>
+        </div>
+      </div>
 
       {/* Toast Notification */}
       {toastMsg && (
