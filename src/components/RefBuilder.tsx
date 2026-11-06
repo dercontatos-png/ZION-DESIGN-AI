@@ -701,6 +701,7 @@ export const RefBuilder: React.FC<RefBuilderProps> = ({
   });
 
   const [mobileView, setMobileView] = useState<"form" | "palco">("palco");
+  const [isMobileActionsOpen, setIsMobileActionsOpen] = useState(false);
   const [mobileActiveCategory, setMobileActiveCategory] = useState<"foto" | "estilo" | "saida" | null>(null);
 
   const handleSelectMobileCategory = (cat: "foto" | "estilo" | "saida") => {
@@ -3541,6 +3542,23 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                                       : "pointer"
                                   }}
                                 />
+                                {/* Botão Mais Opções / Ações no Canto Superior Esquerdo (1:1 com Element Armory Snippet) */}
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setIsMobileActionsOpen(true);
+                                  }}
+                                  aria-label="Ações da Arte"
+                                  title="Ações da Arte"
+                                  className="lg:hidden absolute top-3 left-3 z-30 flex h-8 w-8 items-center justify-center rounded-full bg-black/55 text-white ring-1 ring-white/15 backdrop-blur-md active:scale-95 cursor-pointer shadow-lg"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-ellipsis lucide-more-horizontal h-4 w-4" aria-hidden="true">
+                                    <circle cx="12" cy="12" r="1"></circle>
+                                    <circle cx="19" cy="12" r="1"></circle>
+                                    <circle cx="5" cy="12" r="1"></circle>
+                                  </svg>
+                                </button>
                                 {isBrushActive && (
                                   <canvas
                                     ref={drawingCanvasRef}
@@ -5478,6 +5496,135 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
           </button>
         </div>
       </div>
+
+      {/* Modal Bottom Sheet "Ações" Mobile (Formato, Download, Base, Favoritar) */}
+      {isMobileActionsOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setIsMobileActionsOpen(false)}
+        >
+          <div
+            className="w-full max-w-lg rounded-t-3xl border-t border-white/10 bg-[#090710] p-5 shadow-2xl animate-in slide-in-from-bottom duration-300 max-h-[85vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-white/10">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-ellipsis lucide-more-horizontal h-4 w-4 text-violet-400" aria-hidden="true">
+                  <circle cx="12" cy="12" r="1"></circle>
+                  <circle cx="19" cy="12" r="1"></circle>
+                  <circle cx="5" cy="12" r="1"></circle>
+                </svg>
+                <span>Ações da Arte</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsMobileActionsOpen(false)}
+                className="h-8 w-8 flex items-center justify-center rounded-full bg-white/5 text-zinc-400 hover:text-white cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Ações Rápidas */}
+            <div className="py-4 space-y-1">
+              <button
+                type="button"
+                onClick={() => {
+                  if (generatedImage) {
+                    setSubjectImages([{ id: Math.random().toString(36).substring(2, 9), url: generatedImage, desc: "" }]);
+                    showToast("Arte definida como imagem principal!", "success");
+                  }
+                  setIsMobileActionsOpen(false);
+                }}
+                className="flex items-center gap-3.5 px-3 py-3 rounded-2xl hover:bg-white/5 text-left text-sm font-semibold text-zinc-200 hover:text-white transition-colors cursor-pointer w-full"
+              >
+                <Sparkles className="h-5 w-5 text-amber-400" />
+                <span>Usar como imagem principal</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (onOpenReport) onOpenReport();
+                  else showToast("Reportar geração aberto!", "info");
+                  setIsMobileActionsOpen(false);
+                }}
+                className="flex items-center gap-3.5 px-3 py-3 rounded-2xl hover:bg-white/5 text-left text-sm font-semibold text-red-400 hover:text-red-300 transition-colors cursor-pointer w-full"
+              >
+                <AlertTriangle className="h-5 w-5" />
+                <span>Reportar geração</span>
+              </button>
+            </div>
+
+            {/* Seção FORMATO */}
+            <div className="mb-5 border-t border-white/10 pt-4">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-500 mb-3">FORMATO</h4>
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { id: "1:1", label: "1:1" },
+                  { id: "4:5", label: "4:5" },
+                  { id: "9:16", label: "9:16" },
+                  { id: "16:9", label: "16:9" },
+                ].map((fmt) => (
+                  <button
+                    key={fmt.id}
+                    type="button"
+                    onClick={() => {
+                      setDimension(fmt.id as any);
+                      setIsMobileActionsOpen(false);
+                      if (generatedImage) handleReformat(fmt.id as any);
+                    }}
+                    className={`flex flex-col items-center justify-center py-2.5 rounded-xl border transition-all cursor-pointer ${
+                      dimension === fmt.id
+                        ? "bg-violet-600/20 border-violet-500 text-violet-300"
+                        : "bg-white/5 border-white/5 text-zinc-400 hover:text-white hover:bg-white/10"
+                    }`}
+                  >
+                    <span className="text-xs font-bold">{fmt.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Seção EXPORTAR */}
+            <div className="border-t border-white/10 pt-4">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-500 mb-3">EXPORTAR ARTE</h4>
+              <div className="grid grid-cols-2 gap-2.5">
+                {[
+                  { id: "PNG", label: "PNG", sub: "Máxima Fidelidade" },
+                  { id: "JPG", label: "JPG", sub: "Mais Leve" },
+                  { id: "PDF", label: "PDF", sub: "Pronto para Impressão" },
+                  { id: "WEBP", label: "WEBP", sub: "Otimizado para Web" }
+                ].map((exp) => (
+                  <button
+                    key={exp.id}
+                    type="button"
+                    onClick={() => {
+                      if (generatedImage) {
+                        downloadImage(generatedImage, exp.id as any, undefined, undefined, undefined, quality || "4K", {
+                          title: "arte_ref",
+                          aspectRatio: dimension,
+                          targetResolution: quality || "4K"
+                        });
+                        showToast(`Download ${exp.label} iniciado!`, "success");
+                      }
+                      setIsMobileActionsOpen(false);
+                    }}
+                    className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-violet-500/30 transition-all text-left cursor-pointer"
+                  >
+                    <Download className="h-4 w-4 text-violet-400 shrink-0" />
+                    <div>
+                      <p className="text-xs font-bold text-white">{exp.label}</p>
+                      <p className="text-[10px] text-zinc-500">{exp.sub}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Toast Notification */}
       {toastMsg && (
