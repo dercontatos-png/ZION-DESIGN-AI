@@ -939,3 +939,22 @@ button:active:not(:disabled),
 .sub-area-entra {
   animation: subAreaEntra 200ms ease-out forwards;
 }
+
+/* ── Mobile Actions Bottom Sheet (1:1 app.designbuilder.co) ── */
+@keyframes slideUpDrawer {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slideUpDrawer 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.pb-safe {
+  padding-bottom: max(1.25rem, env(safe-area-inset-bottom, 1.25rem));
+}
+

@@ -5497,129 +5497,179 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
         </div>
       </div>
 
-      {/* Modal Bottom Sheet "Ações" Mobile (Formato, Download, Base, Favoritar) */}
+      {/* Modal Bottom Sheet "Ações" Mobile (1:1 com app.designbuilder.co) */}
       {isMobileActionsOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity"
           onClick={() => setIsMobileActionsOpen(false)}
         >
           <div
-            className="w-full max-w-lg rounded-t-3xl border-t border-white/10 bg-[#090710] p-5 shadow-2xl animate-in slide-in-from-bottom duration-300 max-h-[85vh] overflow-y-auto"
+            className="absolute inset-x-0 bottom-0 max-h-[88dvh] overflow-y-auto rounded-t-3xl border-t border-white/10 bg-zinc-950 pb-safe shadow-2xl animate-slide-up"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-white/10">
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-ellipsis lucide-more-horizontal h-4 w-4 text-violet-400" aria-hidden="true">
-                  <circle cx="12" cy="12" r="1"></circle>
-                  <circle cx="19" cy="12" r="1"></circle>
-                  <circle cx="5" cy="12" r="1"></circle>
-                </svg>
-                <span>Ações da Arte</span>
-              </h3>
+            {/* Header Sticky com barra de puxar e botão Fechar */}
+            <div className="sticky top-0 z-10 flex touch-none items-center justify-between bg-zinc-950/95 px-5 pb-2 pt-3 backdrop-blur">
+              <div className="absolute left-1/2 top-1.5 h-1 w-10 -translate-x-1/2 rounded-full bg-white/15" />
+              <span className="text-sm font-semibold text-white">Ações</span>
               <button
                 type="button"
+                aria-label="Fechar"
                 onClick={() => setIsMobileActionsOpen(false)}
-                className="h-8 w-8 flex items-center justify-center rounded-full bg-white/5 text-zinc-400 hover:text-white cursor-pointer"
+                className="flex h-11 w-11 items-center justify-center rounded-full text-zinc-400 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
               >
-                ✕
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x h-5 w-5" aria-hidden="true">
+                  <path d="M18 6 6 18" />
+                  <path d="m6 6 12 12" />
+                </svg>
               </button>
             </div>
 
-            {/* Ações Rápidas */}
-            <div className="py-4 space-y-1">
+            <div className="space-y-1 px-4 pb-6 pt-2">
+              {/* Reutilizar configurações */}
+              <button
+                type="button"
+                onClick={() => {
+                  showToast("Configurações reutilizadas!", "info");
+                  setIsMobileActionsOpen(false);
+                }}
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm text-zinc-200 transition-colors hover:bg-white/[0.06] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-rotate-ccw h-[18px] w-[18px] text-zinc-400" aria-hidden="true">
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                  <path d="M3 3v5h5" />
+                </svg>
+                <span className="flex-1">Reutilizar configurações</span>
+              </button>
+
+              {/* Usar como base */}
               <button
                 type="button"
                 onClick={() => {
                   if (generatedImage) {
                     setSubjectImages([{ id: Math.random().toString(36).substring(2, 9), url: generatedImage, desc: "" }]);
-                    showToast("Arte definida como imagem principal!", "success");
+                    showToast("Arte definida como imagem de base!", "success");
                   }
                   setIsMobileActionsOpen(false);
                 }}
-                className="flex items-center gap-3.5 px-3 py-3 rounded-2xl hover:bg-white/5 text-left text-sm font-semibold text-zinc-200 hover:text-white transition-colors cursor-pointer w-full"
+                disabled={!generatedImage}
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm text-zinc-200 transition-colors hover:bg-white/[0.06] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
-                <Sparkles className="h-5 w-5 text-amber-400" />
-                <span>Usar como imagem principal</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-sparkles lucide-stars h-[18px] w-[18px] text-zinc-400" aria-hidden="true">
+                  <path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z" />
+                  <path d="M20 2v4" />
+                  <path d="M22 4h-4" />
+                  <circle cx="4" cy="20" r="2" />
+                </svg>
+                <span className="flex-1">Usar como base</span>
               </button>
 
+              {/* Favoritar */}
               <button
                 type="button"
                 onClick={() => {
-                  if (onOpenReport) onOpenReport();
-                  else showToast("Reportar geração aberto!", "info");
+                  setIsFavorited(!isFavorited);
+                  showToast(isFavorited ? "Removido dos favoritos" : "Favoritado!", "info");
                   setIsMobileActionsOpen(false);
                 }}
-                className="flex items-center gap-3.5 px-3 py-3 rounded-2xl hover:bg-white/5 text-left text-sm font-semibold text-red-400 hover:text-red-300 transition-colors cursor-pointer w-full"
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm text-zinc-200 transition-colors hover:bg-white/[0.06] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
-                <AlertTriangle className="h-5 w-5" />
-                <span>Reportar geração</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill={isFavorited ? "#ef4444" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`lucide lucide-heart h-[18px] w-[18px] ${isFavorited ? "text-red-500 fill-red-500" : "text-zinc-400"}`} aria-hidden="true">
+                  <path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5" />
+                </svg>
+                <span className="flex-1">Favoritar</span>
               </button>
-            </div>
 
-            {/* Seção FORMATO */}
-            <div className="mb-5 border-t border-white/10 pt-4">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-500 mb-3">FORMATO</h4>
-              <div className="grid grid-cols-4 gap-2">
-                {[
-                  { id: "1:1", label: "1:1" },
-                  { id: "4:5", label: "4:5" },
-                  { id: "9:16", label: "9:16" },
-                  { id: "16:9", label: "16:9" },
-                ].map((fmt) => (
-                  <button
-                    key={fmt.id}
-                    type="button"
-                    onClick={() => {
-                      setDimension(fmt.id as any);
-                      setIsMobileActionsOpen(false);
-                      if (generatedImage) handleReformat(fmt.id as any);
-                    }}
-                    className={`flex flex-col items-center justify-center py-2.5 rounded-xl border transition-all cursor-pointer ${
-                      dimension === fmt.id
-                        ? "bg-violet-600/20 border-violet-500 text-violet-300"
-                        : "bg-white/5 border-white/5 text-zinc-400 hover:text-white hover:bg-white/10"
-                    }`}
-                  >
-                    <span className="text-xs font-bold">{fmt.label}</span>
-                  </button>
-                ))}
+              {/* Publicar na Comunidade */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (onOpenCommunity) onOpenCommunity();
+                  else showToast("Publicar na Comunidade aberto!", "info");
+                  setIsMobileActionsOpen(false);
+                }}
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm text-zinc-200 transition-colors hover:bg-white/[0.06] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-globe h-[18px] w-[18px] text-zinc-400" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+                  <path d="M2 12h20" />
+                </svg>
+                <span className="flex-1">Publicar na Comunidade</span>
+              </button>
+
+              {/* Formato */}
+              <div className="pt-3">
+                <p className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Formato</p>
+                <div className="grid grid-cols-3 gap-1.5 px-1">
+                  {[
+                    { id: "16:9", title: "Widescreen" },
+                    { id: "9:16", title: "Story / Reels" },
+                    { id: "1:1", title: "Quadrado" },
+                    { id: "4:5", title: "Instagram" },
+                    { id: "3:4", title: "Retrato" },
+                    { id: "4:3", title: "Paisagem" },
+                  ].map((fmt) => (
+                    <button
+                      key={fmt.id}
+                      type="button"
+                      title={fmt.title}
+                      onClick={() => {
+                        setDimension(fmt.id as any);
+                        setIsMobileActionsOpen(false);
+                        if (generatedImage) handleReformat(fmt.id as any);
+                      }}
+                      className={`flex flex-col items-center gap-1 rounded-xl py-3 transition-colors hover:bg-white/[0.06] disabled:opacity-50 cursor-pointer ${
+                        dimension === fmt.id ? "bg-white/10 ring-1 ring-white/20" : ""
+                      }`}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-crop h-4 w-4 text-zinc-400" aria-hidden="true">
+                        <path d="M6 2v14a2 2 0 0 0 2 2h14" />
+                        <path d="M18 22V8a2 2 0 0 0-2-2H2" />
+                      </svg>
+                      <span className="text-[11px] font-medium text-zinc-300">{fmt.id}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            {/* Seção EXPORTAR */}
-            <div className="border-t border-white/10 pt-4">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-500 mb-3">EXPORTAR ARTE</h4>
-              <div className="grid grid-cols-2 gap-2.5">
-                {[
-                  { id: "PNG", label: "PNG", sub: "Máxima Fidelidade" },
-                  { id: "JPG", label: "JPG", sub: "Mais Leve" },
-                  { id: "PDF", label: "PDF", sub: "Pronto para Impressão" },
-                  { id: "WEBP", label: "WEBP", sub: "Otimizado para Web" }
-                ].map((exp) => (
-                  <button
-                    key={exp.id}
-                    type="button"
-                    onClick={() => {
-                      if (generatedImage) {
-                        downloadImage(generatedImage, exp.id as any, undefined, undefined, undefined, quality || "4K", {
-                          title: "arte_ref",
-                          aspectRatio: dimension,
-                          targetResolution: quality || "4K"
-                        });
-                        showToast(`Download ${exp.label} iniciado!`, "success");
-                      }
-                      setIsMobileActionsOpen(false);
-                    }}
-                    className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-violet-500/30 transition-all text-left cursor-pointer"
-                  >
-                    <Download className="h-4 w-4 text-violet-400 shrink-0" />
-                    <div>
-                      <p className="text-xs font-bold text-white">{exp.label}</p>
-                      <p className="text-[10px] text-zinc-500">{exp.sub}</p>
-                    </div>
-                  </button>
-                ))}
+              {/* Exportar */}
+              <div className="pt-3">
+                <p className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Exportar</p>
+                <div className="grid grid-cols-2 gap-1.5 px-1">
+                  {[
+                    { format: "AVIF", ext: "AVIF", label: "AVIF", sub: "Original" },
+                    { format: "PNG", ext: "PNG", label: "PNG", sub: "Sem perda" },
+                    { format: "JPG", ext: "JPEG", label: "JPEG", sub: "Alta qualidade" },
+                    { format: "WEBP", ext: "WebP", label: "WebP", sub: "Web otimizado" },
+                  ].map((exp) => (
+                    <button
+                      key={exp.format}
+                      type="button"
+                      onClick={() => {
+                        if (generatedImage) {
+                          downloadImage(generatedImage, exp.format as any, undefined, undefined, undefined, quality || "4K", {
+                            title: "arte_ref",
+                            aspectRatio: dimension,
+                            targetResolution: quality || "4K"
+                          });
+                          showToast(`Download ${exp.label} iniciado!`, "success");
+                        }
+                        setIsMobileActionsOpen(false);
+                      }}
+                      className="flex items-center gap-2.5 rounded-xl px-3 py-3 text-left transition-colors hover:bg-white/[0.06] cursor-pointer"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-download h-4 w-4 shrink-0 text-zinc-500" aria-hidden="true">
+                        <path d="M12 15V3" />
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <path d="m7 10 5 5 5-5" />
+                      </svg>
+                      <span className="flex flex-col leading-tight">
+                        <span className="text-sm font-medium text-zinc-200">{exp.label}</span>
+                        <span className="text-[10px] text-zinc-500">{exp.sub}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>

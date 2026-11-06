@@ -1,5 +1,83 @@
 [
   {
+    "id": "img_1793997204022_urpv2",
+    "status": "done",
+    "result_url": "/generated-images/img_1793997204022_urpv2.png",
+    "thumbnail_url": "/generated-images/img_1793997204022_urpv2.png",
+    "created_at": "2026-11-06T20:33:24.036Z",
+    "agent_slug": "design-builder1-2",
+    "dimensions": "4:5",
+    "form_data": {
+      "quality": "4K",
+      "dimensions": "4:5"
+    }
+  },
+  {
+    "id": "img_1793997114321_6u66x",
+    "status": "done",
+    "result_url": "/generated-images/img_1793997114321_6u66x.png",
+    "thumbnail_url": "/generated-images/img_1793997114321_6u66x.png",
+    "created_at": "2026-11-06T20:31:54.329Z",
+    "agent_slug": "design-builder1-2",
+    "dimensions": "4:5",
+    "form_data": {
+      "quality": "4K",
+      "dimensions": "4:5"
+    }
+  },
+  {
+    "id": "img_1793996851840_d4cia",
+    "status": "done",
+    "result_url": "/generated-images/img_1793996851840_d4cia.png",
+    "thumbnail_url": "/generated-images/img_1793996851840_d4cia.png",
+    "created_at": "2026-11-06T20:27:31.859Z",
+    "agent_slug": "design-builder1-2",
+    "dimensions": "4:5",
+    "form_data": {
+      "quality": "4K",
+      "dimensions": "4:5"
+    }
+  },
+  {
+    "id": "img_1793996740027_we2yb",
+    "status": "done",
+    "result_url": "/generated-images/img_1793996740027_we2yb.png",
+    "thumbnail_url": "/generated-images/img_1793996740027_we2yb.png",
+    "created_at": "2026-11-06T20:25:40.038Z",
+    "agent_slug": "design-builder1-2",
+    "dimensions": "4:5",
+    "form_data": {
+      "quality": "4K",
+      "dimensions": "4:5"
+    }
+  },
+  {
+    "id": "img_1793996671597_mtj9w",
+    "status": "done",
+    "result_url": "/generated-images/img_1793996671597_mtj9w.png",
+    "thumbnail_url": "/generated-images/img_1793996671597_mtj9w.png",
+    "created_at": "2026-11-06T20:24:31.634Z",
+    "agent_slug": "design-builder1-2",
+    "dimensions": "4:5",
+    "form_data": {
+      "quality": "4K",
+      "dimensions": "4:5"
+    }
+  },
+  {
+    "id": "img_1793996315082_128x4",
+    "status": "done",
+    "result_url": "/generated-images/img_1793996315082_128x4.png",
+    "thumbnail_url": "/generated-images/img_1793996315082_128x4.png",
+    "created_at": "2026-11-06T20:18:35.342Z",
+    "agent_slug": "design-builder1-2",
+    "dimensions": "4:5",
+    "form_data": {
+      "quality": "4K",
+      "dimensions": "4:5"
+    }
+  },
+  {
     "id": "img_1793922832144_zi45q",
     "status": "done",
     "result_url": "/generated-images/img_1793922832144_zi45q.png",
