@@ -24,6 +24,7 @@ export interface MagicRefineBarProps {
   className?: string;
   onSendRefine: (text: string, attachments: MagicRefineAttachment[], isBrush: boolean) => void;
   onPublishCommunity?: () => void;
+  onFormatClick?: () => void;
   isProcessing?: boolean;
   activeImage?: string | null;
   agentColor?: string;

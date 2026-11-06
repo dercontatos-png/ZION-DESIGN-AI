@@ -2063,7 +2063,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                     <div tabIndex={0} className="relative flex flex-col gap-2 rounded-lg p-2 -m-2 transition-colors outline-none">
                       <input
                         ref={managerSubjectInputRef}
-                        accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+                        accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/svg+xml,.svg"
                         multiple
                         className="hidden"
                         type="file"
@@ -3851,7 +3851,39 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                         </button>
 
                           {/* Bloco Central: Publish Alert + Magic Bar */}
-                          <div className={`absolute bottom-[max(1rem,env(safe-area-inset-bottom,1rem))] sm:bottom-8 left-1/2 z-20 flex w-[min(92vw,480px)] -translate-x-1/2 flex-col items-center gap-2.5 lg:w-[calc(100%-120px)] transition-[max-width] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${isMagicBarFocused || magicRefineText.length > 0 || attachments.length > 0 || isBrushActive ? "lg:max-w-[660px]" : "lg:max-w-[480px]"}`}>
+                          <div className="pointer-events-auto absolute bottom-8 left-1/2 z-20 flex w-[min(92vw,480px)] -translate-x-1/2 flex-col items-center gap-2.5 lg:w-[calc(100%-120px)] transition-[max-width] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] lg:max-w-[480px]">
+                            {/* Toolbar Superior: text-actions-toolbar (1:1 com app.designbuilder.co) */}
+                            <div data-testid="text-actions-toolbar" className="relative z-30 flex w-full items-center justify-between gap-3 px-0.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsBrushActive(!isBrushActive);
+                                  showToast(isBrushActive ? "Modo de pincel desativado" : "Pós-produção ativada! Marque a área ou descreva a alteração.", "info");
+                                }}
+                                className={`magic-bar relative inline-flex min-h-9 items-center gap-2 overflow-hidden rounded-lg px-3 text-xs font-medium text-violet-100 transition-[filter] hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 cursor-pointer ${
+                                  isBrushActive ? "bg-violet-600/30 text-violet-200 ring-1 ring-violet-500/40" : ""
+                                }`}
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-type h-4 w-4" aria-hidden="true">
+                                  <path d="M12 4v16"></path><path d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2"></path><path d="M9 20h6"></path>
+                                </svg>
+                                Pós-produção
+                              </button>
+                              <div className="relative">
+                                <div>
+                                  <button
+                                    type="button"
+                                    onClick={() => setIsMobileActionsOpen(true)}
+                                    className="inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-xs font-medium text-zinc-200 transition-colors hover:bg-white/[0.08] hover:text-white cursor-pointer"
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-crop h-4 w-4" aria-hidden="true">
+                                      <path d="M6 2v14a2 2 0 0 0 2 2h14"></path><path d="M18 22V8a2 2 0 0 0-2-2H2"></path>
+                                    </svg>
+                                    Formato
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
                             {showPublishAlert && (
                               <div className="publish-alert-card relative inline-flex items-center gap-3 rounded-2xl py-2 pl-4 pr-2.5 shadow-xl shadow-black/30" style={{ "--alert-idv": "#8B5CF6", "--alert-idv-dim": "#8B5CF640" } as any}>
                                 <p className="whitespace-nowrap text-[15px] font-semibold leading-snug" style={{ color: "color-mix(in srgb, rgb(139, 92, 246) 74%, rgb(0, 0, 0))" }}>
@@ -4214,12 +4246,9 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                                       }
                                     }}
                                     disabled={isRefining}
-                                    placeholder={
-                                      isBrushActive
-                                        ? (strokeHistory.length > 0 ? "Altere a área marcada..." : "Pinte a área que quer alterar...")
-                                        : "Descreva a alteração mágica..."
-                                    }
+                                    placeholder="Descreva a alteração mágica..."
                                     className="campo-de-refino w-full min-w-0 resize-none bg-transparent px-1 py-[6px] text-[15px] leading-6 text-[#f0ecff] outline-none scrollbar-hide disabled:opacity-50"
+                                    style={{ height: "36px" }}
                                   />
                                 </div>
                                 <button
@@ -4243,7 +4272,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                               </div>
                               <input
                                 ref={magicFileInputRef}
-                                accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+                                accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/svg+xml,.svg"
                                 multiple
                                 className="hidden"
                                 type="file"
