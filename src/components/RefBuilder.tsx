@@ -3539,9 +3539,10 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                                   ref={viewerImageRef}
                                   alt={`design-builder-${(generatedImage || "").slice(-8)}`}
                                   data-testid="result-viewer"
-                                  draggable={false}
+                                  draggable={true}
                                   decoding="async"
-                                  className="block h-auto w-auto max-h-[72vh] lg:max-h-[calc(100vh-280px)] max-w-full lg:max-w-[calc(100vw-500px)] shrink rounded-2xl object-contain shadow-2xl"
+                                  fetchPriority="high"
+                                  className="block h-auto w-auto max-h-full max-w-full shrink rounded-2xl object-contain shadow-2xl"
                                   onError={(e) => {
                                     const img = e.currentTarget;
                                     if (!img.dataset.fallbackApplied && img.src) {
