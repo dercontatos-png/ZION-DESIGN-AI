@@ -3574,9 +3574,9 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                       <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-10 h-48 bg-gradient-to-t from-[rgba(4,2,12,0.70)] via-[rgba(4,2,12,0.35)] to-transparent" />
 
                       {/* Container Absoluto Flutuante (@container) */}
-                      <div className="@container absolute inset-x-0 bottom-0">
+                      <div className="@container absolute inset-0 pointer-events-none">
                         {/* Ações da Lateral Esquerda (Reportar, Reutilizar, Favoritar, Publicar) */}
-                        <div className="acoes-da-arte absolute left-6 z-30 flex items-center gap-1.5 transition-all duration-300 max-[1800px]:flex-col max-[1800px]:items-start max-lg:hidden" style={{ bottom: "108px" }}>
+                        <div className="acoes-da-arte absolute left-6 z-30 flex items-center gap-1.5 transition-all duration-300 max-[1800px]:flex-col max-[1800px]:items-start max-lg:hidden pointer-events-auto" style={{ bottom: "108px" }}>
                           <button
                             type="button"
                             onClick={() => {
@@ -3625,7 +3625,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                         </div>
 
                         {/* Ações da Lateral Direita (Formato, Exportar, Usar como base) */}
-                        <div ref={rightActionsRef} className="acoes-da-arte absolute right-6 z-30 flex items-center gap-1.5 transition-all duration-300 max-[1800px]:flex-col max-[1800px]:items-end max-lg:hidden" style={{ bottom: "108px" }}>
+                        <div ref={rightActionsRef} className="acoes-da-arte absolute right-6 z-30 flex items-center gap-1.5 transition-all duration-300 max-[1800px]:flex-col max-[1800px]:items-end max-lg:hidden pointer-events-auto" style={{ bottom: "108px" }}>
                           {/* Formato Popover */}
                           <div className="relative">
                             <div onClick={() => setActivePopover(activePopover === "formato" ? null : "formato")}>
