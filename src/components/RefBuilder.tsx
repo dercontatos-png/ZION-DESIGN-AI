@@ -3172,10 +3172,9 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
               <button
                 type="submit"
                 disabled={isProcessing}
-                onMouseMove={handleButtonMouseMove}
-                className="flex w-full items-center justify-center gap-2 text-white rounded-xl px-6 py-4 text-base font-semibold transition-all duration-300 hover:scale-[1.01] active:scale-95 shadow-lg disabled:cursor-not-allowed disabled:hover:scale-100 disabled:opacity-40 cursor-pointer"
+                className="flex w-full items-center justify-center gap-2 text-white rounded-xl px-6 py-4 text-base font-semibold transition-all duration-300 hover:scale-[1.01] active:scale-95 shadow-lg disabled:cursor-not-allowed disabled:hover:scale-100 disabled:opacity-40"
                 style={{
-                  background: "radial-gradient(140px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255, 255, 255, 0.28), transparent 75%), linear-gradient(to right, rgb(139, 92, 246), rgba(139, 92, 246, 0.8))"
+                  background: "linear-gradient(to right, rgb(139, 92, 246), rgba(139, 92, 246, 0.8))"
                 }}
               >
                 {isProcessing ? "Construindo..." : "Construir"}
@@ -3216,10 +3215,9 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                   <button
                     type="submit"
                     disabled={isProcessing}
-                    onMouseMove={handleButtonMouseMove}
-                    className="flex w-full items-center justify-center gap-2 text-white rounded-xl px-6 py-4 text-base font-semibold transition-all duration-300 hover:scale-[1.01] active:scale-95 shadow-lg disabled:cursor-not-allowed disabled:hover:scale-100 disabled:opacity-40 cursor-pointer"
+                    className="flex w-full items-center justify-center gap-2 text-white rounded-xl px-6 py-4 text-base font-semibold transition-all duration-300 hover:scale-[1.01] active:scale-95 shadow-lg disabled:cursor-not-allowed disabled:hover:scale-100 disabled:opacity-40"
                     style={{
-                      background: "radial-gradient(140px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255, 255, 255, 0.28), transparent 75%), linear-gradient(to right, rgb(139, 92, 246), rgba(139, 92, 246, 0.8))"
+                      background: "linear-gradient(to right, rgb(139, 92, 246), rgba(139, 92, 246, 0.8))"
                     }}
                   >
                     {isProcessing ? "Construindo..." : "Construir"}

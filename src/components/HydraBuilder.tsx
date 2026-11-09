@@ -1209,7 +1209,7 @@ export const HydraBuilder: React.FC<HydraBuilderProps> = ({
                   onMouseMove={handleButtonMouseMove}
                   className="group relative overflow-hidden flex w-full items-center justify-center gap-2 text-white rounded-xl px-6 py-4 text-base font-semibold transition-all duration-300 hover:scale-[1.01] active:scale-95 shadow-lg shadow-violet-950/40 hover:shadow-[0_0_28px_rgba(139,92,246,0.65)] hover:border-violet-400/40 border border-transparent cursor-pointer disabled:cursor-not-allowed disabled:hover:scale-100 disabled:opacity-50"
                   style={{
-                    background: "radial-gradient(140px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255, 255, 255, 0.28), transparent 75%), linear-gradient(to right, rgb(139, 92, 246), rgba(139, 92, 246, 0.85))",
+                    background: "linear-gradient(to right, rgb(139, 92, 246), rgba(139, 92, 246, 0.8))",
                   }}
                 >
                   <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-1000 ease-in-out pointer-events-none" />
