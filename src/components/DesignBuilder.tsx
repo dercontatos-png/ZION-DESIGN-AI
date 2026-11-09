@@ -2260,19 +2260,19 @@ const hasFotoDot = Boolean(
                   </div>
                 </div>
 
-                {/* Botão de Ações no Canto Superior Esquerdo da Arte (3 pontinhos no Mobile) */}
+                {/* Botão de Ações no Canto Superior Esquerdo da Arte (3 pontinhos no Mobile - 100% IDÊNTICO) */}
                 <button
                   type="button"
                   aria-label="Mais ações"
                   aria-haspopup="dialog"
-                  aria-expanded={isMobileActionsOpen}
+                  aria-expanded={isMobileActionsOpen ? "true" : "false"}
                   onClick={(e) => {
                     e.stopPropagation();
                     setIsMobileActionsOpen(true);
                   }}
-                  className="lg:hidden absolute left-3 top-3 z-30 flex h-8 w-8 items-center justify-center rounded-full bg-black/55 text-white ring-1 ring-white/15 backdrop-blur-md active:scale-95 cursor-pointer shadow-lg"
+                  className="pointer-events-auto lg:hidden absolute left-3 top-3 z-30 flex h-8 w-8 items-center justify-center rounded-full bg-black/55 text-white ring-1 ring-white/15 backdrop-blur-md active:scale-95"
                 >
-                  <MoreHorizontal className="h-4 w-4" />
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-ellipsis lucide-more-horizontal h-4 w-4" aria-hidden="true"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
                 </button>
 
                 {/* Floating Glass Action Bar - Lado Esquerdo */}
