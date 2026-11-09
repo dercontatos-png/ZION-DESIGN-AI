@@ -58,6 +58,7 @@ export const MagicRefineBar: React.FC<MagicRefineBarProps> = ({
   const [isDragOver, setIsDragOver] = useState<boolean>(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [fullscreenPreview, setFullscreenPreview] = useState<string | null>(null);
+  const [isFormatOpen, setIsFormatOpen] = useState<boolean>(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -135,6 +136,10 @@ export const MagicRefineBar: React.FC<MagicRefineBarProps> = ({
           <div>
             <button
               type="button"
+              onClick={() => {
+                if (onFormatClick) onFormatClick();
+                else setIsFormatOpen(!isFormatOpen);
+              }}
               className="inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-xs font-medium text-zinc-200 transition-colors hover:bg-white/[0.08] hover:text-white cursor-pointer"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-crop h-4 w-4" aria-hidden="true">
@@ -143,6 +148,29 @@ export const MagicRefineBar: React.FC<MagicRefineBarProps> = ({
               Formato
             </button>
           </div>
+          {isFormatOpen && (
+            <div
+              className="absolute bottom-full right-0 mb-2 z-40 min-w-[160px] rounded-xl py-1.5 border border-white/[0.08] bg-[rgba(15,10,30,0.95)] backdrop-blur-xl shadow-2xl p-2 animate-in fade-in slide-in-from-bottom-2 duration-150"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <p className="px-2 pb-1 text-[10px] font-medium text-zinc-500">Alterar Formato</p>
+              <div className="grid grid-cols-3 gap-1">
+                {["1:1", "4:5", "9:16", "16:9", "3:4", "4:3"].map((dim) => (
+                  <button
+                    key={dim}
+                    type="button"
+                    onClick={() => {
+                      setIsFormatOpen(false);
+                      if (onFormatClick) onFormatClick();
+                    }}
+                    className="flex h-8 items-center justify-center rounded-lg text-xs font-semibold cursor-pointer text-zinc-400 hover:bg-white/[0.06] hover:text-white"
+                  >
+                    {dim}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -197,6 +225,36 @@ export const MagicRefineBar: React.FC<MagicRefineBarProps> = ({
                 </button>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Mobile Tools Expandable */}
+        {isMobileMenuOpen && (
+          <div className="lg:hidden flex items-center gap-2 px-3 pt-2.5 pb-1 border-t border-white/5 animate-in slide-in-from-bottom-1 fade-in duration-200">
+            <button
+              type="button"
+              onClick={() => {
+                toggleBrush();
+                setIsMobileMenuOpen(false);
+              }}
+              className={`flex h-9 flex-1 items-center justify-center gap-2 rounded-xl text-[13px] font-medium transition-colors cursor-pointer ${
+                isBrushActive ? "bg-violet-500/90 text-white" : "bg-white/[0.06] text-violet-100 hover:bg-white/[0.10]"
+              }`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil h-4 w-4" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"></path><path d="m15 5 4 4"></path></svg>
+              {isBrushActive ? "Sair do pincel" : "Pincel"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                fileInputRef.current?.click();
+                setIsMobileMenuOpen(false);
+              }}
+              className="flex h-9 flex-1 items-center justify-center gap-2 rounded-xl bg-white/[0.06] text-[13px] font-medium text-violet-100 transition-colors hover:bg-white/[0.10] cursor-pointer"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-paperclip h-4 w-4" aria-hidden="true"><path d="m16 6-8.414 8.586a2 2 0 0 0 2.829 2.829l8.414-8.586a4 4 0 1 0-5.657-5.657l-8.379 8.551a6 6 0 1 0 8.485 8.485l8.379-8.551"></path></svg>
+              Anexar
+            </button>
           </div>
         )}
 
@@ -276,7 +334,7 @@ export const MagicRefineBar: React.FC<MagicRefineBarProps> = ({
             className={`flex h-9 w-9 max-lg:h-8 max-lg:w-8 shrink-0 items-center justify-center rounded-full transition-all duration-200 cursor-pointer ${
               isSendActive
                 ? "bg-gradient-to-r from-violet-600 to-purple-500 text-white"
-                : "bg-white/[0.06] text-zinc-600 cursor-not-allowed"
+                : "bg-white/[0.06] text-zinc-600"
             }`}
             title="Enviar refinamento"
             aria-label="Enviar refinamento"

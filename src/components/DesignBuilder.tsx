@@ -2440,6 +2440,7 @@ const hasFotoDot = Boolean(
                   activeImage={activeImage}
                   isProcessing={isRefining}
                   agentColor={isOrion ? "#ffd500" : "#a855f7"}
+                  onFormatClick={() => setIsFormatDropdownOpen(!isFormatDropdownOpen)}
                   onPublishCommunity={() => {
                     setActivePalcoMode("comunidade");
                     showToast("Publicar na Comunidade aberto!", "info");

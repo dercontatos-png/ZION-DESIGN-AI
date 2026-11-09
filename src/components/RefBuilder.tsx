@@ -351,7 +351,7 @@ export const RefBuilder: React.FC<RefBuilderProps> = ({
   const [isFavorited, setIsFavorited] = useState<boolean>(false);
   const [isDetailsDrawerOpen, setIsDetailsDrawerOpen] = useState<boolean>(false);
   const [isFullscreenViewerOpen, setIsFullscreenViewerOpen] = useState<boolean>(false);
-  const [showPublishAlert, setShowPublishAlert] = useState<boolean>(true);
+  const [showPublishAlert, setShowPublishAlert] = useState<boolean>(false);
   const [zoomLevel, setZoomLevel] = useState<number>(100);
   const [isMoreOptionsOpen, setIsMoreOptionsOpen] = useState<boolean>(false);
   const [isUseAsBaseModalOpen, setIsUseAsBaseModalOpen] = useState<boolean>(false);
@@ -3570,6 +3570,21 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                         </div>
                       </div>
 
+                      {/* Botão de Ações no Canto Superior Esquerdo da Arte (3 pontinhos no Mobile - 100% IDÊNTICO AO HTML OFICIAL) */}
+                      <button
+                        type="button"
+                        aria-label="Mais ações"
+                        aria-haspopup="dialog"
+                        aria-expanded={isMobileActionsOpen ? "true" : "false"}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsMobileActionsOpen(true);
+                        }}
+                        className="pointer-events-auto lg:hidden absolute left-3 top-3 z-30 flex h-8 w-8 items-center justify-center rounded-full bg-black/55 text-white ring-1 ring-white/15 backdrop-blur-md active:scale-95"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-ellipsis lucide-more-horizontal h-4 w-4" aria-hidden="true"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
+                      </button>
+
                       {/* Gradiente Inferior Oficial */}
                       <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-10 h-48 bg-gradient-to-t from-[rgba(4,2,12,0.70)] via-[rgba(4,2,12,0.35)] to-transparent" />
 
@@ -3809,17 +3824,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                           </button>
                         </div>
 
-                        {/* Mobile Ellipsis Mais Ações (100% IDÊNTICO AO HTML OFICIAL) */}
-                        <button
-                          type="button"
-                          aria-label="Mais ações"
-                          aria-haspopup="dialog"
-                          aria-expanded={isMobileActionsOpen ? "true" : "false"}
-                          onClick={() => setIsMobileActionsOpen(true)}
-                          className="pointer-events-auto lg:hidden absolute left-3 top-3 z-30 flex h-8 w-8 items-center justify-center rounded-full bg-black/55 text-white ring-1 ring-white/15 backdrop-blur-md active:scale-95"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-ellipsis lucide-more-horizontal h-4 w-4" aria-hidden="true"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
-                        </button>
+
 
                           {/* Bloco Central: Publish Alert + Magic Bar */}
                           <div className="pointer-events-auto absolute bottom-8 left-1/2 z-20 flex w-[min(92vw,480px)] -translate-x-1/2 flex-col items-center gap-2.5 lg:w-[calc(100%-120px)] transition-[max-width] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] lg:max-w-[480px]">
@@ -3844,7 +3849,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                                 <div>
                                   <button
                                     type="button"
-                                    onClick={() => setIsMobileActionsOpen(true)}
+                                    onClick={() => setActivePopover(activePopover === "formato" ? null : "formato")}
                                     className="inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-xs font-medium text-zinc-200 transition-colors hover:bg-white/[0.08] hover:text-white cursor-pointer"
                                   >
                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-crop h-4 w-4" aria-hidden="true">
@@ -3853,6 +3858,42 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                                     Formato
                                   </button>
                                 </div>
+                                {activePopover === "formato" && (
+                                  <div
+                                    className="absolute bottom-full mb-2 z-40 min-w-[160px] rounded-xl py-1.5 border border-white/[0.08] bg-[rgba(15,10,30,0.95)] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] animate-in fade-in slide-in-from-bottom-2 duration-150 right-0"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <p className="px-3 pb-1 pt-0.5 text-[10px] font-medium text-zinc-500">Formato</p>
+                                    <div className="grid grid-cols-3 gap-1 px-2 pb-1.5">
+                                      {([
+                                        { r: "16:9", w: 48, h: 27, t: "Widescreen" },
+                                        { r: "9:16", w: 27, h: 48, t: "Story / Reels" },
+                                        { r: "1:1", w: 36, h: 36, t: "Quadrado" },
+                                        { r: "4:5", w: 32, h: 40, t: "Instagram" },
+                                        { r: "3:4", w: 30, h: 40, t: "Retrato" },
+                                        { r: "4:3", w: 40, h: 30, t: "Paisagem" }
+                                      ] as const).map(({ r, w, h, t }) => (
+                                        <button
+                                          key={r}
+                                          type="button"
+                                          disabled={isReformatting}
+                                          onClick={() => {
+                                            handleReformat(r);
+                                            setActivePopover(null);
+                                          }}
+                                          className={`group/btn relative flex flex-col items-center justify-center gap-1.5 rounded-lg py-2 transition-all duration-150 hover:bg-white/[0.08] cursor-pointer ${dimension === r ? "bg-white/[0.08] ring-1 ring-violet-400" : ""}`}
+                                          title={t}
+                                        >
+                                          <div
+                                            className={`rounded-sm border ${dimension === r ? "border-violet-400 bg-violet-400/20" : "border-zinc-500 group-hover/btn:border-zinc-300"}`}
+                                            style={{ width: `${Math.round(w * 0.55)}px`, height: `${Math.round(h * 0.55)}px` }}
+                                          />
+                                          <span className={`text-[10px] font-medium leading-none ${dimension === r ? "text-violet-300" : "text-zinc-400 group-hover/btn:text-zinc-200"}`}>{r}</span>
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             </div>
                             {showPublishAlert && (
@@ -4173,7 +4214,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                                     isMobileMagicToolsOpen || isBrushActive ? "bg-violet-500/90 text-white" : "bg-white/[0.06] text-violet-200 hover:bg-white/[0.10]"
                                   }`}
                                 >
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-ellipsis h-[18px] w-[18px]" aria-hidden="true"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-ellipsis lucide-more-horizontal h-[18px] w-[18px]" aria-hidden="true"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
                                 </button>
                                 <button
                                   type="button"
