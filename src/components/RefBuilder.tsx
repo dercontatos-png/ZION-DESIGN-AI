@@ -3836,8 +3836,8 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                                   setIsBrushActive(!isBrushActive);
                                   showToast(isBrushActive ? "Modo de pincel desativado" : "Pós-produção ativada! Marque a área ou descreva a alteração.", "info");
                                 }}
-                                className={`magic-bar relative inline-flex min-h-9 items-center gap-2 overflow-hidden rounded-lg px-3 text-xs font-medium text-violet-100 transition-[filter] hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 cursor-pointer ${
-                                  isBrushActive ? "bg-violet-600/30 text-violet-200 ring-1 ring-violet-500/40" : ""
+                                className={`magic-bar relative inline-flex min-h-9 items-center gap-2 overflow-hidden rounded-lg px-3 text-xs font-medium text-violet-100 transition-[filter] hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400${
+                                  isBrushActive ? " bg-violet-600/30 text-violet-200 ring-1 ring-violet-500/40" : ""
                                 }`}
                               >
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-type h-4 w-4" aria-hidden="true">
