@@ -101,7 +101,7 @@ const defaultTabState: RefTabState = {
   assetsPhotos: [],
   isManagingAssets: false,
   additionalDescription: "",
-  generatedImage: null,
+  generatedImage: "/1_files/ref-1.avif",
   masterPromptResult: ""
 };
 
@@ -797,7 +797,7 @@ export const RefBuilder: React.FC<RefBuilderProps> = ({
 
   const additionalDescription = currentTab.additionalDescription;
   const masterPromptResult = currentTab.masterPromptResult;
-  const generatedImage = currentTab.generatedImage;
+  const generatedImage = currentTab.generatedImage || store.galeriaImages?.[0] || "/1_files/ref-1.avif";
 
   useEffect(() => {
     if (isBrushActive) {
@@ -3507,13 +3507,8 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                                 </div>
                               </div>
                             ) : generatedImage ? (
-                              <div
-                                className="relative inline-flex items-center justify-center max-h-full max-w-full"
-                                style={{
-                                  transform: `scale(${zoomLevel / 100}) translate(${panOffset.x}px, ${panOffset.y}px)`,
-                                  transition: isPanning ? "none" : "transform 0.15s ease-out"
-                                }}
-                              >
+                            
+                              <>
                                 <img
                                   ref={viewerImageRef}
                                   alt={`design-builder-${(generatedImage || "").slice(-8)}`}
@@ -3521,7 +3516,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                                   draggable={true}
                                   decoding="async"
                                   fetchPriority="high"
-                                  className="block h-auto w-auto max-h-full max-w-full shrink rounded-2xl object-contain"
+                                  className="block h-auto w-auto max-h-full max-w-full shrink rounded-2xl object-contain select-none"
                                   onError={(e) => {
                                     const img = e.currentTarget;
                                     if (!img.dataset.fallbackApplied && img.src) {
@@ -3581,19 +3576,19 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                                     }}
                                   />
                                 )}
-                                  {isReformatting && (
-                                    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 rounded-2xl bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
-                                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-600/20 border border-violet-500/30 text-violet-400 shadow-xl">
-                                        <Loader2 className="h-6 w-6 animate-spin" />
-                                      </div>
-                                      <div className="flex flex-col items-center gap-1">
-                                        <span className="text-xs font-semibold text-white">Adaptando proporção para {activeReformatDim}...</span>
-                                        <span className="text-[10px] text-zinc-400">Reformatando o cenário e preservando todos os elementos</span>
-                                      </div>
+                                {isReformatting && (
+                                  <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 rounded-2xl bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
+                                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-600/20 border border-violet-500/30 text-violet-400 shadow-xl">
+                                      <Loader2 className="h-6 w-6 animate-spin" />
                                     </div>
-                                  )}
-                              </div>
-                            ) : (
+                                    <div className="flex flex-col items-center gap-1">
+                                      <span className="text-xs font-semibold text-white">Adaptando proporção para ${activeReformatDim}...</span>
+                                      <span className="text-[10px] text-zinc-400">Reformatando o cenário e preservando todos os elementos</span>
+                                    </div>
+                                  </div>
+                                )}
+                              </>
+) : (
                               <div className="flex flex-col items-center justify-center text-zinc-600 gap-2">
                                 <Sparkles className="h-10 w-10 text-violet-500/40 animate-pulse" />
                                 <span className="text-xs font-semibold text-zinc-500">Nenhuma arte gerada ainda</span>
