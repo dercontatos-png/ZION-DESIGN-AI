@@ -2227,7 +2227,7 @@ const hasFotoDot = Boolean(
             ) : activeImage ? (
               /* ESTADO 2: IMAGEM GERADA ATIVA */
               <div className="relative flex h-full min-h-0 min-w-0 flex-1 overflow-hidden flex-col items-center justify-center">
-                <div className="flex h-full min-h-0 min-w-0 flex-1 items-center justify-center gap-3 p-4 pb-36 w-full">
+                <div className="flex h-full min-h-0 min-w-0 flex-1 items-center justify-center gap-3 p-4 pb-36">
                   <div className="group/viewer relative flex h-full min-h-0 min-w-0 flex-1 overflow-hidden">
                     <div
                       data-testid="result-viewer-surface"
@@ -2256,21 +2256,24 @@ const hasFotoDot = Boolean(
                         }}
                         className="block h-auto w-auto max-h-full max-w-full shrink rounded-2xl object-contain"
                       />
-                      {/* Botão de Ações no Canto Superior Esquerdo da Arte (3 pontinhos no Mobile) */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setIsMobileActionsOpen(true);
-                        }}
-                        title="Ações da Arte"
-                        className="absolute top-3 left-3 z-30 flex h-10 w-10 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-md border border-white/10 hover:bg-black/80 transition-all cursor-pointer shadow-lg active:scale-95"
-                      >
-                        <MoreHorizontal className="h-5 w-5" />
-                      </button>
                     </div>
                   </div>
                 </div>
+
+                {/* Botão de Ações no Canto Superior Esquerdo da Arte (3 pontinhos no Mobile) */}
+                <button
+                  type="button"
+                  aria-label="Mais ações"
+                  aria-haspopup="dialog"
+                  aria-expanded={isMobileActionsOpen}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsMobileActionsOpen(true);
+                  }}
+                  className="lg:hidden absolute left-3 top-3 z-30 flex h-8 w-8 items-center justify-center rounded-full bg-black/55 text-white ring-1 ring-white/15 backdrop-blur-md active:scale-95 cursor-pointer shadow-lg"
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </button>
 
                 {/* Floating Glass Action Bar - Lado Esquerdo */}
                 <div className="acoes-da-arte absolute left-6 z-30 flex items-center gap-1.5 transition-all duration-300 max-[1800px]:flex-col max-[1800px]:items-start max-lg:hidden pointer-events-auto" style={{ bottom: "108px" }}>

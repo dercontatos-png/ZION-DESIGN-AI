@@ -3514,7 +3514,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                                   draggable={true}
                                   decoding="async"
                                   fetchPriority="high"
-                                  className="block h-auto w-auto max-h-full max-w-full shrink rounded-2xl object-contain select-none"
+                                  className="block h-auto w-auto max-h-full max-w-full shrink rounded-2xl object-contain"
                                   onError={(e) => {
                                     const img = e.currentTarget;
                                     if (!img.dataset.fallbackApplied && img.src) {
@@ -3529,33 +3529,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                                   onClick={() => {
                                     if (!isBrushActive) setIsFullscreenViewerOpen(true);
                                   }}
-                                  style={{
-                                    cursor: isBrushActive
-                                      ? brushTool === "hand"
-                                        ? isPanning
-                                          ? "grabbing"
-                                          : "grab"
-                                        : "crosshair"
-                                      : "pointer"
-                                  }}
                                 />
-                                {/* Botão Mais Opções / Ações no Canto Superior Esquerdo (1:1 com Element Armory Snippet) */}
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setIsMobileActionsOpen(true);
-                                  }}
-                                  aria-label="Ações da Arte"
-                                  title="Ações da Arte"
-                                  className="lg:hidden absolute top-3 left-3 z-30 flex h-8 w-8 items-center justify-center rounded-full bg-black/55 text-white ring-1 ring-white/15 backdrop-blur-md active:scale-95 cursor-pointer shadow-lg"
-                                >
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-ellipsis lucide-more-horizontal h-4 w-4" aria-hidden="true">
-                                    <circle cx="12" cy="12" r="1"></circle>
-                                    <circle cx="19" cy="12" r="1"></circle>
-                                    <circle cx="5" cy="12" r="1"></circle>
-                                  </svg>
-                                </button>
                                 {isBrushActive && (
                                   <canvas
                                     ref={drawingCanvasRef}
