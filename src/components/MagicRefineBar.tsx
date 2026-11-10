@@ -38,6 +38,7 @@ export const MagicRefineBar: React.FC<MagicRefineBarProps> = ({
   className,
   onSendRefine,
   onPublishCommunity,
+  onFormatClick,
   isProcessing = false,
   activeImage = null,
   agentColor = "#a855f7",

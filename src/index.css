@@ -768,22 +768,6 @@ section a.group:hover {
   }
 }
 
-/* ==========================================================================
-   DESIGN BUILDER 1.2 OFFICIAL BUTTONS & CONTROLS
-   ========================================================================== */
-.pb-glass-input {
-  background: rgba(255, 255, 255, 0.04) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  color: #f0ecff !important;
-}
-.pb-glass-input:focus {
-  border-color: rgba(139, 92, 246, 0.5) !important;
-  background: rgba(255, 255, 255, 0.07) !important;
-  outline: none !important;
-  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.2) !important;
-}
-
-
 /* BACKGROUND ORBS */
 .bg-orb {
   position: fixed;
@@ -1029,4 +1013,95 @@ button:active:not(:disabled),
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
+
+/* ── Oficial Design Builder Logo Animation (Loading Stage 1:1) ── */
+.db-logo-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+.db-logo-svg .db-apagada,
+.db-apagada {
+  fill: var(--db-fg, #ffffff);
+  opacity: 0.16;
+}
+.db-logo-svg .db-acesa,
+.db-acesa {
+  fill: var(--db-fg, #ffffff);
+  clip-path: inset(100% 0 0);
+  animation: db-enche var(--db-cycle, 3.2s) cubic-bezier(0.45, 0, 0.25, 1) infinite;
+}
+.db-logo-svg .db-luz,
+.db-luz {
+  opacity: 0;
+  animation: db-luz var(--db-cycle, 3.2s) cubic-bezier(0.5, 0, 0.4, 1) infinite;
+}
+.db-logo-svg .db-respiro,
+.db-respiro {
+  transform-box: fill-box;
+  transform-origin: 50%;
+  animation: db-respiro var(--db-cycle, 3.2s) ease-in-out infinite;
+}
+.db-breathe-bg {
+  animation: breathe 4s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+}
+
+@keyframes db-enche {
+  0%, 5% {
+    clip-path: inset(100% 0 0);
+  }
+  45%, 88% {
+    clip-path: inset(0);
+  }
+  to {
+    clip-path: inset(100% 0 0);
+  }
+}
+
+@keyframes db-luz {
+  0%, 48% {
+    opacity: 0;
+    transform: translate(-120px);
+  }
+  52% {
+    opacity: 1;
+  }
+  76% {
+    opacity: 1;
+    transform: translate(430px);
+  }
+  80% {
+    opacity: 0;
+    transform: translate(450px);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-120px);
+  }
+}
+
+@keyframes db-respiro {
+  0%, 42% {
+    transform: scale(0.97);
+  }
+  56%, 88% {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(0.97);
+  }
+}
+
 

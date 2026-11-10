@@ -33,6 +33,7 @@ import {
   Copy,
   Settings2,
   ChevronDown,
+  ChevronUp,
   User,
   Layers,
   Loader2,
@@ -315,6 +316,16 @@ export const RefBuilder: React.FC<RefBuilderProps> = ({
     : (mainPhotoBase64 ? [{ id: "1", url: mainPhotoBase64, desc: "" }] : []);
 
   const [isManagingSujeitos, setIsManagingSujeitos] = useState<boolean>(false);
+  // Sincroniza estado de gerenciamento de imagens ao trocar de aba
+  useEffect(() => {
+    const tab = tabsData[activeTab];
+    if (tab) {
+      setIsManagingSujeitos(!!tab.isManagingSujeitos);
+      setIsManagingReferencias(!!tab.isManagingReferencias);
+      setIsManagingAssets(!!tab.isManagingAssets);
+    }
+  }, [activeTab]);
+
   const [pinterestSearch, setPinterestSearch] = useState<string>("");
 
   const subjectPosition = currentTab.subjectPosition;
@@ -1016,6 +1027,20 @@ export const RefBuilder: React.FC<RefBuilderProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [copiedPrompt, setCopiedPrompt] = useState(false);
   const [isExpandedTextarea, setIsExpandedTextarea] = useState(false);
+  const descTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const adjustDescTextareaHeight = useCallback(() => {
+    const el = descTextareaRef.current;
+    if (el) {
+      el.style.height = "auto";
+      const h = Math.max(85.3559, el.scrollHeight);
+      el.style.height = `${h}px`;
+    }
+  }, []);
+
+  useLayoutEffect(() => {
+    adjustDescTextareaHeight();
+  }, [additionalDescription, adjustDescTextareaHeight]);
 
   // Modais
   const [isFolderModalOpen, setIsFolderModalOpen] = useState(false);
@@ -1039,6 +1064,9 @@ export const RefBuilder: React.FC<RefBuilderProps> = ({
   const managerSubjectInputRef = useRef<HTMLInputElement>(null);
 
   const mainInputRef = useRef<HTMLInputElement>(null);
+  const mobileMainInputRef = useRef<HTMLInputElement>(null);
+  const mobileRefInputRef = useRef<HTMLInputElement>(null);
+  const mobileAssetsInputRef = useRef<HTMLInputElement>(null);
   const refInputRef = useRef<HTMLInputElement>(null);
   const assetsInputRef = useRef<HTMLInputElement>(null);
 
@@ -1055,6 +1083,9 @@ export const RefBuilder: React.FC<RefBuilderProps> = ({
   const handleSubjectFiles = (files: FileList | File[]) => {
     const fileArray = Array.from(files);
     if (!fileArray.length) return;
+
+    setIsManagingSujeitos(true);
+    updateActiveTab({ isManagingSujeitos: true });
 
     fileArray.forEach((file) => {
       if (!file.type.startsWith("image/")) return;
@@ -1088,6 +1119,7 @@ export const RefBuilder: React.FC<RefBuilderProps> = ({
             }
           };
         });
+        setIsManagingSujeitos(true);
       };
       reader.readAsDataURL(file);
     });
@@ -1098,6 +1130,7 @@ export const RefBuilder: React.FC<RefBuilderProps> = ({
     setSubjectImages(currentList);
     if (currentList.length === 0) {
       setIsManagingSujeitos(false);
+      updateActiveTab({ isManagingSujeitos: false });
     }
   };
 
@@ -1189,6 +1222,7 @@ export const RefBuilder: React.FC<RefBuilderProps> = ({
     setReferenceImages(currentList);
     if (currentList.length === 0) {
       setIsManagingReferencias(false);
+      updateActiveTab({ isManagingReferencias: false });
     }
   };
 
@@ -1277,6 +1311,7 @@ export const RefBuilder: React.FC<RefBuilderProps> = ({
     setAssetImages(currentList);
     if (currentList.length === 0) {
       setIsManagingAssets(false);
+      updateActiveTab({ isManagingAssets: false });
     }
   };
 
@@ -1944,8 +1979,8 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
               ? `[USER DIRECT MANDATE - HIGHEST OVERRIDING PRIORITY]: ${additionalDescription.trim()}`
               : "",
             isGraphicCardOrFlyer
-              ? "[GRAPHIC DESIGN & COMMERCIAL AD MANDATE]: Master-grade commercial graphic design card layout and advertising post. Vector-sharp typographic clarity, clean visual hierarchy, modern geometric shapes (pill badges, product podiums, curved footer banner with location and contact icons), and authentic studio product lighting with realistic depth and reflections. Generous visual breathing room and safe margins."
-              : "[PHOTO ARCHITECTURE MANDATE]: Authentic medium-format commercial editorial portrait. Pure full-bleed photographic realism with authentic 3-layer SSS dermal micro-pores.",
+              ? "[GRAPHIC DESIGN & ADVERTISING MANDATE]: Replicate the layout composition, color palette, lighting atmosphere, and visual style directly from the Design Reference image. STRICT TEXT MANDATE: Render ONLY the text explicitly requested by the user. Do NOT copy or carry over any text, words, or phone numbers from the reference image."
+              : "[PHOTO ARCHITECTURE MANDATE]: Authentic commercial editorial portrait. Pure full-bleed photographic realism with authentic 3-layer SSS dermal micro-pores.",
             subjectPosition === "left"
               ? "[COMPOSITION MANDATE]: Main subject positioned strictly on the LEFT SIDE of the frame, leaving the right side open."
               : subjectPosition === "right"
@@ -2002,11 +2037,11 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
   };
 
   return (
-    <div className="flex h-full w-full flex-1 overflow-hidden bg-black text-white relative font-sans select-none flex-col">
+    <div className="flex h-full flex-col overflow-hidden">
       <main
         data-builder-workspace-shell=""
         className={`relative flex h-full min-h-0 overflow-hidden bg-black lg:flex-row max-lg:grid max-lg:overflow-hidden max-lg:transition-[grid-template-rows] max-lg:duration-300 max-lg:ease-in-out flex-1 ${
-          (mobileActiveCategory && !isProcessing) ? "max-lg:grid-rows-[auto_1fr]" : "max-lg:grid-rows-[1fr_0fr]"
+          mobileActiveCategory ? "max-lg:grid-rows-[auto_1fr]" : "max-lg:grid-rows-[1fr_0fr]"
         }`}
       >
         {/* ── COLUNA DO FORMULÁRIO REF (LAYOUT 100% ORIGINAL) ── */}
@@ -2018,6 +2053,14 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
         >
         <form onSubmit={(e) => { e.preventDefault(); handleBuild(); }} className="flex flex-col gap-6 lg:gap-12">
           {/* ── SEÇÃO 1: FOTO (100% IDÊNTICO AO HTML OFICIAL) ── */}
+
+
+
+
+          {/* ══════════════════════════════════════════════════════════════════
+              MODO CELULAR / MOBILE (lg:hidden) - 100% IDÊNTICO AO APP MOBILE
+              ══════════════════════════════════════════════════════════════════ */}
+          <div className="flex flex-col gap-6 lg:hidden">
           <div data-tour="form-sec-foto" className={mobileActiveCategory !== "foto" ? "max-lg:hidden" : ""}>
             <div
               data-state={isFotoOpen ? "open" : "closed"}
@@ -2034,7 +2077,9 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
               >
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.04] transition-colors">
                   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-image h-[18px] w-[18px] text-zinc-400 transition-colors" aria-hidden="true">
-                    <rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
+                    <rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect>
+                    <circle cx="9" cy="9" r="2"></circle>
+                    <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
                   </svg>
                 </span>
                 <span className="flex min-w-0 flex-1 items-baseline gap-2">
@@ -2044,10 +2089,913 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                   <path d="m6 9 6 6 6-6"></path>
                 </svg>
               </button>
+
               {isFotoOpen && (
                 <div data-state="open" data-slot="collapsible-content" className="overflow-hidden">
                   <div className="flex flex-col px-2 pb-5 pt-2 lg:px-4 lg:pb-6 lg:pt-3 gap-6 lg:gap-12">
-              <div data-field-id="sujeitos" data-tour="form-field-sujeitos" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
+
+                    {/* ── 1. SUJEITOS (IMAGEM PRINCIPAL) ── */}
+                    <div data-field-id="sujeitos" data-tour="form-field-sujeitos" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
+                      <div className="flex flex-col gap-3" data-image-field-id="sujeitos">
+                        <div className="flex min-w-0 items-center justify-between gap-2">
+                          <label className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-white">
+                            <span>Envie sua imagem principal</span>
+                            <span className="relative inline-flex items-center">
+                              <button
+                                type="button"
+                                data-field-info=""
+                                aria-label="Mais informações Envie sua imagem principal"
+                                aria-expanded={showSubjectInfo}
+                                onClick={() => setShowSubjectInfo(!showSubjectInfo)}
+                                className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 cursor-pointer"
+                                style={{ color: "rgb(139, 92, 246)" }}
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-info h-3.5 w-3.5" aria-hidden="true">
+                                  <circle cx="12" cy="12" r="10"></circle>
+                                  <path d="M12 16v-4"></path>
+                                  <path d="M12 8h.01"></path>
+                                </svg>
+                              </button>
+                            </span>
+                          </label>
+                        </div>
+
+                        {showSubjectInfo && (
+                          <div className="text-xs text-zinc-400 bg-white/[0.04] p-2.5 rounded-lg border border-white/10">
+                            Envie a foto do sujeito ou modelo que será o foco da sua arte. Você pode adicionar mais fotos para enriquecer o contexto e orientar a IA sobre o que focar.
+                          </div>
+                        )}
+
+                        <div tabIndex={0} className="relative flex flex-col gap-2 rounded-lg p-2 -m-2 transition-colors outline-none">
+                          {subjectImages.length > 0 && (
+                            <div className="flex flex-col gap-2">
+                              {subjectImages.map((img, idx) => (
+                                <div key={img.id || idx} className="group flex items-center gap-2">
+                                  <div className="relative shrink-0">
+                                    <img
+                                      alt={`imagem ${idx + 1}`}
+                                      onClick={() => setLightboxImage(img.url)}
+                                      className="h-12 w-12 rounded-lg object-cover border border-white/10 cursor-pointer transition-all hover:border-violet-500/40 hover:ring-1 hover:ring-violet-500/20"
+                                      src={img.url}
+                                    />
+                                    <button
+                                      type="button"
+                                      aria-label={`Remover imagem ${idx + 1}`}
+                                      title={`Remover imagem ${idx + 1}`}
+                                      onClick={() => handleRemoveSubjectImage(idx)}
+                                      className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-zinc-800 border border-white/10 text-zinc-300 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 max-lg:opacity-100 transition-opacity hover:bg-red-500 hover:text-white hover:border-red-500 z-10 cursor-pointer"
+                                    >
+                                      ×
+                                    </button>
+                                    <button
+                                      type="button"
+                                      aria-label={`Recortar imagem ${idx + 1}`}
+                                      title={`Recortar imagem ${idx + 1}`}
+                                      onClick={() => openCropper(img.url, "sujeito", idx)}
+                                      className="absolute -bottom-1.5 -right-1.5 h-5 w-5 rounded-full bg-zinc-800 border border-white/10 text-zinc-300 flex items-center justify-center opacity-0 group-hover:opacity-100 max-lg:opacity-100 transition-opacity hover:bg-violet-600 hover:text-white hover:border-violet-500 z-10 cursor-pointer"
+                                    >
+                                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-crop h-2.5 w-2.5" aria-hidden="true">
+                                        <path d="M6 2v14a2 2 0 0 0 2 2h14"></path>
+                                        <path d="M18 22V8a2 2 0 0 0-2-2H2"></path>
+                                      </svg>
+                                    </button>
+                                  </div>
+                                  <input
+                                    placeholder="Descreva o que quer focar nesta foto (ex: 'rosto', 'cabelo', 'roupa')"
+                                    className="flex-1 rounded-lg pb-glass-input px-3 py-2 text-xs transition-colors text-white"
+                                    type="text"
+                                    value={img.desc || ""}
+                                    onChange={(e) => handleSubjectDescChange(idx, e.target.value)}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center rounded-lg border-2 border-dashed border-[rgba(139,92,246,0.20)] bg-[rgba(139,92,246,0.03)] transition-colors hover:border-[rgba(139,92,246,0.38)] py-2">
+                              <button
+                                type="button"
+                                onClick={() => mobileMainInputRef.current?.click()}
+                                className="flex min-w-0 flex-1 items-center justify-center gap-1.5 self-stretch text-xs text-[#5c5278] transition-colors hover:text-[#9d94bb] cursor-pointer"
+                              >
+                                <span className="text-base leading-none">+</span>
+                                <span className="truncate">Clique, arraste ou cole (Ctrl+V)</span>
+                              </button>
+                            </div>
+                          </div>
+
+                          <input
+                            ref={mobileMainInputRef}
+                            accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/svg+xml,.svg"
+                            multiple
+                            className="hidden"
+                            type="file"
+                            onChange={(e) => {
+                              if (e.target.files) handleSubjectFiles(e.target.files);
+                              e.target.value = "";
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* ── 2. REFERÊNCIAS (INSPIRAÇÕES DE ESTILO) ── */}
+                    <div data-field-id="referencias" data-tour="form-field-referencias" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
+                      <div className="flex flex-col gap-3" data-image-field-id="referencias">
+                        <div className="flex min-w-0 items-center justify-between gap-2">
+                          <label className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-white">
+                            <span>Inspirações de Estilo</span>
+                            <span className="relative inline-flex items-center">
+                              <button
+                                type="button"
+                                data-field-info=""
+                                aria-label="Mais informações Inspirações de Estilo"
+                                aria-expanded={showRefInfo}
+                                onClick={() => setShowRefInfo(!showRefInfo)}
+                                className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 cursor-pointer"
+                                style={{ color: "rgb(139, 92, 246)" }}
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-info h-3.5 w-3.5" aria-hidden="true">
+                                  <circle cx="12" cy="12" r="10"></circle>
+                                  <path d="M12 16v-4"></path>
+                                  <path d="M12 8h.01"></path>
+                                </svg>
+                              </button>
+                            </span>
+                          </label>
+
+                          <button
+                            type="button"
+                            aria-label={`Usar na imagem: ${useRefOnBuild ? "ativado" : "desativado"}`}
+                            aria-pressed={useRefOnBuild}
+                            title={useRefOnBuild ? "Imagem" : "Somente JSON"}
+                            onClick={() => setUseRefOnBuild(!useRefOnBuild)}
+                            className="flex shrink-0 items-center gap-1.5 text-[10px] text-zinc-500 transition-colors hover:text-zinc-300 cursor-pointer"
+                          >
+                            <span>Usar na imagem</span>
+                            <span
+                              className={`relative h-4 w-7 rounded-full border transition-colors ${
+                                useRefOnBuild
+                                  ? "border-violet-500/50 bg-violet-500/30"
+                                  : "border-white/10 bg-white/[0.05]"
+                              }`}
+                            >
+                              <span
+                                className={`absolute top-0.5 h-2.5 w-2.5 rounded-full transition-all ${
+                                  useRefOnBuild ? "left-3.5 bg-violet-300" : "left-0.5 bg-zinc-600"
+                                }`}
+                              />
+                            </span>
+                            <span
+                              className={`rounded-full border px-1.5 py-0.5 font-medium ${
+                                useRefOnBuild
+                                  ? "border-violet-500/30 bg-violet-500/10 text-violet-300"
+                                  : "border-amber-500/30 bg-amber-500/10 text-amber-300"
+                              }`}
+                            >
+                              {useRefOnBuild ? "Imagem" : "Somente JSON"}
+                            </span>
+                          </button>
+                        </div>
+
+                        {showRefInfo && (
+                          <div className="text-xs text-zinc-400 bg-white/[0.04] p-2.5 rounded-lg border border-white/10">
+                            Envie imagens de referência visual para guiar a iluminação, ângulo, clima e acabamento da sua composição.
+                          </div>
+                        )}
+
+                        <div tabIndex={0} className="relative flex flex-col gap-2 rounded-lg p-2 -m-2 transition-colors outline-none">
+                          {referenceImages.length > 0 && (
+                            <div className="flex flex-col gap-2">
+                              {referenceImages.map((img, idx) => (
+                                <div key={img.id || idx} className="group flex items-center gap-2">
+                                  <div className="relative shrink-0">
+                                    <img
+                                      alt={`imagem ${idx + 1}`}
+                                      onClick={() => setLightboxImage(img.url)}
+                                      className="h-12 w-12 rounded-lg object-cover border border-white/10 cursor-pointer transition-all hover:border-violet-500/40 hover:ring-1 hover:ring-violet-500/20"
+                                      src={img.url}
+                                    />
+                                    <button
+                                      type="button"
+                                      aria-label={`Remover imagem ${idx + 1}`}
+                                      title={`Remover imagem ${idx + 1}`}
+                                      onClick={() => handleRemoveRefImage(idx)}
+                                      className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-zinc-800 border border-white/10 text-zinc-300 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 max-lg:opacity-100 transition-opacity hover:bg-red-500 hover:text-white hover:border-red-500 z-10 cursor-pointer"
+                                    >
+                                      ×
+                                    </button>
+                                    <button
+                                      type="button"
+                                      aria-label={`Recortar imagem ${idx + 1}`}
+                                      title={`Recortar imagem ${idx + 1}`}
+                                      onClick={() => openCropper(img.url, "referencia", idx)}
+                                      className="absolute -bottom-1.5 -right-1.5 h-5 w-5 rounded-full bg-zinc-800 border border-white/10 text-zinc-300 flex items-center justify-center opacity-0 group-hover:opacity-100 max-lg:opacity-100 transition-opacity hover:bg-violet-600 hover:text-white hover:border-violet-500 z-10 cursor-pointer"
+                                    >
+                                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-crop h-2.5 w-2.5" aria-hidden="true">
+                                        <path d="M6 2v14a2 2 0 0 0 2 2h14"></path>
+                                        <path d="M18 22V8a2 2 0 0 0-2-2H2"></path>
+                                      </svg>
+                                    </button>
+                                  </div>
+                                  <input
+                                    placeholder="Descreva o estilo que quer extrair desta referência (ex: 'cores', 'iluminação', 'composição')"
+                                    className="flex-1 rounded-lg pb-glass-input px-3 py-2 text-xs transition-colors text-white"
+                                    type="text"
+                                    value={img.desc || ""}
+                                    onChange={(e) => handleRefDescChange(idx, e.target.value)}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center rounded-lg border-2 border-dashed border-[rgba(139,92,246,0.20)] bg-[rgba(139,92,246,0.03)] transition-colors hover:border-[rgba(139,92,246,0.38)] py-2">
+                              <button
+                                type="button"
+                                onClick={() => mobileRefInputRef.current?.click()}
+                                className="flex min-w-0 flex-1 items-center justify-center gap-1.5 self-stretch text-xs text-[#5c5278] transition-colors hover:text-[#9d94bb] cursor-pointer"
+                              >
+                                <span className="text-base leading-none">+</span>
+                                <span className="truncate">Clique, arraste ou cole (Ctrl+V)</span>
+                              </button>
+                            </div>
+                          </div>
+
+                          <input
+                            ref={mobileRefInputRef}
+                            accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/svg+xml,.svg"
+                            multiple
+                            className="hidden"
+                            type="file"
+                            onChange={(e) => {
+                              if (e.target.files) handleRefFiles(e.target.files);
+                              e.target.value = "";
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* ── 3. USAR INSPIRAÇÃO NA CONSTRUÇÃO DA IMAGEM (TOGGLE) ── */}
+                    <div data-field-id="send_style_ref_bytes" data-tour="form-field-send_style_ref_bytes" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <label htmlFor="send_style_ref_bytes" className="text-sm font-medium text-zinc-300 leading-snug">
+                            Usar inspiração na construção da imagem
+                          </label>
+                          <span className="relative inline-flex items-center">
+                            <button
+                              type="button"
+                              data-field-info=""
+                              aria-label="Mais informações Usar inspiração na construção da imagem"
+                              aria-expanded={false}
+                              className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 cursor-pointer"
+                              style={{ color: "rgb(139, 92, 246)" }}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-info h-3.5 w-3.5" aria-hidden="true">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <path d="M12 16v-4"></path>
+                                <path d="M12 8h.01"></path>
+                              </svg>
+                            </button>
+                          </span>
+                          <span className="shrink-0 rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest border" style={{ color: "rgb(139, 92, 246)", borderColor: "rgba(139, 92, 246, 0.267)", backgroundColor: "rgba(139, 92, 246, 0.07)" }}>
+                            Avançado
+                          </span>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-1 rounded-xl border border-white/8 bg-zinc-900/80 p-1">
+                          <button
+                            type="button"
+                            title="Ativar"
+                            onClick={() => setUseRefOnBuild(true)}
+                            className="flex h-7 w-7 items-center justify-center rounded-lg transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
+                            style={
+                              useRefOnBuild
+                                ? { color: "rgb(139, 92, 246)", backgroundColor: "rgba(139, 92, 246, 0.133)", boxShadow: "rgba(139, 92, 246, 0.267) 0px 0px 0px 1px" }
+                                : { color: "rgb(82, 82, 91)" }
+                            }
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check h-3.5 w-3.5" aria-hidden="true">
+                              <path d="M20 6 9 17l-5-5"></path>
+                            </svg>
+                          </button>
+                          <button
+                            type="button"
+                            title="Desativar"
+                            onClick={() => setUseRefOnBuild(false)}
+                            className="flex h-7 w-7 items-center justify-center rounded-lg transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
+                            style={
+                              !useRefOnBuild
+                                ? { backgroundColor: "rgba(239, 68, 68, 0.12)", color: "rgb(248, 113, 113)", boxShadow: "rgba(239, 68, 68, 0.25) 0px 0px 0px 1px" }
+                                : { color: "rgb(82, 82, 91)" }
+                            }
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x h-3.5 w-3.5" aria-hidden="true">
+                              <path d="M18 6 6 18"></path>
+                              <path d="m6 6 12 12"></path>
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* ── 4. ASSETS (OPCIONAL) ── */}
+                    <div data-field-id="assets" data-tour="form-field-assets" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
+                      <div className="flex flex-col gap-3" data-image-field-id="assets">
+                        <div className="flex min-w-0 items-center justify-between gap-2">
+                          <label className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-white">
+                            <span>Assets (opcional)</span>
+                            <span className="relative inline-flex items-center">
+                              <button
+                                type="button"
+                                data-field-info=""
+                                aria-label="Mais informações Assets (opcional)"
+                                aria-expanded={showAssetsInfo}
+                                onClick={() => setShowAssetsInfo(!showAssetsInfo)}
+                                className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 cursor-pointer"
+                                style={{ color: "rgb(139, 92, 246)" }}
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-info h-3.5 w-3.5" aria-hidden="true">
+                                  <circle cx="12" cy="12" r="10"></circle>
+                                  <path d="M12 16v-4"></path>
+                                  <path d="M12 8h.01"></path>
+                                </svg>
+                              </button>
+                            </span>
+                          </label>
+                        </div>
+
+                        {showAssetsInfo && (
+                          <div className="text-xs text-zinc-400 bg-white/[0.04] p-2.5 rounded-lg border border-white/10">
+                            Envie assets extras como logotipos, mockups de celular ou outros produtos para serem compostos na imagem.
+                          </div>
+                        )}
+
+                        <div tabIndex={0} className="relative flex flex-col gap-2 rounded-lg p-2 -m-2 transition-colors outline-none">
+                          {assetImages.length > 0 && (
+                            <div className="flex flex-col gap-2">
+                              {assetImages.map((img, idx) => (
+                                <div key={img.id || idx} className="group flex items-center gap-2">
+                                  <div className="relative shrink-0">
+                                    <img
+                                      alt={`imagem ${idx + 1}`}
+                                      onClick={() => setLightboxImage(img.url)}
+                                      className="h-12 w-12 rounded-lg object-cover border border-white/10 cursor-pointer transition-all hover:border-violet-500/40 hover:ring-1 hover:ring-violet-500/20"
+                                      src={img.url}
+                                    />
+                                    <button
+                                      type="button"
+                                      aria-label={`Remover imagem ${idx + 1}`}
+                                      title={`Remover imagem ${idx + 1}`}
+                                      onClick={() => handleRemoveAssetImage(idx)}
+                                      className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-zinc-800 border border-white/10 text-zinc-300 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 max-lg:opacity-100 transition-opacity hover:bg-red-500 hover:text-white hover:border-red-500 z-10 cursor-pointer"
+                                    >
+                                      ×
+                                    </button>
+                                    <button
+                                      type="button"
+                                      aria-label={`Recortar imagem ${idx + 1}`}
+                                      title={`Recortar imagem ${idx + 1}`}
+                                      onClick={() => openCropper(img.url, "asset", idx)}
+                                      className="absolute -bottom-1.5 -right-1.5 h-5 w-5 rounded-full bg-zinc-800 border border-white/10 text-zinc-300 flex items-center justify-center opacity-0 group-hover:opacity-100 max-lg:opacity-100 transition-opacity hover:bg-violet-600 hover:text-white hover:border-violet-500 z-10 cursor-pointer"
+                                    >
+                                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-crop h-2.5 w-2.5" aria-hidden="true">
+                                        <path d="M6 2v14a2 2 0 0 0 2 2h14"></path>
+                                        <path d="M18 22V8a2 2 0 0 0-2-2H2"></path>
+                                      </svg>
+                                    </button>
+                                  </div>
+                                  <input
+                                    placeholder="Descreva o que quer extrair deste asset (ex: 'logotipo', 'produto em destaque')"
+                                    className="flex-1 rounded-lg pb-glass-input px-3 py-2 text-xs transition-colors text-white"
+                                    type="text"
+                                    value={img.desc || ""}
+                                    onChange={(e) => handleAssetDescChange(idx, e.target.value)}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center rounded-lg border-2 border-dashed border-[rgba(139,92,246,0.20)] bg-[rgba(139,92,246,0.03)] transition-colors hover:border-[rgba(139,92,246,0.38)] py-2">
+                              <button
+                                type="button"
+                                onClick={() => mobileAssetsInputRef.current?.click()}
+                                className="flex min-w-0 flex-1 items-center justify-center gap-1.5 self-stretch text-xs text-[#5c5278] transition-colors hover:text-[#9d94bb] cursor-pointer"
+                              >
+                                <span className="text-base leading-none">+</span>
+                                <span className="truncate">Clique, arraste ou cole (Ctrl+V)</span>
+                              </button>
+                            </div>
+                          </div>
+
+                          <input
+                            ref={mobileAssetsInputRef}
+                            accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/svg+xml,.svg"
+                            multiple
+                            className="hidden"
+                            type="file"
+                            onChange={(e) => {
+                              if (e.target.files) handleAssetFiles(e.target.files);
+                              e.target.value = "";
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div data-tour="form-sec-estilo" className={mobileActiveCategory !== "estilo" ? "max-lg:hidden" : ""}>
+            <div
+              data-state={isEstiloOpen ? "open" : "closed"}
+              data-slot="collapsible"
+              className="group/step relative overflow-hidden rounded-2xl border border-white/[0.04] transition-colors duration-200 bg-white/[0.015] hover:border-white/[0.08]"
+            >
+              <button
+                type="button"
+                aria-expanded={isEstiloOpen}
+                data-state={isEstiloOpen ? "open" : "closed"}
+                data-slot="collapsible-trigger"
+                onClick={() => setIsEstiloOpen(!isEstiloOpen)}
+                className="flex w-full items-center gap-3 px-2 py-3 lg:px-4 lg:py-3.5 text-left select-none cursor-pointer transition-colors duration-200 hover:bg-white/[0.025] outline-none focus-visible:bg-white/[0.03]"
+              >
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.04] transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-sparkles lucide-stars h-[18px] w-[18px] text-zinc-400 transition-colors" aria-hidden="true">
+                    <path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"></path>
+                    <path d="M20 2v4"></path><path d="M22 4h-4"></path><circle cx="4" cy="20" r="2"></circle>
+                  </svg>
+                </span>
+                <span className="flex min-w-0 flex-1 items-baseline gap-2">
+                  <span className="truncate text-left text-base font-normal text-[#e2d9ff]">Estilo</span>
+                </span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`lucide lucide-chevron-down h-4 w-4 shrink-0 text-zinc-500 transition-transform duration-200 ease-out ${isEstiloOpen ? "rotate-180" : ""}`} aria-hidden="true">
+                  <path d="m6 9 6 6 6-6"></path>
+                </svg>
+              </button>
+              {isEstiloOpen && (
+                <div data-state="open" data-slot="collapsible-content" className="overflow-hidden">
+                  <div className="flex flex-col px-2 pb-5 pt-2 lg:px-4 lg:pb-6 lg:pt-3 gap-6 lg:gap-12">
+              {/* Posição do Sujeito */}
+              <div data-field-id="subject_position" data-tour="form-field-subject_position" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
+                <div className="flex flex-col gap-3">
+                  <label className="flex items-center gap-1.5 text-sm font-semibold text-white">
+                    <span>Posição do sujeito</span>
+                    <span className="relative inline-flex items-center">
+                      <button
+                        type="button"
+                        data-field-info=""
+                        aria-label="Mais informações Posição do sujeito"
+                        aria-expanded={showPosInfo}
+                        onClick={() => setShowPosInfo(!showPosInfo)}
+                        className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 cursor-pointer"
+                        style={{ color: "rgb(139, 92, 246)" }}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-info h-3.5 w-3.5" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+                      </button>
+                    </span>
+                  </label>
+                  <div role="group" aria-label="Posição do sujeito" className="grid gap-2.5" style={{ gridTemplateColumns: "repeat(3, minmax(0px, 1fr))" }}>
+                    <div className="group relative">
+                      <button
+                        type="button"
+                        aria-pressed={subjectPosition === "left"}
+                        onClick={() => setSubjectPosition("left")}
+                        className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${
+                          subjectPosition === "left" ? "pb-ctrl-active text-white" : "text-zinc-200"
+                        }`}
+                      >
+                        <span className="font-medium text-sm">Esquerda</span>
+                      </button>
+                    </div>
+                    <div className="group relative">
+                      <button
+                        type="button"
+                        aria-pressed={subjectPosition === "center"}
+                        onClick={() => setSubjectPosition("center")}
+                        className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${
+                          subjectPosition === "center" ? "pb-ctrl-active text-white" : "text-zinc-200"
+                        }`}
+                      >
+                        <span className="font-medium text-sm">Centro</span>
+                      </button>
+                    </div>
+                    <div className="group relative">
+                      <button
+                        type="button"
+                        aria-pressed={subjectPosition === "right"}
+                        onClick={() => setSubjectPosition("right")}
+                        className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${
+                          subjectPosition === "right" ? "pb-ctrl-active text-white" : "text-zinc-200"
+                        }`}
+                      >
+                        <span className="font-medium text-sm">Direita</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div data-field-id="descricao_adicional" data-tour="form-field-descricao_adicional" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="descricao_adicional" className="flex items-center gap-1.5 text-sm font-semibold text-white">
+                    <span>Descrição adicional (opcional)</span>
+                    <span className="relative inline-flex items-center">
+                      <button
+                        type="button"
+                        data-field-info=""
+                        aria-label="Mais informações Descrição adicional (opcional)"
+                        aria-expanded={showDescInfo}
+                        onClick={() => setShowDescInfo(!showDescInfo)}
+                        className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 cursor-pointer"
+                        style={{ color: "rgb(139, 92, 246)" }}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-info h-3.5 w-3.5" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+                      </button>
+                    </span>
+                  </label>
+
+                  {showDescInfo && (
+                    <div className="text-xs text-zinc-400 bg-white/[0.04] p-2.5 rounded-lg border border-white/10">
+                      Pedidos específicos que a IA deve seguir à risca (ex.: texto exato, ajuste de roupa ou cena). Opcional.
+                    </div>
+                  )}
+
+                  <div className="group relative">
+                    <textarea
+                      ref={descTextareaRef}
+                      id="descricao_adicional"
+                      rows={2}
+                      value={additionalDescription}
+                      onInput={adjustDescTextareaHeight}
+                      onChange={(e) => {
+                        setAdditionalDescription(e.target.value);
+                        adjustDescTextareaHeight();
+                      }}
+                      placeholder="Instruções extras ou contexto. Ex: 'coloque o sujeito em pé com o logo no peito'..."
+                      className="w-full rounded-2xl pb-glass-input px-4 py-3 pb-8 text-sm resize-none min-h-[80px] transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                      style={{ height: "85.3559px" }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setIsExpandedTextarea(true)}
+                      className="absolute bottom-2 right-2 rounded-md p-1 text-zinc-600 transition-all opacity-0 group-hover:opacity-100 focus:opacity-100 hover:bg-white/5 hover:text-zinc-300 disabled:cursor-not-allowed disabled:opacity-0 cursor-pointer"
+                      title="Expandir editor"
+                      aria-haspopup="dialog"
+                      aria-expanded={isExpandedTextarea}
+                      data-state={isExpandedTextarea ? "open" : "closed"}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-maximize2 lucide-maximize-2 h-3.5 w-3.5" aria-hidden="true"><path d="M15 3h6v6"></path><path d="m21 3-7 7"></path><path d="m3 21 7-7"></path><path d="M9 21H3v-6"></path><path d="M21 9V3"></path><path d="M3 15v6"></path></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ── SEÇÃO 3: SAÍDA (100% IDÊNTICO AO HTML OFICIAL) ── */}
+          <div data-tour="form-sec-saida" className={mobileActiveCategory !== "saida" ? "max-lg:hidden" : ""}>
+            <div
+              data-state={isSaidaOpen ? "open" : "closed"}
+              data-slot="collapsible"
+              className="group/step relative overflow-hidden rounded-2xl border border-white/[0.04] transition-colors duration-200 bg-white/[0.015] hover:border-white/[0.08]"
+            >
+              <button
+                type="button"
+                aria-expanded={isSaidaOpen}
+                data-state={isSaidaOpen ? "open" : "closed"}
+                data-slot="collapsible-trigger"
+                onClick={() => setIsSaidaOpen(!isSaidaOpen)}
+                className="flex w-full items-center gap-3 px-2 py-3 lg:px-4 lg:py-3.5 text-left select-none cursor-pointer transition-colors duration-200 hover:bg-white/[0.025] outline-none focus-visible:bg-white/[0.03]"
+              >
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.04] transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-sliders-horizontal h-[18px] w-[18px] text-zinc-400 transition-colors" aria-hidden="true">
+                    <path d="M10 5H3"></path><path d="M12 19H3"></path><path d="M14 3v4"></path><path d="M16 17v4"></path><path d="M21 12h-9"></path><path d="M21 19h-5"></path><path d="M21 5h-7"></path><path d="M8 10v4"></path><path d="M8 12H3"></path>
+                  </svg>
+                </span>
+                <span className="flex min-w-0 flex-1 items-baseline gap-2">
+                  <span className="truncate text-left text-base font-normal text-[#e2d9ff]">Saída</span>
+                </span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`lucide lucide-chevron-down h-4 w-4 shrink-0 text-zinc-500 transition-transform duration-200 ease-out ${isSaidaOpen ? "rotate-180" : ""}`} aria-hidden="true">
+                  <path d="m6 9 6 6 6-6"></path>
+                </svg>
+              </button>
+
+              {isSaidaOpen && (
+                <div data-state="open" data-slot="collapsible-content" className="overflow-hidden">
+                  <div className="flex flex-col px-2 pb-5 pt-2 lg:px-4 lg:pb-6 lg:pt-3 gap-6 lg:gap-12">
+                    
+                    {/* Campo Dimensões */}
+                    <div data-field-id="dimensions" data-tour="form-field-dimensions" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
+                      <div className="flex flex-col gap-2.5">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-semibold text-white text-sm">Dimensões</span>
+                            <span className="relative inline-flex items-center">
+                              <button
+                                type="button"
+                                data-field-info=""
+                                aria-label="Mais informações Dimensões"
+                                aria-expanded={showDimInfo}
+                                onClick={() => setShowDimInfo(!showDimInfo)}
+                                className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 cursor-pointer"
+                                style={{ color: "rgb(139, 92, 246)" }}
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-info h-3.5 w-3.5" aria-hidden="true">
+                                  <circle cx="12" cy="12" r="10"></circle>
+                                  <path d="M12 16v-4"></path>
+                                  <path d="M12 8h.01"></path>
+                                </svg>
+                              </button>
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-[1fr_auto] gap-3 items-stretch">
+                          <div role="group" aria-label="Dimensões" className="flex flex-col gap-1.5">
+                            {/* Stories 9:16 */}
+                            <button
+                              type="button"
+                              aria-pressed={dimension === "9:16"}
+                              onClick={() => { setDimension("9:16"); if (generatedImage) handleReformat("9:16"); }}
+                              className={`group flex items-center gap-2 rounded-xl px-3 py-2 transition-all pb-ctrl-btn cursor-pointer ${
+                                dimension === "9:16" ? "pb-ctrl-active" : ""
+                              }`}
+                              style={dimension === "9:16" ? { boxShadow: "rgba(139, 92, 246, 0.2) 0px 0px 14px" } : undefined}
+                            >
+                              <span className={`text-[12px] font-semibold transition-colors ${
+                                dimension === "9:16" ? "text-white" : "text-zinc-200 group-hover:text-white"
+                              }`}>Stories</span>
+                              <span
+                                className={`rounded-md px-1.5 py-0.5 text-[9px] font-bold tabular-nums tracking-wide transition-colors ${
+                                  dimension === "9:16" ? "text-white/80" : "text-zinc-300"
+                                }`}
+                                style={{ backgroundColor: dimension === "9:16" ? "rgba(139, 92, 246, 0.133)" : "rgba(255, 255, 255, 0.04)" }}
+                              >9:16</span>
+                            </button>
+
+                            {/* Feed Vertical 4:5 */}
+                            <button
+                              type="button"
+                              aria-pressed={dimension === "4:5"}
+                              onClick={() => { setDimension("4:5"); if (generatedImage) handleReformat("4:5"); }}
+                              className={`group flex items-center gap-2 rounded-xl px-3 py-2 transition-all pb-ctrl-btn cursor-pointer ${
+                                dimension === "4:5" ? "pb-ctrl-active" : ""
+                              }`}
+                              style={dimension === "4:5" ? { boxShadow: "rgba(139, 92, 246, 0.2) 0px 0px 14px" } : undefined}
+                            >
+                              <span className={`text-[12px] font-semibold transition-colors ${
+                                dimension === "4:5" ? "text-white" : "text-zinc-200 group-hover:text-white"
+                              }`}>Feed Vertical</span>
+                              <span
+                                className={`rounded-md px-1.5 py-0.5 text-[9px] font-bold tabular-nums tracking-wide transition-colors ${
+                                  dimension === "4:5" ? "text-white/80" : "text-zinc-300"
+                                }`}
+                                style={{ backgroundColor: dimension === "4:5" ? "rgba(139, 92, 246, 0.133)" : "rgba(255, 255, 255, 0.04)" }}
+                              >4:5</span>
+                            </button>
+
+                            {/* Feed 1:1 */}
+                            <button
+                              type="button"
+                              aria-pressed={dimension === "1:1"}
+                              onClick={() => { setDimension("1:1"); if (generatedImage) handleReformat("1:1"); }}
+                              className={`group flex items-center gap-2 rounded-xl px-3 py-2 transition-all pb-ctrl-btn cursor-pointer ${
+                                dimension === "1:1" ? "pb-ctrl-active" : ""
+                              }`}
+                              style={dimension === "1:1" ? { boxShadow: "rgba(139, 92, 246, 0.2) 0px 0px 14px" } : undefined}
+                            >
+                              <span className={`text-[12px] font-semibold transition-colors ${
+                                dimension === "1:1" ? "text-white" : "text-zinc-200 group-hover:text-white"
+                              }`}>Feed</span>
+                              <span
+                                className={`rounded-md px-1.5 py-0.5 text-[9px] font-bold tabular-nums tracking-wide transition-colors ${
+                                  dimension === "1:1" ? "text-white/80" : "text-zinc-300"
+                                }`}
+                                style={{ backgroundColor: dimension === "1:1" ? "rgba(139, 92, 246, 0.133)" : "rgba(255, 255, 255, 0.04)" }}
+                              >1:1</span>
+                            </button>
+
+                            {/* Cinema 16:9 */}
+                            <button
+                              type="button"
+                              aria-pressed={dimension === "16:9"}
+                              onClick={() => { setDimension("16:9"); if (generatedImage) handleReformat("16:9"); }}
+                              className={`group flex items-center gap-2 rounded-xl px-3 py-2 transition-all pb-ctrl-btn cursor-pointer ${
+                                dimension === "16:9" ? "pb-ctrl-active" : ""
+                              }`}
+                              style={dimension === "16:9" ? { boxShadow: "rgba(139, 92, 246, 0.2) 0px 0px 14px" } : undefined}
+                            >
+                              <span className={`text-[12px] font-semibold transition-colors ${
+                                dimension === "16:9" ? "text-white" : "text-zinc-200 group-hover:text-white"
+                              }`}>Cinema</span>
+                              <span
+                                className={`rounded-md px-1.5 py-0.5 text-[9px] font-bold tabular-nums tracking-wide transition-colors ${
+                                  dimension === "16:9" ? "text-white/80" : "text-zinc-300"
+                                }`}
+                                style={{ backgroundColor: dimension === "16:9" ? "rgba(139, 92, 246, 0.133)" : "rgba(255, 255, 255, 0.04)" }}
+                              >16:9</span>
+                            </button>
+                          </div>
+
+                          {/* Preview visual proporcional à direita */}
+                          <div aria-hidden="true" className="hidden sm:flex h-[170px] w-[120px] items-center justify-center rounded-xl pb-ctrl-btn p-2">
+                            <div
+                              className="rounded-md transition-all duration-300"
+                              style={{
+                                width: dimension === "16:9" ? "100%" : "92%",
+                                maxHeight: "92%",
+                                aspectRatio: dimension === "9:16" ? "9 / 16" : dimension === "4:5" ? "4 / 5" : dimension === "1:1" ? "1 / 1" : "16 / 9",
+                                background: "linear-gradient(rgba(139, 92, 246, 0.19), rgba(139, 92, 246, 0.063))",
+                                border: "1.5px solid rgba(139, 92, 246, 0.333)",
+                                boxShadow: "rgba(139, 92, 246, 0.133) 0px 0px 16px inset"
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Campo Qualidade */}
+                    <div data-field-id="quality" data-tour="form-field-quality" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
+                      <div className="flex flex-col gap-2.5">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-semibold text-white text-sm">Qualidade</span>
+                            <span className="relative inline-flex items-center">
+                              <button
+                                type="button"
+                                data-field-info=""
+                                aria-label="Mais informações Qualidade"
+                                aria-expanded={showQualInfo}
+                                onClick={() => setShowQualInfo(!showQualInfo)}
+                                className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 cursor-pointer"
+                                style={{ color: "rgb(139, 92, 246)" }}
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-info h-3.5 w-3.5" aria-hidden="true">
+                                  <circle cx="12" cy="12" r="10"></circle>
+                                  <path d="M12 16v-4"></path>
+                                  <path d="M12 8h.01"></path>
+                                </svg>
+                              </button>
+                            </span>
+                            <div className="ml-auto text-[10px] tabular-nums text-white/60">
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className="rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider"
+                                  style={
+                                    quality === "4K"
+                                      ? {
+                                          backgroundColor: "rgba(245, 158, 11, 0.12)",
+                                          color: "rgb(251, 191, 36)",
+                                          border: "1px solid rgba(245, 158, 11, 0.3)"
+                                        }
+                                      : quality === "2K"
+                                      ? {
+                                          backgroundColor: "rgba(139, 92, 246, 0.12)",
+                                          color: "rgb(196, 181, 253)",
+                                          border: "1px solid rgba(139, 92, 246, 0.3)"
+                                        }
+                                      : {
+                                          backgroundColor: "rgba(255, 255, 255, 0.06)",
+                                          color: "rgb(161, 161, 170)",
+                                          border: "1px solid rgba(255, 255, 255, 0.08)"
+                                        }
+                                  }
+                                >
+                                  {quality === "4K" ? "MÁXIMA" : quality === "2K" ? "ALTA" : "PADRÃO"}
+                                </span>
+                                <span className="text-[10px] tabular-nums text-zinc-500">
+                                  {dimension === "4:5"
+                                    ? (quality === "4K" ? "3712×4608" : quality === "2K" ? "2048×2560" : "1080×1350")
+                                    : dimension === "9:16"
+                                    ? (quality === "4K" ? "2160×3840" : quality === "2K" ? "1440×2560" : "1080×1920")
+                                    : dimension === "16:9"
+                                    ? (quality === "4K" ? "3840×2160" : quality === "2K" ? "2560×1440" : "1920×1080")
+                                    : (quality === "4K" ? "4096×4096" : quality === "2K" ? "2048×2048" : "1024×1024")}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div role="group" aria-label="Qualidade" className="grid gap-2" style={{ gridTemplateColumns: "repeat(3, minmax(0px, 1fr))" }}>
+                          {/* 1K Rápido */}
+                          <button
+                            type="button"
+                            aria-pressed={quality === "1K"}
+                            onClick={() => setQuality("1K" as any)}
+                            className="group flex items-center justify-center rounded-xl px-2 transition-all duration-200 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 flex-col gap-1.5 py-3"
+                            style={
+                              quality === "1K"
+                                ? {
+                                    background: "linear-gradient(rgba(30, 16, 70, 0.6), rgba(20, 10, 50, 0.7)) padding-box padding-box, linear-gradient(135deg, rgba(139, 92, 246, 0.447), rgba(139, 92, 246, 0.12) 50%, rgba(139, 92, 246, 0.28)) border-box border-box",
+                                    border: "1px solid transparent",
+                                    boxShadow: "rgba(139, 92, 246, 0.2) 0px 0px 14px"
+                                  }
+                                : {
+                                    background: "linear-gradient(rgba(16, 10, 40, 0.4), rgba(10, 7, 28, 0.5)) padding-box padding-box, linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(139, 92, 246, 0.027)) border-box border-box",
+                                    border: "1px solid transparent"
+                                  }
+                            }
+                          >
+                            <span
+                              className="text-base font-bold leading-none tracking-tight transition-colors"
+                              style={{ color: quality === "1K" ? "rgb(255, 255, 255)" : "rgb(161, 161, 170)" }}
+                            >1K</span>
+                            <span
+                              className="font-medium uppercase tracking-[0.05em] transition-colors text-[10px]"
+                              style={{ color: quality === "1K" ? "rgb(196, 181, 253)" : "rgb(161, 161, 170)" }}
+                            >Rápido</span>
+                          </button>
+
+                          {/* 2K Médio */}
+                          <button
+                            type="button"
+                            aria-pressed={quality === "2K"}
+                            onClick={() => setQuality("2K" as any)}
+                            className="group flex items-center justify-center rounded-xl px-2 transition-all duration-200 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 flex-col gap-1.5 py-3"
+                            style={
+                              quality === "2K"
+                                ? {
+                                    background: "linear-gradient(rgba(30, 16, 70, 0.6), rgba(20, 10, 50, 0.7)) padding-box padding-box, linear-gradient(135deg, rgba(139, 92, 246, 0.447), rgba(139, 92, 246, 0.12) 50%, rgba(139, 92, 246, 0.28)) border-box border-box",
+                                    border: "1px solid transparent",
+                                    boxShadow: "rgba(139, 92, 246, 0.2) 0px 0px 14px"
+                                  }
+                                : {
+                                    background: "linear-gradient(rgba(16, 10, 40, 0.4), rgba(10, 7, 28, 0.5)) padding-box padding-box, linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(139, 92, 246, 0.027)) border-box border-box",
+                                    border: "1px solid transparent"
+                                  }
+                            }
+                          >
+                            <span
+                              className="text-base font-bold leading-none tracking-tight transition-colors"
+                              style={{ color: quality === "2K" ? "rgb(255, 255, 255)" : "rgb(161, 161, 170)" }}
+                            >2K</span>
+                            <span
+                              className="font-medium uppercase tracking-[0.05em] transition-colors text-[10px]"
+                              style={{ color: quality === "2K" ? "rgb(196, 181, 253)" : "rgb(161, 161, 170)" }}
+                            >Médio</span>
+                          </button>
+
+                          {/* 4K Lento (Dourado Oficial Âmbar) */}
+                          <button
+                            type="button"
+                            aria-pressed={quality === "4K"}
+                            onClick={() => setQuality("4K" as any)}
+                            className="group flex items-center justify-center rounded-xl px-2 transition-all duration-200 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 flex-col gap-1.5 py-3"
+                            style={
+                              quality === "4K"
+                                ? {
+                                    background: "linear-gradient(rgba(60, 38, 8, 0.85), rgba(40, 24, 4, 0.92)) padding-box padding-box, linear-gradient(135deg, rgba(245, 158, 11, 0.85), rgba(245, 158, 11, 0.3) 50%, rgba(245, 158, 11, 0.65)) border-box border-box",
+                                    border: "1px solid transparent",
+                                    boxShadow: "rgba(245, 158, 11, 0.35) 0px 0px 14px, rgba(245, 158, 11, 0.18) 0px 0px 32px"
+                                  }
+                                : {
+                                    background: "linear-gradient(rgba(16, 10, 40, 0.4), rgba(10, 7, 28, 0.5)) padding-box padding-box, linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(139, 92, 246, 0.027)) border-box border-box",
+                                    border: "1px solid transparent"
+                                  }
+                            }
+                          >
+                            <span
+                              className="text-base font-bold leading-none tracking-tight transition-colors"
+                              style={{ color: quality === "4K" ? "rgb(251, 191, 36)" : "rgb(161, 161, 170)" }}
+                            >4K</span>
+                            <span
+                              className="font-medium uppercase tracking-[0.05em] transition-colors text-[10px]"
+                              style={{ color: quality === "4K" ? "rgb(245, 158, 11)" : "rgb(161, 161, 170)" }}
+                            >Lento</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          </div>
+
+
+          {/* ══════════════════════════════════════════════════════════════════
+              MODO PC / DESKTOP (hidden lg:flex) - 100% IDÊNTICO AO REF_ASIDE.HTML
+              ══════════════════════════════════════════════════════════════════ */}
+          <div className="hidden lg:flex flex-col gap-6 lg:gap-12">
+            <div data-tour="form-sec-ref-essential">
+            <div className="flex flex-col gap-6 lg:gap-12">
+              {/* Imagem Principal */}
+              <div data-field-id="sujeitos" className={`flex flex-col gap-1 campo-com-info ${mobileActiveCategory && mobileActiveCategory !== "foto" ? "max-lg:hidden" : ""}`}>
                 <div
                   className={`flex flex-col gap-3 ${
                     isManagingSujeitos
@@ -2237,7 +3185,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
 
                                 <button
                                   type="button"
-                                  onClick={() => setIsManagingSujeitos(false)}
+                                  onClick={() => { setIsManagingSujeitos(false); updateActiveTab({ isManagingSujeitos: false }); }}
                                   className="sub-area-entra w-full rounded-xl bg-violet-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-violet-600/25 transition-colors hover:bg-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 mt-8 cursor-pointer"
                                   style={{ animationDelay: "110ms" }}
                                 >
@@ -2295,7 +3243,16 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                       )}
 
                       <div className="flex flex-col gap-1">
-                        <div className="flex items-center rounded-lg border-2 border-dashed border-[rgba(139,92,246,0.20)] bg-[rgba(139,92,246,0.03)] transition-colors hover:border-[rgba(139,92,246,0.38)] h-10 gap-2 px-1">
+                        <div
+                          onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                              handleSubjectFiles(e.dataTransfer.files);
+                            }
+                          }}
+                          className="flex items-center rounded-lg border-2 border-dashed border-[rgba(139,92,246,0.20)] bg-[rgba(139,92,246,0.03)] transition-colors hover:border-[rgba(139,92,246,0.38)] h-10 gap-2 px-1">
                           <div className="flex shrink-0 items-center gap-1" role="group" aria-label="Alinhamento do sujeito">
                             <button
                               type="button"
@@ -2350,7 +3307,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                           </button>
                           <button
                             type="button"
-                            onClick={() => setIsManagingSujeitos(true)}
+                            onClick={() => { setIsManagingSujeitos(true); updateActiveTab({ isManagingSujeitos: true }); }}
                             aria-label="Ajustar fotos e cena"
                             title="Ajustar fotos e cena"
                             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-zinc-500 transition-colors hover:border-violet-500/30 hover:text-zinc-200 cursor-pointer"
@@ -2375,7 +3332,68 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                   )}
                 </div>
               </div>
-              <div data-field-id="referencias" data-tour="form-field-referencias" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
+
+              {/* Posição do Sujeito (Oculto por padrão, idêntico ao original) */}
+              <div data-field-id="subject_position" className="flex-col gap-1 campo-com-info hidden">
+                <div className="flex items-center justify-between gap-3">
+                  <label className="flex min-w-0 items-center gap-1.5 text-sm font-medium text-zinc-300">
+                    <span className="truncate">Posição do sujeito</span>
+                    <span className="relative inline-flex items-center">
+                      <button
+                        type="button"
+                        data-field-info=""
+                        aria-label="Mais informações Posição do sujeito"
+                        onClick={() => setShowPosInfo(!showPosInfo)}
+                        className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none"
+                        style={{ color: "rgb(139, 92, 246)" }}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-info h-3.5 w-3.5"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></svg>
+                      </button>
+                    </span>
+                  </label>
+                  <div role="group" aria-label="Posição do sujeito" className="flex shrink-0 items-center gap-1.5">
+                    <button
+                      type="button"
+                      aria-label="Esquerda"
+                      aria-pressed={subjectPosition === "left"}
+                      title="Esquerda"
+                      onClick={() => setSubjectPosition("left")}
+                      className={`flex h-8 w-10 items-center justify-center rounded-lg transition-colors pb-ctrl-btn cursor-pointer ${
+                        subjectPosition === "left" ? "pb-ctrl-active text-white" : "text-zinc-500 hover:text-zinc-200"
+                      }`}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-text-align-start h-5 w-5"><path d="M21 5H3" /><path d="M15 12H3" /><path d="M17 19H3" /></svg>
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Centro"
+                      aria-pressed={subjectPosition === "center"}
+                      title="Centro"
+                      onClick={() => setSubjectPosition("center")}
+                      className={`flex h-8 w-10 items-center justify-center rounded-lg transition-colors pb-ctrl-btn cursor-pointer ${
+                        subjectPosition === "center" ? "pb-ctrl-active text-white" : "text-zinc-500 hover:text-zinc-200"
+                      }`}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-text-align-center h-5 w-5"><path d="M21 5H3" /><path d="M17 12H7" /><path d="M19 19H5" /></svg>
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Direita"
+                      aria-pressed={subjectPosition === "right"}
+                      title="Direita"
+                      onClick={() => setSubjectPosition("right")}
+                      className={`flex h-8 w-10 items-center justify-center rounded-lg transition-colors pb-ctrl-btn cursor-pointer ${
+                        subjectPosition === "right" ? "pb-ctrl-active text-white" : "text-zinc-500 hover:text-zinc-200"
+                      }`}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-text-align-end h-5 w-5"><path d="M21 5H3" /><path d="M21 12H9" /><path d="M21 19H7" /></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Referências de Estilo (Idêntico ao snippet oficial com gerenciador) */}
+              <div data-field-id="referencias" className={`flex flex-col gap-1 campo-com-info ${mobileActiveCategory && mobileActiveCategory !== "estilo" ? "max-lg:hidden" : ""}`}>
                 <div
                   className={`flex flex-col gap-3 ${
                     isManagingReferencias
@@ -2403,20 +3421,37 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                     </label>
 
                     {/* Switch: Usar na imagem */}
+                    {/* Switch: Usar na imagem (100% IDÊNTICO AO HTML OFICIAL) */}
                     <button
                       type="button"
                       aria-label={`Usar na imagem: ${useRefOnBuild ? "ativado" : "desativado"}`}
                       aria-pressed={useRefOnBuild}
-                      title="Imagem"
+                      title={useRefOnBuild ? "Imagem" : "Somente JSON"}
                       onClick={() => setUseRefOnBuild(!useRefOnBuild)}
                       className="flex shrink-0 items-center gap-1.5 text-[10px] text-zinc-500 transition-colors hover:text-zinc-300 cursor-pointer"
                     >
                       <span>Usar na imagem</span>
-                      <span className={`relative h-4 w-7 rounded-full border transition-colors ${useRefOnBuild ? "border-violet-500/50 bg-violet-500/30" : "border-white/10 bg-white/5"}`}>
-                        <span className={`absolute top-0.5 h-2.5 w-2.5 rounded-full transition-all ${useRefOnBuild ? "left-3.5 bg-violet-300" : "left-0.5 bg-zinc-500"}`} />
+                      <span
+                        className={`relative h-4 w-7 rounded-full border transition-colors ${
+                          useRefOnBuild
+                            ? "border-violet-500/50 bg-violet-500/30"
+                            : "border-white/10 bg-white/[0.05]"
+                        }`}
+                      >
+                        <span
+                          className={`absolute top-0.5 h-2.5 w-2.5 rounded-full transition-all ${
+                            useRefOnBuild ? "left-3.5 bg-violet-300" : "left-0.5 bg-zinc-600"
+                          }`}
+                        />
                       </span>
-                      <span className={`rounded-full border px-1.5 py-0.5 font-medium ${useRefOnBuild ? "border-violet-500/30 bg-violet-500/10 text-violet-300" : "border-white/10 bg-white/5 text-zinc-500"}`}>
-                        Imagem
+                      <span
+                        className={`rounded-full border px-1.5 py-0.5 font-medium ${
+                          useRefOnBuild
+                            ? "border-violet-500/30 bg-violet-500/10 text-violet-300"
+                            : "border-amber-500/30 bg-amber-500/10 text-amber-300"
+                        }`}
+                      >
+                        {useRefOnBuild ? "Imagem" : "Somente JSON"}
                       </span>
                     </button>
                   </div>
@@ -2580,7 +3615,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
 
                                 <button
                                   type="button"
-                                  onClick={() => setIsManagingReferencias(false)}
+                                  onClick={() => { setIsManagingReferencias(false); updateActiveTab({ isManagingReferencias: false }); }}
                                   className="sub-area-entra w-full rounded-xl bg-violet-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-violet-600/25 transition-colors hover:bg-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 mt-8 cursor-pointer"
                                   style={{ animationDelay: "110ms" }}
                                 >
@@ -2650,7 +3685,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                           </button>
                           <button
                             type="button"
-                            onClick={() => setIsManagingReferencias(true)}
+                            onClick={() => { setIsManagingReferencias(true); updateActiveTab({ isManagingReferencias: true }); }}
                             aria-label="Ajustar fotos e cena"
                             title="Ajustar fotos e cena"
                             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-zinc-500 transition-colors hover:border-violet-500/30 hover:text-zinc-200 cursor-pointer"
@@ -2675,8 +3710,9 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                   )}
                 </div>
               </div>
-              {/* Usar inspiração na construção da imagem */}
-              <div data-field-id="send_style_ref_bytes" data-tour="form-field-send_style_ref_bytes" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
+
+              {/* Usar inspiração na construção da imagem (oculto por padrão) */}
+              <div data-field-id="send_style_ref_bytes" className="flex-col gap-1 campo-com-info hidden">
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-2 min-w-0">
                     <label htmlFor="send_style_ref_bytes" className="text-sm font-medium text-zinc-300 leading-snug">
@@ -2688,14 +3724,11 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                         data-field-info=""
                         aria-label="Mais informações Usar inspiração na construção da imagem"
                         aria-expanded="false"
-                        className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 cursor-pointer"
+                        className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
                         style={{ color: "rgb(139, 92, 246)" }}
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-info h-3.5 w-3.5" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
                       </button>
-                    </span>
-                    <span className="shrink-0 rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest border" style={{ color: "rgb(139, 92, 246)", borderColor: "rgba(139, 92, 246, 0.267)", backgroundColor: "rgba(139, 92, 246, 0.07)" }}>
-                      Avançado
                     </span>
                   </div>
                   <div className="flex shrink-0 items-center gap-1 rounded-xl border border-white/8 bg-zinc-900/80 p-1">
@@ -2720,277 +3753,9 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                   </div>
                 </div>
               </div>
-              <div data-field-id="assets" data-tour="form-field-assets" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
-                <div className="flex flex-col gap-3" data-image-field-id="assets">
-                  <div className="flex min-w-0 items-center justify-between gap-2">
-                    <label className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-white">
-                      <span>Assets (opcional)</span>
-                      <span className="relative inline-flex items-center">
-                        <button
-                          type="button"
-                          data-field-info=""
-                          aria-label="Mais informações Assets (opcional)"
-                          aria-expanded={showAssetsInfo}
-                          onClick={() => setShowAssetsInfo(!showAssetsInfo)}
-                          className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 cursor-pointer"
-                          style={{ color: "rgb(139, 92, 246)" }}
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-info h-3.5 w-3.5" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
-                        </button>
-                      </span>
-                    </label>
-                  </div>
 
-                  {showAssetsInfo && (
-                    <div className="text-xs text-zinc-400 bg-white/[0.04] p-2.5 rounded-lg border border-white/10">
-                      Envie assets extras como logotipos, mockups de celular ou outros produtos para serem compostos na imagem.
-                    </div>
-                  )}
-
-                  <div tabIndex={0} className="relative flex flex-col gap-2 rounded-lg p-2 -m-2 transition-colors outline-none">
-                    {assetImages.length > 0 && (
-                      <div className="flex flex-col gap-2">
-                        {assetImages.map((img, idx) => (
-                          <div key={img.id || idx} className="group flex items-center gap-2">
-                            <div className="relative shrink-0">
-                              <img
-                                alt={`imagem ${idx + 1}`}
-                                onClick={() => setLightboxImage(img.url)}
-                                className="h-12 w-12 rounded-lg object-cover border border-white/10 cursor-pointer transition-all hover:border-violet-500/40 hover:ring-1 hover:ring-violet-500/20"
-                                src={img.url}
-                              />
-                              <button
-                                type="button"
-                                aria-label={`Remover imagem ${idx + 1}`}
-                                title={`Remover imagem ${idx + 1}`}
-                                onClick={() => handleRemoveAssetImage(idx)}
-                                className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-zinc-800 border border-white/10 text-zinc-300 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 max-lg:opacity-100 transition-opacity hover:bg-red-500 hover:text-white hover:border-red-500 z-10 cursor-pointer"
-                              >
-                                ×
-                              </button>
-                              <button
-                                type="button"
-                                aria-label={`Recortar imagem ${idx + 1}`}
-                                title={`Recortar imagem ${idx + 1}`}
-                                onClick={() => openCropper(img.url, "asset", idx)}
-                                className="absolute -bottom-1.5 -right-1.5 h-5 w-5 rounded-full bg-zinc-800 border border-white/10 text-zinc-300 flex items-center justify-center opacity-0 group-hover:opacity-100 max-lg:opacity-100 transition-opacity hover:bg-violet-600 hover:text-white hover:border-violet-500 z-10 disabled:opacity-40 cursor-pointer"
-                              >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-crop h-2.5 w-2.5" aria-hidden="true"><path d="M6 2v14a2 2 0 0 0 2 2h14"></path><path d="M18 22V8a2 2 0 0 0-2-2H2"></path></svg>
-                              </button>
-                            </div>
-                            <input
-                              placeholder="Descreva o que quer extrair deste asset (ex: 'logotipo', 'produto em destaque')"
-                              className="flex-1 rounded-lg pb-glass-input px-3 py-2 text-xs transition-colors text-white"
-                              type="text"
-                              value={img.desc || ""}
-                              onChange={(e) => handleAssetDescChange(idx, e.target.value)}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center rounded-lg border-2 border-dashed border-[rgba(139,92,246,0.20)] bg-[rgba(139,92,246,0.03)] transition-colors hover:border-[rgba(139,92,246,0.38)] py-2">
-                        <button
-                          type="button"
-                          onClick={() => assetsInputRef.current?.click()}
-                          className="flex min-w-0 flex-1 items-center justify-center gap-1.5 self-stretch text-xs text-[#5c5278] transition-colors hover:text-[#9d94bb] cursor-pointer"
-                        >
-                          <span className="text-base leading-none">+</span>
-                          <span className="truncate">Clique, arraste ou cole (Ctrl+V)</span>
-                        </button>
-                      </div>
-                    </div>
-                    <input
-                      ref={assetsInputRef}
-                      accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
-                      multiple
-                      className="hidden"
-                      type="file"
-                      onChange={(e) => {
-                        if (e.target.files) handleAssetFiles(e.target.files);
-                        e.target.value = "";
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* ── SEÇÃO 2: ESTILO (100% IDÊNTICO AO HTML OFICIAL) ── */}
-          <div data-tour="form-sec-estilo" className={mobileActiveCategory !== "estilo" ? "max-lg:hidden" : ""}>
-            <div
-              data-state={isEstiloOpen ? "open" : "closed"}
-              data-slot="collapsible"
-              className="group/step relative overflow-hidden rounded-2xl border border-white/[0.04] transition-colors duration-200 bg-white/[0.015] hover:border-white/[0.08]"
-            >
-              <button
-                type="button"
-                aria-expanded={isEstiloOpen}
-                data-state={isEstiloOpen ? "open" : "closed"}
-                data-slot="collapsible-trigger"
-                onClick={() => setIsEstiloOpen(!isEstiloOpen)}
-                className="flex w-full items-center gap-3 px-2 py-3 lg:px-4 lg:py-3.5 text-left select-none cursor-pointer transition-colors duration-200 hover:bg-white/[0.025] outline-none focus-visible:bg-white/[0.03]"
-              >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.04] transition-colors">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-sparkles lucide-stars h-[18px] w-[18px] text-zinc-400 transition-colors" aria-hidden="true">
-                    <path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"></path>
-                    <path d="M20 2v4"></path><path d="M22 4h-4"></path><circle cx="4" cy="20" r="2"></circle>
-                  </svg>
-                </span>
-                <span className="flex min-w-0 flex-1 items-baseline gap-2">
-                  <span className="truncate text-left text-base font-normal text-[#e2d9ff]">Estilo</span>
-                </span>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`lucide lucide-chevron-down h-4 w-4 shrink-0 text-zinc-500 transition-transform duration-200 ease-out ${isEstiloOpen ? "rotate-180" : ""}`} aria-hidden="true">
-                  <path d="m6 9 6 6 6-6"></path>
-                </svg>
-              </button>
-              {isEstiloOpen && (
-                <div data-state="open" data-slot="collapsible-content" className="overflow-hidden">
-                  <div className="flex flex-col px-2 pb-5 pt-2 lg:px-4 lg:pb-6 lg:pt-3 gap-6 lg:gap-12">
-              {/* Posição do Sujeito */}
-              <div data-field-id="subject_position" data-tour="form-field-subject_position" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
-                <div className="flex flex-col gap-3">
-                  <label className="flex items-center gap-1.5 text-sm font-semibold text-white">
-                    <span>Posição do sujeito</span>
-                    <span className="relative inline-flex items-center">
-                      <button
-                        type="button"
-                        data-field-info=""
-                        aria-label="Mais informações Posição do sujeito"
-                        aria-expanded={showPosInfo}
-                        onClick={() => setShowPosInfo(!showPosInfo)}
-                        className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 cursor-pointer"
-                        style={{ color: "rgb(139, 92, 246)" }}
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-info h-3.5 w-3.5" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
-                      </button>
-                    </span>
-                  </label>
-                  <div role="group" aria-label="Posição do sujeito" className="grid gap-2.5" style={{ gridTemplateColumns: "repeat(3, minmax(0px, 1fr))" }}>
-                    <div className="group relative">
-                      <button
-                        type="button"
-                        aria-pressed={subjectPosition === "left"}
-                        onClick={() => setSubjectPosition("left")}
-                        className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${
-                          subjectPosition === "left" ? "pb-ctrl-active text-white" : "text-zinc-200"
-                        }`}
-                      >
-                        <span className="font-medium text-sm">Esquerda</span>
-                      </button>
-                    </div>
-                    <div className="group relative">
-                      <button
-                        type="button"
-                        aria-pressed={subjectPosition === "center"}
-                        onClick={() => setSubjectPosition("center")}
-                        className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${
-                          subjectPosition === "center" ? "pb-ctrl-active text-white" : "text-zinc-200"
-                        }`}
-                      >
-                        <span className="font-medium text-sm">Centro</span>
-                      </button>
-                    </div>
-                    <div className="group relative">
-                      <button
-                        type="button"
-                        aria-pressed={subjectPosition === "right"}
-                        onClick={() => setSubjectPosition("right")}
-                        className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${
-                          subjectPosition === "right" ? "pb-ctrl-active text-white" : "text-zinc-200"
-                        }`}
-                      >
-                        <span className="font-medium text-sm">Direita</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div data-field-id="descricao_adicional" data-tour="form-field-descricao_adicional" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
-                <div className="flex flex-col gap-2">
-                  <label htmlFor="descricao_adicional" className="flex items-center gap-1.5 text-sm font-semibold text-white">
-                    <span>Descrição adicional (opcional)</span>
-                    <span className="relative inline-flex items-center">
-                      <button
-                        type="button"
-                        data-field-info=""
-                        aria-label="Mais informações Descrição adicional (opcional)"
-                        aria-expanded={showDescInfo}
-                        onClick={() => setShowDescInfo(!showDescInfo)}
-                        className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 cursor-pointer"
-                        style={{ color: "rgb(139, 92, 246)" }}
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-info h-3.5 w-3.5" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
-                      </button>
-                    </span>
-                  </label>
-                  <div className="group relative">
-                    <textarea
-                      id="descricao_adicional"
-                      rows={2}
-                      value={additionalDescription}
-                      onChange={(e) => setAdditionalDescription(e.target.value)}
-                      placeholder="Instruções extras ou contexto. Ex: 'coloque o sujeito em pé com o logo no peito'..."
-                      className="w-full rounded-2xl pb-glass-input px-4 py-3 pb-8 text-sm resize-none min-h-[80px] transition-colors disabled:cursor-not-allowed disabled:opacity-50 text-white"
-                      style={{ height: "85.6px" }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setIsExpandedTextarea(true)}
-                      className="absolute bottom-2 right-2 rounded-md p-1 text-zinc-600 transition-all opacity-0 group-hover:opacity-100 focus:opacity-100 hover:bg-white/5 hover:text-zinc-300 disabled:cursor-not-allowed disabled:opacity-0 cursor-pointer"
-                      title="Expandir editor"
-                      aria-haspopup="dialog"
-                      aria-expanded={isExpandedTextarea}
-                      data-state={isExpandedTextarea ? "open" : "closed"}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-maximize2 lucide-maximize-2 h-3.5 w-3.5" aria-hidden="true"><path d="M15 3h6v6"></path><path d="m21 3-7 7"></path><path d="m3 21 7-7"></path><path d="M9 21H3v-6"></path></svg>
-                    </button>
-                  </div>
-                </div>
-              </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* ── SEÇÃO 3: SAÍDA (100% IDÊNTICO AO HTML OFICIAL) ── */}
-          <div data-tour="form-sec-saida" className={mobileActiveCategory !== "saida" ? "max-lg:hidden" : ""}>
-            <div
-              data-state={isSaidaOpen ? "open" : "closed"}
-              data-slot="collapsible"
-              className="group/step relative overflow-hidden rounded-2xl border border-white/[0.04] transition-colors duration-200 bg-white/[0.015] hover:border-white/[0.08]"
-            >
-              <button
-                type="button"
-                aria-expanded={isSaidaOpen}
-                data-state={isSaidaOpen ? "open" : "closed"}
-                data-slot="collapsible-trigger"
-                onClick={() => setIsSaidaOpen(!isSaidaOpen)}
-                className="flex w-full items-center gap-3 px-2 py-3 lg:px-4 lg:py-3.5 text-left select-none cursor-pointer transition-colors duration-200 hover:bg-white/[0.025] outline-none focus-visible:bg-white/[0.03]"
-              >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.04] transition-colors">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-sliders-horizontal h-[18px] w-[18px] text-zinc-400 transition-colors" aria-hidden="true">
-                    <path d="M10 5H3"></path><path d="M12 19H3"></path><path d="M14 3v4"></path><path d="M16 17v4"></path><path d="M21 12h-9"></path><path d="M21 19h-5"></path><path d="M21 5h-7"></path><path d="M8 10v4"></path><path d="M8 12H3"></path>
-                  </svg>
-                </span>
-                <span className="flex min-w-0 flex-1 items-baseline gap-2">
-                  <span className="truncate text-left text-base font-normal text-[#e2d9ff]">Saída</span>
-                </span>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`lucide lucide-chevron-down h-4 w-4 shrink-0 text-zinc-500 transition-transform duration-200 ease-out ${isSaidaOpen ? "rotate-180" : ""}`} aria-hidden="true">
-                  <path d="m6 9 6 6 6-6"></path>
-                </svg>
-              </button>
-              {isSaidaOpen && (
-                <div data-state="open" data-slot="collapsible-content" className="overflow-hidden">
-                  <div className="flex flex-col px-2 pb-5 pt-2 lg:px-4 lg:pb-6 lg:pt-3 gap-6 lg:gap-12">
-              <div data-field-id="dimensions" data-tour="form-field-dimensions" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
+              {/* Dimensões */}
+              <div data-field-id="dimensions" className={`flex flex-col gap-1 campo-com-info ${mobileActiveCategory && mobileActiveCategory !== "saida" ? "max-lg:hidden" : ""}`}>
                 <div className="flex flex-col gap-1.5">
                   <div className="flex flex-col gap-1">
                     <div className="flex items-center gap-1.5">
@@ -3168,7 +3933,9 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                   )}
                 </div>
               </div>
-              <div data-field-id="quality" data-tour="form-field-quality" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
+
+              {/* Qualidade */}
+              <div data-field-id="quality" data-tour="form-field-quality" className="flex flex-col gap-1 campo-com-info">
                 <div className="flex flex-col gap-1.5">
                   <div className="flex flex-col gap-1">
                     <div className="flex items-center gap-1.5">
@@ -3183,45 +3950,57 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                           className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 cursor-pointer"
                           style={{ color: "rgb(139, 92, 246)" }}
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-info h-3.5 w-3.5"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-info h-3.5 w-3.5" aria-hidden="true">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="M12 16v-4"></path>
+                            <path d="M12 8h.01"></path>
+                          </svg>
                         </button>
                       </span>
                       <div className="ml-auto text-[10px] tabular-nums text-white/60">
                         <div className="flex items-center gap-2">
                           <span
                             className="rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider"
-                            style={{
-                              backgroundColor: "rgba(255, 255, 255, 0.06)",
-                              color: "rgb(161, 161, 170)",
-                              border: "1px solid rgba(255, 255, 255, 0.08)"
-                            }}
+                            style={
+                              quality === "4K"
+                                ? { backgroundColor: "rgba(245, 158, 11, 0.12)", color: "rgb(251, 191, 36)", border: "1px solid rgba(245, 158, 11, 0.3)" }
+                                : quality === "2K"
+                                ? { backgroundColor: "rgba(139, 92, 246, 0.12)", color: "rgb(196, 181, 253)", border: "1px solid rgba(139, 92, 246, 0.3)" }
+                                : { backgroundColor: "rgba(255, 255, 255, 0.06)", color: "rgb(161, 161, 170)", border: "1px solid rgba(255, 255, 255, 0.08)" }
+                            }
                           >
-                            {quality === "1K" ? "PADRÃO" : quality === "2K" ? "MÉDIO" : quality === "4K" ? "ALTO" : "MASTER 8K"}
+                            {quality === "4K" ? "MÁXIMA" : quality === "2K" ? "ALTA" : "PADRÃO"}
                           </span>
                           <span className="text-[10px] tabular-nums text-zinc-500">
                             {dimension === "custom"
                               ? `${customWidth}×${customHeight}`
                               : dimension === "4:5"
-                              ? (quality === "4K" ? "6144×7680" : quality === "2K" ? "2048×2560" : "1080×1350")
+                              ? (quality === "4K" ? "3712×4608" : quality === "2K" ? "1792×2304" : "896×1152")
                               : dimension === "9:16"
-                              ? (quality === "4K" ? "4320×7680" : quality === "2K" ? "1440×2560" : "1080×1920")
+                              ? (quality === "4K" ? "2880×5120" : quality === "2K" ? "1536×2688" : "768×1344")
                               : dimension === "16:9"
-                              ? (quality === "4K" ? "7680×4320" : quality === "2K" ? "2560×1440" : "1920×1080")
-                              : (quality === "4K" ? "7680×7680" : quality === "2K" ? "2048×2048" : "1024×1024")}
+                              ? (quality === "4K" ? "5120×2880" : quality === "2K" ? "2688×1536" : "1344×768")
+                              : (quality === "4K" ? "4096×4096" : quality === "2K" ? "2048×2048" : "1024×1024")}
                           </span>
                         </div>
                       </div>
                     </div>
                   </div>
 
+                  {showQualInfo && (
+                    <div className="text-xs text-zinc-400 bg-white/[0.04] p-2.5 rounded-lg border border-white/10">
+                      Define a densidade de pixels e fidelidade visual da imagem final. O modo 4K aplica acabamento cinematográfico com super-resolução.
+                    </div>
+                  )}
+
                   <div role="group" aria-label="Qualidade" className="grid gap-1.5" style={{ gridTemplateColumns: "repeat(3, minmax(0px, 1fr))" }}>
                     {[
                       { id: "1K", sub: "Rápido" },
                       { id: "2K", sub: "Médio" },
-                      { id: "4K", sub: "Alto" },
-                      
+                      { id: "4K", sub: "Lento" }
                     ].map((q) => {
                       const isSelected = quality === q.id;
+                      const is4K = q.id === "4K";
                       return (
                         <button
                           key={q.id}
@@ -3230,7 +4009,13 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                           onClick={() => setQuality(q.id as any)}
                           className="group flex items-center justify-center rounded-xl px-2 transition-all duration-200 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 h-10 gap-1.5 py-1.5"
                           style={
-                            isSelected
+                            isSelected && is4K
+                              ? {
+                                  background: "linear-gradient(rgba(60, 38, 8, 0.85), rgba(40, 24, 4, 0.92)) padding-box padding-box, linear-gradient(135deg, rgba(245, 158, 11, 0.85), rgba(245, 158, 11, 0.3) 50%, rgba(245, 158, 11, 0.65)) border-box border-box",
+                                  border: "1px solid transparent",
+                                  boxShadow: "rgba(245, 158, 11, 0.35) 0px 0px 14px, rgba(245, 158, 11, 0.18) 0px 0px 32px"
+                                }
+                              : isSelected
                               ? {
                                   background: "linear-gradient(rgba(30, 16, 70, 0.6), rgba(20, 10, 50, 0.7)) padding-box padding-box, linear-gradient(135deg, rgba(139, 92, 246, 0.447), rgba(139, 92, 246, 0.12) 50%, rgba(139, 92, 246, 0.28)) border-box border-box",
                                   border: "1px solid transparent",
@@ -3242,10 +4027,20 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                                 }
                           }
                         >
-                          <span className="text-base font-bold leading-none tracking-tight transition-colors" style={{ color: isSelected ? "rgb(255, 255, 255)" : "rgb(161, 161, 170)" }}>
+                          <span
+                            className="text-base font-bold leading-none tracking-tight transition-colors"
+                            style={{
+                              color: isSelected && is4K ? "rgb(251, 191, 36)" : isSelected ? "rgb(255, 255, 255)" : "rgb(161, 161, 170)"
+                            }}
+                          >
                             {q.id}
                           </span>
-                          <span className="font-medium uppercase tracking-[0.05em] transition-colors text-[9px]" style={{ color: isSelected ? "rgb(255, 255, 255)" : "rgb(161, 161, 170)" }}>
+                          <span
+                            className="font-medium uppercase tracking-[0.05em] transition-colors text-[9px]"
+                            style={{
+                              color: isSelected && is4K ? "rgb(245, 158, 11)" : isSelected ? "rgb(255, 255, 255)" : "rgb(161, 161, 170)"
+                            }}
+                          >
                             {q.sub}
                           </span>
                         </button>
@@ -3254,11 +4049,160 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                   </div>
                 </div>
               </div>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
+
+          {/* ── SEÇÃO 2: MAIS OPÇÕES (100% IDÊNTICO AO HTML OFICIAL DO AGENTE REF) ── */}
+          
+            <div data-tour="form-sec-ref-more-options" className={mobileActiveCategory === "foto" ? "max-lg:hidden" : ""}>
+            <div className="flex flex-col gap-4">
+              {/* Assets (opcional) */}
+              <div data-field-id="assets" className={`flex flex-col gap-1 campo-com-info ${mobileActiveCategory && mobileActiveCategory !== "saida" ? "max-lg:hidden" : ""}`}>
+                <div className="flex flex-col gap-3" data-image-field-id="assets">
+                  <div className="flex min-w-0 items-center justify-between gap-2">
+                    <label className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-white">
+                      <span>Assets (opcional)</span>
+                      <span className="relative inline-flex items-center">
+                        <button
+                          type="button"
+                          data-field-info=""
+                          aria-label="Mais informações Assets (opcional)"
+                          aria-expanded={showAssetsInfo}
+                          onClick={() => setShowAssetsInfo(!showAssetsInfo)}
+                          className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 cursor-pointer"
+                          style={{ color: "rgb(139, 92, 246)" }}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-info h-3.5 w-3.5" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+                        </button>
+                      </span>
+                    </label>
+                  </div>
+
+                  {showAssetsInfo && (
+                    <div className="text-xs text-zinc-400 bg-white/[0.04] p-2.5 rounded-lg border border-white/10">
+                      Envie assets extras como logotipos, mockups de celular ou outros produtos para serem compostos na imagem.
+                    </div>
+                  )}
+
+                  <div tabIndex={0} className="relative flex flex-col gap-2 rounded-lg p-2 -m-2 transition-colors outline-none">
+                    {assetImages.length > 0 && (
+                      <div className="flex flex-col gap-2">
+                        {assetImages.map((img, idx) => (
+                          <div key={img.id || idx} className="group flex items-center gap-2">
+                            <div className="relative shrink-0">
+                              <img
+                                alt={`imagem ${idx + 1}`}
+                                onClick={() => setLightboxImage(img.url)}
+                                className="h-12 w-12 rounded-lg object-cover border border-white/10 cursor-pointer transition-all hover:border-violet-500/40 hover:ring-1 hover:ring-violet-500/20"
+                                src={img.url}
+                              />
+                              <button
+                                type="button"
+                                aria-label={`Remover imagem ${idx + 1}`}
+                                title={`Remover imagem ${idx + 1}`}
+                                onClick={() => handleRemoveAssetImage(idx)}
+                                className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-zinc-800 border border-white/10 text-zinc-300 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 max-lg:opacity-100 transition-opacity hover:bg-red-500 hover:text-white hover:border-red-500 z-10 cursor-pointer"
+                              >
+                                ×
+                              </button>
+                              <button
+                                type="button"
+                                aria-label={`Recortar imagem ${idx + 1}`}
+                                title={`Recortar imagem ${idx + 1}`}
+                                onClick={() => openCropper(img.url, "asset", idx)}
+                                className="absolute -bottom-1.5 -right-1.5 h-5 w-5 rounded-full bg-zinc-800 border border-white/10 text-zinc-300 flex items-center justify-center opacity-0 group-hover:opacity-100 max-lg:opacity-100 transition-opacity hover:bg-violet-600 hover:text-white hover:border-violet-500 z-10 disabled:opacity-40 cursor-pointer"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-crop h-2.5 w-2.5" aria-hidden="true"><path d="M6 2v14a2 2 0 0 0 2 2h14"></path><path d="M18 22V8a2 2 0 0 0-2-2H2"></path></svg>
+                              </button>
+                            </div>
+                            <input
+                              placeholder="Descreva o que quer extrair deste asset (ex: 'logotipo', 'produto em destaque')"
+                              className="flex-1 rounded-lg pb-glass-input px-3 py-2 text-xs transition-colors text-white"
+                              type="text"
+                              value={img.desc || ""}
+                              onChange={(e) => handleAssetDescChange(idx, e.target.value)}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center rounded-lg border-2 border-dashed border-[rgba(139,92,246,0.20)] bg-[rgba(139,92,246,0.03)] transition-colors hover:border-[rgba(139,92,246,0.38)] py-2">
+                        <button
+                          type="button"
+                          onClick={() => assetsInputRef.current?.click()}
+                          className="flex min-w-0 flex-1 items-center justify-center gap-1.5 self-stretch text-xs text-[#5c5278] transition-colors hover:text-[#9d94bb] cursor-pointer"
+                        >
+                          <span className="text-base leading-none">+</span>
+                          <span className="truncate">Clique, arraste ou cole (Ctrl+V)</span>
+                        </button>
+                      </div>
+                    </div>
+                    <input
+                      ref={assetsInputRef}
+                      accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+                      multiple
+                      className="hidden"
+                      type="file"
+                      onChange={(e) => {
+                        if (e.target.files) handleAssetFiles(e.target.files);
+                        e.target.value = "";
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Descrição adicional (opcional) */}
+              <div data-field-id="descricao_adicional" className={`flex flex-col gap-1 campo-com-info ${mobileActiveCategory && mobileActiveCategory !== "estilo" ? "max-lg:hidden" : ""}`}>
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="descricao_adicional" className="flex items-center gap-1.5 text-sm font-semibold text-white">
+                    <span>Descrição adicional (opcional)</span>
+                    <span className="relative inline-flex items-center">
+                      <button
+                        type="button"
+                        data-field-info=""
+                        aria-label="Mais informações Descrição adicional (opcional)"
+                        aria-expanded={showDescInfo}
+                        onClick={() => setShowDescInfo(!showDescInfo)}
+                        className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 cursor-pointer"
+                        style={{ color: "rgb(139, 92, 246)" }}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-info h-3.5 w-3.5" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+                      </button>
+                    </span>
+                  </label>
+                  <div className="group relative">
+                    <textarea
+                      id="descricao_adicional"
+                      rows={2}
+                      value={additionalDescription}
+                      onChange={(e) => setAdditionalDescription(e.target.value)}
+                      placeholder="Instruções extras ou contexto. Ex: 'coloque o sujeito em pé com o logo no peito'..."
+                      className="w-full rounded-2xl pb-glass-input px-4 py-3 pb-8 text-sm resize-none min-h-[80px] transition-colors disabled:cursor-not-allowed disabled:opacity-50 text-white"
+                      style={{ height: "85.6px" }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setIsExpandedTextarea(true)}
+                      className="absolute bottom-2 right-2 rounded-md p-1 text-zinc-600 transition-all opacity-0 group-hover:opacity-100 focus:opacity-100 hover:bg-white/5 hover:text-zinc-300 disabled:cursor-not-allowed disabled:opacity-0 cursor-pointer"
+                      title="Expandir editor"
+                      aria-haspopup="dialog"
+                      aria-expanded={isExpandedTextarea}
+                      data-state={isExpandedTextarea ? "open" : "closed"}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-maximize2 lucide-maximize-2 h-3.5 w-3.5" aria-hidden="true"><path d="M15 3h6v6"></path><path d="m21 3-7 7"></path><path d="m3 21 7-7"></path><path d="M9 21H3v-6"></path></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          
+          </div>
+
 
           {/* ── BOTÕES CONSTRUIR, DUPLICAR E RESETAR (DESKTOP) ── */}
           <div data-tour="form-actions" className="flex flex-col gap-6 max-lg:hidden">
@@ -3367,15 +4311,15 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
               if (mobileActiveCategory) {
                 setMobileActiveCategory(null);
               } else {
-                handleSelectMobileCategory("foto");
+                setMobileActiveCategory("foto");
               }
             }}
             className="lg:hidden flex w-full shrink-0 items-center justify-center py-0.5 text-zinc-500 transition-colors active:text-white cursor-pointer"
           >
             {mobileActiveCategory ? (
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-up h-5 w-5" aria-hidden="true"><path d="m18 15-6-6-6 6"></path></svg>
+              <ChevronUp className="h-5 w-5" />
             ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-down h-5 w-5" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+              <ChevronDown className="h-5 w-5" />
             )}
           </button>
 
@@ -3398,10 +4342,18 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                           className={`inline-flex h-7 max-w-[12rem] flex-none items-center justify-center gap-1.5 rounded-lg border px-2.5 text-[11px] font-semibold uppercase tracking-wide transition-colors duration-200 outline-none focus-visible:ring-2 focus-visible:ring-white/30 hover:bg-white/[0.06] cursor-pointer ${
                             tabs.length > 1 ? "pr-5" : ""
                           }`}
-                          style={{
-                            color: "rgb(139, 92, 246)",
-                            borderColor: "rgba(139, 92, 246, 0.333)",
-                          }}
+                          style={
+                            isActive
+                              ? {
+                                  color: "rgb(139, 92, 246)",
+                                  borderColor: "rgba(139, 92, 246, 0.4)",
+                                  backgroundColor: "rgba(139, 92, 246, 0.08)"
+                                }
+                              : {
+                                  color: "rgb(139, 92, 246)",
+                                  borderColor: "rgba(139, 92, 246, 0.333)"
+                                }
+                          }
                         >
                           {isActive && (
                             <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
@@ -3480,7 +4432,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                   className={`relative rounded-full px-5 py-2 text-xs font-semibold uppercase tracking-wider transition-all duration-200 max-lg:min-w-0 max-lg:flex-1 max-lg:truncate max-lg:px-1 max-lg:text-[10px] max-lg:tracking-normal cursor-pointer ${
                     activeViewMode === "builder" ? "text-white shadow-lg" : "text-zinc-500 hover:text-zinc-300"
                   }`}
-                  style={activeViewMode === "builder" ? { background: "linear-gradient(135deg, #8B5CF6, #8B5CF6cc)" } : {}}
+                  style={activeViewMode === "builder" ? { background: "linear-gradient(135deg, rgb(139, 92, 246), rgba(139, 92, 246, 0.8))" } : {}}
                 >
                   Builder
                 </button>
@@ -3492,7 +4444,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                   className={`relative rounded-full px-5 py-2 text-xs font-semibold uppercase tracking-wider transition-all duration-200 max-lg:min-w-0 max-lg:flex-1 max-lg:truncate max-lg:px-1 max-lg:text-[10px] max-lg:tracking-normal cursor-pointer ${
                     activeViewMode === "pinterest" ? "text-white shadow-lg" : "text-zinc-500 hover:text-zinc-300"
                   }`}
-                  style={activeViewMode === "pinterest" ? { background: "linear-gradient(135deg, #8B5CF6, #8B5CF6cc)" } : {}}
+                  style={activeViewMode === "pinterest" ? { background: "linear-gradient(135deg, rgb(139, 92, 246), rgba(139, 92, 246, 0.8))" } : {}}
                 >
                   Pinterest
                 </button>
@@ -3504,7 +4456,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                   className={`relative rounded-full px-5 py-2 text-xs font-semibold uppercase tracking-wider transition-all duration-200 max-lg:min-w-0 max-lg:flex-1 max-lg:truncate max-lg:px-1 max-lg:text-[10px] max-lg:tracking-normal cursor-pointer ${
                     activeViewMode === "comunidade" ? "text-white shadow-lg" : "text-zinc-500 hover:text-zinc-300"
                   }`}
-                  style={activeViewMode === "comunidade" ? { background: "linear-gradient(135deg, #8B5CF6, #8B5CF6cc)" } : {}}
+                  style={activeViewMode === "comunidade" ? { background: "linear-gradient(135deg, rgb(139, 92, 246), rgba(139, 92, 246, 0.8))" } : {}}
                 >
                   Comunidade
                 </button>
@@ -3516,7 +4468,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                   className={`relative rounded-full px-5 py-2 text-xs font-semibold uppercase tracking-wider transition-all duration-200 max-lg:min-w-0 max-lg:flex-1 max-lg:truncate max-lg:px-1 max-lg:text-[10px] max-lg:tracking-normal cursor-pointer ${
                     activeViewMode === "galeria" ? "text-white shadow-lg" : "text-zinc-500 hover:text-zinc-300"
                   }`}
-                  style={activeViewMode === "galeria" ? { background: "linear-gradient(135deg, #8B5CF6, #8B5CF6cc)" } : {}}
+                  style={activeViewMode === "galeria" ? { background: "linear-gradient(135deg, rgb(139, 92, 246), rgba(139, 92, 246, 0.8))" } : {}}
                 >
                   Galeria
                 </button>
@@ -3542,18 +4494,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
 
           {/* ── ÁREA CENTRAL (BUILDER / PINTEREST / COMUNIDADE / GALERIA) ── */}
           <div className={`relative flex flex-1 min-h-0 flex-row overflow-hidden ${mobileActiveCategory ? "max-lg:hidden" : ""}`}>
-            {(isManagingSujeitos || isManagingReferencias || isManagingAssets) && (
-              <div className="relative flex flex-1 min-h-0 flex-col overflow-hidden bg-[#07050d] border-l border-white/5 animate-in fade-in duration-200">
-                <ProjetosWorkspace
-                  compacto={true}
-                  aoEscolher={(asset) => {
-                    handleSelectAssetFromWorkspace(asset.url, asset.name);
-                  }}
-                />
-              </div>
-            )}
-
-            {!(isManagingSujeitos || isManagingReferencias || isManagingAssets) && activeViewMode === "builder" && (
+            {activeViewMode === "builder" && (
               <>
                 <div className="relative flex flex-1 min-h-0 flex-col items-center justify-center overflow-hidden">
                   <div className="flex items-center justify-center overflow-hidden h-full w-full">
@@ -3580,20 +4521,10 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-ellipsis lucide-more-horizontal h-4 w-4" aria-hidden="true"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
                             </button>
                             {isProcessing ? (
-                              <div className="relative flex h-full min-h-0 min-w-0 flex-1 overflow-hidden items-center justify-center p-3 pb-28 sm:pb-32 animate-in fade-in zoom-in-95 duration-300">
-                                <div
-                                  className={`relative flex items-center justify-center h-full max-h-[72vh] sm:max-h-[78vh] w-auto ${
-                                    dimension === "9:16" ? "aspect-[9/16]" : dimension === "16:9" ? "aspect-[16/9]" : dimension === "1:1" ? "aspect-square" : "aspect-[4/5]"
-                                  } max-w-full rounded-2xl overflow-hidden db-generating-card transition-all duration-300`}
-                                  style={{ minWidth: "min(320px, 90vw)", minHeight: "340px" }}
-                                >
-                                  <GenerationLoadingCanvas
-                                    className="w-full h-full"
-                                    agentColor="#8b5cf6"
-                                    subMessage="REF Builder replicando estilo da referência com seu sujeito"
-                                  />
-                                </div>
-                              </div>
+                              <GenerationLoadingCanvas
+                                agentColor="#ffffff"
+                                subMessage="REF Builder replicando estilo da referência com seu sujeito"
+                              />
                             ) : generatedImage ? (
                             
                               <>
@@ -5683,6 +6614,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
           className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8"
           style={{ background: "linear-gradient(to left, rgba(10, 7, 25, 0.92), transparent)" }}
         />
+
         <div
           role="tablist"
           aria-label="Categorias do agente"
@@ -5710,28 +6642,47 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
             </span>
           </button>
 
-          <span aria-hidden="true" className="mx-1 my-2 w-px shrink-0 self-stretch bg-white/10"></span>
+          <span aria-hidden="true" className="mx-1 my-2 w-px shrink-0 self-stretch bg-white/10" />
 
           {/* Foto */}
           <button
             type="button"
             role="tab"
             aria-selected={mobileActiveCategory === "foto"}
+            aria-current={mobileActiveCategory === "foto" ? "true" : undefined}
             onClick={() => handleSelectMobileCategory("foto")}
             className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
               mobileActiveCategory === "foto" ? "text-white" : "text-zinc-500 hover:text-zinc-300"
             }`}
           >
-            <span className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
-              mobileActiveCategory === "foto" ? "bg-white/[0.12] ring-1 ring-white/20" : "group-hover:bg-white/[0.06]"
-            }`}>
+            <span
+              className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
+                mobileActiveCategory === "foto" ? "" : "group-hover:bg-white/[0.06]"
+              }`}
+              style={mobileActiveCategory === "foto" ? { backgroundColor: "rgba(139, 92, 246, 0.15)" } : undefined}
+            >
               <span className="relative">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-image h-[22px] w-[22px]" aria-hidden="true">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="lucide lucide-image h-[22px] w-[22px]"
+                  aria-hidden="true"
+                  style={mobileActiveCategory === "foto" ? { color: "rgb(139, 92, 246)" } : undefined}
+                >
                   <rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect>
                   <circle cx="9" cy="9" r="2"></circle>
                   <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
                 </svg>
-                <span aria-hidden="true" className="absolute -right-1.5 -top-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: "rgb(139, 92, 246)" }}></span>
+                {mobileActiveCategory !== "foto" && (
+                  <span aria-hidden="true" className="absolute -right-1.5 -top-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: "rgb(139, 92, 246)" }} />
+                )}
               </span>
             </span>
             <span className="whitespace-nowrap text-[10px] font-medium leading-none">
@@ -5744,22 +6695,41 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
             type="button"
             role="tab"
             aria-selected={mobileActiveCategory === "estilo"}
+            aria-current={mobileActiveCategory === "estilo" ? "true" : undefined}
             onClick={() => handleSelectMobileCategory("estilo")}
             className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
               mobileActiveCategory === "estilo" ? "text-white" : "text-zinc-500 hover:text-zinc-300"
             }`}
           >
-            <span className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
-              mobileActiveCategory === "estilo" ? "bg-white/[0.12] ring-1 ring-white/20" : "group-hover:bg-white/[0.06]"
-            }`}>
+            <span
+              className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
+                mobileActiveCategory === "estilo" ? "" : "group-hover:bg-white/[0.06]"
+              }`}
+              style={mobileActiveCategory === "estilo" ? { backgroundColor: "rgba(139, 92, 246, 0.15)" } : undefined}
+            >
               <span className="relative">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-sparkles lucide-stars h-[22px] w-[22px]" aria-hidden="true">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="lucide lucide-sparkles lucide-stars h-[22px] w-[22px]"
+                  aria-hidden="true"
+                  style={mobileActiveCategory === "estilo" ? { color: "rgb(139, 92, 246)" } : undefined}
+                >
                   <path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"></path>
                   <path d="M20 2v4"></path>
                   <path d="M22 4h-4"></path>
                   <circle cx="4" cy="20" r="2"></circle>
                 </svg>
-                <span aria-hidden="true" className="absolute -right-1.5 -top-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: "rgb(139, 92, 246)" }}></span>
+                {mobileActiveCategory !== "estilo" && (
+                  <span aria-hidden="true" className="absolute -right-1.5 -top-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: "rgb(139, 92, 246)" }} />
+                )}
               </span>
             </span>
             <span className="whitespace-nowrap text-[10px] font-medium leading-none">
@@ -5772,16 +6742,33 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
             type="button"
             role="tab"
             aria-selected={mobileActiveCategory === "saida"}
+            aria-current={mobileActiveCategory === "saida" ? "true" : undefined}
             onClick={() => handleSelectMobileCategory("saida")}
             className={`group flex min-h-[56px] shrink-0 snap-start flex-col items-center justify-center gap-1 px-2.5 py-1 transition-transform duration-100 ease-out active:scale-95 cursor-pointer ${
               mobileActiveCategory === "saida" ? "text-white" : "text-zinc-500 hover:text-zinc-300"
             }`}
           >
-            <span className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
-              mobileActiveCategory === "saida" ? "bg-white/[0.12] ring-1 ring-white/20" : "group-hover:bg-white/[0.06]"
-            }`}>
+            <span
+              className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
+                mobileActiveCategory === "saida" ? "" : "group-hover:bg-white/[0.06]"
+              }`}
+              style={mobileActiveCategory === "saida" ? { backgroundColor: "rgba(139, 92, 246, 0.15)" } : undefined}
+            >
               <span className="relative">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-sliders-horizontal h-[22px] w-[22px]" aria-hidden="true">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="lucide lucide-sliders-horizontal h-[22px] w-[22px]"
+                  aria-hidden="true"
+                  style={mobileActiveCategory === "saida" ? { color: "rgb(139, 92, 246)" } : undefined}
+                >
                   <path d="M10 5H3"></path>
                   <path d="M12 19H3"></path>
                   <path d="M14 3v4"></path>
@@ -5792,7 +6779,9 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                   <path d="M8 10v4"></path>
                   <path d="M8 12H3"></path>
                 </svg>
-                <span aria-hidden="true" className="absolute -right-1.5 -top-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: "rgb(139, 92, 246)" }}></span>
+                {mobileActiveCategory !== "saida" && (
+                  <span aria-hidden="true" className="absolute -right-1.5 -top-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: "rgb(139, 92, 246)" }} />
+                )}
               </span>
             </span>
             <span className="whitespace-nowrap text-[10px] font-medium leading-none">
@@ -5800,7 +6789,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
             </span>
           </button>
 
-          <span aria-hidden="true" className="mx-1 my-2 w-px shrink-0 self-stretch bg-white/10"></span>
+          <span aria-hidden="true" className="mx-1 my-2 w-px shrink-0 self-stretch bg-white/10" />
 
           {/* Construir */}
           <button

@@ -9776,57 +9776,77 @@ MANDATORY REFORMATTING RULES:
         if (isGraphicCardOrFlyer) {
           console.log("[api/gerar] === REF BUILDER GRAPHIC DESIGN & COMMERCIAL AD MASTER ENGINE (8K) ACTIVATED ===");
           const userNotes = (req.body.additionalPrompt || promptTraduzido || "").trim();
-          fullPrompt = `=== REF MASTER GRAPHIC DESIGN & COMMERCIAL ADVERTISING DIRECTIVE (8K) ===
+          fullPrompt = `=== REF MASTER GRAPHIC DESIGN, FLYER & VISUAL CLONING DIRECTIVE (8K) ===
 [ROLE & EXPERTISE]
-You are an elite Creative Director and World-Class Commercial Graphic Designer executing an award-winning, agency-grade commercial advertising post and marketing card layout.
-Simulate high-end studio commercial product photography seamlessly integrated with vector-sharp typographic hierarchy, clean geometric framing, and pristine luxury brand art direction.
+You are a World-Class Creative Director and Master Graphic Designer executing an agency-grade flyer, poster, social media card, or commercial marketing visual.
 
-[GRAPHIC ARCHITECTURE & COMPOSITION HIERARCHY]
-1. HERO PRODUCT & 3D FOCAL ELEMENT:
-   - Centerpiece product (e.g. stylish designer glasses, eyewear frames, or featured subject) rendered with authentic optical reflections on lenses, crisp frame textures (acetate, tortoise-shell, metal), and realistic soft contact shadows resting gracefully on a geometric platform, podium, or circular framing backdrop.
-   - Clean 3D depth layering with perfect visual separation between background, geometric cards/podiums, hero product, and foreground text.
+[UNIVERSAL DESIGN REFERENCE REPLICATION \u2014 GOVERNING LAW]
+Look at the attached Design Layout & Style Inspiration Reference:
+1. REPLICATE THE ENVIRONMENT, BACKGROUND & ATMOSPHERE:
+   - Extract and mirror the authentic background environment from the Design Reference (e.g. cathedral basilica / church interior with glowing arches and divine stained-glass lighting, concert stage, neon city, nature, or studio).
+   - Replicate the exact color grading, atmospheric lighting beams, and artistic depth of the reference.
+   - ABSOLUTE PROHIBITION OF PODIUMS: NEVER generate modern 3D geometric platforms, podiums, cubes, or pedestals unless the reference itself has one or the user explicitly asks for a product podium!
+   - If the reference features an ornate decorative bottom element (like a golden baroque altar border, floral garland, or wave), replicate that decorative bottom frame naturally.
 
-2. TYPOGRAPHIC MASTERY & VECTOR CLARITY:
-   - HEADLINE / HEADER: Dominant, bold, modern geometric sans-serif typography (like Montserrat, Inter, Poppins, Outfit) with high contrast. Use elegant pill badges, rounded container buttons, or highlight ribbons for key phrases.
-   - ORGANIZED CONTENT BLOCKS: Group procedure checklists, bullet points, conditions, dates, and locations into clean, beautifully spaced graphic blocks with modern checkmark icons (\u2714), elegant dividers, or card badges.
-   - FOOTER / BRANDING BANNER: A cohesive, elegant curved or structured footer banner in deep rich brand navy (#0F1E36) featuring:
-     * Location pin icon with address.
-     * Brand logo / mark ("\xD3tica Progresso").
-     * WhatsApp / contact icon with phone number and call to action.
+2. COMPOSITION & SUBJECT PLACEMENT:
+   - Place the main subject(s) in the exact prominent position indicated by the Design Reference (e.g. centered, elevated, dignified).
+   - If the subject is a person (or people), integrate them naturally into the scene's lighting, depth, and sacred/editorial atmosphere.
 
-3. SACRED SAFE MARGINS & VISUAL BREATHING ROOM (RESPIRO):
-   - TOP MARGIN: Minimum 16% safe headroom from top border (never glued to top).
-   - BOTTOM MARGIN: Minimum 16% safe footroom from bottom border (never glued to bottom).
-   - SIDES: Minimum 10% padding. Zero elements touching or glued to canvas edges. Everything floats with luxury breathing space.
+[100% REAL BIOMETRIC IDENTITY LOCK (SWAP SLOT)]
+Look at the attached Main Subject Real Identity Reference:
+1. FAITHFUL HUMAN BIOMETRICS:
+   - Replicate 100% of the exact faces, facial geometry, expressions, eye shape, nose, mouth, authentic skin tone, and hair of the person/people in the Subject image.
+   - The person must look identical to their real photo. Real biological human skin texture with 3-layer subsurface scattering and micro-pores.
+   - ZERO waxy plastic sheen, ZERO cartoon or anime smoothing, ZERO caricature.
 
-4. BRAND COLOR PALETTE LOCK:
-   - Primary Deep Navy Blue: #0F1E36 (rich, authoritative background and footer panels).
-   - Pure Crisp White: #FFFFFF (high-contrast headlines, icons, clean surface areas).
-   - Luxury Gold Accent: #CCA038 (badges, checkmarks, highlights, CTA accents).
+[STRICT TYPOGRAPHIC PURGE & ZERO TEXT MIXING LAW]
+1. COMPLETE PURGE OF OLD REFERENCE TEXT:
+   - All written text, words, headlines, slogans, dates, times, phone numbers, addresses, and details inside the Design Reference image are TEMPORARY DUMMY PLACEHOLDERS.
+   - You MUST 100% ERASE AND PURGE all text from the reference image! NEVER copy, borrow, or carry over any word from the reference image into the new generation!
+2. RENDER ONLY THE USER'S EXPLICIT TEXT REQUESTS:
+   - Render ONLY AND EXCLUSIVELY the exact text phrases explicitly provided by the user in [USER CUSTOM SPECIFICATIONS & CONTEXT].
+   - Map each requested text item into the corresponding visual zone of the Design Reference:
+     * Headlines map to the primary large title zone of the reference.
+     * Subheaders, quotes, and badges map to the supporting typographic zones of the reference.
+     * Dates, times, and locations map to the logistical/footer details zone of the reference.
+   - Render ONLY those exact lines, arranged with high-contrast vector-sharp typography matching the elegant fonts (serif, display, script, or modern sans) of the reference!
+   - RESPECT ALL NEGATIVE TEXT COMMANDS: If the user says "sem whatsapp, sem instagram", do NOT render any WhatsApp number or Instagram handle! If the user says "n\xE3o colocar coroa", do NOT put any crown!
+   - ABSOLUTELY DO NOT invent extra words, do NOT hallucinate fake phone numbers, fake checklists, or unrequested text.
+   - Do NOT duplicate lines of text.
 
-5. CRISP VECTOR TYPOGRAPHY & ZERO DIFFUSION BLUR (8K MASTER FIDELITY):
-   - SOLID HIGH-CONTRAST VECTOR GLYPHS: Render all typography with 100% solid, opaque fill and razor-sharp, hard pixel-perfect boundaries.
-   - Letters must look like Illustrator vector graphics overlaid with supreme precision, NOT soft airbrushed paint.
-   - ZERO fuzzy diffusion halos, ZERO soft glow bleed around letter outlines, ZERO double strokes.
-   - High luminance contrast between text and background: white (#FFFFFF) and gold (#CCA038) text placed strictly over solid dark navy background (#0F1E36) or dedicated container cards so letters are completely legible and pin-sharp under 100% zoom.
-   - Brazilian Portuguese text rendered 100% faithfully as requested without translating or hallucinating unrequested words.
+[DYNAMIC REFERENCE REVERSE-ENGINEERING & 1:1 SPATIAL MIRRORING]
+You MUST NOT follow any rigid generic template or hardcoded layout! Instead, deeply analyze the attached Design Reference image to understand its unique visual balance, hierarchy, and spatial arrangement:
+1. SUBJECT POSITION & FRAMING:
+   - Analyze WHERE and HOW the main subject is placed in the Design Reference (e.g. centered, elevated, left-aligned, right-aligned, bust portrait, or full-length). Place the new subject in that exact corresponding position, scale, and framing.
+2. LOGO POSITION & PROPORTION:
+   - Analyze WHERE the logo or brand emblem is located in the Design Reference (e.g. bottom-left footer, top-left corner, top-right corner, or centered). Embed the user's brand logo in that EXACT corresponding position and relative scale. NEVER force the logo to a fixed arbitrary corner!
+3. TYPOGRAPHY ZONES & HIERARCHY:
+   - Observe where the Design Reference places its main headline (top, middle, over the subject, or bottom). Replicate that exact spatial placement and typographic styling for the user's primary headline.
+   - Replicate the layout of secondary text blocks, quotes, and badges (e.g. pill badges, script subtitles) in the same spatial zones where the reference placed them.
+4. SECONDARY DETAILS & ICONS:
+   - Look at how the Design Reference groups logistical details and icons (e.g. whether it uses a dark footer bar, separate columns, rounded boxes, or floating tags). Mirror that exact design structure.
+   - If icons (calendars, clocks, location pins, broadcast badges) are requested, place each icon neatly integrated next to its respective text in the layout, strictly following the design language of the reference. NEVER scatter icons randomly across the subject's face or body.
+5. DESIGN HARMONY & REASONING:
+   - Think like a master art director: evaluate the reference's composition and determine the optimal, most faithful way to assemble the user's elements so the resulting artwork looks indistinguishable from the agency style of the reference flyer!
+
+
 
 ${userNotes ? `[USER CUSTOM SPECIFICATIONS & CONTEXT]
 ${userNotes}` : ""}
 
 [NEGATIVE CONSTRAINTS]
-blurry, low resolution, soft focus, out of focus, motion blur, plastic skin, airbrushed, cartoon, anime, 3D model, messy layout, overlapping text, illegible font, unrequested English words, missing text, cut-off borders, glued-to-edge text.`;
-          expandedSystemInstruction = `You are an elite commercial graphic designer and art director. You execute pristine advertising posters, social media cards, and commercial marketing layouts with vector-sharp typographic precision and commercial studio product photography.
+podium, geometric platform, 3D display cube, pedestal, blurry, low resolution, soft focus, out of focus, motion blur, plastic skin, airbrushed, cartoon, anime, 3D model, messy layout, overlapping text, illegible font, unrequested English words, missing text, cut-off borders, glued-to-edge text, unrequested old text from reference, crown, whatsapp icon, instagram handle.`;
+          expandedSystemInstruction = `You are an elite commercial graphic designer and art director. You execute pristine advertising posters, religious event flyers, social media cards, and commercial marketing layouts with vector-sharp typographic precision.
 RULES:
-1. RENDER COMPLETE GRAPHIC DESIGN CARD: Generate the full advertising card with clean typography, headlines, checklist blocks, hero product with studio lighting, and elegant footer banner with icons.
-2. SACRED SAFE MARGINS: Maintain at least 16% to 20% safe breathing room from top and bottom borders.
-3. BRAZILIAN PORTUGUESE ONLY: Render all text exactly in Brazilian Portuguese as provided.
-4. VECTOR SHARPNESS: Every letter, number, and icon must be crisp, high contrast, and perfectly legible.`;
+1. DYNAMIC REFERENCE ANALYSIS & REPLICATION: Visually analyze the Design Reference to understand its unique composition and layout. Replicate the environment, color palette, lighting mood, and composition grid from the Design Reference. Position the logo, titles, subject, and badges in the corresponding spatial zones where the reference placed them, without applying any fixed arbitrary template. NO modern 3D podiums or plastic cubes on non-product flyers.
+2. STRICT TEXT PURGE: Completely erase all old text from the reference image. Render ONLY the text explicitly requested by the user. Respect all negative constraints (e.g. no crown, no whatsapp, no instagram).
+3. REAL BIOMETRIC IDENTITY: Keep the exact facial identity, skin tone, hair, and clothing of the person in the Subject image. Authentic human realism.
+4. BRAZILIAN PORTUGUESE ONLY: Render all requested text exactly in Brazilian Portuguese as provided.`;
           parts.push({ text: fullPrompt });
           if (base64DoSujeito) {
             addImagePart(
               base64DoSujeito,
-              "HERO PRODUCT / MAIN SUBJECT REFERENCE \u2014 Faithfully feature this exact product/subject as the centerpiece with realistic lighting, shadows, and reflections."
+              "MAIN SUBJECT REAL IDENTITY REFERENCE (SWAP SLOT) \u2014 Replicate 100% of the authentic facial identity, hair, skin tone, and features of the person/people in this image. Keep their real faces identical to the photo."
             );
           }
           if (Array.isArray(sujeitosBase64List)) {
@@ -9844,7 +9864,7 @@ RULES:
               if (ref) {
                 addImagePart(
                   ref,
-                  `DESIGN LAYOUT & STYLE INSPIRATION REFERENCE #${idx + 1} \u2014 Replicate this layout hierarchy, composition grid, geometric cards, pill badges, and clean studio aesthetic. Replace text with the new requested text.`
+                  `DESIGN LAYOUT & STYLE INSPIRATION REFERENCE #${idx + 1} \u2014 Replicate this visual aesthetic, colors, lighting mood, and composition grid. IMPORTANT: ERASE and IGNORE all text in this image; render ONLY the text explicitly requested by the user.`
                 );
               }
             });
@@ -9852,13 +9872,13 @@ RULES:
           if (designRefBase64) {
             addImagePart(
               designRefBase64,
-              "PRIMARY DESIGN LAYOUT REFERENCE \u2014 Replicate this graphic composition, spatial layout, badges, and hierarchy."
+              "PRIMARY DESIGN LAYOUT & STYLE INSPIRATION REFERENCE \u2014 Replicate this graphic composition, spatial layout, lighting, and style. IMPORTANT: ERASE and IGNORE all text in this image; render ONLY the text explicitly requested by the user."
             );
           }
           if (logoBase64) {
             addImagePart(
               logoBase64,
-              "BRAND LOGO REFERENCE \u2014 Embed this brand logo cleanly into the layout or footer banner."
+              "BRAND LOGO REFERENCE \u2014 Embed this brand logo into the artwork, positioning it in the exact corresponding location where the logo or brand mark is located in the Design Reference image (e.g. bottom-left, top-corner, or header), maintaining authentic proportions and clean integration without obscuring the subject."
             );
           }
           if (Array.isArray(logosList)) {

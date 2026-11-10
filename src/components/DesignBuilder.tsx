@@ -2202,28 +2202,12 @@ const hasFotoDot = Boolean(
                 )}
               </div>
             ) : (store.isGenerating || isGenerating) ? (
-              <div className="relative flex h-full min-h-0 min-w-0 flex-1 overflow-hidden items-center justify-center p-3 pb-28 sm:pb-32 animate-in fade-in zoom-in-95 duration-300">
-                <div
-                  className={`relative flex items-center justify-center h-full max-h-[72vh] sm:max-h-[78vh] w-auto ${
-                    store.dimensao === "9:16"
-                      ? "aspect-[9/16]"
-                      : store.dimensao === "16:9"
-                      ? "aspect-[16/9]"
-                      : store.dimensao === "1:1"
-                      ? "aspect-square"
-                      : "aspect-[4/5]"
-                  } max-w-full rounded-2xl overflow-hidden db-generating-card transition-all duration-300`}
-                  style={{ minWidth: "min(320px, 90vw)", minHeight: "340px" }}
-                >
-                  <GenerationLoadingCanvas
-                    className="w-full h-full"
-                    agentColor={isOrion ? "#ffd500" : "#a78bfa"}
-                    elapsedSeconds={elapsedSeconds}
-                    message={statusMessage}
-                    subMessage={isOrion ? "Órion Pro construindo anúncio de alta conversão" : "Zion Design sintetizando arte fidedigna"}
-                  />
-                </div>
-              </div>
+              <GenerationLoadingCanvas
+                agentColor={isOrion ? "#ffd500" : "#ffffff"}
+                elapsedSeconds={elapsedSeconds}
+                message={statusMessage}
+                subMessage={isOrion ? "Órion Pro construindo anúncio de alta conversão" : "Design Builder sintetizando arte fidedigna"}
+              />
             ) : activeImage ? (
               /* ESTADO 2: IMAGEM GERADA ATIVA */
               <div className="relative flex h-full min-h-0 min-w-0 flex-1 overflow-hidden flex-col items-center justify-center">

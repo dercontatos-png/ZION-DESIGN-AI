@@ -99,7 +99,7 @@ interface GenerationLoadingCanvasProps {
  */
 export const GenerationLoadingCanvas: React.FC<GenerationLoadingCanvasProps> = ({
   className = "",
-  agentColor = "#a78bfa",
+  agentColor = "#ffffff",
   elapsedSeconds: externalElapsed,
   message,
   subMessage
@@ -138,137 +138,34 @@ export const GenerationLoadingCanvas: React.FC<GenerationLoadingCanvasProps> = (
   const currentStepText = message || (isAlmostDone ? "Quase lá, finalizando..." : OFFICIAL_STEPS[stepIndex]);
 
   return (
-    <div
-      className={`relative inset-0 flex h-full w-full flex-col items-center justify-center overflow-hidden rounded-2xl select-none border border-white/[0.06] shadow-2xl shadow-black/50 ${className}`}
-      style={{
-        backgroundColor: "#0c0a15"
-      }}
-    >
-      {/* 1. Fundo Radial Gradiente com Respiração Oficial (breathe 4s) */}
-      <div
-        className="pointer-events-none absolute inset-0 db-breathe-bg"
-        style={{
-          background:
-            "radial-gradient(ellipse at 50% 50%, rgba(91,33,182,0.3) 0%, rgba(15,10,30,0.95) 70%)"
-        }}
-      />
-
-      {/* 2. Conteúdo Central Oficial do Design Builder */}
-      <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-6">
-        {/* Glow Central + Logo Animado */}
-        <div className="relative flex items-center justify-center">
-          <div className="absolute h-32 w-32 rounded-full bg-violet-500/20 blur-3xl animate-pulse" />
-          <AnimatedLogo color="#ffffff" size={120} />
-        </div>
-
-        {/* Texto da Etapa Atual com Animação Oficial */}
-        <div className="flex flex-col items-center gap-2 px-4 text-center">
-          <p
-            className={`text-sm font-semibold tracking-wide text-white/80 transition-all duration-500 ${
-              isFading ? "translate-y-2 opacity-0" : "translate-y-0 opacity-100"
-            }`}
-          >
-            {currentStepText}
-          </p>
-
-          {/* Submensagem sutil caso o usuário tenha um status específico */}
-          {subMessage && (
-            <span className="text-[11px] font-medium tracking-wide text-white/40">
-              {subMessage}
-            </span>
-          )}
-        </div>
+    <div className={`absolute inset-0 z-10 flex flex-col items-center justify-center gap-6 ${className}`}>
+      {/* Glow Central + Logo Animado (100% Idêntico ao app.designbuilder.co) */}
+      <div className="relative flex items-center justify-center">
+        <div className="absolute h-32 w-32 rounded-full bg-violet-500/20 blur-3xl animate-pulse" />
+        <AnimatedLogo color={agentColor || "#ffffff"} size={120} />
       </div>
 
-      {/* Estilos CSS Oficiais do Design Builder (0n49d5t_bv61z.js / 0jne17lrb1-9y.js) */}
-      <style>{`
-        .db-logo-svg {
-          width: 100%;
-          height: 100%;
-          display: block;
-        }
-        .db-logo-svg .db-apagada {
-          fill: var(--db-fg, #ffffff);
-          opacity: 0.16;
-        }
-        .db-logo-svg .db-acesa {
-          fill: var(--db-fg, #ffffff);
-          clip-path: inset(100% 0 0);
-          animation: db-enche var(--db-cycle, 3.2s) cubic-bezier(0.45, 0, 0.25, 1) infinite;
-        }
-        .db-logo-svg .db-luz {
-          opacity: 0;
-          animation: db-luz var(--db-cycle, 3.2s) cubic-bezier(0.5, 0, 0.4, 1) infinite;
-        }
-        .db-logo-svg .db-respiro {
-          transform-box: fill-box;
-          transform-origin: 50%;
-          animation: db-respiro var(--db-cycle, 3.2s) ease-in-out infinite;
-        }
-        .db-breathe-bg {
-          animation: breathe 4s ease-in-out infinite;
-        }
+      {/* Texto da Etapa Atual com Animação Oficial */}
+      <div className="flex flex-col items-center gap-2 px-4 text-center">
+        <p
+          className={`text-sm font-semibold tracking-wide text-white/80 transition-all duration-500 ${
+            isFading ? "translate-y-2 opacity-0" : "translate-y-0 opacity-100"
+          }`}
+        >
+          {currentStepText}
+        </p>
 
-        @keyframes breathe {
-          0%, 100% {
-            transform: scale(1);
-            opacity: 0.8;
-          }
-          50% {
-            transform: scale(1.08);
-            opacity: 1;
-          }
-        }
-
-        @keyframes db-enche {
-          0%, 5% {
-            clip-path: inset(100% 0 0);
-          }
-          45%, 88% {
-            clip-path: inset(0);
-          }
-          to {
-            clip-path: inset(100% 0 0);
-          }
-        }
-
-        @keyframes db-luz {
-          0%, 48% {
-            opacity: 0;
-            transform: translate(-120px);
-          }
-          52% {
-            opacity: 1;
-          }
-          76% {
-            opacity: 1;
-            transform: translate(430px);
-          }
-          80% {
-            opacity: 0;
-            transform: translate(450px);
-          }
-          to {
-            opacity: 0;
-            transform: translate(-120px);
-          }
-        }
-
-        @keyframes db-respiro {
-          0%, 42% {
-            transform: scale(0.97);
-          }
-          56%, 88% {
-            transform: scale(1);
-          }
-          to {
-            transform: scale(0.97);
-          }
-        }
-      `}</style>
+        {/* Submensagem sutil oficial */}
+        {subMessage && (
+          <span className="text-[11px] font-medium tracking-wide text-white/40">
+            {subMessage}
+          </span>
+        )}
+      </div>
     </div>
   );
 };
 
 export default GenerationLoadingCanvas;
+
 
