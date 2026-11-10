@@ -1025,7 +1025,8 @@ button:active:not(:disabled),
   animation: slideUpDrawer 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+/* Safe Area Utilities (1:1 Oficial app.designbuilder.co) */
 .pb-safe {
-  padding-bottom: max(1.25rem, env(safe-area-inset-bottom, 1.25rem));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
