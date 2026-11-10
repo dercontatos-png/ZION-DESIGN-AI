@@ -2018,7 +2018,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
         >
         <form onSubmit={(e) => { e.preventDefault(); handleBuild(); }} className="flex flex-col gap-6 lg:gap-12">
           {/* ── SEÇÃO 1: FOTO (100% IDÊNTICO AO HTML OFICIAL) ── */}
-          <div data-tour="form-sec-foto" className={mobileActiveCategory && mobileActiveCategory !== "foto" ? "max-lg:hidden" : ""}>
+          <div data-tour="form-sec-foto" className={mobileActiveCategory !== "foto" ? "max-lg:hidden" : ""}>
             <div
               data-state={isFotoOpen ? "open" : "closed"}
               data-slot="collapsible"
@@ -2047,17 +2047,775 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
               {isFotoOpen && (
                 <div data-state="open" data-slot="collapsible-content" className="overflow-hidden">
                   <div className="flex flex-col px-2 pb-5 pt-2 lg:px-4 lg:pb-6 lg:pt-3 gap-6 lg:gap-12">
-                    {/* Imagem Principal */}
-                    ${sujeitosCode}
+              <div data-field-id="sujeitos" data-tour="form-field-sujeitos" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
+                <div
+                  className={`flex flex-col gap-3 ${
+                    isManagingSujeitos
+                      ? "relative z-30 rounded-xl bg-[#0b0b0f] px-2 py-3 ring-1 ring-violet-500/40"
+                      : ""
+                  }`}
+                  data-image-field-id="sujeitos"
+                >
+                  <div className="flex min-w-0 items-center justify-between gap-2">
+                    <label className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-white">
+                      <span>Envie sua imagem principal</span>
+                      <span className="relative inline-flex items-center">
+                        <button
+                          type="button"
+                          data-field-info=""
+                          aria-label="Mais informações Envie sua imagem principal"
+                          aria-expanded={showSubjectInfo}
+                          onClick={() => setShowSubjectInfo(!showSubjectInfo)}
+                          className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 cursor-pointer"
+                          style={{ color: "rgb(139, 92, 246)" }}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-info h-3.5 w-3.5" aria-hidden="true">
+                            <circle cx="12" cy="12" r="10" />
+                            <path d="M12 16v-4" />
+                            <path d="M12 8h.01" />
+                          </svg>
+                        </button>
+                      </span>
+                    </label>
+                  </div>
 
-                    {/* Inspirações de Estilo */}
-                    ${referenciasCode}
+                  {showSubjectInfo && (
+                    <div className="text-xs text-zinc-400 bg-white/[0.04] p-2.5 rounded-lg border border-white/10">
+                      Envie a foto do sujeito ou modelo que será o foco da sua arte. Você pode adicionar mais fotos para enriquecer o contexto e orientar a IA sobre o que focar.
+                    </div>
+                  )}
 
-                    {/* Usar inspiração na construção da imagem */}
-                    ${sendStyleCode}
+                  {isManagingSujeitos ? (
+                    <div tabIndex={0} className="relative flex flex-col gap-2 rounded-lg p-2 -m-2 transition-colors outline-none">
+                      <input
+                        ref={managerSubjectInputRef}
+                        accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/svg+xml,.svg"
+                        multiple
+                        className="hidden"
+                        type="file"
+                        onChange={(e) => {
+                          if (e.target.files) handleSubjectFiles(e.target.files);
+                          e.target.value = "";
+                        }}
+                      />
+                      <div className="flex items-center justify-center w-full" role="group" aria-label="Gerenciar imagens — Envie sua imagem principal">
+                        <div className="relative flex flex-col bg-[#0b0b0f] w-full">
+                          <div className="flex">
+                            <div className="flex flex-col w-full">
+                              <div className="py-3 px-2">
+                                <button
+                                  type="button"
+                                  onClick={() => managerSubjectInputRef.current?.click()}
+                                  className="sub-area-entra mb-3 w-full rounded-xl border border-dashed px-3 py-5 text-center text-xs transition-colors border-white/15 text-zinc-500 hover:border-violet-500/50 hover:bg-violet-500/[0.05] hover:text-violet-300 cursor-pointer"
+                                  style={{ animationDelay: "0ms" }}
+                                >
+                                  Clique ou arraste para trazer mais
+                                </button>
 
-                    {/* Assets (opcional) */}
-                    ${assetsCode}
+                                <div className="space-y-2.5" data-testid="lista-de-imagens">
+                                  {subjectImages.map((imgItem, idx) => (
+                                    <div
+                                      key={imgItem.id || idx}
+                                      draggable
+                                      onDragStart={() => setDraggedSubjectIdx(idx)}
+                                      onDragOver={(e) => e.preventDefault()}
+                                      onDrop={() => handleDropSubjectReorder(idx)}
+                                      className="sub-area-entra rounded-xl border border-white/[0.08] bg-white/[0.02] p-2 transition-opacity"
+                                      style={{ animationDelay: `${55 * (idx + 1)}ms` }}
+                                    >
+                                      <div className="flex items-center gap-2.5">
+                                        <svg
+                                          xmlns="http://www.w3.org/2000/svg"
+                                          width="24"
+                                          height="24"
+                                          viewBox="0 0 24 24"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          strokeWidth="2"
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          className="lucide lucide-grip-vertical h-4 w-4 shrink-0 cursor-grab text-zinc-600 active:cursor-grabbing"
+                                          aria-hidden="true"
+                                        >
+                                          <circle cx="9" cy="12" r="1" />
+                                          <circle cx="9" cy="5" r="1" />
+                                          <circle cx="9" cy="19" r="1" />
+                                          <circle cx="15" cy="12" r="1" />
+                                          <circle cx="15" cy="5" r="1" />
+                                          <circle cx="15" cy="19" r="1" />
+                                        </svg>
+
+                                        <button
+                                          type="button"
+                                          aria-label={`Ampliar imagem ${idx + 1}`}
+                                          title="Ampliar imagem"
+                                          onClick={() => setLightboxImage(imgItem.url)}
+                                          className="relative shrink-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 cursor-pointer"
+                                        >
+                                          <img
+                                            alt={`imagem ${idx + 1}`}
+                                            className="h-14 w-14 rounded-lg border border-white/10 object-cover transition-colors hover:border-violet-500/60"
+                                            src={imgItem.url}
+                                          />
+                                          <span
+                                            aria-hidden="true"
+                                            className="absolute -left-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-violet-600 text-[9px] font-bold text-white shadow-md"
+                                          >
+                                            {idx + 1}
+                                          </span>
+                                        </button>
+
+                                        <button
+                                          type="button"
+                                          aria-label={`Recortar imagem ${idx + 1}`}
+                                          title="Recortar imagem"
+                                          onClick={() => openCropper(imgItem.url, "sujeito", idx)}
+                                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-violet-500/10 hover:text-violet-300 disabled:opacity-40 cursor-pointer"
+                                        >
+                                          <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            width="24"
+                                            height="24"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            className="lucide lucide-crop h-3.5 w-3.5"
+                                            aria-hidden="true"
+                                          >
+                                            <path d="M6 2v14a2 2 0 0 0 2 2h14" />
+                                            <path d="M18 22V8a2 2 0 0 0-2-2H2" />
+                                          </svg>
+                                        </button>
+
+                                        <div className="flex-1" />
+
+                                        <div className="flex shrink-0 items-center gap-1">
+                                          <button
+                                            type="button"
+                                            aria-label={`Remover imagem ${idx + 1}`}
+                                            title="Remover"
+                                            onClick={() => handleRemoveSubjectImage(idx)}
+                                            className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-red-500/10 hover:text-red-400 cursor-pointer"
+                                          >
+                                            <svg
+                                              xmlns="http://www.w3.org/2000/svg"
+                                              width="24"
+                                              height="24"
+                                              viewBox="0 0 24 24"
+                                              fill="none"
+                                              stroke="currentColor"
+                                              strokeWidth="2"
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                              className="lucide lucide-trash2 lucide-trash-2 h-3.5 w-3.5"
+                                              aria-hidden="true"
+                                            >
+                                              <path d="M10 11v6" />
+                                              <path d="M14 11v6" />
+                                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                                              <path d="M3 6h18" />
+                                              <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                            </svg>
+                                          </button>
+                                        </div>
+                                      </div>
+
+                                      <textarea
+                                        rows={2}
+                                        value={imgItem.desc || ""}
+                                        onChange={(e) => handleSubjectDescChange(idx, e.target.value)}
+                                        placeholder="Descreva o que quer extrair desta imagem (ex: 'foco no rosto', 'pegar pose e roupa')"
+                                        aria-label={`Descrição da imagem ${idx + 1}`}
+                                        className="mt-2 w-full resize-none rounded-xl border border-white/10 bg-zinc-950 px-3 py-2 text-xs leading-relaxed text-zinc-200 placeholder:text-zinc-600 focus:border-violet-500 focus:outline-none"
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() => setIsManagingSujeitos(false)}
+                                  className="sub-area-entra w-full rounded-xl bg-violet-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-violet-600/25 transition-colors hover:bg-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 mt-8 cursor-pointer"
+                                  style={{ animationDelay: "110ms" }}
+                                >
+                                  Concluir
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Visão Recolhida (100% fiel ao HTML oficial) */
+                    <div tabIndex={0} className="relative flex flex-col gap-2 rounded-lg p-2 -m-2 transition-colors outline-none">
+                      {subjectImages.length > 0 && (
+                        <div className="flex flex-col gap-2">
+                          {subjectImages.map((item, idx) => (
+                            <div key={item.id || idx} className="group flex items-center gap-2">
+                              <div className="relative shrink-0">
+                                <img
+                                  alt={`imagem ${idx + 1}`}
+                                  onClick={() => setLightboxImage(item.url)}
+                                  className="h-12 w-12 rounded-lg object-cover border border-white/10 cursor-pointer transition-all hover:border-violet-500/40 hover:ring-1 hover:ring-violet-500/20"
+                                  src={item.url}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveSubjectImage(idx)}
+                                  aria-label={`Remover imagem ${idx + 1}`}
+                                  title={`Remover imagem ${idx + 1}`}
+                                  className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-zinc-800 border border-white/10 text-zinc-300 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 max-lg:opacity-100 transition-opacity hover:bg-red-500 hover:text-white hover:border-red-500 z-10 cursor-pointer"
+                                >
+                                  ×
+                                </button>
+                                <button
+                                  type="button"
+                                  aria-label={`Recortar imagem ${idx + 1}`}
+                                  title={`Recortar imagem ${idx + 1}`}
+                                  onClick={() => openCropper(item.url, "sujeito", idx)}
+                                  className="absolute -bottom-1.5 -right-1.5 h-5 w-5 rounded-full bg-zinc-800 border border-white/10 text-zinc-300 flex items-center justify-center opacity-0 group-hover:opacity-100 max-lg:opacity-100 transition-opacity hover:bg-violet-600 hover:text-white hover:border-violet-500 z-10 disabled:opacity-40 cursor-pointer"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-crop h-2.5 w-2.5" aria-hidden="true"><path d="M6 2v14a2 2 0 0 0 2 2h14"></path><path d="M18 22V8a2 2 0 0 0-2-2H2"></path></svg>
+                                </button>
+                              </div>
+                              <input
+                                placeholder="Descreva o que quer extrair desta imagem (ex: 'foco no rosto', 'pegar pose e roupa')"
+                                className="flex-1 rounded-lg pb-glass-input px-3 py-2 text-xs transition-colors text-white"
+                                type="text"
+                                value={item.desc || ""}
+                                onChange={(e) => handleSubjectDescChange(idx, e.target.value)}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center rounded-lg border-2 border-dashed border-[rgba(139,92,246,0.20)] bg-[rgba(139,92,246,0.03)] transition-colors hover:border-[rgba(139,92,246,0.38)] h-10 gap-2 px-1">
+                          <div className="flex shrink-0 items-center gap-1" role="group" aria-label="Alinhamento do sujeito">
+                            <button
+                              type="button"
+                              aria-label="Sujeito à esquerda"
+                              aria-pressed={subjectPosition === "left"}
+                              title="Sujeito à esquerda"
+                              onClick={() => setSubjectPosition("left")}
+                              className={`flex h-7 w-7 items-center justify-center rounded-md border transition-colors cursor-pointer ${
+                                subjectPosition === "left"
+                                  ? "border-violet-500/60 bg-violet-500/25 text-violet-200"
+                                  : "border-white/10 bg-white/[0.04] text-zinc-500 hover:border-white/20 hover:text-zinc-300"
+                              }`}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-text-align-start h-3.5 w-3.5" aria-hidden="true"><path d="M21 5H3"></path><path d="M15 12H3"></path><path d="M17 19H3"></path></svg>
+                            </button>
+                            <button
+                              type="button"
+                              aria-label="Sujeito ao centro"
+                              aria-pressed={subjectPosition === "center"}
+                              title="Sujeito ao centro"
+                              onClick={() => setSubjectPosition("center")}
+                              className={`flex h-7 w-7 items-center justify-center rounded-md border transition-colors cursor-pointer ${
+                                subjectPosition === "center"
+                                  ? "border-violet-500/60 bg-violet-500/25 text-violet-200"
+                                  : "border-white/10 bg-white/[0.04] text-zinc-500 hover:border-white/20 hover:text-zinc-300"
+                              }`}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-text-align-center h-3.5 w-3.5" aria-hidden="true"><path d="M21 5H3"></path><path d="M17 12H7"></path><path d="M19 19H5"></path></svg>
+                            </button>
+                            <button
+                              type="button"
+                              aria-label="Sujeito à direita"
+                              aria-pressed={subjectPosition === "right"}
+                              title="Sujeito à direita"
+                              onClick={() => setSubjectPosition("right")}
+                              className={`flex h-7 w-7 items-center justify-center rounded-md border transition-colors cursor-pointer ${
+                                subjectPosition === "right"
+                                  ? "border-violet-500/60 bg-violet-500/25 text-violet-200"
+                                  : "border-white/10 bg-white/[0.04] text-zinc-500 hover:border-white/20 hover:text-zinc-300"
+                              }`}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-text-align-end h-3.5 w-3.5" aria-hidden="true"><path d="M21 5H3"></path><path d="M21 12H9"></path><path d="M21 19H7"></path></svg>
+                            </button>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => mainInputRef.current?.click()}
+                            className="flex min-w-0 flex-1 items-center justify-center gap-1.5 self-stretch text-xs text-[#5c5278] transition-colors hover:text-[#9d94bb] cursor-pointer"
+                          >
+                            <span className="text-base leading-none">+</span>
+                            <span className="truncate">Clique, arraste ou cole (Ctrl+V)</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setIsManagingSujeitos(true)}
+                            aria-label="Ajustar fotos e cena"
+                            title="Ajustar fotos e cena"
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-zinc-500 transition-colors hover:border-violet-500/30 hover:text-zinc-200 cursor-pointer"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-folder-open h-3.5 w-3.5" aria-hidden="true"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"></path></svg>
+                          </button>
+                        </div>
+                      </div>
+
+                      <input
+                        ref={mainInputRef}
+                        onChange={(e) => {
+                          if (e.target.files) handleSubjectFiles(e.target.files);
+                          e.target.value = "";
+                        }}
+                        accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+                        multiple
+                        className="hidden"
+                        type="file"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div data-field-id="referencias" data-tour="form-field-referencias" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
+                <div
+                  className={`flex flex-col gap-3 ${
+                    isManagingReferencias
+                      ? "relative z-30 rounded-xl bg-[#0b0b0f] px-2 py-3 ring-1 ring-violet-500/40"
+                      : ""
+                  }`}
+                  data-image-field-id="referencias"
+                >
+                  <div className="flex min-w-0 items-center justify-between gap-2">
+                    <label className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-white">
+                      <span>Inspirações de Estilo</span>
+                      <span className="relative inline-flex items-center">
+                        <button
+                          type="button"
+                          data-field-info=""
+                          aria-label="Mais informações Inspirações de Estilo"
+                          aria-expanded={showRefInfo}
+                          onClick={() => setShowRefInfo(!showRefInfo)}
+                          className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 cursor-pointer"
+                          style={{ color: "rgb(139, 92, 246)" }}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-info h-3.5 w-3.5"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+                        </button>
+                      </span>
+                    </label>
+
+                    {/* Switch: Usar na imagem */}
+                    <button
+                      type="button"
+                      aria-label={`Usar na imagem: ${useRefOnBuild ? "ativado" : "desativado"}`}
+                      aria-pressed={useRefOnBuild}
+                      title="Imagem"
+                      onClick={() => setUseRefOnBuild(!useRefOnBuild)}
+                      className="flex shrink-0 items-center gap-1.5 text-[10px] text-zinc-500 transition-colors hover:text-zinc-300 cursor-pointer"
+                    >
+                      <span>Usar na imagem</span>
+                      <span className={`relative h-4 w-7 rounded-full border transition-colors ${useRefOnBuild ? "border-violet-500/50 bg-violet-500/30" : "border-white/10 bg-white/5"}`}>
+                        <span className={`absolute top-0.5 h-2.5 w-2.5 rounded-full transition-all ${useRefOnBuild ? "left-3.5 bg-violet-300" : "left-0.5 bg-zinc-500"}`} />
+                      </span>
+                      <span className={`rounded-full border px-1.5 py-0.5 font-medium ${useRefOnBuild ? "border-violet-500/30 bg-violet-500/10 text-violet-300" : "border-white/10 bg-white/5 text-zinc-500"}`}>
+                        Imagem
+                      </span>
+                    </button>
+                  </div>
+
+                  {showRefInfo && (
+                    <div className="text-xs text-zinc-400 bg-white/[0.04] p-2.5 rounded-lg border border-white/10">
+                      Envie uma imagem de referência visual para guiar iluminação, composição estética e paleta de cores.
+                    </div>
+                  )}
+
+                  {isManagingReferencias ? (
+                    /* Visão Expandida do Gerenciador de Referências (100% idêntico ao HTML do usuário) */
+                    <div tabIndex={0} className="relative flex flex-col gap-2 rounded-lg p-2 -m-2 transition-colors outline-none">
+                      <input
+                        ref={managerRefInputRef}
+                        accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+                        multiple
+                        className="hidden"
+                        type="file"
+                        onChange={(e) => {
+                          if (e.target.files) handleRefFiles(e.target.files);
+                          e.target.value = "";
+                        }}
+                      />
+                      <div className="flex items-center justify-center w-full" role="group" aria-label="Gerenciar imagens — Referências de Estilo">
+                        <div className="relative flex flex-col bg-[#0b0b0f] w-full">
+                          <div className="flex">
+                            <div className="flex flex-col w-full">
+                              <div className="py-3 px-2">
+                                <button
+                                  type="button"
+                                  onClick={() => managerRefInputRef.current?.click()}
+                                  className="sub-area-entra mb-3 w-full rounded-xl border border-dashed px-3 py-5 text-center text-xs transition-colors border-white/15 text-zinc-500 hover:border-violet-500/50 hover:bg-violet-500/[0.05] hover:text-violet-300 cursor-pointer"
+                                  style={{ animationDelay: "0ms" }}
+                                >
+                                  Clique ou arraste para trazer mais
+                                </button>
+
+                                <div className="space-y-2.5" data-testid="lista-de-imagens">
+                                  {referenceImages.map((imgItem, idx) => (
+                                    <div
+                                      key={imgItem.id || idx}
+                                      draggable
+                                      onDragStart={() => setDraggedRefIdx(idx)}
+                                      onDragOver={(e) => e.preventDefault()}
+                                      onDrop={() => handleDropRefReorder(idx)}
+                                      className="sub-area-entra rounded-xl border border-white/[0.08] bg-white/[0.02] p-2 transition-opacity"
+                                      style={{ animationDelay: `${55 * (idx + 1)}ms` }}
+                                    >
+                                      <div className="flex items-center gap-2.5">
+                                        <svg
+                                          xmlns="http://www.w3.org/2000/svg"
+                                          width="24"
+                                          height="24"
+                                          viewBox="0 0 24 24"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          strokeWidth="2"
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          className="lucide lucide-grip-vertical h-4 w-4 shrink-0 cursor-grab text-zinc-600 active:cursor-grabbing"
+                                          aria-hidden="true"
+                                        >
+                                          <circle cx="9" cy="12" r="1" />
+                                          <circle cx="9" cy="5" r="1" />
+                                          <circle cx="9" cy="19" r="1" />
+                                          <circle cx="15" cy="12" r="1" />
+                                          <circle cx="15" cy="5" r="1" />
+                                          <circle cx="15" cy="19" r="1" />
+                                        </svg>
+
+                                        <button
+                                          type="button"
+                                          aria-label={`Ampliar imagem ${idx + 1}`}
+                                          title="Ampliar imagem"
+                                          onClick={() => setLightboxImage(imgItem.url)}
+                                          className="relative shrink-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 cursor-pointer"
+                                        >
+                                          <img
+                                            alt={`imagem ${idx + 1}`}
+                                            className="h-14 w-14 rounded-lg border border-white/10 object-cover transition-colors hover:border-violet-500/60"
+                                            src={imgItem.url}
+                                          />
+                                          <span
+                                            aria-hidden="true"
+                                            className="absolute -left-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-violet-600 text-[9px] font-bold text-white shadow-md"
+                                          >
+                                            {idx + 1}
+                                          </span>
+                                        </button>
+
+                                        <button
+                                          type="button"
+                                          aria-label={`Recortar imagem ${idx + 1}`}
+                                          title="Recortar imagem"
+                                          onClick={() => openCropper(imgItem.url, "referencia", idx)}
+                                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-violet-500/10 hover:text-violet-300 disabled:opacity-40 cursor-pointer"
+                                        >
+                                          <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            width="24"
+                                            height="24"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            className="lucide lucide-crop h-3.5 w-3.5"
+                                            aria-hidden="true"
+                                          >
+                                            <path d="M6 2v14a2 2 0 0 0 2 2h14" />
+                                            <path d="M18 22V8a2 2 0 0 0-2-2H2" />
+                                          </svg>
+                                        </button>
+
+                                        <div className="flex-1" />
+
+                                        <div className="flex shrink-0 items-center gap-1">
+                                          <button
+                                            type="button"
+                                            aria-label={`Remover imagem ${idx + 1}`}
+                                            title="Remover"
+                                            onClick={() => handleRemoveRefImage(idx)}
+                                            className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-red-500/10 hover:text-red-400 cursor-pointer"
+                                          >
+                                            <svg
+                                              xmlns="http://www.w3.org/2000/svg"
+                                              width="24"
+                                              height="24"
+                                              viewBox="0 0 24 24"
+                                              fill="none"
+                                              stroke="currentColor"
+                                              strokeWidth="2"
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                              className="lucide lucide-trash2 lucide-trash-2 h-3.5 w-3.5"
+                                              aria-hidden="true"
+                                            >
+                                              <path d="M10 11v6" />
+                                              <path d="M14 11v6" />
+                                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                                              <path d="M3 6h18" />
+                                              <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                            </svg>
+                                          </button>
+                                        </div>
+                                      </div>
+
+                                      <textarea
+                                        rows={2}
+                                        value={imgItem.desc || ""}
+                                        onChange={(e) => handleRefDescChange(idx, e.target.value)}
+                                        placeholder="Descreva o que quer extrair desta ref (ex: 'só a paleta de cores', 'só a iluminação')"
+                                        aria-label={`Descrição da imagem ${idx + 1}`}
+                                        className="mt-2 w-full resize-none rounded-xl border border-white/10 bg-zinc-950 px-3 py-2 text-xs leading-relaxed text-zinc-200 placeholder:text-zinc-600 focus:border-violet-500 focus:outline-none"
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() => setIsManagingReferencias(false)}
+                                  className="sub-area-entra w-full rounded-xl bg-violet-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-violet-600/25 transition-colors hover:bg-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 mt-8 cursor-pointer"
+                                  style={{ animationDelay: "110ms" }}
+                                >
+                                  Concluir
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <input accept="image/*" multiple className="hidden" type="file" />
+                    </div>
+                  ) : (
+                    /* Visão Recolhida de Referências */
+                    <div tabIndex={0} className="relative flex flex-col gap-2 rounded-lg p-2 -m-2 transition-colors outline-none">
+                      {referenceImages.length > 0 && (
+                        <div className="flex flex-col gap-2">
+                          {referenceImages.map((item, idx) => (
+                            <div key={item.id || idx} className="group flex items-center gap-2">
+                              <div className="relative shrink-0">
+                                <img
+                                  alt={`imagem ${idx + 1}`}
+                                  onClick={() => setLightboxImage(item.url)}
+                                  className="h-12 w-12 rounded-lg object-cover border border-white/10 cursor-pointer transition-all hover:border-violet-500/40 hover:ring-1 hover:ring-violet-500/20"
+                                  src={item.url}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveRefImage(idx)}
+                                  aria-label={`Remover imagem ${idx + 1}`}
+                                  title={`Remover imagem ${idx + 1}`}
+                                  className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-zinc-800 border border-white/10 text-zinc-300 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 max-lg:opacity-100 transition-opacity hover:bg-red-500 hover:text-white hover:border-red-500 z-10 cursor-pointer"
+                                >
+                                  ×
+                                </button>
+                                <button
+                                  type="button"
+                                  aria-label={`Recortar imagem ${idx + 1}`}
+                                  title={`Recortar imagem ${idx + 1}`}
+                                  onClick={() => openCropper(item.url, "referencia", idx)}
+                                  className="absolute -bottom-1.5 -right-1.5 h-5 w-5 rounded-full bg-zinc-800 border border-white/10 text-zinc-300 flex items-center justify-center opacity-0 group-hover:opacity-100 max-lg:opacity-100 transition-opacity hover:bg-violet-600 hover:text-white hover:border-violet-500 z-10 disabled:opacity-40 cursor-pointer"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-crop h-2.5 w-2.5" aria-hidden="true"><path d="M6 2v14a2 2 0 0 0 2 2h14"></path><path d="M18 22V8a2 2 0 0 0-2-2H2"></path></svg>
+                                </button>
+                              </div>
+                              <input
+                                placeholder="Descreva o que quer extrair desta imagem (ex: 'só a paleta de cores', 'só a iluminação')"
+                                className="flex-1 rounded-lg pb-glass-input px-3 py-2 text-xs transition-colors text-white"
+                                type="text"
+                                value={item.desc || ""}
+                                onChange={(e) => handleRefDescChange(idx, e.target.value)}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center rounded-lg border-2 border-dashed border-[rgba(139,92,246,0.20)] bg-[rgba(139,92,246,0.03)] transition-colors hover:border-[rgba(139,92,246,0.38)] h-10 gap-2 px-1">
+                          <button
+                            type="button"
+                            onClick={() => refInputRef.current?.click()}
+                            className="flex min-w-0 flex-1 items-center justify-center gap-1.5 self-stretch text-xs text-[#5c5278] transition-colors hover:text-[#9d94bb] cursor-pointer"
+                          >
+                            <span className="text-base leading-none">+</span>
+                            <span className="truncate">Clique, arraste ou cole (Ctrl+V)</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setIsManagingReferencias(true)}
+                            aria-label="Ajustar fotos e cena"
+                            title="Ajustar fotos e cena"
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-zinc-500 transition-colors hover:border-violet-500/30 hover:text-zinc-200 cursor-pointer"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-folder-open h-3.5 w-3.5" aria-hidden="true"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"></path></svg>
+                          </button>
+                        </div>
+                      </div>
+
+                      <input
+                        ref={refInputRef}
+                        onChange={(e) => {
+                          if (e.target.files) handleRefFiles(e.target.files);
+                          e.target.value = "";
+                        }}
+                        accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+                        multiple
+                        className="hidden"
+                        type="file"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+              {/* Usar inspiração na construção da imagem */}
+              <div data-field-id="send_style_ref_bytes" data-tour="form-field-send_style_ref_bytes" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <label htmlFor="send_style_ref_bytes" className="text-sm font-medium text-zinc-300 leading-snug">
+                      Usar inspiração na construção da imagem
+                    </label>
+                    <span className="relative inline-flex items-center">
+                      <button
+                        type="button"
+                        data-field-info=""
+                        aria-label="Mais informações Usar inspiração na construção da imagem"
+                        aria-expanded="false"
+                        className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 cursor-pointer"
+                        style={{ color: "rgb(139, 92, 246)" }}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-info h-3.5 w-3.5" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+                      </button>
+                    </span>
+                    <span className="shrink-0 rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest border" style={{ color: "rgb(139, 92, 246)", borderColor: "rgba(139, 92, 246, 0.267)", backgroundColor: "rgba(139, 92, 246, 0.07)" }}>
+                      Avançado
+                    </span>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1 rounded-xl border border-white/8 bg-zinc-900/80 p-1">
+                    <button
+                      type="button"
+                      title="Ativar"
+                      onClick={() => setUseRefOnBuild(true)}
+                      className="flex h-7 w-7 items-center justify-center rounded-lg transition-all duration-150 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+                      style={useRefOnBuild ? { backgroundColor: "rgba(139, 92, 246, 0.133)", color: "rgb(139, 92, 246)", boxShadow: "rgba(139, 92, 246, 0.267) 0px 0px 0px 1px" } : { color: "rgb(82, 82, 91)" }}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-check h-3.5 w-3.5" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>
+                    </button>
+                    <button
+                      type="button"
+                      title="Desativar"
+                      onClick={() => setUseRefOnBuild(false)}
+                      className="flex h-7 w-7 items-center justify-center rounded-lg transition-all duration-150 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+                      style={!useRefOnBuild ? { backgroundColor: "rgba(139, 92, 246, 0.133)", color: "rgb(139, 92, 246)", boxShadow: "rgba(139, 92, 246, 0.267) 0px 0px 0px 1px" } : { color: "rgb(82, 82, 91)" }}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x h-3.5 w-3.5" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div data-field-id="assets" data-tour="form-field-assets" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
+                <div className="flex flex-col gap-3" data-image-field-id="assets">
+                  <div className="flex min-w-0 items-center justify-between gap-2">
+                    <label className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-white">
+                      <span>Assets (opcional)</span>
+                      <span className="relative inline-flex items-center">
+                        <button
+                          type="button"
+                          data-field-info=""
+                          aria-label="Mais informações Assets (opcional)"
+                          aria-expanded={showAssetsInfo}
+                          onClick={() => setShowAssetsInfo(!showAssetsInfo)}
+                          className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 cursor-pointer"
+                          style={{ color: "rgb(139, 92, 246)" }}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-info h-3.5 w-3.5" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+                        </button>
+                      </span>
+                    </label>
+                  </div>
+
+                  {showAssetsInfo && (
+                    <div className="text-xs text-zinc-400 bg-white/[0.04] p-2.5 rounded-lg border border-white/10">
+                      Envie assets extras como logotipos, mockups de celular ou outros produtos para serem compostos na imagem.
+                    </div>
+                  )}
+
+                  <div tabIndex={0} className="relative flex flex-col gap-2 rounded-lg p-2 -m-2 transition-colors outline-none">
+                    {assetImages.length > 0 && (
+                      <div className="flex flex-col gap-2">
+                        {assetImages.map((img, idx) => (
+                          <div key={img.id || idx} className="group flex items-center gap-2">
+                            <div className="relative shrink-0">
+                              <img
+                                alt={`imagem ${idx + 1}`}
+                                onClick={() => setLightboxImage(img.url)}
+                                className="h-12 w-12 rounded-lg object-cover border border-white/10 cursor-pointer transition-all hover:border-violet-500/40 hover:ring-1 hover:ring-violet-500/20"
+                                src={img.url}
+                              />
+                              <button
+                                type="button"
+                                aria-label={`Remover imagem ${idx + 1}`}
+                                title={`Remover imagem ${idx + 1}`}
+                                onClick={() => handleRemoveAssetImage(idx)}
+                                className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-zinc-800 border border-white/10 text-zinc-300 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 max-lg:opacity-100 transition-opacity hover:bg-red-500 hover:text-white hover:border-red-500 z-10 cursor-pointer"
+                              >
+                                ×
+                              </button>
+                              <button
+                                type="button"
+                                aria-label={`Recortar imagem ${idx + 1}`}
+                                title={`Recortar imagem ${idx + 1}`}
+                                onClick={() => openCropper(img.url, "asset", idx)}
+                                className="absolute -bottom-1.5 -right-1.5 h-5 w-5 rounded-full bg-zinc-800 border border-white/10 text-zinc-300 flex items-center justify-center opacity-0 group-hover:opacity-100 max-lg:opacity-100 transition-opacity hover:bg-violet-600 hover:text-white hover:border-violet-500 z-10 disabled:opacity-40 cursor-pointer"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-crop h-2.5 w-2.5" aria-hidden="true"><path d="M6 2v14a2 2 0 0 0 2 2h14"></path><path d="M18 22V8a2 2 0 0 0-2-2H2"></path></svg>
+                              </button>
+                            </div>
+                            <input
+                              placeholder="Descreva o que quer extrair deste asset (ex: 'logotipo', 'produto em destaque')"
+                              className="flex-1 rounded-lg pb-glass-input px-3 py-2 text-xs transition-colors text-white"
+                              type="text"
+                              value={img.desc || ""}
+                              onChange={(e) => handleAssetDescChange(idx, e.target.value)}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center rounded-lg border-2 border-dashed border-[rgba(139,92,246,0.20)] bg-[rgba(139,92,246,0.03)] transition-colors hover:border-[rgba(139,92,246,0.38)] py-2">
+                        <button
+                          type="button"
+                          onClick={() => assetsInputRef.current?.click()}
+                          className="flex min-w-0 flex-1 items-center justify-center gap-1.5 self-stretch text-xs text-[#5c5278] transition-colors hover:text-[#9d94bb] cursor-pointer"
+                        >
+                          <span className="text-base leading-none">+</span>
+                          <span className="truncate">Clique, arraste ou cole (Ctrl+V)</span>
+                        </button>
+                      </div>
+                    </div>
+                    <input
+                      ref={assetsInputRef}
+                      accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+                      multiple
+                      className="hidden"
+                      type="file"
+                      onChange={(e) => {
+                        if (e.target.files) handleAssetFiles(e.target.files);
+                        e.target.value = "";
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
                   </div>
                 </div>
               )}
@@ -2065,7 +2823,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
           </div>
 
           {/* ── SEÇÃO 2: ESTILO (100% IDÊNTICO AO HTML OFICIAL) ── */}
-          <div data-tour="form-sec-estilo" className={mobileActiveCategory && mobileActiveCategory !== "estilo" ? "max-lg:hidden" : ""}>
+          <div data-tour="form-sec-estilo" className={mobileActiveCategory !== "estilo" ? "max-lg:hidden" : ""}>
             <div
               data-state={isEstiloOpen ? "open" : "closed"}
               data-slot="collapsible"
@@ -2095,11 +2853,107 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
               {isEstiloOpen && (
                 <div data-state="open" data-slot="collapsible-content" className="overflow-hidden">
                   <div className="flex flex-col px-2 pb-5 pt-2 lg:px-4 lg:pb-6 lg:pt-3 gap-6 lg:gap-12">
-                    {/* Posição do Sujeito */}
-                    ${subjectPosCode}
-
-                    {/* Descrição adicional */}
-                    ${descCode}
+              {/* Posição do Sujeito */}
+              <div data-field-id="subject_position" data-tour="form-field-subject_position" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
+                <div className="flex flex-col gap-3">
+                  <label className="flex items-center gap-1.5 text-sm font-semibold text-white">
+                    <span>Posição do sujeito</span>
+                    <span className="relative inline-flex items-center">
+                      <button
+                        type="button"
+                        data-field-info=""
+                        aria-label="Mais informações Posição do sujeito"
+                        aria-expanded={showPosInfo}
+                        onClick={() => setShowPosInfo(!showPosInfo)}
+                        className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 cursor-pointer"
+                        style={{ color: "rgb(139, 92, 246)" }}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-info h-3.5 w-3.5" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+                      </button>
+                    </span>
+                  </label>
+                  <div role="group" aria-label="Posição do sujeito" className="grid gap-2.5" style={{ gridTemplateColumns: "repeat(3, minmax(0px, 1fr))" }}>
+                    <div className="group relative">
+                      <button
+                        type="button"
+                        aria-pressed={subjectPosition === "left"}
+                        onClick={() => setSubjectPosition("left")}
+                        className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${
+                          subjectPosition === "left" ? "pb-ctrl-active text-white" : "text-zinc-200"
+                        }`}
+                      >
+                        <span className="font-medium text-sm">Esquerda</span>
+                      </button>
+                    </div>
+                    <div className="group relative">
+                      <button
+                        type="button"
+                        aria-pressed={subjectPosition === "center"}
+                        onClick={() => setSubjectPosition("center")}
+                        className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${
+                          subjectPosition === "center" ? "pb-ctrl-active text-white" : "text-zinc-200"
+                        }`}
+                      >
+                        <span className="font-medium text-sm">Centro</span>
+                      </button>
+                    </div>
+                    <div className="group relative">
+                      <button
+                        type="button"
+                        aria-pressed={subjectPosition === "right"}
+                        onClick={() => setSubjectPosition("right")}
+                        className={`flex h-full w-full items-center text-center transition-colors pb-ctrl-btn flex-col gap-2 rounded-xl p-4 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${
+                          subjectPosition === "right" ? "pb-ctrl-active text-white" : "text-zinc-200"
+                        }`}
+                      >
+                        <span className="font-medium text-sm">Direita</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div data-field-id="descricao_adicional" data-tour="form-field-descricao_adicional" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="descricao_adicional" className="flex items-center gap-1.5 text-sm font-semibold text-white">
+                    <span>Descrição adicional (opcional)</span>
+                    <span className="relative inline-flex items-center">
+                      <button
+                        type="button"
+                        data-field-info=""
+                        aria-label="Mais informações Descrição adicional (opcional)"
+                        aria-expanded={showDescInfo}
+                        onClick={() => setShowDescInfo(!showDescInfo)}
+                        className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 cursor-pointer"
+                        style={{ color: "rgb(139, 92, 246)" }}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-info h-3.5 w-3.5" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+                      </button>
+                    </span>
+                  </label>
+                  <div className="group relative">
+                    <textarea
+                      id="descricao_adicional"
+                      rows={2}
+                      value={additionalDescription}
+                      onChange={(e) => setAdditionalDescription(e.target.value)}
+                      placeholder="Instruções extras ou contexto. Ex: 'coloque o sujeito em pé com o logo no peito'..."
+                      className="w-full rounded-2xl pb-glass-input px-4 py-3 pb-8 text-sm resize-none min-h-[80px] transition-colors disabled:cursor-not-allowed disabled:opacity-50 text-white"
+                      style={{ height: "85.6px" }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setIsExpandedTextarea(true)}
+                      className="absolute bottom-2 right-2 rounded-md p-1 text-zinc-600 transition-all opacity-0 group-hover:opacity-100 focus:opacity-100 hover:bg-white/5 hover:text-zinc-300 disabled:cursor-not-allowed disabled:opacity-0 cursor-pointer"
+                      title="Expandir editor"
+                      aria-haspopup="dialog"
+                      aria-expanded={isExpandedTextarea}
+                      data-state={isExpandedTextarea ? "open" : "closed"}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-maximize2 lucide-maximize-2 h-3.5 w-3.5" aria-hidden="true"><path d="M15 3h6v6"></path><path d="m21 3-7 7"></path><path d="m3 21 7-7"></path><path d="M9 21H3v-6"></path></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
                   </div>
                 </div>
               )}
@@ -2107,7 +2961,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
           </div>
 
           {/* ── SEÇÃO 3: SAÍDA (100% IDÊNTICO AO HTML OFICIAL) ── */}
-          <div data-tour="form-sec-saida" className={mobileActiveCategory && mobileActiveCategory !== "saida" ? "max-lg:hidden" : ""}>
+          <div data-tour="form-sec-saida" className={mobileActiveCategory !== "saida" ? "max-lg:hidden" : ""}>
             <div
               data-state={isSaidaOpen ? "open" : "closed"}
               data-slot="collapsible"
@@ -2136,11 +2990,270 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
               {isSaidaOpen && (
                 <div data-state="open" data-slot="collapsible-content" className="overflow-hidden">
                   <div className="flex flex-col px-2 pb-5 pt-2 lg:px-4 lg:pb-6 lg:pt-3 gap-6 lg:gap-12">
-                    {/* Dimensões */}
-                    ${dimensionsCode}
+              <div data-field-id="dimensions" data-tour="form-field-dimensions" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-semibold text-white text-xs">Dimensões</span>
+                      <span className="relative inline-flex items-center">
+                        <button
+                          type="button"
+                          data-field-info=""
+                          aria-label="Mais informações Dimensões"
+                          aria-expanded={showDimInfo}
+                          onClick={() => setShowDimInfo(!showDimInfo)}
+                          className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 cursor-pointer"
+                          style={{ color: "rgb(139, 92, 246)" }}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-info h-3.5 w-3.5"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+                        </button>
+                      </span>
+                    </div>
+                  </div>
 
-                    {/* Qualidade */}
-                    ${qualityCode}
+                  <div role="group" aria-label="Dimensões" className="grid grid-cols-5 gap-1.5">
+                    <button
+                      type="button"
+                      aria-label="Stories 9:16"
+                      aria-pressed={dimension === "9:16"}
+                      title="Stories · 9:16"
+                      onClick={() => { setDimension("9:16"); if (generatedImage) handleReformat("9:16"); }}
+                      className={`flex h-12 items-center justify-center gap-1.5 rounded-lg px-1.5 transition-colors pb-ctrl-btn cursor-pointer ${
+                        dimension === "9:16" ? "pb-ctrl-active text-white" : "text-zinc-500 hover:text-zinc-200"
+                      }`}
+                    >
+                      <span aria-hidden="true" className={`block rounded-[3px] border ${dimension === "9:16" ? "border-violet-300 bg-violet-400/20" : "border-zinc-600 bg-white/[0.025]"}`} style={{ width: "12px", height: "22px" }}></span>
+                      <span className="text-[10px] font-semibold tabular-nums">9:16</span>
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Feed Vertical 4:5"
+                      aria-pressed={dimension === "4:5"}
+                      title="Feed Vertical · 4:5"
+                      onClick={() => { setDimension("4:5"); if (generatedImage) handleReformat("4:5"); }}
+                      className={`flex h-12 items-center justify-center gap-1.5 rounded-lg px-1.5 transition-colors pb-ctrl-btn cursor-pointer ${
+                        dimension === "4:5" ? "pb-ctrl-active text-white" : "text-zinc-500 hover:text-zinc-200"
+                      }`}
+                    >
+                      <span aria-hidden="true" className={`block rounded-[3px] border ${dimension === "4:5" ? "border-violet-300 bg-violet-400/20" : "border-zinc-600 bg-white/[0.025]"}`} style={{ width: "18px", height: "22px" }}></span>
+                      <span className="text-[10px] font-semibold tabular-nums">4:5</span>
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Feed 1:1"
+                      aria-pressed={dimension === "1:1"}
+                      title="Feed · 1:1"
+                      onClick={() => { setDimension("1:1"); if (generatedImage) handleReformat("1:1"); }}
+                      className={`flex h-12 items-center justify-center gap-1.5 rounded-lg px-1.5 transition-colors pb-ctrl-btn cursor-pointer ${
+                        dimension === "1:1" ? "pb-ctrl-active text-white" : "text-zinc-500 hover:text-zinc-200"
+                      }`}
+                    >
+                      <span aria-hidden="true" className={`block rounded-[3px] border ${dimension === "1:1" ? "border-violet-300 bg-violet-400/20" : "border-zinc-600 bg-white/[0.025]"}`} style={{ width: "22px", height: "22px" }}></span>
+                      <span className="text-[10px] font-semibold tabular-nums">1:1</span>
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Cinema 16:9"
+                      aria-pressed={dimension === "16:9"}
+                      title="Cinema · 16:9"
+                      onClick={() => { setDimension("16:9"); if (generatedImage) handleReformat("16:9"); }}
+                      className={`flex h-12 items-center justify-center gap-1.5 rounded-lg px-1.5 transition-colors pb-ctrl-btn cursor-pointer ${
+                        dimension === "16:9" ? "pb-ctrl-active text-white" : "text-zinc-500 hover:text-zinc-200"
+                      }`}
+                    >
+                      <span aria-hidden="true" className={`block rounded-[3px] border ${dimension === "16:9" ? "border-violet-300 bg-violet-400/20" : "border-zinc-600 bg-white/[0.025]"}`} style={{ width: "22px", height: "12px" }}></span>
+                      <span className="text-[10px] font-semibold tabular-nums">16:9</span>
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Personalizado"
+                      aria-pressed={dimension === "custom"}
+                      title="Personalizado (Largura × Altura em Pixels)"
+                      onClick={() => setDimension("custom")}
+                      className={`flex h-12 flex-col items-center justify-center gap-1 rounded-lg px-1 transition-colors pb-ctrl-btn cursor-pointer ${
+                        dimension === "custom" ? "pb-ctrl-active text-white" : "text-zinc-500 hover:text-zinc-200"
+                      }`}
+                    >
+                      <Sliders className={`h-3.5 w-3.5 ${dimension === "custom" ? "text-violet-300" : "text-zinc-500"}`} />
+                      <span className="text-[9px] font-semibold tracking-tight">Livre</span>
+                    </button>
+                  </div>
+
+                  {dimension === "custom" && (
+                    <div className="mt-2.5 rounded-xl border border-violet-500/25 bg-gradient-to-b from-violet-500/[0.08] to-purple-500/[0.02] p-3 backdrop-blur-md animate-in fade-in slide-in-from-top-1 duration-200">
+                      <div className="flex items-center justify-between pb-2">
+                        <span className="text-[11px] font-medium text-zinc-300 flex items-center gap-1.5">
+                          <Sliders className="h-3.5 w-3.5 text-violet-400" />
+                          Medida Exata em Pixels
+                        </span>
+                        <span className="text-[10px] font-mono text-violet-300 bg-violet-500/20 px-2 py-0.5 rounded-md border border-violet-500/30">
+                          {customWidth} × {customHeight} px
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-zinc-400 font-medium">Largura (px)</label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              min={128}
+                              max={4096}
+                              step={10}
+                              value={customWidth}
+                              onChange={(e) => {
+                                const v = Math.max(1, parseInt(e.target.value) || 0);
+                                setCustomWidth(v);
+                              }}
+                              className="w-full h-8 rounded-lg bg-black/40 border border-white/10 px-2.5 text-xs text-white font-mono focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
+                              placeholder="1200"
+                            />
+                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-zinc-500 pointer-events-none">W</span>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] text-zinc-400 font-medium">Altura (px)</label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              min={128}
+                              max={4096}
+                              step={10}
+                              value={customHeight}
+                              onChange={(e) => {
+                                const v = Math.max(1, parseInt(e.target.value) || 0);
+                                setCustomHeight(v);
+                              }}
+                              className="w-full h-8 rounded-lg bg-black/40 border border-white/10 px-2.5 text-xs text-white font-mono focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
+                              placeholder="630"
+                            />
+                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-zinc-500 pointer-events-none">H</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Chips de Predefinições Rápidas */}
+                      <div className="mt-2.5 pt-2 border-t border-white/5">
+                        <span className="text-[9px] uppercase tracking-wider text-zinc-500 font-semibold block mb-1.5">Atalhos rápidos:</span>
+                        <div className="flex flex-wrap gap-1">
+                          {[
+                            { label: "1200 × 630 (Meta)", w: 1200, h: 630 },
+                            { label: "800 × 1200 (Pin)", w: 800, h: 1200 },
+                            { label: "1920 × 1080 (HD)", w: 1920, h: 1080 },
+                            { label: "2 Lâminas 4:5 (2160×1350)", w: 2160, h: 1350 },
+                            { label: "3 Lâminas 4:5 (3240×1350)", w: 3240, h: 1350 },
+                            { label: "4 Lâminas 4:5 (4320×1350)", w: 4320, h: 1350 },
+                            { label: "5 Lâminas 4:5 (5400×1350)", w: 5400, h: 1350 }
+                          ].map((preset) => (
+                            <button
+                              key={preset.label}
+                              type="button"
+                              onClick={() => {
+                                setCustomWidth(preset.w);
+                                setCustomHeight(preset.h);
+                              }}
+                              className={`text-[10px] px-2 py-0.5 rounded-md border transition-all cursor-pointer ${
+                                customWidth === preset.w && customHeight === preset.h
+                                  ? "bg-violet-500/30 border-violet-400/50 text-white shadow-sm"
+                                  : "bg-white/[0.03] border-white/10 text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.08]"
+                              }`}
+                            >
+                              {preset.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div data-field-id="quality" data-tour="form-field-quality" className="flex flex-col gap-2 lg:gap-1 campo-com-info">
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-semibold text-white text-xs">Qualidade</span>
+                      <span className="relative inline-flex items-center">
+                        <button
+                          type="button"
+                          data-field-info=""
+                          aria-label="Mais informações Qualidade"
+                          aria-expanded={showQualInfo}
+                          onClick={() => setShowQualInfo(!showQualInfo)}
+                          className="group inline-flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 cursor-pointer"
+                          style={{ color: "rgb(139, 92, 246)" }}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-info h-3.5 w-3.5"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+                        </button>
+                      </span>
+                      <div className="ml-auto text-[10px] tabular-nums text-white/60">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider"
+                            style={{
+                              backgroundColor: "rgba(255, 255, 255, 0.06)",
+                              color: "rgb(161, 161, 170)",
+                              border: "1px solid rgba(255, 255, 255, 0.08)"
+                            }}
+                          >
+                            {quality === "1K" ? "PADRÃO" : quality === "2K" ? "MÉDIO" : quality === "4K" ? "ALTO" : "MASTER 8K"}
+                          </span>
+                          <span className="text-[10px] tabular-nums text-zinc-500">
+                            {dimension === "custom"
+                              ? `${customWidth}×${customHeight}`
+                              : dimension === "4:5"
+                              ? (quality === "4K" ? "6144×7680" : quality === "2K" ? "2048×2560" : "1080×1350")
+                              : dimension === "9:16"
+                              ? (quality === "4K" ? "4320×7680" : quality === "2K" ? "1440×2560" : "1080×1920")
+                              : dimension === "16:9"
+                              ? (quality === "4K" ? "7680×4320" : quality === "2K" ? "2560×1440" : "1920×1080")
+                              : (quality === "4K" ? "7680×7680" : quality === "2K" ? "2048×2048" : "1024×1024")}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div role="group" aria-label="Qualidade" className="grid gap-1.5" style={{ gridTemplateColumns: "repeat(3, minmax(0px, 1fr))" }}>
+                    {[
+                      { id: "1K", sub: "Rápido" },
+                      { id: "2K", sub: "Médio" },
+                      { id: "4K", sub: "Alto" },
+                      
+                    ].map((q) => {
+                      const isSelected = quality === q.id;
+                      return (
+                        <button
+                          key={q.id}
+                          type="button"
+                          aria-pressed={isSelected}
+                          onClick={() => setQuality(q.id as any)}
+                          className="group flex items-center justify-center rounded-xl px-2 transition-all duration-200 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 h-10 gap-1.5 py-1.5"
+                          style={
+                            isSelected
+                              ? {
+                                  background: "linear-gradient(rgba(30, 16, 70, 0.6), rgba(20, 10, 50, 0.7)) padding-box padding-box, linear-gradient(135deg, rgba(139, 92, 246, 0.447), rgba(139, 92, 246, 0.12) 50%, rgba(139, 92, 246, 0.28)) border-box border-box",
+                                  border: "1px solid transparent",
+                                  boxShadow: "rgba(139, 92, 246, 0.19) 0px 0px 12px, rgba(139, 92, 246, 0.07) 0px 0px 28px"
+                                }
+                              : {
+                                  background: "linear-gradient(rgba(16, 10, 40, 0.4), rgba(10, 7, 28, 0.5)) padding-box padding-box, linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(139, 92, 246, 0.027)) border-box border-box",
+                                  border: "1px solid transparent"
+                                }
+                          }
+                        >
+                          <span className="text-base font-bold leading-none tracking-tight transition-colors" style={{ color: isSelected ? "rgb(255, 255, 255)" : "rgb(161, 161, 170)" }}>
+                            {q.id}
+                          </span>
+                          <span className="font-medium uppercase tracking-[0.05em] transition-colors text-[9px]" style={{ color: isSelected ? "rgb(255, 255, 255)" : "rgb(161, 161, 170)" }}>
+                            {q.sub}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
                   </div>
                 </div>
               )}
@@ -2149,7 +3262,90 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
 
           {/* ── BOTÕES CONSTRUIR, DUPLICAR E RESETAR (DESKTOP) ── */}
           <div data-tour="form-actions" className="flex flex-col gap-6 max-lg:hidden">
-            ${actionsCode}
+          <div>
+            <div ref={inlineSubmitRef} className="w-full">
+              <button
+                type="submit"
+                disabled={isProcessing}
+                className="flex w-full items-center justify-center gap-2 text-white rounded-xl px-6 py-4 text-base font-semibold transition-all duration-300 hover:scale-[1.01] active:scale-95 shadow-lg disabled:cursor-not-allowed disabled:hover:scale-100 disabled:opacity-40"
+                style={{
+                  background: "linear-gradient(to right, rgb(139, 92, 246), rgba(139, 92, 246, 0.8))"
+                }}
+              >
+                {isProcessing ? "Construindo..." : "Construir"}
+                <span className="ml-1.5 rounded-lg bg-white/15 px-2 py-0.5 text-xs font-medium">1 crédito</span>
+              </button>
+            </div>
+          </div>
+
+          {/* ── BOTÕES DUPLICAR E RESETAR (100% IDÊNTICO AO HTML OFICIAL) ── */}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              title="Duplicar configurações para uma nova aba"
+              onClick={handleDuplicateTab}
+              disabled={tabs.length >= 3}
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-medium text-[#9d94bb] transition-colors pb-ctrl-btn hover:text-[#f0ecff] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-[#9d94bb] cursor-pointer"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-copy h-4 w-4" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path></svg>
+              <span>Duplicar</span>
+            </button>
+            <button
+              type="button"
+              title="Resetar todas as configurações do formulário"
+              onClick={handleReset}
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-medium text-[#9d94bb] transition-colors pb-ctrl-btn hover:text-[#f0ecff] cursor-pointer"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-rotate-ccw h-4 w-4" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+              <span>Resetar</span>
+            </button>
+          </div>
+
+          {/* ── CARD DE AÇÃO FLUTUANTE AO ROLAR O FORMULÁRIO ── */}
+          {/* ── CARD DE AÇÃO FLUTUANTE AO ROLAR O FORMULÁRIO (100% IDÊNTICO AO HTML OFICIAL) ── */}
+          {!isSubmitIntersecting && (
+            <div className="sticky bottom-[max(0.75rem,env(safe-area-inset-bottom,0.75rem))] z-30 animate-in fade-in slide-in-from-bottom-2 duration-200">
+              <div className="rounded-2xl border border-white/10 bg-black/70 px-2 py-2 shadow-2xl backdrop-blur-md">
+                <div className="w-full">
+                  <button
+                    type="submit"
+                    disabled={isProcessing}
+                    className="flex w-full items-center justify-center gap-2 text-white rounded-xl px-6 py-4 text-base font-semibold transition-all duration-300 hover:scale-[1.01] active:scale-95 shadow-lg disabled:cursor-not-allowed disabled:hover:scale-100 disabled:opacity-40"
+                    style={{
+                      background: "linear-gradient(to right, rgb(139, 92, 246), rgba(139, 92, 246, 0.8))"
+                    }}
+                  >
+                    {isProcessing ? "Construindo..." : "Construir"}
+                    <span className="ml-1.5 rounded-lg bg-white/15 px-2 py-0.5 text-xs font-medium">1 crédito</span>
+                  </button>
+                </div>
+                <div className="mt-2 px-1 pb-0.5">
+                  <div className="flex items-center justify-center gap-3 text-[11px] text-[#9d94bb]">
+                    <button
+                      type="button"
+                      title="Duplicar configurações para uma nova aba"
+                      onClick={handleDuplicateTab}
+                      disabled={tabs.length >= 3}
+                      className="inline-flex items-center gap-1 transition-colors hover:text-[#f0ecff] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-[#9d94bb] cursor-pointer"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-copy h-3 w-3" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path></svg>
+                      Duplicar
+                    </button>
+                    <span aria-hidden="true" className="text-white/15">·</span>
+                    <button
+                      type="button"
+                      title="Resetar todas as configurações do formulário"
+                      onClick={handleReset}
+                      className="inline-flex items-center gap-1 transition-colors hover:text-[#f0ecff] cursor-pointer"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-rotate-ccw h-3 w-3" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+                      Resetar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
           </div>
         </form>
       </aside>
