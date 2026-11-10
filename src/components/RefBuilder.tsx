@@ -3380,11 +3380,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
           </button>
 
           {/* ── BARRA DE NAVEGAÇÃO PERSISTENTE (IDÊNTICO AO SNIPPET OFICIAL) ── */}
-          <div className={`barra-de-navegacao navegacao-persistente relative flex w-full items-center justify-start gap-2 py-3 pl-3 pr-14 shrink-0 scrollbar-hide max-lg:flex-col max-lg:items-stretch max-lg:gap-1.5 max-lg:px-2 lg:z-30 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:gap-0 lg:overflow-visible lg:pl-0 lg:pr-0 max-lg:overflow-hidden max-lg:transition-all max-lg:duration-300 max-lg:ease-out ${
-            mobileActiveCategory
-              ? "max-lg:sticky max-lg:top-0 max-lg:z-20 max-lg:border-white/[0.06] max-lg:bg-[#0c0a15]/85 max-lg:backdrop-blur-sm max-lg:max-h-0 max-lg:-translate-y-4 max-lg:opacity-0 max-lg:pointer-events-none"
-              : "max-lg:py-1.5 max-lg:sticky max-lg:top-0 max-lg:z-20 max-lg:border-b max-lg:border-white/[0.06] max-lg:bg-[#0c0a15]/85 max-lg:backdrop-blur-sm max-lg:max-h-48 max-lg:opacity-100"
-          }`}>
+          <div className="barra-de-navegacao navegacao-persistente relative flex w-full items-center justify-start gap-2 py-3 pl-3 pr-14 shrink-0 scrollbar-hide max-lg:flex-col max-lg:items-stretch max-lg:gap-1.5 max-lg:px-2 max-lg:py-1.5 max-lg:sticky max-lg:top-0 max-lg:z-20 max-lg:border-b max-lg:border-white/[0.06] max-lg:bg-[#0c0a15]/85 max-lg:backdrop-blur-sm lg:z-30 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:gap-0 lg:overflow-visible lg:pl-0 lg:pr-0 max-lg:overflow-hidden max-lg:transition-all max-lg:duration-300 max-lg:ease-out max-lg:max-h-48">
             
             {/* Coluna 1: Abas de Geração */}
             <div className="pointer-events-auto flex min-w-0 items-start gap-2 max-lg:order-2 max-lg:w-full max-lg:justify-center lg:w-full lg:pl-4">
@@ -3402,18 +3398,10 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                           className={`inline-flex h-7 max-w-[12rem] flex-none items-center justify-center gap-1.5 rounded-lg border px-2.5 text-[11px] font-semibold uppercase tracking-wide transition-colors duration-200 outline-none focus-visible:ring-2 focus-visible:ring-white/30 hover:bg-white/[0.06] cursor-pointer ${
                             tabs.length > 1 ? "pr-5" : ""
                           }`}
-                          style={
-                            isActive
-                              ? {
-                                  color: "rgb(139, 92, 246)",
-                                  borderColor: "rgba(139, 92, 246, 0.4)",
-                                  backgroundColor: "rgba(139, 92, 246, 0.08)"
-                                }
-                              : {
-                                  color: "rgb(139, 92, 246)",
-                                  borderColor: "rgba(139, 92, 246, 0.333)"
-                                }
-                          }
+                          style={{
+                            color: "rgb(139, 92, 246)",
+                            borderColor: "rgba(139, 92, 246, 0.333)",
+                          }}
                         >
                           {isActive && (
                             <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
@@ -3492,7 +3480,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                   className={`relative rounded-full px-5 py-2 text-xs font-semibold uppercase tracking-wider transition-all duration-200 max-lg:min-w-0 max-lg:flex-1 max-lg:truncate max-lg:px-1 max-lg:text-[10px] max-lg:tracking-normal cursor-pointer ${
                     activeViewMode === "builder" ? "text-white shadow-lg" : "text-zinc-500 hover:text-zinc-300"
                   }`}
-                  style={activeViewMode === "builder" ? { background: "linear-gradient(135deg, rgb(139, 92, 246), rgba(139, 92, 246, 0.8))" } : {}}
+                  style={activeViewMode === "builder" ? { background: "linear-gradient(135deg, #8B5CF6, #8B5CF6cc)" } : {}}
                 >
                   Builder
                 </button>
@@ -3504,7 +3492,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                   className={`relative rounded-full px-5 py-2 text-xs font-semibold uppercase tracking-wider transition-all duration-200 max-lg:min-w-0 max-lg:flex-1 max-lg:truncate max-lg:px-1 max-lg:text-[10px] max-lg:tracking-normal cursor-pointer ${
                     activeViewMode === "pinterest" ? "text-white shadow-lg" : "text-zinc-500 hover:text-zinc-300"
                   }`}
-                  style={activeViewMode === "pinterest" ? { background: "linear-gradient(135deg, rgb(139, 92, 246), rgba(139, 92, 246, 0.8))" } : {}}
+                  style={activeViewMode === "pinterest" ? { background: "linear-gradient(135deg, #8B5CF6, #8B5CF6cc)" } : {}}
                 >
                   Pinterest
                 </button>
@@ -3516,7 +3504,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                   className={`relative rounded-full px-5 py-2 text-xs font-semibold uppercase tracking-wider transition-all duration-200 max-lg:min-w-0 max-lg:flex-1 max-lg:truncate max-lg:px-1 max-lg:text-[10px] max-lg:tracking-normal cursor-pointer ${
                     activeViewMode === "comunidade" ? "text-white shadow-lg" : "text-zinc-500 hover:text-zinc-300"
                   }`}
-                  style={activeViewMode === "comunidade" ? { background: "linear-gradient(135deg, rgb(139, 92, 246), rgba(139, 92, 246, 0.8))" } : {}}
+                  style={activeViewMode === "comunidade" ? { background: "linear-gradient(135deg, #8B5CF6, #8B5CF6cc)" } : {}}
                 >
                   Comunidade
                 </button>
@@ -3528,7 +3516,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                   className={`relative rounded-full px-5 py-2 text-xs font-semibold uppercase tracking-wider transition-all duration-200 max-lg:min-w-0 max-lg:flex-1 max-lg:truncate max-lg:px-1 max-lg:text-[10px] max-lg:tracking-normal cursor-pointer ${
                     activeViewMode === "galeria" ? "text-white shadow-lg" : "text-zinc-500 hover:text-zinc-300"
                   }`}
-                  style={activeViewMode === "galeria" ? { background: "linear-gradient(135deg, rgb(139, 92, 246), rgba(139, 92, 246, 0.8))" } : {}}
+                  style={activeViewMode === "galeria" ? { background: "linear-gradient(135deg, #8B5CF6, #8B5CF6cc)" } : {}}
                 >
                   Galeria
                 </button>
