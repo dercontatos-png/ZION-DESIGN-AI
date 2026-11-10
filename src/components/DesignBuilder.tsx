@@ -2724,7 +2724,7 @@ const hasFotoDot = Boolean(
             <div
               role="tablist"
               aria-label="Categorias do agente"
-              className="flex items-stretch gap-0.5 overflow-x-auto scrollbar-hide px-2 py-1.5 [scroll-snap-type:x_proximity]"
+              className="flex items-stretch gap-0.5 overflow-x-auto scrollbar-hide px-2 py-1.5 [scroll-snap-type:x_proximity] justify-center"
             >
               {/* Início */}
               <button

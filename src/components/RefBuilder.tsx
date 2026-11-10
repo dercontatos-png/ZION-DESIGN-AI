@@ -1999,18 +1999,18 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
     <div className="flex h-full w-full flex-1 overflow-hidden bg-black text-white relative font-sans select-none flex-col">
       <main
         data-builder-workspace-shell=""
-        className={`relative flex h-full min-h-0 overflow-hidden bg-transparent lg:flex-row max-lg:grid max-lg:overflow-hidden max-lg:transition-[grid-template-rows] max-lg:duration-300 max-lg:ease-in-out flex-1 ${
-          (mobileActiveCategory && !isProcessing) ? "max-lg:grid-rows-[0fr_1fr]" : "max-lg:grid-rows-[1fr_0fr]"
+        className={`relative flex h-full min-h-0 overflow-hidden bg-black lg:flex-row max-lg:grid max-lg:overflow-hidden max-lg:transition-[grid-template-rows] max-lg:duration-300 max-lg:ease-in-out flex-1 ${
+          (mobileActiveCategory && !isProcessing) ? "max-lg:grid-rows-[auto_1fr]" : "max-lg:grid-rows-[1fr_0fr]"
         }`}
       >
         {/* ── COLUNA DO FORMULÁRIO REF (LAYOUT 100% ORIGINAL) ── */}
         <aside
           data-aside-form-col=""
           data-tour="form"
-          className="agent-form-col relative z-10 shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-white/5 scrollbar-hide px-1.5 py-3 max-lg:pb-[calc(3rem+env(safe-area-inset-bottom,0px))] lg:p-6 lg:pb-6 transition-[filter,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] w-full lg:h-full lg:w-[var(--agent-form-col-w,420px)] lg:min-w-[280px] lg:max-w-[700px] lg:flex-shrink-0 flex max-lg:order-last max-lg:min-h-0 lg:flex"
+          className="agent-form-col relative z-10 shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-white/5 scrollbar-hide px-1.5 py-3 lg:p-6 transition-[filter,opacity] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] w-full lg:h-full lg:w-[var(--agent-form-col-w,420px)] lg:min-w-[280px] lg:max-w-[700px] lg:flex-shrink-0 flex max-lg:order-last max-lg:min-h-0 lg:flex"
           style={{ "--agent-form-col-w": "420px", "--agent-color": "#8B5CF6" } as any}
         >
-        <form onSubmit={(e) => { e.preventDefault(); handleBuild(); }} className="flex flex-col gap-4 lg:gap-5">
+        <form onSubmit={(e) => { e.preventDefault(); handleBuild(); }} className="flex flex-col gap-6 lg:gap-12">
           
           {/* ── SEÇÃO 1: ESSENCIAL (ORIGINAL) ── */}
           <div data-tour="form-sec-ref-essential">
@@ -3263,10 +3263,10 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
       <div className="relative flex min-h-0 min-w-0 flex-1 max-lg:contents">
         <section className="palco-central relative flex-col overflow-hidden flex max-lg:order-first max-lg:min-h-0 max-lg:overflow-hidden max-lg:pt-[env(safe-area-inset-top)] lg:h-full lg:flex-1" style={{ minWidth: 0 }}>
           
-          {/* Botão Minimizar filtros no Mobile (100% IDÊNTICO AO OFICIAL) */}
+          {/* Botão Minimizar/Mostrar filtros no Mobile (100% IDÊNTICO AO OFICIAL) */}
           <button
             type="button"
-            aria-label="Minimizar filtros"
+            aria-label={mobileActiveCategory ? "Minimizar filtros" : "Mostrar filtros"}
             onClick={() => {
               if (mobileActiveCategory) {
                 setMobileActiveCategory(null);
@@ -3276,27 +3276,19 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
             }}
             className="lg:hidden flex w-full shrink-0 items-center justify-center py-0.5 text-zinc-500 transition-colors active:text-white cursor-pointer"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className={`lucide lucide-chevron-up h-5 w-5 transition-transform duration-200 ${
-                mobileActiveCategory ? "" : "rotate-180"
-              }`}
-              aria-hidden="true"
-            >
-              <path d="m18 15-6-6-6 6"></path>
-            </svg>
+            {mobileActiveCategory ? (
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-up h-5 w-5" aria-hidden="true"><path d="m18 15-6-6-6 6"></path></svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-down h-5 w-5" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+            )}
           </button>
 
           {/* ── BARRA DE NAVEGAÇÃO PERSISTENTE (IDÊNTICO AO SNIPPET OFICIAL) ── */}
-          <div className="barra-de-navegacao navegacao-persistente relative flex w-full items-center justify-start gap-2 py-3 pl-3 pr-14 shrink-0 scrollbar-hide max-lg:flex-col max-lg:items-stretch max-lg:gap-1.5 max-lg:px-2 max-lg:py-1.5 max-lg:sticky max-lg:top-0 max-lg:z-20 max-lg:border-b max-lg:border-white/[0.06] max-lg:bg-[#0c0a15]/85 max-lg:backdrop-blur-sm lg:z-30 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:gap-0 lg:overflow-visible lg:pl-0 lg:pr-0 max-lg:overflow-hidden max-lg:transition-all max-lg:duration-300 max-lg:ease-out max-lg:max-h-48">
+          <div className={`barra-de-navegacao navegacao-persistente relative flex w-full items-center justify-start gap-2 py-3 pl-3 pr-14 shrink-0 scrollbar-hide max-lg:flex-col max-lg:items-stretch max-lg:gap-1.5 max-lg:px-2 lg:z-30 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:gap-0 lg:overflow-visible lg:pl-0 lg:pr-0 max-lg:overflow-hidden max-lg:transition-all max-lg:duration-300 max-lg:ease-out ${
+            mobileActiveCategory
+              ? "max-lg:sticky max-lg:top-0 max-lg:z-20 max-lg:border-white/[0.06] max-lg:bg-[#0c0a15]/85 max-lg:backdrop-blur-sm max-lg:max-h-0 max-lg:-translate-y-4 max-lg:opacity-0 max-lg:pointer-events-none"
+              : "max-lg:py-1.5 max-lg:sticky max-lg:top-0 max-lg:z-20 max-lg:border-b max-lg:border-white/[0.06] max-lg:bg-[#0c0a15]/85 max-lg:backdrop-blur-sm max-lg:max-h-48 max-lg:opacity-100"
+          }`}>
             
             {/* Coluna 1: Abas de Geração */}
             <div className="pointer-events-auto flex min-w-0 items-start gap-2 max-lg:order-2 max-lg:w-full max-lg:justify-center lg:w-full lg:pl-4">
@@ -3455,9 +3447,9 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                 aria-label="Guia"
                 onClick={() => setIsGuiaOpen(!isGuiaOpen)}
                 className="flex shrink-0 items-center gap-1.5 rounded-full py-2 text-xs font-semibold transition-colors hover:bg-white/[0.06] max-lg:px-2.5 h-10 px-5 uppercase tracking-wider lg:mr-4 lg:justify-self-end cursor-pointer"
-                style={{ color: "rgb(139, 92, 246)", border: "1px solid rgba(139, 92, 246, 0.2)" }}
+                style={{ color: "#8B5CF6", border: "1px solid #8B5CF633" }}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-book-open h-3.5 w-3.5 shrink-0" aria-hidden="true"><path d="M12 7v14"></path><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"></path></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-book-open h-3.5 w-3.5 shrink-0" aria-hidden="true"><path d="M12 5v16"></path><path d="M20.001 19A2 2 0 0022 17V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2z"></path></svg>
                 <span className="max-lg:hidden">Guia</span>
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-down h-3 w-3 shrink-0 transition-transform duration-200 max-lg:hidden" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
               </button>
@@ -3489,6 +3481,20 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                             className="relative flex h-full min-h-0 w-full min-w-0 items-center justify-center overflow-hidden"
                             style={{ cursor: "pointer" }}
                           >
+                            {/* Botão Mais ações no Canto Superior Esquerdo da Imagem (100% IDÊNTICO AO HTML OFICIAL) */}
+                            <button
+                              type="button"
+                              aria-label="Mais ações"
+                              aria-haspopup="dialog"
+                              aria-expanded={isMobileActionsOpen ? "true" : "false"}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setIsMobileActionsOpen(true);
+                              }}
+                              className="pointer-events-auto lg:hidden absolute left-3 top-3 z-30 flex h-8 w-8 items-center justify-center rounded-full bg-black/55 text-white ring-1 ring-white/15 backdrop-blur-md active:scale-95 cursor-pointer"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-ellipsis lucide-more-horizontal h-4 w-4" aria-hidden="true"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
+                            </button>
                             {isProcessing ? (
                               <div className="relative flex h-full min-h-0 min-w-0 flex-1 overflow-hidden items-center justify-center p-3 pb-28 sm:pb-32 animate-in fade-in zoom-in-95 duration-300">
                                 <div
@@ -3570,20 +3576,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                         </div>
                       </div>
 
-                      {/* Botão de Ações no Canto Superior Esquerdo da Arte (3 pontinhos no Mobile - 100% IDÊNTICO AO HTML OFICIAL) */}
-                      <button
-                        type="button"
-                        aria-label="Mais ações"
-                        aria-haspopup="dialog"
-                        aria-expanded={isMobileActionsOpen ? "true" : "false"}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setIsMobileActionsOpen(true);
-                        }}
-                        className="pointer-events-auto lg:hidden absolute left-3 top-3 z-30 flex h-8 w-8 items-center justify-center rounded-full bg-black/55 text-white ring-1 ring-white/15 backdrop-blur-md active:scale-95"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-ellipsis lucide-more-horizontal h-4 w-4" aria-hidden="true"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
-                      </button>
+                      
 
                       {/* Gradiente Inferior Oficial */}
                       <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-10 h-48 bg-gradient-to-t from-[rgba(4,2,12,0.70)] via-[rgba(4,2,12,0.35)] to-transparent" />
@@ -5609,7 +5602,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
         <div
           role="tablist"
           aria-label="Categorias do agente"
-          className="flex items-stretch gap-0.5 overflow-x-auto scrollbar-hide px-2 py-1.5 [scroll-snap-type:x_proximity]"
+          className="flex items-stretch gap-0.5 overflow-x-auto scrollbar-hide px-2 py-1.5 [scroll-snap-type:x_proximity] justify-center"
         >
           {/* Início */}
           <button
@@ -5646,7 +5639,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
             }`}
           >
             <span className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
-              mobileActiveCategory === "foto" ? "bg-violet-600/30 ring-1 ring-violet-500" : "group-hover:bg-white/[0.06]"
+              mobileActiveCategory === "foto" ? "bg-white/[0.12] ring-1 ring-white/20" : "group-hover:bg-white/[0.06]"
             }`}>
               <span className="relative">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-image h-[22px] w-[22px]" aria-hidden="true">
@@ -5654,6 +5647,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                   <circle cx="9" cy="9" r="2"></circle>
                   <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
                 </svg>
+                <span aria-hidden="true" className="absolute -right-1.5 -top-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: "rgb(139, 92, 246)" }}></span>
               </span>
             </span>
             <span className="whitespace-nowrap text-[10px] font-medium leading-none">
@@ -5672,7 +5666,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
             }`}
           >
             <span className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
-              mobileActiveCategory === "estilo" ? "bg-violet-600/30 ring-1 ring-violet-500" : "group-hover:bg-white/[0.06]"
+              mobileActiveCategory === "estilo" ? "bg-white/[0.12] ring-1 ring-white/20" : "group-hover:bg-white/[0.06]"
             }`}>
               <span className="relative">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-sparkles lucide-stars h-[22px] w-[22px]" aria-hidden="true">
@@ -5681,6 +5675,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                   <path d="M22 4h-4"></path>
                   <circle cx="4" cy="20" r="2"></circle>
                 </svg>
+                <span aria-hidden="true" className="absolute -right-1.5 -top-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: "rgb(139, 92, 246)" }}></span>
               </span>
             </span>
             <span className="whitespace-nowrap text-[10px] font-medium leading-none">
@@ -5699,7 +5694,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
             }`}
           >
             <span className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${
-              mobileActiveCategory === "saida" ? "bg-violet-600/30 ring-1 ring-violet-500" : "group-hover:bg-white/[0.06]"
+              mobileActiveCategory === "saida" ? "bg-white/[0.12] ring-1 ring-white/20" : "group-hover:bg-white/[0.06]"
             }`}>
               <span className="relative">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-sliders-horizontal h-[22px] w-[22px]" aria-hidden="true">
@@ -5713,6 +5708,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                   <path d="M8 10v4"></path>
                   <path d="M8 12H3"></path>
                 </svg>
+                <span aria-hidden="true" className="absolute -right-1.5 -top-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: "rgb(139, 92, 246)" }}></span>
               </span>
             </span>
             <span className="whitespace-nowrap text-[10px] font-medium leading-none">
