@@ -1456,26 +1456,6 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                       </span>
                     )}
                   </button>
-
-                  <div className="my-0.5 h-px bg-white/[0.06]" />
-
-                  {/* Assinantes & Créditos */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAdminActiveTab("subscribers");
-                      setIsAdminSuiteOpen(true);
-                      window.dispatchEvent(new CustomEvent("open-admin-suite", { detail: { tab: "subscribers" } }));
-                    }}
-                    className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition-colors text-left cursor-pointer ${
-                      isAdminSuiteOpen && adminActiveTab === "subscribers"
-                        ? "bg-violet-500/15 text-violet-300"
-                        : "text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100"
-                    }`}
-                  >
-                    <Users className="h-3.5 w-3.5 shrink-0" />
-                    <span className="flex-1 truncate">Assinantes & Créditos</span>
-                  </button>
                 </div>
               </div>
             </div>

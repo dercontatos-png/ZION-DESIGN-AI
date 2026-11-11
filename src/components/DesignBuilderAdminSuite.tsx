@@ -38,7 +38,8 @@ import {
   Palette,
   Sun,
   Flame,
-  UserPlus
+  UserPlus,
+  ArrowLeft
 } from "lucide-react";
 import { Subscriber } from "../utils/subscriberService";
 
@@ -435,69 +436,65 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-[10090] flex items-center justify-center bg-black/85 p-2 sm:p-4 backdrop-blur-xl animate-in fade-in duration-200"
-      onClick={handleClose}
+      className="fixed inset-0 z-40 flex flex-col h-[100dvh] w-screen overflow-hidden bg-[#090710] text-left lg:pl-[72px] animate-in fade-in duration-150"
     >
-      <div
-        className="relative flex flex-col h-[94vh] w-full max-w-6xl overflow-hidden rounded-3xl border border-white/10 bg-[#090710] shadow-2xl text-left"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Top Header */}
-        <header className="flex shrink-0 items-center justify-between border-b border-white/10 px-6 py-4 bg-zinc-950/70">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-600/20 text-violet-400 border border-violet-500/30 shadow-lg shadow-violet-500/10">
-              <Shield className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-base font-bold text-white tracking-tight">
-                  DesignBuilder Admin Master Suite
-                </h1>
-                <span className="rounded-full bg-violet-500/20 border border-violet-500/30 px-2 py-0.5 text-[10px] font-bold text-violet-300">
-                  ROOT / SUPERADMIN
+      {/* Top Header */}
+      <header className="flex shrink-0 items-center justify-between border-b border-white/10 px-6 py-4 bg-zinc-950/70">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-600/20 text-violet-400 border border-violet-500/30 shadow-lg shadow-violet-500/10">
+            <Shield className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-base font-bold text-white tracking-tight">
+                DesignBuilder Admin Master Suite
+              </h1>
+              <span className="rounded-full bg-violet-500/20 border border-violet-500/30 px-2 py-0.5 text-[10px] font-bold text-violet-300">
+                ROOT / SUPERADMIN
+              </span>
+              {isLiveActive && (
+                <span className="flex items-center gap-1 rounded-full bg-red-500/20 border border-red-500/40 px-2 py-0.5 text-[10px] font-bold text-red-400 animate-pulse">
+                  <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
+                  LIVE ON AIR
                 </span>
-                {isLiveActive && (
-                  <span className="flex items-center gap-1 rounded-full bg-red-500/20 border border-red-500/40 px-2 py-0.5 text-[10px] font-bold text-red-400 animate-pulse">
-                    <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
-                    LIVE ON AIR
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-zinc-400">
-                Painel Oficial de Controle, Gestão de Clientes, Métricas e Políticas de IA 1:1
-              </p>
+              )}
             </div>
+            <p className="text-xs text-zinc-400">
+              Painel Oficial de Controle, Gestão de Clientes, Métricas e Políticas de IA 1:1
+            </p>
           </div>
+        </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                loadDashboardStats();
-                loadAgents();
-                loadGlobalGenerations();
-                loadSubscribers();
-                loadReports();
-                loadRatings();
-                loadLiveConfig();
-                loadHydraObjectives();
-                showToast?.("Todos os dados foram atualizados!", "info");
-              }}
-              className="flex h-9 items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 text-xs font-medium text-zinc-300 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Atualizar</span>
-            </button>
-            <button
-              type="button"
-              onClick={handleClose}
-              className="flex h-9 w-9 items-center justify-center rounded-xl text-zinc-400 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
-              aria-label="Fechar"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-        </header>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              loadDashboardStats();
+              loadAgents();
+              loadGlobalGenerations();
+              loadSubscribers();
+              loadReports();
+              loadRatings();
+              loadLiveConfig();
+              loadHydraObjectives();
+              showToast?.("Todos os dados foram atualizados!", "info");
+            }}
+            className="flex h-9 items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 text-xs font-medium text-zinc-300 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Atualizar</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleClose}
+            className="flex h-9 items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3.5 text-xs font-semibold text-zinc-300 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
+            title="Voltar ao estúdio"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <span>Voltar ao App</span>
+          </button>
+        </div>
+      </header>
 
         {/* Navigation Tabs Bar */}
         <div className="flex shrink-0 items-center gap-1 border-b border-white/10 bg-zinc-950/40 px-6 py-2 overflow-x-auto scrollbar-hide">
@@ -1631,7 +1628,6 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
 
         </div>
       </div>
-    </div>
-  );
+    );
 };
 export default DesignBuilderAdminSuite;
