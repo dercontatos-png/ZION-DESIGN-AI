@@ -1143,6 +1143,7 @@ import { AuthModal } from "./components/AuthModal";
 import { ProfileCompletePopup } from "./components/ProfileCompletePopup";
 import { EmDesenvolvimentoScreen } from "./components/EmDesenvolvimentoScreen";
 import { AdminSubscribersModal } from "./components/AdminSubscribersModal";
+import { DesignBuilderAdminSuite } from "./components/DesignBuilderAdminSuite";
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<{ email: string; role: "admin" | "client" } | null>(() => {
@@ -1239,6 +1240,27 @@ export default function App() {
   });
   const [paywallDismissed, setPaywallDismissed] = useState(false);
   const [isAdminSubscribersModalOpen, setIsAdminSubscribersModalOpen] = useState(false);
+  const [isAdminSuiteOpen, setIsAdminSuiteOpen] = useState(false);
+  const [adminActiveTab, setAdminActiveTab] = useState<any>("dashboard");
+
+  useEffect(() => {
+    const handleOpenSuite = (e: any) => {
+      const tab = e?.detail?.tab || "dashboard";
+      setAdminActiveTab(tab);
+      setIsAdminSuiteOpen(true);
+    };
+    window.addEventListener("open-admin-suite", handleOpenSuite);
+    window.addEventListener("open-admin-subscribers", () => {
+      setAdminActiveTab("subscribers");
+      setIsAdminSuiteOpen(true);
+    });
+    window.addEventListener("db:open_admin", handleOpenSuite);
+    return () => {
+      window.removeEventListener("open-admin-suite", handleOpenSuite);
+      window.removeEventListener("open-admin-subscribers", () => {});
+      window.removeEventListener("db:open_admin", handleOpenSuite);
+    };
+  }, []);
 
   const checkSubscriber = React.useCallback(async (emailToCheck?: string) => {
     const email = (emailToCheck || currentUser?.email || "").toLowerCase().trim();
@@ -4621,7 +4643,7 @@ ${textContent}`
                 }, 50);
               }}
               onOpenCreditsModal={() => setIsCreditsModalOpen(true)}
-              onOpenAdmin={() => setIsAdminSubscribersModalOpen(true)}
+              onOpenAdmin={() => { setAdminActiveTab("dashboard"); setIsAdminSuiteOpen(true); }}
               currentLang={currentLang}
               setLanguage={setLanguage}
               userInitials={(myProfile?.name || currentUser?.email || "EQ").substring(0, 2).toUpperCase()}
@@ -8287,6 +8309,15 @@ ${textContent}`
           showToast={showToast}
         />
       )}
+
+      {/* Suíte Administrativa DesignBuilder Oficial */}
+      <DesignBuilderAdminSuite
+        isOpen={isAdminSuiteOpen}
+        initialTab={adminActiveTab}
+        onClose={() => setIsAdminSuiteOpen(false)}
+        adminEmail={currentUser?.email || "der.contatos@gmail.com"}
+        showToast={showToast}
+      />
 
       {/* Botão Flutuante Oficial do WhatsApp Suporte (100% IDÊNTICO AO ORIGINAL) */}
       <a

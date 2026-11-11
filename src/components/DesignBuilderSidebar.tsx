@@ -973,6 +973,13 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
 
       {/* Modal de Report */}
       <ReportModal isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} />
+      {/* Suíte Administrativa DesignBuilder 1:1 Oficial */}
+      <DesignBuilderAdminSuite
+        isOpen={isAdminSuiteOpen}
+        initialTab={adminActiveTab}
+        onClose={() => setIsAdminSuiteOpen(false)}
+        adminEmail={cleanEmail || "der.contatos@gmail.com"}
+      />
     </>
   );
 }
@@ -1265,6 +1272,7 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                     onClick={() => {
                       setAdminActiveTab("dashboard");
                       setIsAdminSuiteOpen(true);
+                      window.dispatchEvent(new CustomEvent("open-admin-suite", { detail: { tab: "dashboard" } }));
                     }}
                     className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-zinc-300 hover:bg-white/[0.06] hover:text-white transition-colors text-left cursor-pointer"
                   >
@@ -1278,6 +1286,7 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                     onClick={() => {
                       setAdminActiveTab("agents");
                       setIsAdminSuiteOpen(true);
+                      window.dispatchEvent(new CustomEvent("open-admin-suite", { detail: { tab: "agents" } }));
                     }}
                     className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-zinc-300 hover:bg-white/[0.06] hover:text-white transition-colors text-left cursor-pointer"
                   >
@@ -1291,6 +1300,7 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                     onClick={() => {
                       setAdminActiveTab("generations");
                       setIsAdminSuiteOpen(true);
+                      window.dispatchEvent(new CustomEvent("open-admin-suite", { detail: { tab: "generations" } }));
                     }}
                     className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-zinc-300 hover:bg-white/[0.06] hover:text-white transition-colors text-left cursor-pointer"
                   >
@@ -1304,6 +1314,7 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                     onClick={() => {
                       setAdminActiveTab("live");
                       setIsAdminSuiteOpen(true);
+                      window.dispatchEvent(new CustomEvent("open-admin-suite", { detail: { tab: "live" } }));
                     }}
                     className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-zinc-300 hover:bg-white/[0.06] hover:text-white transition-colors text-left cursor-pointer"
                   >
@@ -1319,6 +1330,7 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                     onClick={() => {
                       setAdminActiveTab("hydra");
                       setIsAdminSuiteOpen(true);
+                      window.dispatchEvent(new CustomEvent("open-admin-suite", { detail: { tab: "hydra" } }));
                     }}
                     className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-zinc-300 hover:bg-white/[0.06] hover:text-white transition-colors text-left cursor-pointer"
                   >
@@ -1334,6 +1346,7 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                     onClick={() => {
                       setAdminActiveTab("ratings");
                       setIsAdminSuiteOpen(true);
+                      window.dispatchEvent(new CustomEvent("open-admin-suite", { detail: { tab: "ratings" } }));
                     }}
                     className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-zinc-300 hover:bg-white/[0.06] hover:text-white transition-colors text-left cursor-pointer"
                   >
@@ -1347,6 +1360,7 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                     onClick={() => {
                       setAdminActiveTab("reports");
                       setIsAdminSuiteOpen(true);
+                      window.dispatchEvent(new CustomEvent("open-admin-suite", { detail: { tab: "reports" } }));
                     }}
                     className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-zinc-300 hover:bg-white/[0.06] hover:text-white transition-colors text-left cursor-pointer"
                   >
@@ -1367,6 +1381,7 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                     onClick={() => {
                       setAdminActiveTab("subscribers");
                       setIsAdminSuiteOpen(true);
+                      window.dispatchEvent(new CustomEvent("open-admin-suite", { detail: { tab: "subscribers" } }));
                     }}
                     className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-amber-300 hover:bg-amber-500/10 transition-colors text-left cursor-pointer font-medium"
                   >
@@ -1516,6 +1531,13 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
         onOpenCredits={onOpenCreditsModal}
         onOpenAdmin={onOpenAdmin}
         onOpenReport={() => setIsReportOpen(true)}
+      />
+      {/* Suíte Administrativa DesignBuilder 1:1 Oficial */}
+      <DesignBuilderAdminSuite
+        isOpen={isAdminSuiteOpen}
+        initialTab={adminActiveTab}
+        onClose={() => setIsAdminSuiteOpen(false)}
+        adminEmail={cleanEmail || "der.contatos@gmail.com"}
       />
     </>
   );
