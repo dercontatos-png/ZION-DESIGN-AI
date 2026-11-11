@@ -2727,7 +2727,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                             <button
                               type="button"
                               aria-pressed={dimension === "9:16"}
-                              onClick={() => { setDimension("9:16"); if (generatedImage) handleReformat("9:16"); }}
+                              onClick={() => setDimension("9:16")}
                               className={`group flex items-center gap-2 rounded-xl px-3 py-2 transition-all pb-ctrl-btn cursor-pointer ${
                                 dimension === "9:16" ? "pb-ctrl-active" : ""
                               }`}
@@ -2748,7 +2748,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                             <button
                               type="button"
                               aria-pressed={dimension === "4:5"}
-                              onClick={() => { setDimension("4:5"); if (generatedImage) handleReformat("4:5"); }}
+                              onClick={() => setDimension("4:5")}
                               className={`group flex items-center gap-2 rounded-xl px-3 py-2 transition-all pb-ctrl-btn cursor-pointer ${
                                 dimension === "4:5" ? "pb-ctrl-active" : ""
                               }`}
@@ -2769,7 +2769,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                             <button
                               type="button"
                               aria-pressed={dimension === "1:1"}
-                              onClick={() => { setDimension("1:1"); if (generatedImage) handleReformat("1:1"); }}
+                              onClick={() => setDimension("1:1")}
                               className={`group flex items-center gap-2 rounded-xl px-3 py-2 transition-all pb-ctrl-btn cursor-pointer ${
                                 dimension === "1:1" ? "pb-ctrl-active" : ""
                               }`}
@@ -2790,7 +2790,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                             <button
                               type="button"
                               aria-pressed={dimension === "16:9"}
-                              onClick={() => { setDimension("16:9"); if (generatedImage) handleReformat("16:9"); }}
+                              onClick={() => setDimension("16:9")}
                               className={`group flex items-center gap-2 rounded-xl px-3 py-2 transition-all pb-ctrl-btn cursor-pointer ${
                                 dimension === "16:9" ? "pb-ctrl-active" : ""
                               }`}
@@ -3782,7 +3782,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                       aria-label="Stories 9:16"
                       aria-pressed={dimension === "9:16"}
                       title="Stories · 9:16"
-                      onClick={() => { setDimension("9:16"); if (generatedImage) handleReformat("9:16"); }}
+                      onClick={() => setDimension("9:16")}
                       className={`flex h-12 items-center justify-center gap-1.5 rounded-lg px-1.5 transition-colors pb-ctrl-btn cursor-pointer ${
                         dimension === "9:16" ? "pb-ctrl-active text-white" : "text-zinc-500 hover:text-zinc-200"
                       }`}
@@ -3795,7 +3795,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                       aria-label="Feed Vertical 4:5"
                       aria-pressed={dimension === "4:5"}
                       title="Feed Vertical · 4:5"
-                      onClick={() => { setDimension("4:5"); if (generatedImage) handleReformat("4:5"); }}
+                      onClick={() => setDimension("4:5")}
                       className={`flex h-12 items-center justify-center gap-1.5 rounded-lg px-1.5 transition-colors pb-ctrl-btn cursor-pointer ${
                         dimension === "4:5" ? "pb-ctrl-active text-white" : "text-zinc-500 hover:text-zinc-200"
                       }`}
@@ -3808,7 +3808,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                       aria-label="Feed 1:1"
                       aria-pressed={dimension === "1:1"}
                       title="Feed · 1:1"
-                      onClick={() => { setDimension("1:1"); if (generatedImage) handleReformat("1:1"); }}
+                      onClick={() => setDimension("1:1")}
                       className={`flex h-12 items-center justify-center gap-1.5 rounded-lg px-1.5 transition-colors pb-ctrl-btn cursor-pointer ${
                         dimension === "1:1" ? "pb-ctrl-active text-white" : "text-zinc-500 hover:text-zinc-200"
                       }`}
@@ -3821,7 +3821,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                       aria-label="Cinema 16:9"
                       aria-pressed={dimension === "16:9"}
                       title="Cinema · 16:9"
-                      onClick={() => { setDimension("16:9"); if (generatedImage) handleReformat("16:9"); }}
+                      onClick={() => setDimension("16:9")}
                       className={`flex h-12 items-center justify-center gap-1.5 rounded-lg px-1.5 transition-colors pb-ctrl-btn cursor-pointer ${
                         dimension === "16:9" ? "pb-ctrl-active text-white" : "text-zinc-500 hover:text-zinc-200"
                       }`}
@@ -6528,7 +6528,6 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                       onClick={() => {
                         setDimension(fmt.id as any);
                         setIsMobileActionsOpen(false);
-                        if (generatedImage) handleReformat(fmt.id as any);
                       }}
                       className={`flex flex-col items-center gap-1 rounded-xl py-3 transition-colors hover:bg-white/[0.06] disabled:opacity-50 cursor-pointer ${
                         dimension === fmt.id ? "bg-white/10 ring-1 ring-white/20" : ""
