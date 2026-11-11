@@ -33,3 +33,4 @@ targetChunks.forEach(file => {
   console.log('Sample prominent classes (up to 12):');
   significant.slice(0, 12).forEach(c => console.log('  * ' + c));
 });
+
