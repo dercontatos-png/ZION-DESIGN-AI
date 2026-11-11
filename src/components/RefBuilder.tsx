@@ -8,6 +8,7 @@ import { ImageCropModal } from "./ImageCropModal";
 import { CarouselSlicerModal } from "./CarouselSlicerModal";
 import { ProjetosWorkspace } from "./ProjetosWorkspace";
 import { GenerationLoadingCanvas } from "./GenerationLoadingCanvas";
+import { UsefulLinksMenu } from "./UsefulLinksMenu";
 import { optimizeBase64Image } from "../utils/compressBase64";
 
 import { REF_PINTEREST_CARDS } from "../data/refPinterestData";
@@ -4489,6 +4490,9 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                 <span className="max-lg:hidden">Guia</span>
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-down h-3 w-3 shrink-0 transition-transform duration-200 max-lg:hidden" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
               </button>
+
+              {/* Botão de reticências (...) Links Úteis oficial do DesignBuilder */}
+              <UsefulLinksMenu />
             </div>
           </div>
 
@@ -4635,9 +4639,33 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                           </button>
                           <button
                             type="button"
-                            onClick={() => {
-                              onOpenCommunity?.();
-                              showToast("Publicar na Comunidade aberto!", "info");
+                            onClick={async () => {
+                              if (!generatedImage) {
+                                showToast("Nenhuma arte gerada para publicar.", "warning");
+                                return;
+                              }
+                              try {
+                                showToast("Publicando no Feed Global...", "info");
+                                const res = await fetch("/api/comunidade/publicar", {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({
+                                    imageUrl: generatedImage,
+                                    prompt: promptValue || promptMaster || additionalDescription || "Arte criada no Ref Builder",
+                                    aspectRatio: dimension,
+                                    app: "ref",
+                                    authorName: "Criador Zion",
+                                    tag: "destaque"
+                                  })
+                                });
+                                const data = await res.json();
+                                if (!res.ok) throw new Error(data.error || "Erro ao publicar");
+                                showToast("Arte publicada com sucesso no Feed da Comunidade!", "success");
+                                window.dispatchEvent(new CustomEvent("community:new_post", { detail: data.post }));
+                                onOpenCommunity?.();
+                              } catch (err: any) {
+                                showToast(err.message || "Erro ao publicar arte.", "error");
+                              }
                             }}
                             title="Publicar na Comunidade"
                             className="flex h-9 items-center rounded-lg px-3 text-xs font-medium backdrop-blur-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed bg-black/70 text-zinc-300 hover:text-white cursor-pointer"

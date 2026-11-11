@@ -18,6 +18,18 @@ import { initWhatsAppEndpoints } from "./src/whatsapp-server";
 import { uploadToR2, downloadFromR2, isR2Active, deleteFromR2, deleteR2Prefix, listR2Objects } from "./src/utils/r2StorageService";
 import { buildEnhancedPrompt } from "./src/utils/promptEngine";
 import { getSubscribersList, saveSubscriber, deleteSubscriber, checkSubscriberAccess, deductCredit } from "./src/utils/subscriberService";
+import {
+  SAAS_PLANS,
+  CREDIT_BUNDLES,
+  createCheckoutSession,
+  processSuccessfulCheckout,
+  isStripeConfigured
+} from "./src/utils/stripeService";
+import {
+  getCommunityPosts,
+  publishCommunityPost,
+  upvoteCommunityPost
+} from "./src/utils/communityService";
 
 const logPath = path.join(os.tmpdir(), "app.log");
 function syncLog(type: string, ...args: any[]) {
@@ -1919,6 +1931,192 @@ async function startServer() {
       console.error("[Storage Download] Error:", err);
       return res.status(500).json({ error: "Internal server error." });
     }
+  });
+
+  // ── ROTAS STRIPE & SAAS COMERCIAL (ASSINATURAS E RECARGAS DE CRÉDITO) ──
+  app.get("/api/stripe/config", (req: any, res: any) => {
+    res.json({
+      configured: isStripeConfigured(),
+      publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || "",
+      plans: SAAS_PLANS,
+      bundles: CREDIT_BUNDLES
+    });
+  });
+
+  app.post("/api/stripe/create-checkout-session", async (req: any, res: any) => {
+    try {
+      const { planId, currency = "brl", userEmail, userName = "", successUrl, cancelUrl } = req.body;
+      if (!planId) {
+        return res.status(400).json({ error: "Parâmetro 'planId' é obrigatório." });
+      }
+      const host = req.get("origin") || req.get("host") || "http://localhost:3000";
+      const resolvedSuccessUrl = successUrl || `${host}/?payment=success`;
+      const resolvedCancelUrl = cancelUrl || `${host}/?payment=cancelled`;
+
+      const session = await createCheckoutSession({
+        planId,
+        currency,
+        userEmail: userEmail || "cliente@ziondesign.ai",
+        userName,
+        successUrl: resolvedSuccessUrl,
+        cancelUrl: resolvedCancelUrl
+      });
+
+      return res.json(session);
+    } catch (err: any) {
+      console.error("[Stripe Checkout] Erro ao criar checkout session:", err);
+      return res.status(500).json({ error: err.message || "Erro ao gerar checkout." });
+    }
+  });
+
+  app.post("/api/stripe/verify-session", async (req: any, res: any) => {
+    try {
+      const { sessionId, planId, credits, userEmail } = req.body;
+      if (!userEmail) {
+        return res.status(400).json({ error: "E-mail de usuário é obrigatório." });
+      }
+      const numCredits = parseInt(String(credits || 100), 10);
+      const result = await processSuccessfulCheckout({
+        sessionId: sessionId || `cs_manual_${Date.now()}`,
+        planId: planId || "starter",
+        credits: isNaN(numCredits) ? 100 : numCredits,
+        userEmail
+      });
+      return res.json(result);
+    } catch (err: any) {
+      console.error("[Stripe Verify] Erro:", err);
+      return res.status(500).json({ error: err.message || "Erro ao verificar pagamento." });
+    }
+  });
+
+  // ── ROTAS DO FEED GLOBAL DA COMUNIDADE EM TEMPO REAL ──
+  app.get(["/api/comunidade/feed", "/api/community-feed", "/api/feed"], async (req: any, res: any) => {
+    try {
+      const allPosts = await getCommunityPosts();
+      const { app: appFilter, tag, sort = "recent", search = "", page = "1", limit = "30" } = req.query;
+
+      let filtered = [...allPosts];
+
+      if (appFilter && appFilter !== "all") {
+        const needle = String(appFilter).toLowerCase();
+        filtered = filtered.filter(p =>
+          (p.agent_slug && p.agent_slug.toLowerCase().includes(needle)) ||
+          (p.app && p.app.toLowerCase().includes(needle))
+        );
+      }
+
+      if (tag && tag !== "all") {
+        const needle = String(tag).toLowerCase();
+        filtered = filtered.filter(p => p.tag && p.tag.toLowerCase().includes(needle));
+      }
+
+      if (search && String(search).trim()) {
+        const q = String(search).toLowerCase().trim();
+        filtered = filtered.filter(p =>
+          (p.title && p.title.toLowerCase().includes(q)) ||
+          (p.prompt && p.prompt.toLowerCase().includes(q)) ||
+          (p.author && p.author.toLowerCase().includes(q)) ||
+          (p.tag && p.tag.toLowerCase().includes(q))
+        );
+      }
+
+      if (sort === "popular") {
+        filtered.sort((a, b) => (b.upvote_count || 0) - (a.upvote_count || 0));
+      } else if (sort === "random") {
+        filtered.sort(() => Math.random() - 0.5);
+      } else {
+        // "recent"
+        filtered.sort((a, b) => new Date(b.published_at || 0).getTime() - new Date(a.published_at || 0).getTime());
+      }
+
+      const p = Math.max(1, parseInt(String(page), 10) || 1);
+      const l = Math.max(1, parseInt(String(limit), 10) || 30);
+      const startIndex = (p - 1) * l;
+      const paginated = filtered.slice(startIndex, startIndex + l);
+
+      return res.json({
+        items: paginated,
+        total: filtered.length,
+        page: p,
+        limit: l,
+        hasMore: startIndex + l < filtered.length
+      });
+    } catch (err: any) {
+      console.error("[Community Feed] Erro:", err);
+      return res.status(500).json({ error: "Erro ao buscar feed da comunidade." });
+    }
+  });
+
+  app.post("/api/comunidade/publicar", async (req: any, res: any) => {
+    try {
+      const { imageUrl, prompt, aspectRatio, app: appName, authorName, authorEmail, tag } = req.body;
+      if (!imageUrl || !prompt) {
+        return res.status(400).json({ error: "Arte e prompt são obrigatórios para publicação." });
+      }
+
+      const post = await publishCommunityPost({
+        imageUrl,
+        prompt,
+        aspectRatio,
+        app: appName,
+        authorName,
+        authorEmail,
+        tag
+      });
+
+      return res.json({ success: true, post });
+    } catch (err: any) {
+      console.error("[Community Publish] Erro ao publicar arte:", err);
+      return res.status(500).json({ error: "Falha ao publicar arte no feed global." });
+    }
+  });
+
+  app.post("/api/comunidade/like", async (req: any, res: any) => {
+    try {
+      const { id } = req.body;
+      if (!id) return res.status(400).json({ error: "ID do post obrigatório." });
+      const likes = await upvoteCommunityPost(id);
+      return res.json({ success: true, likes });
+    } catch (err: any) {
+      console.error("[Community Like] Erro:", err);
+      return res.status(500).json({ error: "Falha ao curtir post." });
+    }
+  });
+
+  // Endpoint oficial para Sidebar Links úteis
+  app.get("/api/sidebar-links", (req: any, res: any) => {
+    res.json([
+      {
+        label: "Documentação",
+        description: "Guias e tutoriais",
+        icon: "book",
+        color: "#a78bfa",
+        url: "https://docs.designbuilder.co/docs/onboarding"
+      },
+      {
+        label: "Roadmap",
+        description: "O que vem por aí",
+        icon: "map",
+        color: "#34d399",
+        url: "https://roadmap.designbuilder.co/"
+      },
+      {
+        label: "Discord",
+        description: "Comunidade de criadores",
+        icon: "discord",
+        color: "#5865F2",
+        url: "https://link.easybuilder.com.br/convitediscord-fundadores"
+      },
+      {
+        slug: "support",
+        category: "support",
+        label: "Suporte",
+        description: "Fale com o suporte via WhatsApp",
+        icon: "headset",
+        color: "#a78bfa",
+        url: "https://link.designbuilder.co/fale-com-suporte-db"
+      }
+    ]);
   });
 
   // Master High-Fidelity Image Download & Format Conversion Endpoint (Zero Canvas Re-encoding / Pure Sharp Pipeline)

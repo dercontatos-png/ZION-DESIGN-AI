@@ -118,44 +118,45 @@ export const ComunidadeManager: React.FC<ComunidadeManagerProps> = ({
   });
 
   useEffect(() => {
-    // 1. Fetch from backend /api/community
-    fetch("/api/community")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data && Array.isArray(data.items) && data.items.length > 0) {
-          const formatted: CommunityCardItem[] = data.items
-            .filter((it: any) => {
-              const s = it.src || it.image_url || it.thumbnail_url || it.result_url || "";
-              if (s.includes("X-Amz-Signature") || s.includes("X-Amz-Expires")) return false;
-              return Boolean(s);
-            })
-            .map((it: any, idx: number) => ({
-              id: it.id || `comm-api-${idx}`,
-              col: 0,
-              index: idx,
-              title: it.community_title || it.title || "Arte Criada",
-              tag: it.tag || (Array.isArray(it.community_tags) && it.community_tags[0]) || "Criativo",
-              aspect: it.aspect || (it.dimensions === "9:16" ? "9 / 16" : it.dimensions === "16:9" ? "16 / 9" : it.dimensions === "1:1" ? "1 / 1" : "4 / 5"),
-              author: it.autor?.nome || it.author || "Você",
-              avatar: it.autor?.avatar_url || it.avatar || "",
-              letter: (it.autor?.nome || it.author || "V")[0],
-              baseVotes: it.upvote_count || it.baseVotes || 1,
-              app: it.app || (it.agent_slug === "orion-pro" ? "Órion Pro" : "Zion Design"),
-              src: it.src || it.image_url || it.thumbnail_url || it.result_url || "",
-              prompt: it.prompt || ""
-            }));
+    // 1. Fetch from live global feed endpoint /api/comunidade/feed
+    const fetchCommunityFeed = () => {
+      fetch(`/api/comunidade/feed?app=${selectedApp}&sort=${sortOption}&search=${encodeURIComponent(communitySearch)}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data && Array.isArray(data.items) && data.items.length > 0) {
+            const formatted: CommunityCardItem[] = data.items
+              .filter((it: any) => Boolean(it.src || it.image_url || it.thumbnail_url))
+              .map((it: any, idx: number) => ({
+                id: it.id || `comm-api-${idx}`,
+                col: 0,
+                index: idx,
+                title: it.community_title || it.title || "Arte Criada",
+                tag: it.tag || (Array.isArray(it.community_tags) && it.community_tags[0]) || "Criativo",
+                aspect: it.aspect || (it.dimensions === "9:16" ? "9 / 16" : it.dimensions === "16:9" ? "16 / 9" : it.dimensions === "1:1" ? "1 / 1" : "4 / 5"),
+                author: it.autor?.nome || it.author || "Criador Global",
+                avatar: it.autor?.avatar_url || it.avatar || "",
+                letter: (it.autor?.nome || it.author || "G")[0],
+                baseVotes: it.upvote_count || it.baseVotes || 1,
+                app: it.app || (it.agent_slug === "orion-pro" ? "Órion Pro" : "Zion Design"),
+                src: it.src || it.image_url || it.thumbnail_url || it.result_url || "",
+                prompt: it.prompt || ""
+              }));
 
-          setAllCards((prev) => {
-            const existingIds = new Set(prev.map((c) => c.id));
-            const newFromApi = formatted.filter((c) => !existingIds.has(c.id));
-            if (newFromApi.length > 0) {
-              return [...newFromApi, ...prev];
-            }
-            return prev;
-          });
-        }
-      })
-      .catch(() => {});
+            setAllCards((prev) => {
+              const existingIds = new Set(prev.map((c) => c.id));
+              const newFromApi = formatted.filter((c) => !existingIds.has(c.id));
+              if (newFromApi.length > 0) {
+                return [...newFromApi, ...prev];
+              }
+              return prev;
+            });
+          }
+        })
+        .catch(() => {});
+    };
+
+    fetchCommunityFeed();
+    const pollInterval = setInterval(fetchCommunityFeed, 15000);
 
     // 2. Listen to real-time publish events from Design Builder Studio
     const handleNewPost = (e: any) => {
@@ -165,8 +166,11 @@ export const ComunidadeManager: React.FC<ComunidadeManagerProps> = ({
       }
     };
     window.addEventListener("community:new_post", handleNewPost);
-    return () => window.removeEventListener("community:new_post", handleNewPost);
-  }, []);
+    return () => {
+      clearInterval(pollInterval);
+      window.removeEventListener("community:new_post", handleNewPost);
+    };
+  }, [selectedApp, sortOption, communitySearch]);
 
   // Filtragem e Ordenação
   const filteredCards = useMemo(() => {

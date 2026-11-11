@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { X, Zap, CreditCard, User, Coins, ImageOff, Mail, Camera, Shield } from "lucide-react";
-import { getCreditState, getCreditTransactions, syncWithGoogleCloud, ExtratoItem, CreditState } from "../utils/creditsManager";
+import { X, Zap, CreditCard, User, Coins, ImageOff, Mail, Camera, Shield, CheckCircle2, Sparkles, ArrowRight, Loader2, Check } from "lucide-react";
+import { getCreditState, getCreditTransactions, syncWithGoogleCloud, setTotalCredits, ExtratoItem, CreditState } from "../utils/creditsManager";
 
 interface CreditsModalProps {
   isOpen?: boolean;
@@ -30,6 +30,59 @@ export const CreditsModal: React.FC<CreditsModalProps> = ({
   const [activeTab, setActiveTab] = useState<"perfil" | "planos">(initialTab);
   const [creditState, setCreditState] = useState<CreditState>(getCreditState);
   const [transactions, setTransactions] = useState<ExtratoItem[]>(getCreditTransactions);
+  const [currency, setCurrency] = useState<"brl" | "usd">("brl");
+  const [isCheckingOut, setIsCheckingOut] = useState<string | null>(null);
+  const [checkoutToast, setCheckoutToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
+
+  const handleCheckout = async (planId: string, credits: number, type: "subscription" | "bundle") => {
+    setIsCheckingOut(planId);
+    try {
+      const email = propUserEmail || localStorage.getItem("zion_user_email") || "cliente@ziondesign.ai";
+      const res = await fetch("/api/stripe/create-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          planId,
+          currency,
+          userEmail: email,
+          userName: name || propUserName,
+          successUrl: window.location.origin + window.location.pathname,
+          cancelUrl: window.location.origin + window.location.pathname
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erro ao iniciar checkout Stripe.");
+
+      if (data.url) {
+        if (data.isDemo) {
+          await fetch("/api/stripe/verify-session", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              sessionId: data.sessionId,
+              planId,
+              credits,
+              userEmail: email
+            })
+          });
+          const currentState = getCreditState();
+          const newTotal = currentState.total + credits;
+          setTotalCredits(newTotal);
+          setCreditState(getCreditState());
+          setTransactions(getCreditTransactions());
+          setCheckoutToast({ msg: `Pagamento aprovado! +${credits.toLocaleString("pt-BR")} créditos adicionados com sucesso.`, type: "success" });
+          setTimeout(() => setCheckoutToast(null), 5000);
+        } else {
+          window.location.href = data.url;
+        }
+      }
+    } catch (err: any) {
+      setCheckoutToast({ msg: err.message || "Erro ao processar checkout.", type: "error" });
+      setTimeout(() => setCheckoutToast(null), 5000);
+    } finally {
+      setIsCheckingOut(null);
+    }
+  };
 
   // Profile Form States (Persisted in localStorage)
   const [name, setName] = useState(() => {
@@ -309,6 +362,282 @@ export const CreditsModal: React.FC<CreditsModalProps> = ({
                           {propUserEmail?.toLowerCase() === "der.contatos@gmail.com" ? "Assinante Profissional" : remaining > 0 ? "Assinante Ativo" : "Sem Assinatura"}
                         </span>
                       </span>
+                    </div>
+                  </div>
+
+                  {/* Toast Feedback de Checkout */}
+                  {checkoutToast && (
+                    <div className={`flex items-center gap-2.5 rounded-xl border p-3.5 text-xs font-medium animate-in fade-in-0 duration-200 ${
+                      checkoutToast.type === "success"
+                        ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
+                        : "border-red-500/20 bg-red-500/10 text-red-300"
+                    }`}>
+                      <Sparkles className="h-4 w-4 shrink-0" />
+                      <span>{checkoutToast.msg}</span>
+                    </div>
+                  )}
+
+                  {/* ── SELETOR DE MOEDA (BRL / USD) ── */}
+                  <div className="flex items-center justify-between rounded-xl border border-white/5 bg-zinc-900/60 p-2.5">
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="h-4 w-4 text-violet-400" />
+                      <span className="text-xs font-semibold text-white">Moeda de Pagamento Stripe</span>
+                    </div>
+                    <div className="flex items-center gap-1 rounded-lg bg-black/40 p-1 border border-white/5">
+                      <button
+                        type="button"
+                        onClick={() => setCurrency("brl")}
+                        className={`rounded-md px-2.5 py-1 text-[11px] font-semibold transition-all cursor-pointer ${
+                          currency === "brl"
+                            ? "bg-violet-600 text-white shadow-sm"
+                            : "text-zinc-400 hover:text-white"
+                        }`}
+                      >
+                        🇧🇷 BRL (R$)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCurrency("usd")}
+                        className={`rounded-md px-2.5 py-1 text-[11px] font-semibold transition-all cursor-pointer ${
+                          currency === "usd"
+                            ? "bg-violet-600 text-white shadow-sm"
+                            : "text-zinc-400 hover:text-white"
+                        }`}
+                      >
+                        🇺🇸 USD ($)
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* ── PLANOS DE ASSINATURA MENSAL (SAAS STRIPE) ── */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+                        Assinatura Mensal (SaaS)
+                      </h3>
+                      <span className="text-[11px] text-zinc-500">Sem fidelidade · Cancele quando quiser</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {/* Starter */}
+                      <div className="relative flex flex-col justify-between rounded-2xl border border-white/10 bg-zinc-900/70 p-4 transition-all hover:border-white/20">
+                        <div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-white uppercase tracking-wider">Starter</span>
+                          </div>
+                          <div className="mt-2 flex items-baseline gap-1">
+                            <span className="text-2xl font-extrabold text-white">
+                              {currency === "brl" ? "R$ 97" : "$ 19"}
+                            </span>
+                            <span className="text-xs text-zinc-400">/mês</span>
+                          </div>
+                          <p className="mt-1 text-[11px] font-semibold text-violet-400">
+                            300 créditos mensais
+                          </p>
+                          <ul className="mt-3 space-y-1.5 border-t border-white/5 pt-3 text-[11px] text-zinc-400">
+                            <li className="flex items-center gap-1.5">
+                              <Check className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                              <span>Ref Builder & V2</span>
+                            </li>
+                            <li className="flex items-center gap-1.5">
+                              <Check className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                              <span>Resolução até 4K</span>
+                            </li>
+                            <li className="flex items-center gap-1.5">
+                              <Check className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                              <span>Feed Global da Comunidade</span>
+                            </li>
+                          </ul>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={Boolean(isCheckingOut)}
+                          onClick={() => handleCheckout("starter", 300, "subscription")}
+                          className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/5 py-2 text-xs font-semibold text-white transition-all hover:bg-white/10 active:scale-95 disabled:opacity-50 cursor-pointer"
+                        >
+                          {isCheckingOut === "starter" ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <>
+                              <span>Assinar Starter</span>
+                              <ArrowRight className="h-3.5 w-3.5" />
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                      {/* Pro (Mais Popular) */}
+                      <div className="relative flex flex-col justify-between rounded-2xl border-2 border-violet-500 bg-gradient-to-b from-violet-500/15 via-zinc-900/90 to-zinc-950 p-4 shadow-xl shadow-violet-500/10">
+                        <div className="absolute -top-3 right-4 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 px-2.5 py-0.5 text-[10px] font-bold text-white shadow-md">
+                          MAIS POPULAR
+                        </div>
+                        <div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-violet-300 uppercase tracking-wider">Pro</span>
+                          </div>
+                          <div className="mt-2 flex items-baseline gap-1">
+                            <span className="text-2xl font-extrabold text-white">
+                              {currency === "brl" ? "R$ 197" : "$ 39"}
+                            </span>
+                            <span className="text-xs text-zinc-400">/mês</span>
+                          </div>
+                          <p className="mt-1 text-[11px] font-semibold text-violet-300">
+                            1.000 créditos mensais
+                          </p>
+                          <ul className="mt-3 space-y-1.5 border-t border-white/10 pt-3 text-[11px] text-zinc-300">
+                            <li className="flex items-center gap-1.5">
+                              <Check className="h-3.5 w-3.5 text-violet-400 shrink-0" />
+                              <span>Todos os Builders (Órion, Hydra, Ref)</span>
+                            </li>
+                            <li className="flex items-center gap-1.5">
+                              <Check className="h-3.5 w-3.5 text-violet-400 shrink-0" />
+                              <span>Resolução Máxima 8K Master</span>
+                            </li>
+                            <li className="flex items-center gap-1.5">
+                              <Check className="h-3.5 w-3.5 text-violet-400 shrink-0" />
+                              <span>Fila Prioritária de Render</span>
+                            </li>
+                            <li className="flex items-center gap-1.5">
+                              <Check className="h-3.5 w-3.5 text-violet-400 shrink-0" />
+                              <span>Suporte VIP WhatsApp</span>
+                            </li>
+                          </ul>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={Boolean(isCheckingOut)}
+                          onClick={() => handleCheckout("pro", 1000, "subscription")}
+                          className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-xl bg-violet-600 py-2 text-xs font-bold text-white shadow-lg shadow-violet-600/30 transition-all hover:bg-violet-500 active:scale-95 disabled:opacity-50 cursor-pointer"
+                        >
+                          {isCheckingOut === "pro" ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <>
+                              <span>Assinar Pro Agora</span>
+                              <ArrowRight className="h-3.5 w-3.5" />
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                      {/* Agency */}
+                      <div className="relative flex flex-col justify-between rounded-2xl border border-white/10 bg-zinc-900/70 p-4 transition-all hover:border-white/20">
+                        <div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-white uppercase tracking-wider">Studio / Agência</span>
+                          </div>
+                          <div className="mt-2 flex items-baseline gap-1">
+                            <span className="text-2xl font-extrabold text-white">
+                              {currency === "brl" ? "R$ 397" : "$ 79"}
+                            </span>
+                            <span className="text-xs text-zinc-400">/mês</span>
+                          </div>
+                          <p className="mt-1 text-[11px] font-semibold text-emerald-400">
+                            3.000 créditos mensais
+                          </p>
+                          <ul className="mt-3 space-y-1.5 border-t border-white/5 pt-3 text-[11px] text-zinc-400">
+                            <li className="flex items-center gap-1.5">
+                              <Check className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                              <span>Gerações simultâneas em lote</span>
+                            </li>
+                            <li className="flex items-center gap-1.5">
+                              <Check className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                              <span>Armazenamento R2 Ilimitado</span>
+                            </li>
+                            <li className="flex items-center gap-1.5">
+                              <Check className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                              <span>Onboarding & Gerente Dedicado</span>
+                            </li>
+                          </ul>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={Boolean(isCheckingOut)}
+                          onClick={() => handleCheckout("agency", 3000, "subscription")}
+                          className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/5 py-2 text-xs font-semibold text-white transition-all hover:bg-white/10 active:scale-95 disabled:opacity-50 cursor-pointer"
+                        >
+                          {isCheckingOut === "agency" ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <>
+                              <span>Assinar Agência</span>
+                              <ArrowRight className="h-3.5 w-3.5" />
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ── PACOTES DE RECARGA DE CRÉDITOS AVULSOS ── */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+                        Recarga Avulsa de Créditos
+                      </h3>
+                      <span className="text-[11px] text-zinc-500">Créditos não expiram nunca</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {/* Pack 100 */}
+                      <div className="rounded-xl border border-white/5 bg-zinc-900/40 p-3.5 text-left flex flex-col justify-between">
+                        <div>
+                          <div className="text-xs font-bold text-white">100 Créditos</div>
+                          <div className="mt-1 text-lg font-bold text-white">
+                            {currency === "brl" ? "R$ 39" : "$ 8"}
+                          </div>
+                          <p className="mt-0.5 text-[11px] text-zinc-500">R$ 0,39 por crédito</p>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={Boolean(isCheckingOut)}
+                          onClick={() => handleCheckout("pack_100", 100, "bundle")}
+                          className="mt-3 flex w-full items-center justify-center gap-1 rounded-lg border border-white/10 bg-white/[0.04] py-1.5 text-xs font-semibold text-zinc-200 hover:bg-white/10 hover:text-white transition-all cursor-pointer disabled:opacity-50"
+                        >
+                          {isCheckingOut === "pack_100" ? <Loader2 className="h-3 w-3 animate-spin" /> : "Comprar Recarga"}
+                        </button>
+                      </div>
+
+                      {/* Pack 500 */}
+                      <div className="relative rounded-xl border border-violet-500/40 bg-violet-500/[0.06] p-3.5 text-left flex flex-col justify-between shadow-md shadow-violet-500/5">
+                        <span className="absolute -top-2.5 right-3 rounded-full bg-violet-600 px-2 py-0.5 text-[9px] font-bold text-white">
+                          MELHOR CUSTO
+                        </span>
+                        <div>
+                          <div className="text-xs font-bold text-white">500 Créditos</div>
+                          <div className="mt-1 text-lg font-bold text-violet-300">
+                            {currency === "brl" ? "R$ 149" : "$ 29"}
+                          </div>
+                          <p className="mt-0.5 text-[11px] text-zinc-400">R$ 0,29 por crédito (-25%)</p>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={Boolean(isCheckingOut)}
+                          onClick={() => handleCheckout("pack_500", 500, "bundle")}
+                          className="mt-3 flex w-full items-center justify-center gap-1 rounded-lg bg-violet-600 py-1.5 text-xs font-bold text-white hover:bg-violet-500 transition-all cursor-pointer disabled:opacity-50"
+                        >
+                          {isCheckingOut === "pack_500" ? <Loader2 className="h-3 w-3 animate-spin" /> : "Comprar 500 Créditos"}
+                        </button>
+                      </div>
+
+                      {/* Pack 1500 */}
+                      <div className="rounded-xl border border-white/5 bg-zinc-900/40 p-3.5 text-left flex flex-col justify-between">
+                        <div>
+                          <div className="text-xs font-bold text-white">1.500 Créditos</div>
+                          <div className="mt-1 text-lg font-bold text-white">
+                            {currency === "brl" ? "R$ 349" : "$ 69"}
+                          </div>
+                          <p className="mt-0.5 text-[11px] text-zinc-500">R$ 0,23 por crédito (-40%)</p>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={Boolean(isCheckingOut)}
+                          onClick={() => handleCheckout("pack_1500", 1500, "bundle")}
+                          className="mt-3 flex w-full items-center justify-center gap-1 rounded-lg border border-white/10 bg-white/[0.04] py-1.5 text-xs font-semibold text-zinc-200 hover:bg-white/10 hover:text-white transition-all cursor-pointer disabled:opacity-50"
+                        >
+                          {isCheckingOut === "pack_1500" ? <Loader2 className="h-3 w-3 animate-spin" /> : "Comprar 1.500 Créditos"}
+                        </button>
+                      </div>
                     </div>
                   </div>
 

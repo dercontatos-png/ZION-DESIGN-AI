@@ -17,6 +17,7 @@ import { AuthModal } from "./AuthModal";
 import { PublicEntryModal } from "./PublicEntryModal";
 import { NoCreditsModal } from "./NoCreditsModal";
 import { WhatsAppSupportButton } from "./WhatsAppSupportButton";
+import { UsefulLinksMenu } from "./UsefulLinksMenu";
 
 // Modular App Builders & Hubs
 import { DesignBuilderHome } from "./DesignBuilderHome";
@@ -2041,6 +2042,9 @@ const hasFotoDot = Boolean(
                     <span className="max-lg:hidden">Guia</span>
                     <ChevronDown className="h-3 w-3 shrink-0 transition-transform duration-200 max-lg:hidden" aria-hidden="true" />
                   </button>
+
+                  {/* Botão de reticências (...) Links Úteis oficial do DesignBuilder */}
+                  <UsefulLinksMenu />
                 </div>
               </div>
 
