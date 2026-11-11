@@ -426,11 +426,10 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                   type="button"
                   onClick={() => {
                     setIsMobileAccountOpen(false);
+                    setAdminActiveTab("dashboard");
+                    setIsAdminSuiteOpen(true);
+                    window.dispatchEvent(new CustomEvent("open-admin-suite", { detail: { tab: "dashboard" } }));
                     if (onOpenAdmin) onOpenAdmin();
-                    else {
-                      window.dispatchEvent(new CustomEvent("open-admin-subscribers"));
-                      window.dispatchEvent(new CustomEvent("db:open_admin"));
-                    }
                   }}
                   className="mb-6 flex w-full items-center justify-between rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3.5 text-left transition-all hover:bg-amber-500/20 cursor-pointer"
                 >
@@ -736,6 +735,28 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                 </span>
               </span>
             </li>
+            {isCleanAdmin && (
+              <li>
+                <a
+                  aria-current={isAdminSuiteOpen || (typeof window !== "undefined" && window.location.pathname.startsWith("/admin")) ? "page" : undefined}
+                  className={`flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-left text-[15px] transition-colors cursor-pointer ${
+                    isAdminSuiteOpen || (typeof window !== "undefined" && window.location.pathname.startsWith("/admin"))
+                      ? "bg-violet-600/25 font-medium text-white"
+                      : "text-zinc-300 hover:bg-white/[0.06] hover:text-white"
+                  }`}
+                  href="/admin/agents"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setAdminActiveTab("dashboard");
+                    setIsAdminSuiteOpen(true);
+                    window.dispatchEvent(new CustomEvent("open-admin-suite", { detail: { tab: "dashboard" } }));
+                  }}
+                >
+                  <Shield className="h-[18px] w-[18px] shrink-0 text-violet-400" />
+                  <span className="truncate">Admin</span>
+                </a>
+              </li>
+            )}
           </ul>
 
           <div className="my-4 h-px bg-white/10" />
@@ -834,6 +855,9 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                       type="button"
                       onClick={() => {
                         setIsProfileMenuOpen(false);
+                        setAdminActiveTab("dashboard");
+                        setIsAdminSuiteOpen(true);
+                        window.dispatchEvent(new CustomEvent("open-admin-suite", { detail: { tab: "dashboard" } }));
                         onOpenAdmin?.();
                       }}
                       className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-amber-400 hover:bg-amber-500/10 font-bold cursor-pointer"
@@ -1081,11 +1105,10 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                         role="menuitem"
                         onClick={() => {
                           setIsProfileMenuOpen(false);
+                          setAdminActiveTab("dashboard");
+                          setIsAdminSuiteOpen(true);
+                          window.dispatchEvent(new CustomEvent("open-admin-suite", { detail: { tab: "dashboard" } }));
                           if (onOpenAdmin) onOpenAdmin();
-                          else {
-                            window.dispatchEvent(new CustomEvent("open-admin-subscribers"));
-                            window.dispatchEvent(new CustomEvent("db:open_admin"));
-                          }
                         }}
                         className="flex items-center gap-3 px-4 py-2 text-sm text-amber-400 text-left transition-colors hover:bg-amber-500/10 cursor-pointer font-bold"
                       >
