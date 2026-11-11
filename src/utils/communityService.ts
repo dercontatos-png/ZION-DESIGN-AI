@@ -284,8 +284,9 @@ export async function getCommunityPosts(): Promise<CommunityPost[]> {
   if (isR2Active()) {
     try {
       const r2Obj = await downloadFromR2(R2_COMMUNITY_KEY);
-      if (r2Obj && r2Obj.body) {
-        const parsed = JSON.parse(r2Obj.body.toString("utf8"));
+      const r2Data = (r2Obj as any)?.data || (r2Obj as any)?.body;
+      if (r2Data) {
+        const parsed = JSON.parse(r2Data.toString("utf8"));
         if (Array.isArray(parsed) && parsed.length > 0) {
           memoryCommunityCache = parsed;
           lastCacheTime = now;

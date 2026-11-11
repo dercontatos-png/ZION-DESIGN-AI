@@ -103,6 +103,10 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
   const [settingsInitialTab, setSettingsInitialTab] = useState<"perfil" | "plano" | "uso" | "documentacao">("perfil");
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [creditState, setCreditState] = useState<CreditState>(getCreditState);
+
+  const userPlan = propUserPlan || "Profissional (Vertex AI)";
+  const cleanEmail = (userEmail || "").toLowerCase().trim();
+  const isCleanAdmin = cleanEmail === "der.contatos@gmail.com" || cleanEmail === "ricardo.jrsr.gov@gmail.com" || isUserAdmin() || (typeof window !== "undefined" && (window.location.search.includes("admin=true") || localStorage.getItem("zion_admin_override") === "true"));
   const [isAdminSuiteOpen, setIsAdminSuiteOpen] = useState(false);
   const [adminActiveTab, setAdminActiveTab] = useState<any>("dashboard");
   const [adminUnreadReports, setAdminUnreadReports] = useState(0);
@@ -140,9 +144,6 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
     };
   }, []);
 
-  const userPlan = propUserPlan || "Profissional (Vertex AI)";
-  const cleanEmail = (userEmail || "").toLowerCase().trim();
-  const isCleanAdmin = cleanEmail === "der.contatos@gmail.com" || cleanEmail === "ricardo.jrsr.gov@gmail.com" || isUserAdmin() || (typeof window !== "undefined" && (window.location.search.includes("admin=true") || localStorage.getItem("zion_admin_override") === "true"));
 
   // Calculate real credits from GCP Vertex AI
   const storedReal = typeof window !== "undefined" ? localStorage.getItem("zion_real_credits") : null;

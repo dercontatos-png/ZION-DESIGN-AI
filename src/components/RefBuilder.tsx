@@ -4641,7 +4641,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                             type="button"
                             onClick={async () => {
                               if (!generatedImage) {
-                                showToast("Nenhuma arte gerada para publicar.", "warning");
+                                showToast("Nenhuma arte gerada para publicar.", "error");
                                 return;
                               }
                               try {
@@ -4651,7 +4651,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                                   headers: { "Content-Type": "application/json" },
                                   body: JSON.stringify({
                                     imageUrl: generatedImage,
-                                    prompt: promptValue || promptMaster || additionalDescription || "Arte criada no Ref Builder",
+                                    prompt: masterPromptResult || additionalDescription || "Arte criada no Ref Builder",
                                     aspectRatio: dimension,
                                     app: "ref",
                                     authorName: "Criador Zion",

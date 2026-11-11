@@ -177,7 +177,7 @@ export async function createCheckoutSession(params: CreateCheckoutParams): Promi
     const isSubscription = plan.type === "subscription";
 
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
-      payment_method_types: ["card"],
+      // payment_method_types: ["card"],
       customer_email: userEmail,
       line_items: [
         {
