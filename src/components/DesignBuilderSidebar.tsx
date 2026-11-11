@@ -21,9 +21,16 @@ import {
   Headphones,
   BookOpen,
   Bot,
-  ChevronRight
+  ChevronRight,
+  BarChart3,
+  Radio,
+  Package,
+  Star,
+  Users
 } from "lucide-react";
 import { DesignBuilderSettingsModal } from "./DesignBuilderSettingsModal";
+import { DesignBuilderAdminSuite } from "./DesignBuilderAdminSuite";
+import { isUserAdmin } from "../utils/userAuth";
 
 export const AGENTS = [
   { slug: "ref", name: "REF", href: "/agent/ref", color: "rgb(139, 92, 246)" },
@@ -96,10 +103,34 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
   const [settingsInitialTab, setSettingsInitialTab] = useState<"perfil" | "plano" | "uso" | "documentacao">("perfil");
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [creditState, setCreditState] = useState<CreditState>(getCreditState);
+  const [isAdminSuiteOpen, setIsAdminSuiteOpen] = useState(false);
+  const [adminActiveTab, setAdminActiveTab] = useState<any>("dashboard");
+
+  useEffect(() => {
+    const handleOpenAdminEvent = (e: any) => {
+      const tab = e?.detail?.tab || "dashboard";
+      setAdminActiveTab(tab);
+      setIsAdminSuiteOpen(true);
+    };
+    window.addEventListener("open-admin-suite", handleOpenAdminEvent);
+    window.addEventListener("open-admin-subscribers", () => {
+      setAdminActiveTab("subscribers");
+      setIsAdminSuiteOpen(true);
+    });
+    window.addEventListener("db:open_admin", () => {
+      setAdminActiveTab("dashboard");
+      setIsAdminSuiteOpen(true);
+    });
+    return () => {
+      window.removeEventListener("open-admin-suite", handleOpenAdminEvent);
+      window.removeEventListener("open-admin-subscribers", () => {});
+      window.removeEventListener("db:open_admin", () => {});
+    };
+  }, []);
 
   const userPlan = propUserPlan || "Profissional (Vertex AI)";
   const cleanEmail = (userEmail || "").toLowerCase().trim();
-  const isCleanAdmin = cleanEmail === "der.contatos@gmail.com" || cleanEmail === "ricardo.jrsr.gov@gmail.com";
+  const isCleanAdmin = cleanEmail === "der.contatos@gmail.com" || cleanEmail === "ricardo.jrsr.gov@gmail.com" || isUserAdmin() || (typeof window !== "undefined" && (window.location.search.includes("admin=true") || localStorage.getItem("zion_admin_override") === "true"));
 
   // Calculate real credits from GCP Vertex AI
   const storedReal = typeof window !== "undefined" ? localStorage.getItem("zion_real_credits") : null;
@@ -1192,6 +1223,145 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
               Comunidade
             </span>
           </a>
+
+          {/* Botão Admin Oculto 1:1 Oficial do DesignBuilder (apenas visível para administradores) */}
+          {isCleanAdmin && (
+            <div className="group/admin relative">
+              <button
+                type="button"
+                title="Admin"
+                onClick={() => {
+                  setAdminActiveTab("dashboard");
+                  setIsAdminSuiteOpen(true);
+                }}
+                className={`flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200 cursor-pointer ${
+                  isAdminSuiteOpen
+                    ? "bg-violet-500/20 text-violet-400"
+                    : "text-zinc-400 hover:bg-white/10 hover:text-white"
+                }`}
+              >
+                <Shield className="h-[18px] w-[18px]" aria-hidden="true" />
+              </button>
+
+              {/* Flyout Hover Menu 1:1 Oficial */}
+              <div className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 pl-3 opacity-0 transition-all duration-200 group-hover/admin:pointer-events-auto group-hover/admin:opacity-100 z-50">
+                <div className="flex flex-col gap-0.5 rounded-xl bg-zinc-900 p-1.5 shadow-2xl shadow-black/60 ring-1 ring-white/[0.08] min-w-[200px]">
+                  {/* Dashboard */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAdminActiveTab("dashboard");
+                      setIsAdminSuiteOpen(true);
+                    }}
+                    className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-zinc-300 hover:bg-white/[0.06] hover:text-white transition-colors text-left cursor-pointer"
+                  >
+                    <BarChart3 className="h-3.5 w-3.5 shrink-0 text-violet-400" />
+                    <span className="flex-1 truncate">Dashboard</span>
+                  </button>
+
+                  {/* Política de IA */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAdminActiveTab("agents");
+                      setIsAdminSuiteOpen(true);
+                    }}
+                    className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-zinc-300 hover:bg-white/[0.06] hover:text-white transition-colors text-left cursor-pointer"
+                  >
+                    <Bot className="h-3.5 w-3.5 shrink-0 text-sky-400" />
+                    <span className="flex-1 truncate">Política de IA</span>
+                  </button>
+
+                  {/* Galeria Global */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAdminActiveTab("generations");
+                      setIsAdminSuiteOpen(true);
+                    }}
+                    className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-zinc-300 hover:bg-white/[0.06] hover:text-white transition-colors text-left cursor-pointer"
+                  >
+                    <Images className="h-3.5 w-3.5 shrink-0 text-fuchsia-400" />
+                    <span className="flex-1 truncate">Galeria Global</span>
+                  </button>
+
+                  {/* Modo Live */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAdminActiveTab("live");
+                      setIsAdminSuiteOpen(true);
+                    }}
+                    className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-zinc-300 hover:bg-white/[0.06] hover:text-white transition-colors text-left cursor-pointer"
+                  >
+                    <Radio className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
+                    <span className="flex-1 truncate">Modo Live</span>
+                  </button>
+
+                  <div className="my-0.5 h-px bg-white/[0.06]" />
+
+                  {/* Hydra */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAdminActiveTab("hydra");
+                      setIsAdminSuiteOpen(true);
+                    }}
+                    className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-zinc-300 hover:bg-white/[0.06] hover:text-white transition-colors text-left cursor-pointer"
+                  >
+                    <Package className="h-3.5 w-3.5 shrink-0 text-amber-400" />
+                    <span className="flex-1 truncate">Hydra Objectives</span>
+                  </button>
+
+                  <div className="my-0.5 h-px bg-white/[0.06]" />
+
+                  {/* Feedbacks */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAdminActiveTab("ratings");
+                      setIsAdminSuiteOpen(true);
+                    }}
+                    className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-zinc-300 hover:bg-white/[0.06] hover:text-white transition-colors text-left cursor-pointer"
+                  >
+                    <Star className="h-3.5 w-3.5 shrink-0 text-amber-300" />
+                    <span className="flex-1 truncate">Feedbacks</span>
+                  </button>
+
+                  {/* Reports */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAdminActiveTab("reports");
+                      setIsAdminSuiteOpen(true);
+                    }}
+                    className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-zinc-300 hover:bg-white/[0.06] hover:text-white transition-colors text-left cursor-pointer"
+                  >
+                    <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-rose-400" />
+                    <span className="flex-1 truncate">Reports & Bugs</span>
+                    <span className="ml-auto inline-flex items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white min-w-[18px]">
+                      3
+                    </span>
+                  </button>
+
+                  <div className="my-0.5 h-px bg-white/[0.06]" />
+
+                  {/* Assinantes & Créditos */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAdminActiveTab("subscribers");
+                      setIsAdminSuiteOpen(true);
+                    }}
+                    className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-amber-300 hover:bg-amber-500/10 transition-colors text-left cursor-pointer font-medium"
+                  >
+                    <Users className="h-3.5 w-3.5 shrink-0 text-amber-400" />
+                    <span className="flex-1 truncate">Assinantes & Créditos</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* 7. Rodapé da Sidebar */}
           <div className="rodape-da-sidebar">

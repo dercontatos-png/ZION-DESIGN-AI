@@ -97,3 +97,4 @@ try {
   console.error("❌ ERRO AO EXECUTAR BACKUP:", error);
   process.exit(1);
 }
+

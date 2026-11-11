@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
-import { MoreHorizontal, Headphones, FileText, BookOpen, ExternalLink, ArrowRight } from "lucide-react";
+import { MoreHorizontal, Headphones, FileText, BookOpen, ExternalLink, ArrowRight, Shield } from "lucide-react";
+import { isUserAdmin } from "../utils/userAuth";
 import { TermsOfUseModal } from "./TermsOfUseModal";
 
 interface UsefulLinksMenuProps {
@@ -149,6 +150,31 @@ export const UsefulLinksMenu: React.FC<UsefulLinksMenuProps> = ({
               </span>
               <ExternalLink className="h-3.5 w-3.5 text-zinc-600 transition-colors group-hover/link:text-zinc-400" />
             </a>
+
+            {/* Painel Admin (visível para administradores) */}
+            {isUserAdmin() && (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setIsOpen(false);
+                  window.dispatchEvent(new CustomEvent("open-admin-suite", { detail: { tab: "dashboard" } }));
+                }}
+                className="group/link flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-amber-300 transition-all hover:bg-amber-500/10 cursor-pointer text-left"
+              >
+                <span
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+                  style={{ background: "rgba(245, 158, 11, 0.15)", border: "1px solid rgba(245, 158, 11, 0.25)" }}
+                >
+                  <Shield className="h-4 w-4 text-amber-400" />
+                </span>
+                <span className="min-w-0 flex-1 text-left">
+                  <span className="block text-sm font-semibold leading-tight text-amber-400">Painel Admin</span>
+                  <span className="block text-xs text-amber-500/70">Métricas & Gestão Superuser</span>
+                </span>
+                <ArrowRight className="h-3.5 w-3.5 text-amber-500/70 transition-colors group-hover/link:text-amber-400" />
+              </button>
+            )}
           </div>
         )}
       </div>
