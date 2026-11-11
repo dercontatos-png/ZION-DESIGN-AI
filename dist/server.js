@@ -5,9 +5,9 @@ import multer from "multer";
 import { GoogleGenAI as GoogleGenAI2 } from "@google/genai";
 import { Jimp, ResizeStrategy, BlendMode } from "jimp";
 import sharp from "sharp";
-import path4 from "path";
-import fs4 from "fs";
-import os4 from "os";
+import path5 from "path";
+import fs5 from "fs";
+import os5 from "os";
 
 // src/whatsapp-server.ts
 import makeWASocket, { useMultiFileAuthState, DisconnectReason, downloadContentFromMessage, fetchLatestBaileysVersion, Browsers } from "@whiskeysockets/baileys";
@@ -2624,6 +2624,409 @@ async function deductCredit(email, amount = 1) {
   return { success: true, remainingCredits: newCredits };
 }
 
+// src/utils/adminService.ts
+import fs3 from "fs";
+import path3 from "path";
+import os3 from "os";
+var isServerless2 = Boolean(
+  process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.LAMBDA_TASK_ROOT || process.env.NOW_REGION
+);
+var LOCAL_STORAGE_DIR2 = isServerless2 ? path3.join(os3.tmpdir(), "zion_storage") : path3.resolve(process.cwd(), "local_storage");
+function ensureDir() {
+  try {
+    if (!fs3.existsSync(LOCAL_STORAGE_DIR2)) {
+      fs3.mkdirSync(LOCAL_STORAGE_DIR2, { recursive: true });
+    }
+  } catch (_) {
+  }
+}
+function readJsonFile(filename, fallback) {
+  ensureDir();
+  const filePath = path3.join(LOCAL_STORAGE_DIR2, filename);
+  try {
+    if (fs3.existsSync(filePath)) {
+      const raw = fs3.readFileSync(filePath, "utf8");
+      return JSON.parse(raw);
+    }
+  } catch (err) {
+    console.warn(`[adminService] Erro ao ler ${filename}:`, err);
+  }
+  return fallback;
+}
+function writeJsonFile(filename, data) {
+  ensureDir();
+  const filePath = path3.join(LOCAL_STORAGE_DIR2, filename);
+  try {
+    fs3.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
+  } catch (err) {
+    console.error(`[adminService] Erro ao escrever ${filename}:`, err);
+  }
+}
+var DEFAULT_REPORTS = [
+  {
+    id: "REP-01",
+    user: "lucas.mendes@gmail.com",
+    agent: "Ref Builder",
+    type: "Bug",
+    title: "Propor\xE7\xE3o 9:16",
+    message: "Gostaria de saber se a dimens\xE3o 9:16 funciona com logos em PNG transparente.",
+    status: "pendente",
+    createdAt: new Date(Date.now() - 1e3 * 60 * 20).toISOString()
+  },
+  {
+    id: "REP-02",
+    user: "camila.design@outlook.com",
+    agent: "Zion Design V2",
+    type: "Sugest\xE3o",
+    title: "Presets de Ilumina\xE7\xE3o",
+    message: "Adicionar mais presets de ilumina\xE7\xE3o neon cyberpunk na aba de estilos.",
+    status: "resolvido",
+    createdAt: new Date(Date.now() - 1e3 * 60 * 120).toISOString()
+  },
+  {
+    id: "REP-03",
+    user: "agencia.prime@gmail.com",
+    agent: "\xD3rion Pro",
+    type: "Outro",
+    title: "Nitidez 8K",
+    message: "A nitidez da resolu\xE7\xE3o 8K superou as expectativas para nossos clientes de \xF3tica.",
+    status: "resolvido",
+    createdAt: new Date(Date.now() - 1e3 * 60 * 360).toISOString()
+  }
+];
+function getAdminReports() {
+  return readJsonFile("admin_reports.json", DEFAULT_REPORTS);
+}
+function saveAdminReport(reportData) {
+  const reports = getAdminReports();
+  const newReport = {
+    id: reportData.id || `REP-${Date.now().toString(36).toUpperCase()}`,
+    user: reportData.user || "usuario@anonimo.com",
+    agent: reportData.agent || "Ref Builder",
+    type: reportData.type || "Bug",
+    title: reportData.title || "Report enviado pelo usu\xE1rio",
+    message: reportData.message || "",
+    screenshot: reportData.screenshot,
+    generationId: reportData.generationId,
+    status: reportData.status || "pendente",
+    createdAt: reportData.createdAt || (/* @__PURE__ */ new Date()).toISOString()
+  };
+  const existingIdx = reports.findIndex((r) => r.id === newReport.id);
+  if (existingIdx >= 0) {
+    reports[existingIdx] = { ...reports[existingIdx], ...newReport };
+  } else {
+    reports.unshift(newReport);
+  }
+  writeJsonFile("admin_reports.json", reports);
+  return newReport;
+}
+function updateAdminReportStatus(id, status) {
+  const reports = getAdminReports();
+  const report = reports.find((r) => r.id === id);
+  if (!report) return false;
+  report.status = status;
+  writeJsonFile("admin_reports.json", reports);
+  return true;
+}
+function deleteAdminReport(id) {
+  const reports = getAdminReports();
+  const filtered = reports.filter((r) => r.id !== id);
+  if (filtered.length === reports.length) return false;
+  writeJsonFile("admin_reports.json", filtered);
+  return true;
+}
+function getUnreadReportsCount() {
+  const reports = getAdminReports();
+  return reports.filter((r) => r.status === "pendente").length;
+}
+var DEFAULT_RATINGS = [
+  {
+    id: "RAT-01",
+    user: "fernando.art@gmail.com",
+    agent: "Ref Builder",
+    rating: 5,
+    comment: "Fidelidade de ilumina\xE7\xE3o absurda! Ficou id\xEAntico \xE0 refer\xEAncia que enviei.",
+    notes: "Cliente satisfeito - Plano Pro",
+    adminStatus: "lido",
+    createdAt: new Date(Date.now() - 1e3 * 60 * 30).toISOString()
+  },
+  {
+    id: "RAT-02",
+    user: "agencia.impacto@gmail.com",
+    agent: "\xD3rion Pro",
+    rating: 5,
+    comment: "Renderiza\xE7\xE3o 8K impec\xE1vel para flyer impresso em lona gigante.",
+    notes: "Recomendado para case de sucesso",
+    adminStatus: "lido",
+    createdAt: new Date(Date.now() - 1e3 * 60 * 90).toISOString()
+  },
+  {
+    id: "RAT-03",
+    user: "roberto.design@gmail.com",
+    agent: "Hydra",
+    rating: 4,
+    comment: "Muito bom, s\xF3 tive que ajustar o contraste do texto de rodap\xE9.",
+    notes: "Ajustar headroom de tipografia no Hydra",
+    adminStatus: "novo",
+    createdAt: new Date(Date.now() - 1e3 * 60 * 240).toISOString()
+  }
+];
+function getAdminRatings() {
+  return readJsonFile("admin_ratings.json", DEFAULT_RATINGS);
+}
+function saveAdminRating(ratingData) {
+  const ratings = getAdminRatings();
+  const newRating = {
+    id: ratingData.id || `RAT-${Date.now().toString(36).toUpperCase()}`,
+    user: ratingData.user || "cliente@design.com",
+    agent: ratingData.agent || "Ref Builder",
+    rating: Math.max(1, Math.min(5, Number(ratingData.rating) || 5)),
+    comment: ratingData.comment || "",
+    notes: ratingData.notes || "",
+    generationId: ratingData.generationId,
+    adminStatus: ratingData.adminStatus || "novo",
+    createdAt: ratingData.createdAt || (/* @__PURE__ */ new Date()).toISOString()
+  };
+  ratings.unshift(newRating);
+  writeJsonFile("admin_ratings.json", ratings);
+  return newRating;
+}
+function updateAdminRatingNotes(id, notes) {
+  const ratings = getAdminRatings();
+  const r = ratings.find((item) => item.id === id);
+  if (!r) return false;
+  r.notes = notes;
+  writeJsonFile("admin_ratings.json", ratings);
+  return true;
+}
+function updateAdminRatingStatus(id, status) {
+  const ratings = getAdminRatings();
+  const r = ratings.find((item) => item.id === id);
+  if (!r) return false;
+  r.adminStatus = status;
+  writeJsonFile("admin_ratings.json", ratings);
+  return true;
+}
+function getAdminRatingStats() {
+  const ratings = getAdminRatings();
+  const total = ratings.length;
+  if (total === 0) {
+    return {
+      average: 5,
+      total: 0,
+      unread: 0,
+      breakdown: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }
+    };
+  }
+  const sum = ratings.reduce((acc, curr) => acc + curr.rating, 0);
+  const average = Number((sum / total).toFixed(2));
+  const unread = ratings.filter((r) => r.adminStatus === "novo").length;
+  const breakdown = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+  for (const r of ratings) {
+    const star = Math.round(r.rating);
+    breakdown[star] = (breakdown[star] || 0) + 1;
+  }
+  return { average, total, unread, breakdown };
+}
+var DEFAULT_AGENTS_POLICY = [
+  {
+    slug: "ref",
+    name: "Ref Builder",
+    category: "Reengenharia Reversa 1:1",
+    status: "Ativo",
+    model: "Google Cloud Vertex AI (Imagen 3 High Quality)",
+    safeMargins: "18% a 20% Top & Bottom",
+    safeMarginPercent: 18,
+    priority: "Ultra Alta",
+    promptGuidelines: "Priorizar preserva\xE7\xE3o da paleta de cores original, ilumina\xE7\xE3o tridimensional de est\xFAdio, hierarquia tipogr\xE1fica precisa e 0 corte de elementos em safe areas 9:16 e 4:5."
+  },
+  {
+    slug: "design-builder-v2",
+    name: "Zion Design V2",
+    category: "Composi\xE7\xE3o Modular Multicamadas",
+    status: "Ativo",
+    model: "Google GenAI Multi-modal Pro",
+    safeMargins: "16% Safe Margins",
+    safeMarginPercent: 16,
+    priority: "Alta",
+    promptGuidelines: "Composi\xE7\xE3o harm\xF4nica de planos, luz volum\xE9trica, separa\xE7\xE3o n\xEDtida de primeiro e segundo plano, est\xE9tica comercial de alto impacto."
+  },
+  {
+    slug: "orion-pro",
+    name: "\xD3rion Pro",
+    category: "Fotografia de Est\xFAdio 8K Master",
+    status: "Ativo",
+    model: "Vertex AI Studio Master 8K",
+    safeMargins: "20% Safe Headroom",
+    safeMarginPercent: 20,
+    priority: "Ultra Alta",
+    promptGuidelines: "Micro-detalhes, texturas hiper-realistas de pele e vidro, ilumina\xE7\xE3o de refletor difuso softbox 85mm, sem ru\xEDdo digital."
+  },
+  {
+    slug: "altera-facil",
+    name: "Altera F\xE1cil",
+    category: "Inpainting & Substitui\xE7\xE3o Inteligente",
+    status: "Ativo",
+    model: "Selective Mask Inpainting Engine",
+    safeMargins: "Preserva Contorno Original",
+    safeMarginPercent: 10,
+    priority: "Alta",
+    promptGuidelines: "Substituir apenas a \xE1rea selecionada pela m\xE1scara com correspond\xEAncia exata de balan\xE7o de branco, sombras e textura do ambiente."
+  },
+  {
+    slug: "hydra",
+    name: "Hydra Builder",
+    category: "Flyers e Posters Tem\xE1ticos",
+    status: "Ativo",
+    model: "Hydra Engine V3 Multi-layer",
+    safeMargins: "18% Dynamic Margins",
+    safeMarginPercent: 18,
+    priority: "Alta",
+    promptGuidelines: "Flyers de baladas, eventos, gastronomia e shows com alto contraste, luz neon cinematogr\xE1fica e reserva de espa\xE7o limpo para t\xEDtulos."
+  }
+];
+function getAgentsPolicy() {
+  return readJsonFile("admin_agents_policy.json", DEFAULT_AGENTS_POLICY);
+}
+function updateAgentPolicy(slug, update) {
+  const policies = getAgentsPolicy();
+  const idx = policies.findIndex((p) => p.slug === slug);
+  if (idx < 0) return null;
+  policies[idx] = {
+    ...policies[idx],
+    ...update,
+    updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+  };
+  writeJsonFile("admin_agents_policy.json", policies);
+  return policies[idx];
+}
+var DEFAULT_LIVE_SESSION = {
+  id: "LIVE-MAIN",
+  title: "Workshop Masterclass: Cria\xE7\xE3o de Flyers 8K ao Vivo",
+  description: "Treinamento pr\xE1tico de composi\xE7\xE3o de artes com a comunidade de designers",
+  status: "idle",
+  viewersCount: 142,
+  unlimitedCreditsRule: true,
+  unlockProAgentsRule: true,
+  challengeTopic: "Flyer de Hamburgueria Artesanal Noturna"
+};
+function getLiveSession() {
+  return readJsonFile("admin_live_sessions.json", DEFAULT_LIVE_SESSION);
+}
+function updateLiveSession(data) {
+  const current = getLiveSession();
+  const updated = {
+    ...current,
+    ...data
+  };
+  writeJsonFile("admin_live_sessions.json", updated);
+  return updated;
+}
+var DEFAULT_HYDRA_OBJECTIVES = [
+  {
+    id: "obj-01",
+    title: "Gastronomia Gourmet",
+    category: "Alimentos & Bebidas",
+    palette: "Tons quentes, madeira e dourado",
+    lighting: "Rim light quente e fuma\xE7a sutil",
+    lens: "Macro 50mm f/1.8",
+    active: true
+  },
+  {
+    id: "obj-02",
+    title: "Nightclub & Balada",
+    category: "M\xFAsica & Festas",
+    palette: "Roxo eletrizante, ciano e neon magenta",
+    lighting: "Luz estrobosc\xF3pica e laser volum\xE9trico",
+    lens: "Ultra-wide 16mm",
+    active: true
+  },
+  {
+    id: "obj-03",
+    title: "Streetwear & Moda",
+    category: "Vestu\xE1rio & Lifestyle",
+    palette: "Monocrom\xE1tico com detalhes fluorescentes",
+    lighting: "Luz de passarela e contraste brutalista",
+    lens: "85mm retrato vertical",
+    active: true
+  },
+  {
+    id: "obj-04",
+    title: "\xD3tica & Sa\xFAde",
+    category: "Com\xE9rcio & Sa\xFAde",
+    palette: "Azul hospitalar, branco puro e reflexos dourados",
+    lighting: "Difusor suave softbox sem reflexo indesejado",
+    lens: "Macro detalhe de arma\xE7\xE3o",
+    active: true
+  },
+  {
+    id: "obj-05",
+    title: "Automotivo GT",
+    category: "Ve\xEDculos & Performance",
+    palette: "Preto acetinado, fibra de carbono e far\xF3is LED",
+    lighting: "Linha de reflexo fluido no cap\xF4",
+    lens: "35mm din\xE2mica em curva",
+    active: true
+  },
+  {
+    id: "obj-06",
+    title: "Podcast Cover",
+    category: "M\xEDdia & Entretenimento",
+    palette: "Gradiente moderno e tipografia bold",
+    lighting: "Luz de est\xFAdio ac\xFAstico",
+    lens: "50mm enquadramento peito",
+    active: true
+  },
+  {
+    id: "obj-07",
+    title: "Im\xF3veis de Luxo",
+    category: "Arquitetura & Real Estate",
+    palette: "Tons de m\xE1rmore, p\xF4r do sol dourado e vegeta\xE7\xE3o",
+    lighting: "Golden hour arquitet\xF4nica",
+    lens: "Wide 24mm tilt-shift",
+    active: true
+  },
+  {
+    id: "obj-08",
+    title: "Barbearia Vintage",
+    category: "Beleza Masculina",
+    palette: "Couro envelhecido, cobre e marrom \xE2mbar",
+    lighting: "L\xE2mpadas de filamento Edison vintage",
+    lens: "50mm f/1.4",
+    active: true
+  }
+];
+function getHydraObjectives() {
+  return readJsonFile("admin_hydra_objectives.json", DEFAULT_HYDRA_OBJECTIVES);
+}
+function saveHydraObjective(obj) {
+  const list = getHydraObjectives();
+  const newObj = {
+    id: obj.id || `obj-${Date.now().toString(36)}`,
+    title: obj.title || "Novo Objetivo",
+    category: obj.category || "Geral",
+    palette: obj.palette || "Equilibrada",
+    lighting: obj.lighting || "Est\xFAdio",
+    lens: obj.lens || "50mm",
+    active: obj.active !== void 0 ? obj.active : true
+  };
+  const idx = list.findIndex((o) => o.id === newObj.id);
+  if (idx >= 0) {
+    list[idx] = newObj;
+  } else {
+    list.push(newObj);
+  }
+  writeJsonFile("admin_hydra_objectives.json", list);
+  return newObj;
+}
+function deleteHydraObjective(id) {
+  const list = getHydraObjectives();
+  const filtered = list.filter((o) => o.id !== id);
+  if (filtered.length === list.length) return false;
+  writeJsonFile("admin_hydra_objectives.json", filtered);
+  return true;
+}
+
 // src/utils/stripeService.ts
 import Stripe from "stripe";
 var SAAS_PLANS = {
@@ -2841,20 +3244,20 @@ async function processSuccessfulCheckout(details) {
 }
 
 // src/utils/communityService.ts
-import fs3 from "fs";
-import path3 from "path";
-import os3 from "os";
-var isServerless2 = Boolean(
+import fs4 from "fs";
+import path4 from "path";
+import os4 from "os";
+var isServerless3 = Boolean(
   process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.LAMBDA_TASK_ROOT || process.env.NOW_REGION
 );
-var LOCAL_STORAGE_DIR2 = isServerless2 ? path3.join(os3.tmpdir(), "zion_storage") : path3.resolve(process.cwd(), "local_storage");
-var COMMUNITY_FILE = path3.join(LOCAL_STORAGE_DIR2, "community_posts.json");
+var LOCAL_STORAGE_DIR3 = isServerless3 ? path4.join(os4.tmpdir(), "zion_storage") : path4.resolve(process.cwd(), "local_storage");
+var COMMUNITY_FILE = path4.join(LOCAL_STORAGE_DIR3, "community_posts.json");
 var R2_COMMUNITY_KEY = "system/community_posts.json";
 function ensureDirExists2(filePath) {
   try {
-    const dir = path3.dirname(filePath);
-    if (!fs3.existsSync(dir)) {
-      fs3.mkdirSync(dir, { recursive: true });
+    const dir = path4.dirname(filePath);
+    if (!fs4.existsSync(dir)) {
+      fs4.mkdirSync(dir, { recursive: true });
     }
   } catch (_) {
   }
@@ -3083,9 +3486,9 @@ async function getCommunityPosts() {
     } catch (_) {
     }
   }
-  if (fs3.existsSync(COMMUNITY_FILE)) {
+  if (fs4.existsSync(COMMUNITY_FILE)) {
     try {
-      const data = fs3.readFileSync(COMMUNITY_FILE, "utf8");
+      const data = fs4.readFileSync(COMMUNITY_FILE, "utf8");
       const parsed = JSON.parse(data);
       if (Array.isArray(parsed) && parsed.length > 0) {
         memoryCommunityCache = parsed;
@@ -3106,7 +3509,7 @@ async function saveCommunityPosts(posts) {
   lastCacheTime = Date.now();
   try {
     ensureDirExists2(COMMUNITY_FILE);
-    fs3.writeFileSync(COMMUNITY_FILE, JSON.stringify(posts, null, 2), "utf8");
+    fs4.writeFileSync(COMMUNITY_FILE, JSON.stringify(posts, null, 2), "utf8");
   } catch (err) {
     console.error("[Community] Erro ao gravar local:", err);
   }
@@ -3174,11 +3577,11 @@ import { spawn } from "child_process";
 sharp.cache(false);
 sharp.concurrency(1);
 sharp.simd(true);
-var logPath = path4.join(os4.tmpdir(), "app.log");
+var logPath = path5.join(os5.tmpdir(), "app.log");
 function syncLog(type, ...args) {
   try {
     const msg = (/* @__PURE__ */ new Date()).toISOString() + " " + type + ": " + args.map((a) => typeof a === "object" ? a?.stack || JSON.stringify(a) : String(a)).join(" ") + "\n";
-    fs4.appendFileSync(logPath, msg);
+    fs5.appendFileSync(logPath, msg);
   } catch (_) {
   }
 }
@@ -3212,22 +3615,22 @@ process.on("beforeExit", (code) => {
 });
 dotenv.config();
 async function runRemoveBgWorker(base64Image) {
-  const tmpDir = os4.tmpdir();
+  const tmpDir = os5.tmpdir();
   const id = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-  const inputPath = path4.join(tmpDir, `in_${id}.png`);
-  const outputPath = path4.join(tmpDir, `out_${id}.png`);
+  const inputPath = path5.join(tmpDir, `in_${id}.png`);
+  const outputPath = path5.join(tmpDir, `out_${id}.png`);
   try {
     const { data: rawData } = resolveImageInput(base64Image);
     if (!rawData) return base64Image;
-    await fs4.promises.writeFile(inputPath, Buffer.from(rawData, "base64"));
-    const workerScript = path4.join(process.cwd(), "scripts", "remove_bg_worker.cjs");
+    await fs5.promises.writeFile(inputPath, Buffer.from(rawData, "base64"));
+    const workerScript = path5.join(process.cwd(), "scripts", "remove_bg_worker.cjs");
     await new Promise((resolve, reject) => {
       const child = spawn(process.execPath, [workerScript, inputPath, outputPath], {
         stdio: ["ignore", "pipe", "pipe"],
         windowsHide: true
       });
       child.on("close", (code) => {
-        if (code === 0 && fs4.existsSync(outputPath)) {
+        if (code === 0 && fs5.existsSync(outputPath)) {
           resolve(true);
         } else {
           reject(new Error(`Worker exited with code ${code}`));
@@ -3235,19 +3638,19 @@ async function runRemoveBgWorker(base64Image) {
       });
       child.on("error", reject);
     });
-    if (fs4.existsSync(outputPath)) {
-      const outBuffer = await fs4.promises.readFile(outputPath);
+    if (fs5.existsSync(outputPath)) {
+      const outBuffer = await fs5.promises.readFile(outputPath);
       return `data:image/png;base64,${outBuffer.toString("base64")}`;
     }
   } catch (err) {
     console.warn("[runRemoveBgWorker] Error:", err?.message || err);
   } finally {
     try {
-      if (fs4.existsSync(inputPath)) fs4.unlinkSync(inputPath);
+      if (fs5.existsSync(inputPath)) fs5.unlinkSync(inputPath);
     } catch (_) {
     }
     try {
-      if (fs4.existsSync(outputPath)) fs4.unlinkSync(outputPath);
+      if (fs5.existsSync(outputPath)) fs5.unlinkSync(outputPath);
     } catch (_) {
     }
   }
@@ -3271,10 +3674,10 @@ var upload = multer({
   }
 });
 function getServiceAccountCredentials() {
-  const localPath = path4.join(process.cwd(), "chave-vertex.json");
-  if (fs4.existsSync(localPath)) {
+  const localPath = path5.join(process.cwd(), "chave-vertex.json");
+  if (fs5.existsSync(localPath)) {
     try {
-      const parsed = JSON.parse(fs4.readFileSync(localPath, "utf8"));
+      const parsed = JSON.parse(fs5.readFileSync(localPath, "utf8"));
       if (parsed && typeof parsed === "object" && parsed.private_key) {
         if (typeof parsed.private_key === "string") {
           parsed.private_key = parsed.private_key.replace(/\\n/g, "\n");
@@ -3378,13 +3781,13 @@ function getCandidateClients(customApiKey) {
   if (saParsed) {
     const projectId = saParsed.project_id || "gerador-de-imagens-ia-502303";
     try {
-      const tmpPath = path4.join(os4.tmpdir(), "chave-vertex.json");
-      fs4.writeFileSync(tmpPath, JSON.stringify(saParsed, null, 2));
+      const tmpPath = path5.join(os5.tmpdir(), "chave-vertex.json");
+      fs5.writeFileSync(tmpPath, JSON.stringify(saParsed, null, 2));
       process.env.GOOGLE_APPLICATION_CREDENTIALS = tmpPath;
-      const cwdPath = path4.join(process.cwd(), "chave-vertex.json");
-      if (!fs4.existsSync(cwdPath)) {
+      const cwdPath = path5.join(process.cwd(), "chave-vertex.json");
+      if (!fs5.existsSync(cwdPath)) {
         try {
-          fs4.writeFileSync(cwdPath, JSON.stringify(saParsed, null, 2));
+          fs5.writeFileSync(cwdPath, JSON.stringify(saParsed, null, 2));
         } catch (_) {
         }
       }
@@ -3504,16 +3907,16 @@ function resolveImageInput(input) {
         const parts = str.split("/generated-images/");
         filename = parts[parts.length - 1];
       } else {
-        filename = path4.basename(str);
+        filename = path5.basename(str);
       }
-      let filepath = path4.join(process.cwd(), "public", "generated-images", filename);
-      if (!fs4.existsSync(filepath)) {
-        filepath = path4.join(process.cwd(), str.replace(/^\//, ""));
+      let filepath = path5.join(process.cwd(), "public", "generated-images", filename);
+      if (!fs5.existsSync(filepath)) {
+        filepath = path5.join(process.cwd(), str.replace(/^\//, ""));
       }
-      if (fs4.existsSync(filepath) && fs4.statSync(filepath).isFile()) {
-        const fileBuffer = fs4.readFileSync(filepath);
+      if (fs5.existsSync(filepath) && fs5.statSync(filepath).isFile()) {
+        const fileBuffer = fs5.readFileSync(filepath);
         const data = fileBuffer.toString("base64");
-        const ext = path4.extname(filename).toLowerCase();
+        const ext = path5.extname(filename).toLowerCase();
         const mimeType = ext === ".png" ? "image/png" : ext === ".webp" ? "image/webp" : "image/jpeg";
         console.log(`[resolveImageInput] Resolved local path ${filepath} to base64 successfully.`);
         return { data, mimeType };
@@ -3837,14 +4240,14 @@ async function saveImageToDisk(rawData, rawMime) {
     const isServerlessEnv = Boolean(
       process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.LAMBDA_TASK_ROOT || process.env.NOW_REGION
     );
-    const publicGenDir = isServerlessEnv ? path4.join(os4.tmpdir(), "zion_storage", "generated-images") : path4.join(process.cwd(), "public", "generated-images");
+    const publicGenDir = isServerlessEnv ? path5.join(os5.tmpdir(), "zion_storage", "generated-images") : path5.join(process.cwd(), "public", "generated-images");
     try {
-      if (!fs4.existsSync(publicGenDir)) {
-        fs4.mkdirSync(publicGenDir, { recursive: true });
+      if (!fs5.existsSync(publicGenDir)) {
+        fs5.mkdirSync(publicGenDir, { recursive: true });
       }
     } catch (_) {
     }
-    const filepath = path4.join(publicGenDir, filename);
+    const filepath = path5.join(publicGenDir, filename);
     let finalBuf = buffer;
     if (ext === "png") {
       try {
@@ -3855,14 +4258,14 @@ async function saveImageToDisk(rawData, rawMime) {
       } catch (_) {
       }
     }
-    await fs4.promises.writeFile(filepath, finalBuf);
+    await fs5.promises.writeFile(filepath, finalBuf);
     console.log(`[saveImageToDisk] Original native image saved to ${filepath} (${finalBuf.length} bytes / ${(finalBuf.length / 1024 / 1024).toFixed(2)} MB).`);
     try {
-      const gPath = path4.join(process.cwd(), "public", "generations_data.json");
+      const gPath = path5.join(process.cwd(), "public", "generations_data.json");
       let existingList = [];
-      if (fs4.existsSync(gPath)) {
+      if (fs5.existsSync(gPath)) {
         try {
-          const raw = fs4.readFileSync(gPath, "utf-8");
+          const raw = fs5.readFileSync(gPath, "utf-8");
           const parsed = JSON.parse(raw);
           existingList = Array.isArray(parsed) ? parsed : parsed.items || [];
         } catch (_) {
@@ -3881,7 +4284,7 @@ async function saveImageToDisk(rawData, rawMime) {
         form_data: { quality: "4K", dimensions: "4:5" }
       };
       existingList = [newItem, ...existingList.filter((it) => it.result_url !== newItem.result_url && it.id !== newItem.id)];
-      fs4.writeFileSync(gPath, JSON.stringify(existingList.slice(0, 300), null, 2), "utf-8");
+      fs5.writeFileSync(gPath, JSON.stringify(existingList.slice(0, 300), null, 2), "utf-8");
     } catch (gErr) {
       console.warn("[saveImageToDisk] Nao foi possivel salvar em generations_data.json:", gErr);
     }
@@ -4518,23 +4921,23 @@ async function startServer() {
     }
     next();
   });
-  const publicGenDir = path4.join(process.cwd(), "public", "generated-images");
+  const publicGenDir = path5.join(process.cwd(), "public", "generated-images");
   try {
-    if (!fs4.existsSync(publicGenDir)) {
-      fs4.mkdirSync(publicGenDir, { recursive: true });
+    if (!fs5.existsSync(publicGenDir)) {
+      fs5.mkdirSync(publicGenDir, { recursive: true });
     }
   } catch (_) {
   }
   app.use("/generated-images", express.static(publicGenDir));
-  const publicUploadsDir = path4.join(process.cwd(), "public", "uploads");
+  const publicUploadsDir = path5.join(process.cwd(), "public", "uploads");
   try {
-    if (!fs4.existsSync(publicUploadsDir)) {
-      fs4.mkdirSync(publicUploadsDir, { recursive: true });
+    if (!fs5.existsSync(publicUploadsDir)) {
+      fs5.mkdirSync(publicUploadsDir, { recursive: true });
     }
   } catch (_) {
   }
   app.use("/uploads", express.static(publicUploadsDir));
-  const designBuilderFilesDir = path4.join(process.cwd(), "public", "Design Builder1 2_files");
+  const designBuilderFilesDir = path5.join(process.cwd(), "public", "Design Builder1 2_files");
   app.use([
     "/agent/Design Builder1 2_files",
     "/agent/Design%20Builder1%202_files",
@@ -4546,22 +4949,22 @@ async function startServer() {
   const isServerlessEnv = Boolean(
     process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.LAMBDA_TASK_ROOT || process.env.NOW_REGION
   );
-  const STORAGE_BASE_DIR = isServerlessEnv ? path4.join(os4.tmpdir(), "zion_storage") : path4.resolve(process.cwd(), "local_storage");
+  const STORAGE_BASE_DIR = isServerlessEnv ? path5.join(os5.tmpdir(), "zion_storage") : path5.resolve(process.cwd(), "local_storage");
   try {
-    if (!fs4.existsSync(STORAGE_BASE_DIR)) {
-      fs4.mkdirSync(STORAGE_BASE_DIR, { recursive: true });
+    if (!fs5.existsSync(STORAGE_BASE_DIR)) {
+      fs5.mkdirSync(STORAGE_BASE_DIR, { recursive: true });
     }
   } catch (_) {
   }
   app.get("/generated-images/:filename", async (req, res, next) => {
     try {
-      const filename = path4.basename(req.params.filename);
-      const localTmp = path4.join(STORAGE_BASE_DIR, "generated-images", filename);
-      if (fs4.existsSync(localTmp) && fs4.statSync(localTmp).isFile()) {
+      const filename = path5.basename(req.params.filename);
+      const localTmp = path5.join(STORAGE_BASE_DIR, "generated-images", filename);
+      if (fs5.existsSync(localTmp) && fs5.statSync(localTmp).isFile()) {
         return res.sendFile(localTmp);
       }
-      const localPublic = path4.join(process.cwd(), "public", "generated-images", filename);
-      if (fs4.existsSync(localPublic) && fs4.statSync(localPublic).isFile()) {
+      const localPublic = path5.join(process.cwd(), "public", "generated-images", filename);
+      if (fs5.existsSync(localPublic) && fs5.statSync(localPublic).isFile()) {
         return res.sendFile(localPublic);
       }
       if (isR2Active()) {
@@ -4578,13 +4981,13 @@ async function startServer() {
   });
   app.get("/uploads/:filename", async (req, res, next) => {
     try {
-      const filename = path4.basename(req.params.filename);
-      const localTmp = path4.join(STORAGE_BASE_DIR, "uploads", filename);
-      if (fs4.existsSync(localTmp) && fs4.statSync(localTmp).isFile()) {
+      const filename = path5.basename(req.params.filename);
+      const localTmp = path5.join(STORAGE_BASE_DIR, "uploads", filename);
+      if (fs5.existsSync(localTmp) && fs5.statSync(localTmp).isFile()) {
         return res.sendFile(localTmp);
       }
-      const localPublic = path4.join(process.cwd(), "public", "uploads", filename);
-      if (fs4.existsSync(localPublic) && fs4.statSync(localPublic).isFile()) {
+      const localPublic = path5.join(process.cwd(), "public", "uploads", filename);
+      if (fs5.existsSync(localPublic) && fs5.statSync(localPublic).isFile()) {
         return res.sendFile(localPublic);
       }
       if (isR2Active()) {
@@ -4606,11 +5009,11 @@ async function startServer() {
         return res.status(400).json({ error: "Missing required query parameter: key" });
       }
       const cleanKey = key.replace(/^[/\\]+/, "");
-      const targetPath = path4.resolve(STORAGE_BASE_DIR, cleanKey);
-      if (!targetPath.startsWith(STORAGE_BASE_DIR + path4.sep) && targetPath !== STORAGE_BASE_DIR) {
+      const targetPath = path5.resolve(STORAGE_BASE_DIR, cleanKey);
+      if (!targetPath.startsWith(STORAGE_BASE_DIR + path5.sep) && targetPath !== STORAGE_BASE_DIR) {
         return res.status(400).json({ error: "Access denied: Invalid or unsafe file key." });
       }
-      if (fs4.existsSync(targetPath) && fs4.statSync(targetPath).isFile()) {
+      if (fs5.existsSync(targetPath) && fs5.statSync(targetPath).isFile()) {
         return res.sendFile(targetPath);
       }
       if (isR2Active()) {
@@ -4802,38 +5205,38 @@ async function startServer() {
           const [_, folder, jId, fName] = match;
           const baseName = fName.replace(/\.[a-zA-Z0-9]+$/, "");
           const candidatePaths = [
-            path4.join(STORAGE_BASE_DIR, folder, jId, `${baseName}.png`),
-            path4.join(STORAGE_BASE_DIR, folder, jId, `${baseName}.avif`),
-            path4.join(STORAGE_BASE_DIR, folder, jId, fName),
-            path4.join(process.cwd(), "public", "generated-images", `img_${jId}.png`),
-            path4.join(STORAGE_BASE_DIR, "generated-images", `img_${jId}.png`),
-            path4.join(process.cwd(), "public", "generated-images", fName),
-            path4.join(STORAGE_BASE_DIR, "generated-images", fName)
+            path5.join(STORAGE_BASE_DIR, folder, jId, `${baseName}.png`),
+            path5.join(STORAGE_BASE_DIR, folder, jId, `${baseName}.avif`),
+            path5.join(STORAGE_BASE_DIR, folder, jId, fName),
+            path5.join(process.cwd(), "public", "generated-images", `img_${jId}.png`),
+            path5.join(STORAGE_BASE_DIR, "generated-images", `img_${jId}.png`),
+            path5.join(process.cwd(), "public", "generated-images", fName),
+            path5.join(STORAGE_BASE_DIR, "generated-images", fName)
           ];
           for (const cp of candidatePaths) {
-            if (fs4.existsSync(cp) && fs4.statSync(cp).isFile()) {
-              buffer = fs4.readFileSync(cp);
+            if (fs5.existsSync(cp) && fs5.statSync(cp).isFile()) {
+              buffer = fs5.readFileSync(cp);
               break;
             }
           }
         }
       }
       if (!buffer && url.includes("/generated-images/")) {
-        const fname = path4.basename(url.split("?")[0].split("#")[0]);
-        const p1 = path4.join(STORAGE_BASE_DIR, "generated-images", fname);
-        const p2 = path4.join(process.cwd(), "public", "generated-images", fname);
-        if (fs4.existsSync(p1) && fs4.statSync(p1).isFile()) buffer = fs4.readFileSync(p1);
-        else if (fs4.existsSync(p2) && fs4.statSync(p2).isFile()) buffer = fs4.readFileSync(p2);
+        const fname = path5.basename(url.split("?")[0].split("#")[0]);
+        const p1 = path5.join(STORAGE_BASE_DIR, "generated-images", fname);
+        const p2 = path5.join(process.cwd(), "public", "generated-images", fname);
+        if (fs5.existsSync(p1) && fs5.statSync(p1).isFile()) buffer = fs5.readFileSync(p1);
+        else if (fs5.existsSync(p2) && fs5.statSync(p2).isFile()) buffer = fs5.readFileSync(p2);
         else if (isR2Active()) {
           const r2Obj = await downloadFromR2(`generated-images/${fname}`);
           if (r2Obj) buffer = r2Obj.data;
         }
       } else if (!buffer && url.includes("/uploads/")) {
-        const fname = path4.basename(url.split("?")[0].split("#")[0]);
-        const p1 = path4.join(STORAGE_BASE_DIR, "uploads", fname);
-        const p2 = path4.join(process.cwd(), "public", "uploads", fname);
-        if (fs4.existsSync(p1) && fs4.statSync(p1).isFile()) buffer = fs4.readFileSync(p1);
-        else if (fs4.existsSync(p2) && fs4.statSync(p2).isFile()) buffer = fs4.readFileSync(p2);
+        const fname = path5.basename(url.split("?")[0].split("#")[0]);
+        const p1 = path5.join(STORAGE_BASE_DIR, "uploads", fname);
+        const p2 = path5.join(process.cwd(), "public", "uploads", fname);
+        if (fs5.existsSync(p1) && fs5.statSync(p1).isFile()) buffer = fs5.readFileSync(p1);
+        else if (fs5.existsSync(p2) && fs5.statSync(p2).isFile()) buffer = fs5.readFileSync(p2);
       } else if (!buffer && url.startsWith("data:")) {
         const { data: b64Data } = resolveImageInput(url);
         if (b64Data) buffer = Buffer.from(b64Data, "base64");
@@ -4842,12 +5245,12 @@ async function startServer() {
         buffer = Buffer.from(await fetchRes.arrayBuffer());
       } else if (!buffer && url.startsWith("/")) {
         const relPath = url.split("?")[0].split("#")[0].replace(/^\//, "");
-        const localPath1 = path4.join(process.cwd(), "public", relPath);
-        const localPath2 = path4.join(STORAGE_BASE_DIR, relPath);
-        if (fs4.existsSync(localPath1) && fs4.statSync(localPath1).isFile()) {
-          buffer = fs4.readFileSync(localPath1);
-        } else if (fs4.existsSync(localPath2) && fs4.statSync(localPath2).isFile()) {
-          buffer = fs4.readFileSync(localPath2);
+        const localPath1 = path5.join(process.cwd(), "public", relPath);
+        const localPath2 = path5.join(STORAGE_BASE_DIR, relPath);
+        if (fs5.existsSync(localPath1) && fs5.statSync(localPath1).isFile()) {
+          buffer = fs5.readFileSync(localPath1);
+        } else if (fs5.existsSync(localPath2) && fs5.statSync(localPath2).isFile()) {
+          buffer = fs5.readFileSync(localPath2);
         }
       }
       if (!buffer || buffer.length === 0) {
@@ -4924,38 +5327,38 @@ async function startServer() {
           const [_, folder, jId, fName] = match;
           const baseName = fName.replace(/\.[a-zA-Z0-9]+$/, "");
           const candidatePaths = [
-            path4.join(STORAGE_BASE_DIR, folder, jId, `${baseName}.png`),
-            path4.join(STORAGE_BASE_DIR, folder, jId, `${baseName}.avif`),
-            path4.join(STORAGE_BASE_DIR, folder, jId, fName),
-            path4.join(process.cwd(), "public", "generated-images", `img_${jId}.png`),
-            path4.join(STORAGE_BASE_DIR, "generated-images", `img_${jId}.png`),
-            path4.join(process.cwd(), "public", "generated-images", fName),
-            path4.join(STORAGE_BASE_DIR, "generated-images", fName)
+            path5.join(STORAGE_BASE_DIR, folder, jId, `${baseName}.png`),
+            path5.join(STORAGE_BASE_DIR, folder, jId, `${baseName}.avif`),
+            path5.join(STORAGE_BASE_DIR, folder, jId, fName),
+            path5.join(process.cwd(), "public", "generated-images", `img_${jId}.png`),
+            path5.join(STORAGE_BASE_DIR, "generated-images", `img_${jId}.png`),
+            path5.join(process.cwd(), "public", "generated-images", fName),
+            path5.join(STORAGE_BASE_DIR, "generated-images", fName)
           ];
           for (const cp of candidatePaths) {
-            if (fs4.existsSync(cp) && fs4.statSync(cp).isFile()) {
-              buffer = fs4.readFileSync(cp);
+            if (fs5.existsSync(cp) && fs5.statSync(cp).isFile()) {
+              buffer = fs5.readFileSync(cp);
               break;
             }
           }
         }
       }
       if (!buffer && url.includes("/generated-images/")) {
-        const fname = path4.basename(url.split("?")[0].split("#")[0]);
-        const p1 = path4.join(STORAGE_BASE_DIR, "generated-images", fname);
-        const p2 = path4.join(process.cwd(), "public", "generated-images", fname);
-        if (fs4.existsSync(p1) && fs4.statSync(p1).isFile()) buffer = fs4.readFileSync(p1);
-        else if (fs4.existsSync(p2) && fs4.statSync(p2).isFile()) buffer = fs4.readFileSync(p2);
+        const fname = path5.basename(url.split("?")[0].split("#")[0]);
+        const p1 = path5.join(STORAGE_BASE_DIR, "generated-images", fname);
+        const p2 = path5.join(process.cwd(), "public", "generated-images", fname);
+        if (fs5.existsSync(p1) && fs5.statSync(p1).isFile()) buffer = fs5.readFileSync(p1);
+        else if (fs5.existsSync(p2) && fs5.statSync(p2).isFile()) buffer = fs5.readFileSync(p2);
         else if (isR2Active()) {
           const r2Obj = await downloadFromR2(`generated-images/${fname}`);
           if (r2Obj) buffer = r2Obj.data;
         }
       } else if (!buffer && url.includes("/uploads/")) {
-        const fname = path4.basename(url.split("?")[0].split("#")[0]);
-        const p1 = path4.join(STORAGE_BASE_DIR, "uploads", fname);
-        const p2 = path4.join(process.cwd(), "public", "uploads", fname);
-        if (fs4.existsSync(p1) && fs4.statSync(p1).isFile()) buffer = fs4.readFileSync(p1);
-        else if (fs4.existsSync(p2) && fs4.statSync(p2).isFile()) buffer = fs4.readFileSync(p2);
+        const fname = path5.basename(url.split("?")[0].split("#")[0]);
+        const p1 = path5.join(STORAGE_BASE_DIR, "uploads", fname);
+        const p2 = path5.join(process.cwd(), "public", "uploads", fname);
+        if (fs5.existsSync(p1) && fs5.statSync(p1).isFile()) buffer = fs5.readFileSync(p1);
+        else if (fs5.existsSync(p2) && fs5.statSync(p2).isFile()) buffer = fs5.readFileSync(p2);
       } else if (!buffer && url.startsWith("data:")) {
         const { data: b64Data } = resolveImageInput(url);
         if (b64Data) buffer = Buffer.from(b64Data, "base64");
@@ -4966,12 +5369,12 @@ async function startServer() {
         }
       } else if (!buffer && url.startsWith("/")) {
         const relPath = url.split("?")[0].split("#")[0].replace(/^\//, "");
-        const localPath1 = path4.join(process.cwd(), "public", relPath);
-        const localPath2 = path4.join(STORAGE_BASE_DIR, relPath);
-        if (fs4.existsSync(localPath1) && fs4.statSync(localPath1).isFile()) {
-          buffer = fs4.readFileSync(localPath1);
-        } else if (fs4.existsSync(localPath2) && fs4.statSync(localPath2).isFile()) {
-          buffer = fs4.readFileSync(localPath2);
+        const localPath1 = path5.join(process.cwd(), "public", relPath);
+        const localPath2 = path5.join(STORAGE_BASE_DIR, relPath);
+        if (fs5.existsSync(localPath1) && fs5.statSync(localPath1).isFile()) {
+          buffer = fs5.readFileSync(localPath1);
+        } else if (fs5.existsSync(localPath2) && fs5.statSync(localPath2).isFile()) {
+          buffer = fs5.readFileSync(localPath2);
         }
       }
       if (!buffer || buffer.length === 0) {
@@ -5031,10 +5434,10 @@ async function startServer() {
         }
         const fileId = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
         const originalName = file.originalname || "image.png";
-        const tempSubDir = path4.join(STORAGE_BASE_DIR, "temp", fileId);
-        fs4.mkdirSync(tempSubDir, { recursive: true });
-        const filePath = path4.join(tempSubDir, originalName);
-        fs4.writeFileSync(filePath, file.buffer);
+        const tempSubDir = path5.join(STORAGE_BASE_DIR, "temp", fileId);
+        fs5.mkdirSync(tempSubDir, { recursive: true });
+        const filePath = path5.join(tempSubDir, originalName);
+        fs5.writeFileSync(filePath, file.buffer);
         const url = `/designbuilder/temp/${fileId}/${encodeURIComponent(originalName)}`;
         const key = `temp/${fileId}/${originalName}`;
         if (isR2Active()) {
@@ -5053,9 +5456,9 @@ async function startServer() {
   );
   app.get(["/designbuilder/temp/:id/:filename", "/temp/:id/:filename"], (req, res) => {
     const { id, filename } = req.params;
-    const cleanFile = path4.basename(filename);
-    const target = path4.join(STORAGE_BASE_DIR, "temp", id, cleanFile);
-    if (fs4.existsSync(target) && fs4.statSync(target).isFile()) {
+    const cleanFile = path5.basename(filename);
+    const target = path5.join(STORAGE_BASE_DIR, "temp", id, cleanFile);
+    if (fs5.existsSync(target) && fs5.statSync(target).isFile()) {
       return res.sendFile(target);
     }
     return res.status(404).json({ error: "Temp file not found" });
@@ -5063,18 +5466,18 @@ async function startServer() {
   app.get(["/designbuilder/results/:id/:filename", "/results/:id/:filename"], async (req, res) => {
     try {
       const { id, filename } = req.params;
-      const cleanFile = path4.basename(filename || "result.avif");
+      const cleanFile = path5.basename(filename || "result.avif");
       const cacheHeader = req.query["response-cache-control"] || "private, max-age=3600, immutable";
-      const resultPath = path4.join(STORAGE_BASE_DIR, "results", id, cleanFile);
-      if (fs4.existsSync(resultPath) && fs4.statSync(resultPath).isFile()) {
+      const resultPath = path5.join(STORAGE_BASE_DIR, "results", id, cleanFile);
+      if (fs5.existsSync(resultPath) && fs5.statSync(resultPath).isFile()) {
         const ct = cleanFile.endsWith(".avif") ? "image/avif" : cleanFile.endsWith(".png") ? "image/png" : "image/jpeg";
         res.setHeader("Content-Type", ct);
         res.setHeader("Cache-Control", cacheHeader);
         return res.sendFile(resultPath);
       }
       for (const ext of [".avif", ".png", ".jpg", ".jpeg"]) {
-        const altFile = path4.join(STORAGE_BASE_DIR, "results", id, `result${ext}`);
-        if (fs4.existsSync(altFile) && fs4.statSync(altFile).isFile()) {
+        const altFile = path5.join(STORAGE_BASE_DIR, "results", id, `result${ext}`);
+        if (fs5.existsSync(altFile) && fs5.statSync(altFile).isFile()) {
           const ct = ext === ".avif" ? "image/avif" : ext === ".png" ? "image/png" : "image/jpeg";
           res.setHeader("Content-Type", ct);
           res.setHeader("Cache-Control", cacheHeader);
@@ -5089,8 +5492,8 @@ async function startServer() {
           return res.send(r2Result.data);
         }
       }
-      const fallbackInput = path4.join(STORAGE_BASE_DIR, "inputs", id, "fotos_do_sujeito_produto", "0.jpg");
-      if (fs4.existsSync(fallbackInput) && fs4.statSync(fallbackInput).isFile()) {
+      const fallbackInput = path5.join(STORAGE_BASE_DIR, "inputs", id, "fotos_do_sujeito_produto", "0.jpg");
+      if (fs5.existsSync(fallbackInput) && fs5.statSync(fallbackInput).isFile()) {
         res.setHeader("Content-Type", "image/jpeg");
         res.setHeader("Cache-Control", cacheHeader);
         return res.sendFile(fallbackInput);
@@ -5104,34 +5507,34 @@ async function startServer() {
   app.get(["/designbuilder/thumbnails/:id/:filename", "/thumbnails/:id/:filename"], async (req, res) => {
     try {
       const { id, filename } = req.params;
-      const cleanFile = path4.basename(filename || "thumbnail.avif");
+      const cleanFile = path5.basename(filename || "thumbnail.avif");
       const cacheHeader = req.query["response-cache-control"] || "private, max-age=3600, immutable";
-      const thumbPath = path4.join(STORAGE_BASE_DIR, "thumbnails", id, cleanFile);
-      if (fs4.existsSync(thumbPath) && fs4.statSync(thumbPath).isFile()) {
+      const thumbPath = path5.join(STORAGE_BASE_DIR, "thumbnails", id, cleanFile);
+      if (fs5.existsSync(thumbPath) && fs5.statSync(thumbPath).isFile()) {
         const ct = cleanFile.endsWith(".avif") ? "image/avif" : cleanFile.endsWith(".png") ? "image/png" : cleanFile.endsWith(".webp") ? "image/webp" : "image/jpeg";
         res.setHeader("Content-Type", ct);
         res.setHeader("Cache-Control", cacheHeader);
         return res.sendFile(thumbPath);
       }
       for (const ext of [".avif", ".png", ".webp", ".jpg", ".jpeg"]) {
-        const altFile = path4.join(STORAGE_BASE_DIR, "thumbnails", id, `thumbnail${ext}`);
-        if (fs4.existsSync(altFile) && fs4.statSync(altFile).isFile()) {
+        const altFile = path5.join(STORAGE_BASE_DIR, "thumbnails", id, `thumbnail${ext}`);
+        if (fs5.existsSync(altFile) && fs5.statSync(altFile).isFile()) {
           const ct = ext === ".avif" ? "image/avif" : ext === ".png" ? "image/png" : ext === ".webp" ? "image/webp" : "image/jpeg";
           res.setHeader("Content-Type", ct);
           res.setHeader("Cache-Control", cacheHeader);
           return res.sendFile(altFile);
         }
       }
-      const resultFile = path4.join(STORAGE_BASE_DIR, "results", id, cleanFile.startsWith("thumbnail") ? cleanFile.replace("thumbnail", "result") : cleanFile);
-      if (fs4.existsSync(resultFile) && fs4.statSync(resultFile).isFile()) {
+      const resultFile = path5.join(STORAGE_BASE_DIR, "results", id, cleanFile.startsWith("thumbnail") ? cleanFile.replace("thumbnail", "result") : cleanFile);
+      if (fs5.existsSync(resultFile) && fs5.statSync(resultFile).isFile()) {
         const ct = cleanFile.endsWith(".avif") ? "image/avif" : cleanFile.endsWith(".png") ? "image/png" : "image/jpeg";
         res.setHeader("Content-Type", ct);
         res.setHeader("Cache-Control", cacheHeader);
         return res.sendFile(resultFile);
       }
       for (const ext of [".avif", ".png", ".jpg", ".jpeg"]) {
-        const altResult = path4.join(STORAGE_BASE_DIR, "results", id, `result${ext}`);
-        if (fs4.existsSync(altResult) && fs4.statSync(altResult).isFile()) {
+        const altResult = path5.join(STORAGE_BASE_DIR, "results", id, `result${ext}`);
+        if (fs5.existsSync(altResult) && fs5.statSync(altResult).isFile()) {
           const ct = ext === ".avif" ? "image/avif" : ext === ".png" ? "image/png" : "image/jpeg";
           res.setHeader("Content-Type", ct);
           res.setHeader("Cache-Control", cacheHeader);
@@ -5146,14 +5549,14 @@ async function startServer() {
           return res.send(r2Thumb.data);
         }
       }
-      const fallbackInput = path4.join(STORAGE_BASE_DIR, "inputs", id, "fotos_do_sujeito_produto", "0.jpg");
-      if (fs4.existsSync(fallbackInput) && fs4.statSync(fallbackInput).isFile()) {
+      const fallbackInput = path5.join(STORAGE_BASE_DIR, "inputs", id, "fotos_do_sujeito_produto", "0.jpg");
+      if (fs5.existsSync(fallbackInput) && fs5.statSync(fallbackInput).isFile()) {
         res.setHeader("Content-Type", "image/jpeg");
         res.setHeader("Cache-Control", cacheHeader);
         return res.sendFile(fallbackInput);
       }
-      const fallbackLogo = path4.join(process.cwd(), "public", "favicon-db.png");
-      if (fs4.existsSync(fallbackLogo)) {
+      const fallbackLogo = path5.join(process.cwd(), "public", "favicon-db.png");
+      if (fs5.existsSync(fallbackLogo)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", cacheHeader);
         return res.sendFile(fallbackLogo);
@@ -5174,19 +5577,19 @@ async function startServer() {
     async (req, res) => {
       try {
         const { id, folder, filename } = req.params;
-        const cleanFile = path4.basename(filename || "0.jpg");
+        const cleanFile = path5.basename(filename || "0.jpg");
         const cacheHeader = req.query["response-cache-control"] || "private, max-age=3600, immutable";
         if (folder) {
-          const localPath = path4.join(STORAGE_BASE_DIR, "inputs", id, folder, cleanFile);
-          if (fs4.existsSync(localPath) && fs4.statSync(localPath).isFile()) {
+          const localPath = path5.join(STORAGE_BASE_DIR, "inputs", id, folder, cleanFile);
+          if (fs5.existsSync(localPath) && fs5.statSync(localPath).isFile()) {
             const ct = cleanFile.endsWith(".avif") ? "image/avif" : cleanFile.endsWith(".png") ? "image/png" : "image/jpeg";
             res.setHeader("Content-Type", ct);
             res.setHeader("Cache-Control", cacheHeader);
             return res.sendFile(localPath);
           }
         }
-        const directPath = path4.join(STORAGE_BASE_DIR, "inputs", id, cleanFile);
-        if (fs4.existsSync(directPath) && fs4.statSync(directPath).isFile()) {
+        const directPath = path5.join(STORAGE_BASE_DIR, "inputs", id, cleanFile);
+        if (fs5.existsSync(directPath) && fs5.statSync(directPath).isFile()) {
           const ct = cleanFile.endsWith(".avif") ? "image/avif" : cleanFile.endsWith(".png") ? "image/png" : "image/jpeg";
           res.setHeader("Content-Type", ct);
           res.setHeader("Cache-Control", cacheHeader);
@@ -5201,8 +5604,8 @@ async function startServer() {
             return res.send(r2Obj.data);
           }
         }
-        const fallbackLogo = path4.join(process.cwd(), "public", "favicon-db.png");
-        if (fs4.existsSync(fallbackLogo)) {
+        const fallbackLogo = path5.join(process.cwd(), "public", "favicon-db.png");
+        if (fs5.existsSync(fallbackLogo)) {
           res.setHeader("Content-Type", "image/png");
           res.setHeader("Cache-Control", cacheHeader);
           return res.sendFile(fallbackLogo);
@@ -5280,12 +5683,12 @@ async function startServer() {
               }
             } else if (str.startsWith("/uploads/") || str.includes("/uploads/")) {
               const cleanRel = str.startsWith("/") ? str.slice(1) : str;
-              const localPath = path4.join(process.cwd(), "public", cleanRel);
-              if (fs4.existsSync(localPath)) {
-                const buf = fs4.readFileSync(localPath);
-                const ext = path4.extname(localPath).toLowerCase();
+              const localPath = path5.join(process.cwd(), "public", cleanRel);
+              if (fs5.existsSync(localPath)) {
+                const buf = fs5.readFileSync(localPath);
+                const ext = path5.extname(localPath).toLowerCase();
                 const mime = ext === ".png" ? "image/png" : ext === ".webp" ? "image/webp" : "image/jpeg";
-                return { buffer: buf, mimetype: mime, originalname: path4.basename(localPath), size: buf.length };
+                return { buffer: buf, mimetype: mime, originalname: path5.basename(localPath), size: buf.length };
               }
             }
           } catch (e) {
@@ -5330,9 +5733,9 @@ async function startServer() {
         } catch (_) {
         }
         const jobId = req.headers["idempotency-key"] || req.headers["x-idempotency-key"] || `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-        const jobDir = path4.join(STORAGE_BASE_DIR, "inputs", jobId);
-        const resultDir = path4.join(STORAGE_BASE_DIR, "results", jobId);
-        fs4.mkdirSync(resultDir, { recursive: true });
+        const jobDir = path5.join(STORAGE_BASE_DIR, "inputs", jobId);
+        const resultDir = path5.join(STORAGE_BASE_DIR, "results", jobId);
+        fs5.mkdirSync(resultDir, { recursive: true });
         const savedFiles = {
           fotos_do_sujeito_produto: null,
           brand_identity_images: null,
@@ -5340,50 +5743,50 @@ async function startServer() {
           referencias_de_estilo: null
         };
         if (files.fotos_do_sujeito_produto && files.fotos_do_sujeito_produto.length > 0) {
-          const subDir = path4.join(jobDir, "fotos_do_sujeito_produto");
-          fs4.mkdirSync(subDir, { recursive: true });
+          const subDir = path5.join(jobDir, "fotos_do_sujeito_produto");
+          fs5.mkdirSync(subDir, { recursive: true });
           files.fotos_do_sujeito_produto.forEach((f, idx) => {
-            const filename = path4.basename(f.originalname || `${idx}.jpg`);
-            const targetFile = path4.join(subDir, filename);
-            fs4.writeFileSync(targetFile, f.buffer);
+            const filename = path5.basename(f.originalname || `${idx}.jpg`);
+            const targetFile = path5.join(subDir, filename);
+            fs5.writeFileSync(targetFile, f.buffer);
             if (idx === 0) {
-              savedFiles.fotos_do_sujeito_produto = path4.relative(STORAGE_BASE_DIR, targetFile).replace(/\\/g, "/");
+              savedFiles.fotos_do_sujeito_produto = path5.relative(STORAGE_BASE_DIR, targetFile).replace(/\\/g, "/");
             }
           });
         }
         if (files.brand_identity_images && files.brand_identity_images.length > 0) {
-          const brandDir = path4.join(jobDir, "brand_identity_images");
-          fs4.mkdirSync(brandDir, { recursive: true });
+          const brandDir = path5.join(jobDir, "brand_identity_images");
+          fs5.mkdirSync(brandDir, { recursive: true });
           files.brand_identity_images.forEach((f, idx) => {
-            const filename = path4.basename(f.originalname || `logo_${idx}.png`);
-            const targetFile = path4.join(brandDir, filename);
-            fs4.writeFileSync(targetFile, f.buffer);
+            const filename = path5.basename(f.originalname || `logo_${idx}.png`);
+            const targetFile = path5.join(brandDir, filename);
+            fs5.writeFileSync(targetFile, f.buffer);
             if (idx === 0) {
-              savedFiles.brand_identity_images = path4.relative(STORAGE_BASE_DIR, targetFile).replace(/\\/g, "/");
+              savedFiles.brand_identity_images = path5.relative(STORAGE_BASE_DIR, targetFile).replace(/\\/g, "/");
             }
           });
         }
         if (files.referencias_de_ambiente && files.referencias_de_ambiente.length > 0) {
-          const ambDir = path4.join(jobDir, "referencias_de_ambiente");
-          fs4.mkdirSync(ambDir, { recursive: true });
+          const ambDir = path5.join(jobDir, "referencias_de_ambiente");
+          fs5.mkdirSync(ambDir, { recursive: true });
           files.referencias_de_ambiente.forEach((f, idx) => {
-            const filename = path4.basename(f.originalname || `env_${idx}.jpg`);
-            const targetFile = path4.join(ambDir, filename);
-            fs4.writeFileSync(targetFile, f.buffer);
+            const filename = path5.basename(f.originalname || `env_${idx}.jpg`);
+            const targetFile = path5.join(ambDir, filename);
+            fs5.writeFileSync(targetFile, f.buffer);
             if (idx === 0) {
-              savedFiles.referencias_de_ambiente = path4.relative(STORAGE_BASE_DIR, targetFile).replace(/\\/g, "/");
+              savedFiles.referencias_de_ambiente = path5.relative(STORAGE_BASE_DIR, targetFile).replace(/\\/g, "/");
             }
           });
         }
         if (files.referencias_de_estilo && files.referencias_de_estilo.length > 0) {
-          const stDir = path4.join(jobDir, "referencias_de_estilo");
-          fs4.mkdirSync(stDir, { recursive: true });
+          const stDir = path5.join(jobDir, "referencias_de_estilo");
+          fs5.mkdirSync(stDir, { recursive: true });
           files.referencias_de_estilo.forEach((f, idx) => {
-            const filename = path4.basename(f.originalname || `style_${idx}.jpg`);
-            const targetFile = path4.join(stDir, filename);
-            fs4.writeFileSync(targetFile, f.buffer);
+            const filename = path5.basename(f.originalname || `style_${idx}.jpg`);
+            const targetFile = path5.join(stDir, filename);
+            fs5.writeFileSync(targetFile, f.buffer);
             if (idx === 0) {
-              savedFiles.referencias_de_estilo = path4.relative(STORAGE_BASE_DIR, targetFile).replace(/\\/g, "/");
+              savedFiles.referencias_de_estilo = path5.relative(STORAGE_BASE_DIR, targetFile).replace(/\\/g, "/");
             }
           });
         }
@@ -5464,7 +5867,7 @@ async function startServer() {
         }
         jobRecord.input_image_urls = inputImageUrls;
         bffGenerationJobs.set(jobId, jobRecord);
-        const isServerless3 = !!(process.env.VERCEL || req.headers["x-vercel-id"]);
+        const isServerless4 = !!(process.env.VERCEL || req.headers["x-vercel-id"]);
         const runGenerationExecution = async () => {
           try {
             const client = getAiClient(body.customApiKey);
@@ -5695,29 +6098,29 @@ CRITICAL RULES:
               targetQuality2 === "8K" ? "8K" : targetQuality2 === "4K" ? "4K" : targetQuality2 === "2K" ? "2K" : "1K"
             );
             const processedAvifBuffer = await sharp(processedPngBuffer).avif({ quality: 85, effort: 1 }).toBuffer();
-            fs4.writeFileSync(path4.join(resultDir, "result.avif"), processedAvifBuffer);
-            fs4.writeFileSync(path4.join(resultDir, "result.png"), processedPngBuffer);
+            fs5.writeFileSync(path5.join(resultDir, "result.avif"), processedAvifBuffer);
+            fs5.writeFileSync(path5.join(resultDir, "result.png"), processedPngBuffer);
             const thumbW = Math.max(256, Math.round(targetDims.width * 0.3));
             const thumbH = Math.max(256, Math.round(targetDims.height * 0.3));
             const thumbPngBuffer = await sharp(processedPngBuffer).resize(thumbW, thumbH, { fit: "cover", position: "center", kernel: sharp.kernel.lanczos3 }).png({ compressionLevel: 0, quality: 100 }).toBuffer();
             const thumbAvifBuffer = await sharp(thumbPngBuffer).avif({ quality: 75, effort: 1 }).toBuffer();
-            const thumbDir = path4.join(STORAGE_BASE_DIR, "thumbnails", jobId);
-            fs4.mkdirSync(thumbDir, { recursive: true });
-            fs4.writeFileSync(path4.join(thumbDir, "thumbnail.avif"), thumbAvifBuffer);
-            fs4.writeFileSync(path4.join(thumbDir, "thumbnail.png"), thumbPngBuffer);
+            const thumbDir = path5.join(STORAGE_BASE_DIR, "thumbnails", jobId);
+            fs5.mkdirSync(thumbDir, { recursive: true });
+            fs5.writeFileSync(path5.join(thumbDir, "thumbnail.avif"), thumbAvifBuffer);
+            fs5.writeFileSync(path5.join(thumbDir, "thumbnail.png"), thumbPngBuffer);
             try {
-              const publicGenDir2 = path4.join(process.cwd(), "public", "generated-images");
-              fs4.mkdirSync(publicGenDir2, { recursive: true });
-              fs4.writeFileSync(path4.join(publicGenDir2, `img_${jobId}.png`), processedPngBuffer);
+              const publicGenDir2 = path5.join(process.cwd(), "public", "generated-images");
+              fs5.mkdirSync(publicGenDir2, { recursive: true });
+              fs5.writeFileSync(path5.join(publicGenDir2, `img_${jobId}.png`), processedPngBuffer);
             } catch (copyErr) {
               console.warn("[bff/generate ASYNC] Could not copy to public/generated-images:", copyErr);
             }
             try {
-              const genDataPath = path4.join(process.cwd(), "public", "generations_data.json");
+              const genDataPath = path5.join(process.cwd(), "public", "generations_data.json");
               let genData = { items: [] };
-              if (fs4.existsSync(genDataPath)) {
+              if (fs5.existsSync(genDataPath)) {
                 try {
-                  genData = JSON.parse(fs4.readFileSync(genDataPath, "utf-8"));
+                  genData = JSON.parse(fs5.readFileSync(genDataPath, "utf-8"));
                   if (!Array.isArray(genData.items)) genData.items = [];
                 } catch (_) {
                 }
@@ -5755,7 +6158,7 @@ CRITICAL RULES:
                 }
               };
               genData.items = [newEntry, ...genData.items.filter((i) => i.id !== jobId)];
-              fs4.writeFileSync(genDataPath, JSON.stringify(genData, null, 2), "utf-8");
+              fs5.writeFileSync(genDataPath, JSON.stringify(genData, null, 2), "utf-8");
             } catch (jsonErr) {
               console.warn("[bff/generate ASYNC] Could not update generations_data.json:", jsonErr);
             }
@@ -5814,10 +6217,10 @@ CRITICAL RULES:
               }
             ];
             try {
-              const gPath = path4.join(process.cwd(), "public", "generations_data.json");
+              const gPath = path5.join(process.cwd(), "public", "generations_data.json");
               let existingList = [];
-              if (fs4.existsSync(gPath)) {
-                const raw = fs4.readFileSync(gPath, "utf-8");
+              if (fs5.existsSync(gPath)) {
+                const raw = fs5.readFileSync(gPath, "utf-8");
                 const parsed = JSON.parse(raw);
                 existingList = Array.isArray(parsed) ? parsed : parsed.items || [];
               }
@@ -5840,7 +6243,7 @@ CRITICAL RULES:
               };
               const filtered = existingList.filter((i) => i.id !== jobId);
               filtered.unshift(finishedItem);
-              fs4.writeFileSync(gPath, JSON.stringify(filtered.slice(0, 150), null, 2), "utf-8");
+              fs5.writeFileSync(gPath, JSON.stringify(filtered.slice(0, 150), null, 2), "utf-8");
             } catch (pErr) {
               console.warn("Could not save to generations_data.json:", pErr);
             }
@@ -5854,7 +6257,7 @@ CRITICAL RULES:
             jobRecord.updated_at = Date.now();
           }
         };
-        if (isServerless3) {
+        if (isServerless4) {
           await runGenerationExecution();
           return res.json({
             generation_id: jobId,
@@ -5895,9 +6298,9 @@ CRITICAL RULES:
         let parentJob = generationId ? bffGenerationJobs.get(generationId) : null;
         let parentData = null;
         try {
-          const gPath = path4.join(process.cwd(), "public", "generations_data.json");
-          if (fs4.existsSync(gPath)) {
-            const raw = fs4.readFileSync(gPath, "utf-8");
+          const gPath = path5.join(process.cwd(), "public", "generations_data.json");
+          if (fs5.existsSync(gPath)) {
+            const raw = fs5.readFileSync(gPath, "utf-8");
             const parsed = JSON.parse(raw);
             const list = Array.isArray(parsed) ? parsed : parsed.items || [];
             parentData = list.find((i) => i.id === generationId) || list[0];
@@ -5951,9 +6354,9 @@ CRITICAL RULES:
                 previousImgBase64 = parentImage;
               } else {
                 const cleanRel = parentImage.startsWith("/") ? parentImage.slice(1) : parentImage;
-                const localPath = path4.join(process.cwd(), "public", cleanRel);
-                if (fs4.existsSync(localPath)) {
-                  const buf = fs4.readFileSync(localPath);
+                const localPath = path5.join(process.cwd(), "public", cleanRel);
+                if (fs5.existsSync(localPath)) {
+                  const buf = fs5.readFileSync(localPath);
                   previousImgBase64 = `data:image/png;base64,${buf.toString("base64")}`;
                 }
               }
@@ -6011,19 +6414,19 @@ CRITICAL RULES:
             }
             jobRecord.progress = 85;
             jobRecord.message = "Otimizando imagem para alta defini\xE7\xE3o...";
-            const resultsDir = path4.join(STORAGE_BASE_DIR, "results", jobId);
-            const thumbsDir = path4.join(STORAGE_BASE_DIR, "thumbnails", jobId);
-            fs4.mkdirSync(resultsDir, { recursive: true });
-            fs4.mkdirSync(thumbsDir, { recursive: true });
-            const pngPath = path4.join(resultsDir, "result.png");
-            const avifPath = path4.join(resultsDir, "result.avif");
-            const thumbAvifPath = path4.join(thumbsDir, "thumbnail.avif");
+            const resultsDir = path5.join(STORAGE_BASE_DIR, "results", jobId);
+            const thumbsDir = path5.join(STORAGE_BASE_DIR, "thumbnails", jobId);
+            fs5.mkdirSync(resultsDir, { recursive: true });
+            fs5.mkdirSync(thumbsDir, { recursive: true });
+            const pngPath = path5.join(resultsDir, "result.png");
+            const avifPath = path5.join(resultsDir, "result.avif");
+            const thumbAvifPath = path5.join(thumbsDir, "thumbnail.avif");
             const processedPng = await sharp(rawBuffer).png({ compressionLevel: 0, quality: 100 }).toBuffer();
             const processedAvif = await sharp(rawBuffer).avif({ quality: 85 }).toBuffer();
             const thumbAvif = await sharp(rawBuffer).resize(400, 500, { fit: "cover" }).avif({ quality: 75 }).toBuffer();
-            fs4.writeFileSync(pngPath, processedPng);
-            fs4.writeFileSync(avifPath, processedAvif);
-            fs4.writeFileSync(thumbAvifPath, thumbAvif);
+            fs5.writeFileSync(pngPath, processedPng);
+            fs5.writeFileSync(avifPath, processedAvif);
+            fs5.writeFileSync(thumbAvifPath, thumbAvif);
             const finalCdnUrl = `/designbuilder/results/${jobId}/result.avif`;
             const finalBffUrl = `/api/bff/api/storage/download?key=results/${jobId}/result.avif`;
             jobRecord.status = "done";
@@ -6043,10 +6446,10 @@ CRITICAL RULES:
               }
             ];
             try {
-              const gPath = path4.join(process.cwd(), "public", "generations_data.json");
+              const gPath = path5.join(process.cwd(), "public", "generations_data.json");
               let existingList = [];
-              if (fs4.existsSync(gPath)) {
-                const raw = fs4.readFileSync(gPath, "utf-8");
+              if (fs5.existsSync(gPath)) {
+                const raw = fs5.readFileSync(gPath, "utf-8");
                 const parsed = JSON.parse(raw);
                 existingList = Array.isArray(parsed) ? parsed : parsed.items || [];
               }
@@ -6072,7 +6475,7 @@ CRITICAL RULES:
               };
               const filtered = existingList.filter((i) => i.id !== jobId);
               filtered.unshift(finishedItem);
-              fs4.writeFileSync(gPath, JSON.stringify(filtered.slice(0, 150), null, 2), "utf-8");
+              fs5.writeFileSync(gPath, JSON.stringify(filtered.slice(0, 150), null, 2), "utf-8");
             } catch (pErr) {
               console.warn("Could not save refined item to generations_data.json:", pErr);
             }
@@ -6239,9 +6642,9 @@ data: ${JSON.stringify({ type: "ping", timestamp: Date.now() })}
         let p = job?.parameters;
         if (!p) {
           try {
-            const gPath = path4.join(process.cwd(), "public", "generations_data.json");
-            if (fs4.existsSync(gPath)) {
-              const raw = fs4.readFileSync(gPath, "utf-8");
+            const gPath = path5.join(process.cwd(), "public", "generations_data.json");
+            if (fs5.existsSync(gPath)) {
+              const raw = fs5.readFileSync(gPath, "utf-8");
               const parsed = JSON.parse(raw);
               const list = Array.isArray(parsed) ? parsed : parsed.items || [];
               const found = list.find((i) => i.id === id);
@@ -6280,9 +6683,9 @@ data: ${JSON.stringify({ type: "ping", timestamp: Date.now() })}
           let p = job?.parameters;
           if (!p) {
             try {
-              const gPath = path4.join(process.cwd(), "public", "generations_data.json");
-              if (fs4.existsSync(gPath)) {
-                const raw = fs4.readFileSync(gPath, "utf-8");
+              const gPath = path5.join(process.cwd(), "public", "generations_data.json");
+              if (fs5.existsSync(gPath)) {
+                const raw = fs5.readFileSync(gPath, "utf-8");
                 const parsed = JSON.parse(raw);
                 const list = Array.isArray(parsed) ? parsed : parsed.items || [];
                 const found = list.find((i) => i.id === id);
@@ -6630,14 +7033,14 @@ data: ${JSON.stringify({ type: "ping", timestamp: Date.now() })}
     });
   });
   app.get(["/favicon-db.png", "/favicon.ico"], (_req, res) => {
-    const faviconPath = path4.join(process.cwd(), "public", "favicon-db.png");
-    if (fs4.existsSync(faviconPath)) {
+    const faviconPath = path5.join(process.cwd(), "public", "favicon-db.png");
+    if (fs5.existsSync(faviconPath)) {
       res.setHeader("Content-Type", "image/png");
       res.setHeader("Cache-Control", "public, max-age=86400");
       return res.sendFile(faviconPath);
     }
-    const fallbackPath = path4.join(process.cwd(), "public", "logo-zion.png");
-    if (fs4.existsSync(fallbackPath)) {
+    const fallbackPath = path5.join(process.cwd(), "public", "logo-zion.png");
+    if (fs5.existsSync(fallbackPath)) {
       res.setHeader("Content-Type", "image/png");
       res.setHeader("Cache-Control", "public, max-age=86400");
       return res.sendFile(fallbackPath);
@@ -6908,17 +7311,17 @@ data: ${JSON.stringify({ type: "ping", timestamp: Date.now() })}
   const isServerlessStorage = Boolean(
     process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.LAMBDA_TASK_ROOT || process.env.NOW_REGION
   );
-  const DELETED_IMAGES_FILE = isServerlessStorage ? path4.join(os4.tmpdir(), "zion_deleted_images.json") : path4.join(process.cwd(), "local_storage", "deleted_images.json");
+  const DELETED_IMAGES_FILE = isServerlessStorage ? path5.join(os5.tmpdir(), "zion_deleted_images.json") : path5.join(process.cwd(), "local_storage", "deleted_images.json");
   const loadServerDeletedImages = () => {
     try {
-      if (fs4.existsSync(DELETED_IMAGES_FILE)) {
-        const raw = fs4.readFileSync(DELETED_IMAGES_FILE, "utf-8");
+      if (fs5.existsSync(DELETED_IMAGES_FILE)) {
+        const raw = fs5.readFileSync(DELETED_IMAGES_FILE, "utf-8");
         const list = JSON.parse(raw);
         if (Array.isArray(list)) {
           list.forEach((i) => {
             const str = String(i).toLowerCase();
             serverDeletedImages.add(str);
-            const b = path4.basename(str).split("?")[0];
+            const b = path5.basename(str).split("?")[0];
             serverDeletedImages.add(b);
             const r = b.replace(/\.[^/.]+$/, "");
             if (r) serverDeletedImages.add(r);
@@ -6933,7 +7336,7 @@ data: ${JSON.stringify({ type: "ping", timestamp: Date.now() })}
     if (!nameOrId) return;
     const clean = String(nameOrId).trim().toLowerCase();
     serverDeletedImages.add(clean);
-    const bname = path4.basename(clean).split("?")[0];
+    const bname = path5.basename(clean).split("?")[0];
     serverDeletedImages.add(bname);
     const raw = bname.replace(/\.[^/.]+$/, "");
     if (raw) serverDeletedImages.add(raw);
@@ -6946,9 +7349,9 @@ data: ${JSON.stringify({ type: "ping", timestamp: Date.now() })}
       serverDeletedImages.add(matchUuid[1].toLowerCase());
     }
     try {
-      const dir = path4.dirname(DELETED_IMAGES_FILE);
-      if (!fs4.existsSync(dir)) fs4.mkdirSync(dir, { recursive: true });
-      fs4.writeFileSync(DELETED_IMAGES_FILE, JSON.stringify(Array.from(serverDeletedImages)), "utf-8");
+      const dir = path5.dirname(DELETED_IMAGES_FILE);
+      if (!fs5.existsSync(dir)) fs5.mkdirSync(dir, { recursive: true });
+      fs5.writeFileSync(DELETED_IMAGES_FILE, JSON.stringify(Array.from(serverDeletedImages)), "utf-8");
     } catch (_) {
     }
   };
@@ -6956,7 +7359,7 @@ data: ${JSON.stringify({ type: "ping", timestamp: Date.now() })}
     if (!idOrUrl) return false;
     const clean = String(idOrUrl).trim().toLowerCase();
     if (serverDeletedImages.has(clean)) return true;
-    const bname = path4.basename(clean).split("?")[0];
+    const bname = path5.basename(clean).split("?")[0];
     if (serverDeletedImages.has(bname)) return true;
     const raw = bname.replace(/\.[^/.]+$/, "");
     if (raw && serverDeletedImages.has(raw)) return true;
@@ -6971,10 +7374,10 @@ data: ${JSON.stringify({ type: "ping", timestamp: Date.now() })}
     const limit = parseInt(req.query.limit) || 20;
     const offset = parseInt(req.query.offset) || 0;
     let items = [];
-    const genDataPath = path4.join(process.cwd(), "public", "generations_data.json");
-    if (fs4.existsSync(genDataPath)) {
+    const genDataPath = path5.join(process.cwd(), "public", "generations_data.json");
+    if (fs5.existsSync(genDataPath)) {
       try {
-        const raw = fs4.readFileSync(genDataPath, "utf-8");
+        const raw = fs5.readFileSync(genDataPath, "utf-8");
         const parsed = JSON.parse(raw);
         const rawItems = Array.isArray(parsed) ? parsed : parsed.items || [];
         items = rawItems.filter((item) => !isServerImageDeleted(item.id) && !isServerImageDeleted(item.result_url || item.imageUrl) && !isServerImageDeleted(item.thumbnail_url || item.imageUrl)).map((item) => ({
@@ -6993,20 +7396,20 @@ data: ${JSON.stringify({ type: "ping", timestamp: Date.now() })}
       }
     }
     try {
-      const resultsBaseDir = path4.join(STORAGE_BASE_DIR, "results");
-      if (fs4.existsSync(resultsBaseDir)) {
-        const folders = fs4.readdirSync(resultsBaseDir);
+      const resultsBaseDir = path5.join(STORAGE_BASE_DIR, "results");
+      if (fs5.existsSync(resultsBaseDir)) {
+        const folders = fs5.readdirSync(resultsBaseDir);
         for (const folder of folders) {
-          const folderPath = path4.join(resultsBaseDir, folder);
-          if (fs4.statSync(folderPath).isDirectory()) {
-            const hasResult = fs4.existsSync(path4.join(folderPath, "result.avif")) || fs4.existsSync(path4.join(folderPath, "result.png"));
+          const folderPath = path5.join(resultsBaseDir, folder);
+          if (fs5.statSync(folderPath).isDirectory()) {
+            const hasResult = fs5.existsSync(path5.join(folderPath, "result.avif")) || fs5.existsSync(path5.join(folderPath, "result.png"));
             if (hasResult && !isServerImageDeleted(folder) && !items.find((i) => i.id === folder)) {
-              const stat = fs4.statSync(folderPath);
+              const stat = fs5.statSync(folderPath);
               let detectedDim = "4:5";
               try {
-                const pngP = path4.join(folderPath, "result.png");
-                if (fs4.existsSync(pngP)) {
-                  const buf = fs4.readFileSync(pngP);
+                const pngP = path5.join(folderPath, "result.png");
+                if (fs5.existsSync(pngP)) {
+                  const buf = fs5.readFileSync(pngP);
                   const dims = getImageDimensions(buf, "image/png");
                   if (dims.width && dims.height) {
                     const r = dims.width / dims.height;
@@ -7044,15 +7447,15 @@ data: ${JSON.stringify({ type: "ping", timestamp: Date.now() })}
     } catch (_) {
     }
     try {
-      const publicGenDir2 = path4.join(process.cwd(), "public", "generated-images");
-      if (fs4.existsSync(publicGenDir2)) {
-        const files = fs4.readdirSync(publicGenDir2);
+      const publicGenDir2 = path5.join(process.cwd(), "public", "generated-images");
+      if (fs5.existsSync(publicGenDir2)) {
+        const files = fs5.readdirSync(publicGenDir2);
         for (const file of files) {
           if (/\.(png|jpg|jpeg|webp|avif)$/i.test(file) && !isServerImageDeleted(file)) {
-            const filePath = path4.join(publicGenDir2, file);
+            const filePath = path5.join(publicGenDir2, file);
             const fileUrl = "/generated-images/" + file;
             if (!isServerImageDeleted(fileUrl) && !items.find((i) => i.result_url === fileUrl || i.thumbnail_url === fileUrl || i.id === file)) {
-              const stat = fs4.statSync(filePath);
+              const stat = fs5.statSync(filePath);
               const fLower = file.toLowerCase();
               const detectedSlug = fLower.includes("ref") ? "ref" : fLower.includes("hydra") ? "hydra" : fLower.includes("enhance") || fLower.includes("enh") ? "enhance" : fLower.includes("altera") ? "altera-facil" : fLower.includes("orion") ? "orion-pro" : "design-builder1-2";
               items.push({
@@ -7171,10 +7574,10 @@ data: ${JSON.stringify({ type: "ping", timestamp: Date.now() })}
     const offset = parseInt(req.query.offset) || 0;
     let items = [];
     let total = 344;
-    const commDataPath = path4.join(process.cwd(), "public", "community_data.json");
-    if (fs4.existsSync(commDataPath)) {
+    const commDataPath = path5.join(process.cwd(), "public", "community_data.json");
+    if (fs5.existsSync(commDataPath)) {
       try {
-        let raw = fs4.readFileSync(commDataPath, "utf-8");
+        let raw = fs5.readFileSync(commDataPath, "utf-8");
         if (raw.charCodeAt(0) === 65279) raw = raw.slice(1);
         const parsed = JSON.parse(raw);
         items = parsed.items || [];
@@ -7193,11 +7596,11 @@ data: ${JSON.stringify({ type: "ping", timestamp: Date.now() })}
   app.post(["/api/bff/api/community", "/api/community"], (req, res) => {
     try {
       const { image, title, prompt, agent_slug, author, tag, aspect } = req.body || {};
-      const commDataPath = path4.join(process.cwd(), "public", "community_data.json");
+      const commDataPath = path5.join(process.cwd(), "public", "community_data.json");
       let commData = { items: [], total: 0 };
-      if (fs4.existsSync(commDataPath)) {
+      if (fs5.existsSync(commDataPath)) {
         try {
-          let raw = fs4.readFileSync(commDataPath, "utf-8");
+          let raw = fs5.readFileSync(commDataPath, "utf-8");
           if (raw.charCodeAt(0) === 65279) raw = raw.slice(1);
           commData = JSON.parse(raw);
         } catch (_) {
@@ -7230,7 +7633,7 @@ data: ${JSON.stringify({ type: "ping", timestamp: Date.now() })}
       };
       commData.items = [newItem, ...(commData.items || []).filter((it) => it.id !== newItem.id)];
       commData.total = (commData.items || []).length;
-      fs4.writeFileSync(commDataPath, JSON.stringify(commData, null, 2), "utf-8");
+      fs5.writeFileSync(commDataPath, JSON.stringify(commData, null, 2), "utf-8");
       return res.json({ success: true, item: newItem, message: "Publicado na comunidade com sucesso!" });
     } catch (e) {
       return res.json({ success: true, message: "Publica\xE7\xE3o registrada." });
@@ -7249,11 +7652,11 @@ data: ${JSON.stringify({ type: "ping", timestamp: Date.now() })}
   app.get("/api/historico-imagens", async (_req, res) => {
     try {
       loadServerDeletedImages();
-      const publicGenDir2 = path4.join(process.cwd(), "public", "generated-images");
-      if (!fs4.existsSync(publicGenDir2)) {
+      const publicGenDir2 = path5.join(process.cwd(), "public", "generated-images");
+      if (!fs5.existsSync(publicGenDir2)) {
         return res.json({ images: [] });
       }
-      const files = await fs4.promises.readdir(publicGenDir2);
+      const files = await fs5.promises.readdir(publicGenDir2);
       const imageFiles = files.filter((f) => {
         if (!/\.(png|jpg|jpeg|webp|avif)$/i.test(f)) return false;
         const lower = f.toLowerCase();
@@ -7264,8 +7667,8 @@ data: ${JSON.stringify({ type: "ping", timestamp: Date.now() })}
       const statsList = await Promise.all(
         imageFiles.map(async (filename) => {
           try {
-            const fullPath = path4.join(publicGenDir2, filename);
-            const stat = await fs4.promises.stat(fullPath);
+            const fullPath = path5.join(publicGenDir2, filename);
+            const stat = await fs5.promises.stat(fullPath);
             let width = 1024;
             let height = 1024;
             let aspect = "1 / 1";
@@ -7318,18 +7721,18 @@ data: ${JSON.stringify({ type: "ping", timestamp: Date.now() })}
       const isServerlessEnv2 = Boolean(
         process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.LAMBDA_TASK_ROOT || process.env.NOW_REGION
       );
-      const publicUploadsDir2 = isServerlessEnv2 ? path4.join(os4.tmpdir(), "zion_storage", "uploads") : path4.join(process.cwd(), "public", "uploads");
+      const publicUploadsDir2 = isServerlessEnv2 ? path5.join(os5.tmpdir(), "zion_storage", "uploads") : path5.join(process.cwd(), "public", "uploads");
       try {
-        if (!fs4.existsSync(publicUploadsDir2)) {
-          fs4.mkdirSync(publicUploadsDir2, { recursive: true });
+        if (!fs5.existsSync(publicUploadsDir2)) {
+          fs5.mkdirSync(publicUploadsDir2, { recursive: true });
         }
       } catch (_) {
       }
       if (req.file) {
-        const ext = path4.extname(req.file.originalname) || ".png";
+        const ext = path5.extname(req.file.originalname) || ".png";
         const filename = "upload_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8) + ext;
-        const targetPath = path4.join(publicUploadsDir2, filename);
-        fs4.writeFileSync(targetPath, req.file.buffer);
+        const targetPath = path5.join(publicUploadsDir2, filename);
+        fs5.writeFileSync(targetPath, req.file.buffer);
         console.log("[api/upload] Arquivo salvo via multipart:", filename);
         return res.json({ success: true, url: "/uploads/" + filename, filename });
       }
@@ -7347,10 +7750,10 @@ data: ${JSON.stringify({ type: "ping", timestamp: Date.now() })}
         } else {
           buffer = Buffer.from(base64, "base64");
         }
-        const baseNameWithoutExt = reqFileName ? path4.parse(reqFileName).name.replace(/[^a-zA-Z0-9_-]/g, "_") : "upload_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
+        const baseNameWithoutExt = reqFileName ? path5.parse(reqFileName).name.replace(/[^a-zA-Z0-9_-]/g, "_") : "upload_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
         const filename = `${baseNameWithoutExt}_${Date.now().toString().slice(-4)}${ext}`;
-        const targetPath = path4.join(publicUploadsDir2, filename);
-        fs4.writeFileSync(targetPath, buffer);
+        const targetPath = path5.join(publicUploadsDir2, filename);
+        fs5.writeFileSync(targetPath, buffer);
         console.log("[api/upload] Arquivo salvo via base64:", filename);
         return res.json({ success: true, url: "/uploads/" + filename, filename });
       }
@@ -7368,17 +7771,17 @@ data: ${JSON.stringify({ type: "ping", timestamp: Date.now() })}
       }
       console.log(`[bff/generations DELETE] Excluindo gera\xE7\xE3o permanentemente: ${id}`);
       recordServerDeletedImage(id);
-      const genDataPath = path4.join(process.cwd(), "public", "generations_data.json");
-      if (fs4.existsSync(genDataPath)) {
+      const genDataPath = path5.join(process.cwd(), "public", "generations_data.json");
+      if (fs5.existsSync(genDataPath)) {
         try {
-          const genData = JSON.parse(fs4.readFileSync(genDataPath, "utf-8"));
+          const genData = JSON.parse(fs5.readFileSync(genDataPath, "utf-8"));
           if (Array.isArray(genData)) {
             const initialCount = genData.length;
             const updated = genData.filter(
               (item) => item.id !== id && !item.result_url?.includes(id) && !item.thumbnail_url?.includes(id)
             );
             if (updated.length !== initialCount) {
-              fs4.writeFileSync(genDataPath, JSON.stringify(updated, null, 2), "utf-8");
+              fs5.writeFileSync(genDataPath, JSON.stringify(updated, null, 2), "utf-8");
               console.log(`[bff/generations DELETE] Removido de generations_data.json (array): ${id}`);
             }
           } else if (Array.isArray(genData.items)) {
@@ -7387,7 +7790,7 @@ data: ${JSON.stringify({ type: "ping", timestamp: Date.now() })}
               (item) => item.id !== id && !item.result_url?.includes(id) && !item.thumbnail_url?.includes(id)
             );
             if (genData.items.length !== initialCount) {
-              fs4.writeFileSync(genDataPath, JSON.stringify(genData, null, 2), "utf-8");
+              fs5.writeFileSync(genDataPath, JSON.stringify(genData, null, 2), "utf-8");
               console.log(`[bff/generations DELETE] Removido de generations_data.json: ${id}`);
             }
           }
@@ -7396,36 +7799,36 @@ data: ${JSON.stringify({ type: "ping", timestamp: Date.now() })}
         }
       }
       bffGenerationJobs.delete(id);
-      const localResultDir = path4.join(STORAGE_BASE_DIR, "results", id);
-      if (fs4.existsSync(localResultDir)) {
+      const localResultDir = path5.join(STORAGE_BASE_DIR, "results", id);
+      if (fs5.existsSync(localResultDir)) {
         try {
-          fs4.rmSync(localResultDir, { recursive: true, force: true });
+          fs5.rmSync(localResultDir, { recursive: true, force: true });
           console.log(`[bff/generations DELETE] Removido local_storage/results/${id}`);
         } catch (rmErr) {
           console.warn(`[bff/generations DELETE] Falha ao remover ${localResultDir}:`, rmErr);
         }
       }
       const pubResults = [
-        path4.join(process.cwd(), "public", "results", id),
-        path4.join(process.cwd(), "public", "designbuilder", "results", id),
-        path4.join(process.cwd(), "public", "designbuilder", "thumbnails", id)
+        path5.join(process.cwd(), "public", "results", id),
+        path5.join(process.cwd(), "public", "designbuilder", "results", id),
+        path5.join(process.cwd(), "public", "designbuilder", "thumbnails", id)
       ];
       for (const p of pubResults) {
-        if (fs4.existsSync(p)) {
+        if (fs5.existsSync(p)) {
           try {
-            fs4.rmSync(p, { recursive: true, force: true });
+            fs5.rmSync(p, { recursive: true, force: true });
           } catch (_) {
           }
         }
       }
-      const publicGenDir2 = path4.join(process.cwd(), "public", "generated-images");
-      if (fs4.existsSync(publicGenDir2)) {
+      const publicGenDir2 = path5.join(process.cwd(), "public", "generated-images");
+      if (fs5.existsSync(publicGenDir2)) {
         try {
-          const files = fs4.readdirSync(publicGenDir2);
+          const files = fs5.readdirSync(publicGenDir2);
           for (const f of files) {
             if (f.includes(id)) {
               try {
-                fs4.unlinkSync(path4.join(publicGenDir2, f));
+                fs5.unlinkSync(path5.join(publicGenDir2, f));
                 console.log(`[bff/generations DELETE] Removido de generated-images: ${f}`);
               } catch (_) {
               }
@@ -7455,26 +7858,26 @@ data: ${JSON.stringify({ type: "ping", timestamp: Date.now() })}
   });
   app.delete("/api/historico-imagens/:filename", async (req, res) => {
     try {
-      const filename = path4.basename(req.params.filename);
+      const filename = path5.basename(req.params.filename);
       recordServerDeletedImage(filename);
       const rawName = filename.replace(/\.[^/.]+$/, "");
       recordServerDeletedImage(rawName);
-      const publicGenDir2 = path4.join(process.cwd(), "public", "generated-images");
-      const filePath = path4.join(publicGenDir2, filename);
+      const publicGenDir2 = path5.join(process.cwd(), "public", "generated-images");
+      const filePath = path5.join(publicGenDir2, filename);
       let deletedFromDisk = false;
-      if (fs4.existsSync(filePath)) {
+      if (fs5.existsSync(filePath)) {
         try {
-          await fs4.promises.unlink(filePath);
+          await fs5.promises.unlink(filePath);
           deletedFromDisk = true;
           console.log(`[api/historico-imagens] Imagem exclu\xEDda com sucesso: ${filename}`);
         } catch (unlinkErr) {
           console.warn(`[api/historico-imagens] Unlink falhou (ambiente somente leitura / serverless):`, unlinkErr);
         }
       }
-      const genDataPath = path4.join(process.cwd(), "public", "generations_data.json");
-      if (fs4.existsSync(genDataPath)) {
+      const genDataPath = path5.join(process.cwd(), "public", "generations_data.json");
+      if (fs5.existsSync(genDataPath)) {
         try {
-          const genData = JSON.parse(fs4.readFileSync(genDataPath, "utf-8"));
+          const genData = JSON.parse(fs5.readFileSync(genDataPath, "utf-8"));
           if (Array.isArray(genData.items)) {
             const beforeCount = genData.items.length;
             genData.items = genData.items.filter((item) => {
@@ -7485,7 +7888,7 @@ data: ${JSON.stringify({ type: "ping", timestamp: Date.now() })}
             });
             if (genData.items.length !== beforeCount) {
               try {
-                fs4.writeFileSync(genDataPath, JSON.stringify(genData, null, 2), "utf-8");
+                fs5.writeFileSync(genDataPath, JSON.stringify(genData, null, 2), "utf-8");
                 console.log(`[api/historico-imagens] Removido de generations_data.json: ${filename}`);
               } catch (_) {
               }
@@ -7517,15 +7920,15 @@ data: ${JSON.stringify({ type: "ping", timestamp: Date.now() })}
       const { id } = req.params;
       const images = Array.isArray(req.body?.images) ? req.body.images : [];
       console.log(`[api/projetos DELETE] Excluindo projeto ${id} com ${images.length} imagens...`);
-      const publicGenDir2 = path4.join(process.cwd(), "public", "generated-images");
+      const publicGenDir2 = path5.join(process.cwd(), "public", "generated-images");
       for (const imgUrl of images) {
         if (!imgUrl || typeof imgUrl !== "string") continue;
-        const bname = path4.basename(imgUrl.split("?")[0]);
+        const bname = path5.basename(imgUrl.split("?")[0]);
         if (bname && (bname.endsWith(".png") || bname.endsWith(".avif") || bname.endsWith(".webp") || bname.endsWith(".jpg"))) {
-          const fp = path4.join(publicGenDir2, bname);
-          if (fs4.existsSync(fp)) {
+          const fp = path5.join(publicGenDir2, bname);
+          if (fs5.existsSync(fp)) {
             try {
-              await fs4.promises.unlink(fp);
+              await fs5.promises.unlink(fp);
             } catch (_) {
             }
           }
@@ -7536,10 +7939,10 @@ data: ${JSON.stringify({ type: "ping", timestamp: Date.now() })}
         }
       }
       for (const folder of ["results", "thumbnails", "inputs", "temp"]) {
-        const localDir = path4.join(STORAGE_BASE_DIR, folder, id);
-        if (fs4.existsSync(localDir)) {
+        const localDir = path5.join(STORAGE_BASE_DIR, folder, id);
+        if (fs5.existsSync(localDir)) {
           try {
-            fs4.rmSync(localDir, { recursive: true, force: true });
+            fs5.rmSync(localDir, { recursive: true, force: true });
           } catch (_) {
           }
         }
@@ -7567,11 +7970,11 @@ data: ${JSON.stringify({ type: "ping", timestamp: Date.now() })}
   const isServerlessClientes = Boolean(
     process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.LAMBDA_TASK_ROOT || process.env.NOW_REGION
   );
-  const CLIENTES_FILE_PATH = isServerlessClientes ? path4.join(os4.tmpdir(), "clientes_db.json") : path4.join(process.cwd(), "local_storage", "clientes_db.json");
+  const CLIENTES_FILE_PATH = isServerlessClientes ? path5.join(os5.tmpdir(), "clientes_db.json") : path5.join(process.cwd(), "local_storage", "clientes_db.json");
   app.get("/api/clientes", async (_req, res) => {
     try {
-      if (fs4.existsSync(CLIENTES_FILE_PATH)) {
-        const data = await fs4.promises.readFile(CLIENTES_FILE_PATH, "utf-8");
+      if (fs5.existsSync(CLIENTES_FILE_PATH)) {
+        const data = await fs5.promises.readFile(CLIENTES_FILE_PATH, "utf-8");
         const parsed = JSON.parse(data || "{}");
         return res.json({ success: true, clients: Array.isArray(parsed.clients) ? parsed.clients : [] });
       }
@@ -7587,11 +7990,11 @@ data: ${JSON.stringify({ type: "ping", timestamp: Date.now() })}
       if (!Array.isArray(clients)) {
         return res.status(400).json({ error: "Campo 'clients' deve ser uma lista" });
       }
-      const dir = path4.dirname(CLIENTES_FILE_PATH);
-      if (!fs4.existsSync(dir)) {
-        fs4.mkdirSync(dir, { recursive: true });
+      const dir = path5.dirname(CLIENTES_FILE_PATH);
+      if (!fs5.existsSync(dir)) {
+        fs5.mkdirSync(dir, { recursive: true });
       }
-      await fs4.promises.writeFile(CLIENTES_FILE_PATH, JSON.stringify({ clients, updatedAt: (/* @__PURE__ */ new Date()).toISOString() }, null, 2), "utf-8");
+      await fs5.promises.writeFile(CLIENTES_FILE_PATH, JSON.stringify({ clients, updatedAt: (/* @__PURE__ */ new Date()).toISOString() }, null, 2), "utf-8");
       return res.json({ success: true, count: clients.length });
     } catch (err) {
       console.error("[api/clientes] Erro ao salvar clientes no disco:", err);
@@ -7602,6 +8005,168 @@ data: ${JSON.stringify({ type: "ping", timestamp: Date.now() })}
     const e = (email || "").toLowerCase().trim();
     return e === "der.contatos@gmail.com" || e === "ricardo.jrsr.gov@gmail.com" || e.includes("admin") || e === "admin@zion.ai";
   };
+  app.get("/api/admin/reports", async (req, res) => {
+    try {
+      const reports = getAdminReports();
+      return res.json({ success: true, reports });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+  app.get("/api/admin/reports/unread-count", async (req, res) => {
+    try {
+      const unread = getUnreadReportsCount();
+      return res.json({ success: true, unread });
+    } catch (err) {
+      return res.status(500).json({ error: err.message, unread: 0 });
+    }
+  });
+  app.post("/api/reports", async (req, res) => {
+    try {
+      const rep = saveAdminReport(req.body);
+      return res.json({ success: true, report: rep });
+    } catch (err) {
+      return res.status(400).json({ error: err.message });
+    }
+  });
+  app.patch("/api/admin/reports/:id/status", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      const ok = updateAdminReportStatus(id, status);
+      return res.json({ success: ok });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+  app.delete("/api/admin/reports/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const ok = deleteAdminReport(id);
+      return res.json({ success: ok });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+  app.get("/api/admin/ratings", async (req, res) => {
+    try {
+      const ratings = getAdminRatings();
+      return res.json({ success: true, ratings });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+  app.get("/api/admin/ratings/stats", async (req, res) => {
+    try {
+      const stats = getAdminRatingStats();
+      return res.json({ success: true, ...stats });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+  app.post("/api/ratings", async (req, res) => {
+    try {
+      const rating = saveAdminRating(req.body);
+      return res.json({ success: true, rating });
+    } catch (err) {
+      return res.status(400).json({ error: err.message });
+    }
+  });
+  app.patch("/api/admin/ratings/:id/status", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      const ok = updateAdminRatingStatus(id, status);
+      return res.json({ success: ok });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+  app.patch("/api/admin/ratings/:id/notes", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { notes } = req.body;
+      const ok = updateAdminRatingNotes(id, notes);
+      return res.json({ success: ok });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+  app.get("/api/admin/agents", async (req, res) => {
+    try {
+      const agents = getAgentsPolicy();
+      return res.json({ success: true, agents });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+  app.post("/api/admin/agents", async (req, res) => {
+    try {
+      const { slug, ...data } = req.body;
+      if (!slug) return res.status(400).json({ error: "Slug do agente \xE9 obrigat\xF3rio." });
+      const updated = updateAgentPolicy(slug, data);
+      return res.json({ success: !!updated, agent: updated });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+  app.get("/api/admin/live/config", async (req, res) => {
+    try {
+      const session = getLiveSession();
+      return res.json({ success: true, enabled: session.status === "live", session });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+  app.post("/api/admin/live/sessions", async (req, res) => {
+    try {
+      const session = updateLiveSession({ ...req.body, status: "live", startedAt: (/* @__PURE__ */ new Date()).toISOString() });
+      return res.json({ success: true, session });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+  app.post("/api/admin/live/sessions/:id/end", async (req, res) => {
+    try {
+      const session = updateLiveSession({ status: "ended", endedAt: (/* @__PURE__ */ new Date()).toISOString() });
+      return res.json({ success: true, session });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+  app.post("/api/admin/live/rules", async (req, res) => {
+    try {
+      const session = updateLiveSession(req.body);
+      return res.json({ success: true, session });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+  app.get("/api/admin/hydra/objectives", async (req, res) => {
+    try {
+      const objectives = getHydraObjectives();
+      return res.json({ success: true, objectives });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+  app.post("/api/admin/hydra/objectives", async (req, res) => {
+    try {
+      const obj = saveHydraObjective(req.body);
+      return res.json({ success: true, objective: obj });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+  app.delete("/api/admin/hydra/objectives/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const ok = deleteHydraObjective(id);
+      return res.json({ success: ok });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
   app.get("/api/admin/dashboard/stats", async (req, res) => {
     try {
       const callerEmail = (req.headers["x-user-email"] || req.query.userEmail || "").toLowerCase().trim();
@@ -7841,13 +8406,13 @@ data: ${JSON.stringify({ type: "ping", timestamp: Date.now() })}
       if (!parsed.type || !parsed.project_id && !parsed.private_key) {
         return res.status(400).json({ error: "JSON inv\xE1lido. Certifique-se de que \xE9 uma chave de Conta de Servi\xE7o (Service Account) v\xE1lida da Google Cloud / Vertex AI." });
       }
-      let credentialsPath = path4.join(os4.tmpdir(), "chave-vertex.json");
+      let credentialsPath = path5.join(os5.tmpdir(), "chave-vertex.json");
       try {
-        const localPath = path4.join(process.cwd(), "chave-vertex.json");
-        fs4.writeFileSync(localPath, JSON.stringify(parsed, null, 2));
+        const localPath = path5.join(process.cwd(), "chave-vertex.json");
+        fs5.writeFileSync(localPath, JSON.stringify(parsed, null, 2));
         credentialsPath = localPath;
       } catch (_) {
-        fs4.writeFileSync(credentialsPath, JSON.stringify(parsed, null, 2));
+        fs5.writeFileSync(credentialsPath, JSON.stringify(parsed, null, 2));
       }
       process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialsPath;
       console.log(`[upload-vertex-key] chave-vertex.json salva com sucesso para o projeto: ${parsed.project_id}`);
@@ -7916,10 +8481,10 @@ data: ${JSON.stringify({ type: "ping", timestamp: Date.now() })}
     res.json({ hasKey: !!key, key });
   });
   app.get("/api/check-vertex-key", (req, res) => {
-    const credentialsPath = path4.join(process.cwd(), "chave-vertex.json");
-    if (fs4.existsSync(credentialsPath)) {
+    const credentialsPath = path5.join(process.cwd(), "chave-vertex.json");
+    if (fs5.existsSync(credentialsPath)) {
       try {
-        const parsed = JSON.parse(fs4.readFileSync(credentialsPath, "utf8"));
+        const parsed = JSON.parse(fs5.readFileSync(credentialsPath, "utf8"));
         return res.json({
           hasKey: true,
           projectId: parsed.project_id,
@@ -7938,15 +8503,15 @@ data: ${JSON.stringify({ type: "ping", timestamp: Date.now() })}
     if (!force && gcpBillingCache && gcpBillingCache.expiresAt > now) {
       return res.json(gcpBillingCache.data);
     }
-    const credentialsPath = path4.join(process.cwd(), "chave-vertex.json");
-    if (!fs4.existsSync(credentialsPath)) {
+    const credentialsPath = path5.join(process.cwd(), "chave-vertex.json");
+    if (!fs5.existsSync(credentialsPath)) {
       return res.json({
         hasKey: false,
         message: "Arquivo chave-vertex.json n\xE3o encontrado."
       });
     }
     try {
-      const creds = JSON.parse(fs4.readFileSync(credentialsPath, "utf8"));
+      const creds = JSON.parse(fs5.readFileSync(credentialsPath, "utf8"));
       const auth = new GoogleAuth({
         keyFile: credentialsPath,
         scopes: [
@@ -9603,8 +10168,8 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         return res.status(400).json({ error: "Cliente GenAI n\xE3o p\xF4de ser inicializado." });
       }
       const token = customApiKey?.trim() || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
-      const credentialsPath = path4.join(process.cwd(), "chave-vertex.json");
-      const isVertex = fs4.existsSync(credentialsPath) || token.startsWith("AQ.");
+      const credentialsPath = path5.join(process.cwd(), "chave-vertex.json");
+      const isVertex = fs5.existsSync(credentialsPath) || token.startsWith("AQ.");
       let promptBuilder = "Professional premium Brazilian event flyer (Flyer BR style), masterpiece, top-tier agency quality, ultra-detailed, 8k resolution, cinematic lighting, sharp focus, highly aesthetic. ";
       if (!imgConfig?.noPeople) {
         const gender = imgConfig?.gender !== "Livre" ? imgConfig?.gender : "person";
@@ -10054,8 +10619,8 @@ CRITICAL DESIGN SYSTEM HIERARCHY RULES FOR PERFECT OUTPUT:
       }
       const debugInfo = client.debugInfo || {};
       const token = customApiKey?.trim() || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
-      const credentialsPath = path4.join(process.cwd(), "chave-vertex.json");
-      const isVertex = fs4.existsSync(credentialsPath) || token.startsWith("AQ.") || debugInfo.isUsingVertex === true;
+      const credentialsPath = path5.join(process.cwd(), "chave-vertex.json");
+      const isVertex = fs5.existsSync(credentialsPath) || token.startsWith("AQ.") || debugInfo.isUsingVertex === true;
       const sizeSelectedForModel = resolutionInput === "8K" || resolutionInput === "4K" ? "4K" : resolutionInput === "2K" ? "2K" : "1K";
       const targetModel = "gemini-3-pro-image";
       let targetAspectRatio = "1:1";
@@ -12363,9 +12928,9 @@ Sempre avise no texto de forma natural se identificou uma logo ou foto de sujeit
     });
     app.use(vite.middlewares);
   } else {
-    app.use(express.static(path4.resolve(process.cwd(), "dist")));
+    app.use(express.static(path5.resolve(process.cwd(), "dist")));
     app.get("*", (_req, res) => {
-      res.sendFile(path4.resolve(process.cwd(), "dist", "index.html"));
+      res.sendFile(path5.resolve(process.cwd(), "dist", "index.html"));
     });
   }
   app.listen(PORT, "0.0.0.0", () => {

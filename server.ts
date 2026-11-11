@@ -19,6 +19,25 @@ import { uploadToR2, downloadFromR2, isR2Active, deleteFromR2, deleteR2Prefix, l
 import { buildEnhancedPrompt } from "./src/utils/promptEngine";
 import { getSubscribersList, saveSubscriber, deleteSubscriber, checkSubscriberAccess, deductCredit } from "./src/utils/subscriberService";
 import {
+  getAdminReports,
+  saveAdminReport,
+  updateAdminReportStatus,
+  deleteAdminReport,
+  getUnreadReportsCount,
+  getAdminRatings,
+  saveAdminRating,
+  updateAdminRatingNotes,
+  updateAdminRatingStatus,
+  getAdminRatingStats,
+  getAgentsPolicy,
+  updateAgentPolicy,
+  getLiveSession,
+  updateLiveSession,
+  getHydraObjectives,
+  saveHydraObjective,
+  deleteHydraObjective
+} from "./src/utils/adminService";
+import {
   SAAS_PLANS,
   CREDIT_BUNDLES,
   createCheckoutSession,
@@ -5378,6 +5397,193 @@ CRITICAL RULES:
     const e = (email || "").toLowerCase().trim();
     return e === "der.contatos@gmail.com" || e === "ricardo.jrsr.gov@gmail.com" || e.includes("admin") || e === "admin@zion.ai";
   };
+
+  // ── SUITE ADMINISTRATIVA DESIGNBUILDER 1:1 OFICIAL ──
+  // 1. REPORTS & BUGS
+  app.get("/api/admin/reports", async (req, res) => {
+    try {
+      const reports = getAdminReports();
+      return res.json({ success: true, reports });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/admin/reports/unread-count", async (req, res) => {
+    try {
+      const unread = getUnreadReportsCount();
+      return res.json({ success: true, unread });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message, unread: 0 });
+    }
+  });
+
+  app.post("/api/reports", async (req, res) => {
+    try {
+      const rep = saveAdminReport(req.body);
+      return res.json({ success: true, report: rep });
+    } catch (err: any) {
+      return res.status(400).json({ error: err.message });
+    }
+  });
+
+  app.patch("/api/admin/reports/:id/status", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      const ok = updateAdminReportStatus(id, status);
+      return res.json({ success: ok });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.delete("/api/admin/reports/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const ok = deleteAdminReport(id);
+      return res.json({ success: ok });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  // 2. RATINGS & FEEDBACKS
+  app.get("/api/admin/ratings", async (req, res) => {
+    try {
+      const ratings = getAdminRatings();
+      return res.json({ success: true, ratings });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/admin/ratings/stats", async (req, res) => {
+    try {
+      const stats = getAdminRatingStats();
+      return res.json({ success: true, ...stats });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/ratings", async (req, res) => {
+    try {
+      const rating = saveAdminRating(req.body);
+      return res.json({ success: true, rating });
+    } catch (err: any) {
+      return res.status(400).json({ error: err.message });
+    }
+  });
+
+  app.patch("/api/admin/ratings/:id/status", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      const ok = updateAdminRatingStatus(id, status);
+      return res.json({ success: ok });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.patch("/api/admin/ratings/:id/notes", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { notes } = req.body;
+      const ok = updateAdminRatingNotes(id, notes);
+      return res.json({ success: ok });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  // 3. POLÍTICA DE IA & AGENTES
+  app.get("/api/admin/agents", async (req, res) => {
+    try {
+      const agents = getAgentsPolicy();
+      return res.json({ success: true, agents });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/admin/agents", async (req, res) => {
+    try {
+      const { slug, ...data } = req.body;
+      if (!slug) return res.status(400).json({ error: "Slug do agente é obrigatório." });
+      const updated = updateAgentPolicy(slug, data);
+      return res.json({ success: !!updated, agent: updated });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  // 4. MODO LIVE
+  app.get("/api/admin/live/config", async (req, res) => {
+    try {
+      const session = getLiveSession();
+      return res.json({ success: true, enabled: session.status === "live", session });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/admin/live/sessions", async (req, res) => {
+    try {
+      const session = updateLiveSession({ ...req.body, status: "live", startedAt: new Date().toISOString() });
+      return res.json({ success: true, session });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/admin/live/sessions/:id/end", async (req, res) => {
+    try {
+      const session = updateLiveSession({ status: "ended", endedAt: new Date().toISOString() });
+      return res.json({ success: true, session });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/admin/live/rules", async (req, res) => {
+    try {
+      const session = updateLiveSession(req.body);
+      return res.json({ success: true, session });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  // 5. HYDRA OBJECTIVES & TAXONOMIA
+  app.get("/api/admin/hydra/objectives", async (req, res) => {
+    try {
+      const objectives = getHydraObjectives();
+      return res.json({ success: true, objectives });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/admin/hydra/objectives", async (req, res) => {
+    try {
+      const obj = saveHydraObjective(req.body);
+      return res.json({ success: true, objective: obj });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.delete("/api/admin/hydra/objectives/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const ok = deleteHydraObjective(id);
+      return res.json({ success: ok });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
 
   app.get("/api/admin/dashboard/stats", async (req, res) => {
     try {

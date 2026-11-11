@@ -105,6 +105,18 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
   const [creditState, setCreditState] = useState<CreditState>(getCreditState);
   const [isAdminSuiteOpen, setIsAdminSuiteOpen] = useState(false);
   const [adminActiveTab, setAdminActiveTab] = useState<any>("dashboard");
+  const [adminUnreadReports, setAdminUnreadReports] = useState(0);
+
+  useEffect(() => {
+    if (isCleanAdmin) {
+      fetch("/api/admin/reports/unread-count")
+        .then(r => r.json())
+        .then(d => {
+          if (typeof d?.unread === "number") setAdminUnreadReports(d.unread);
+        })
+        .catch(() => {});
+    }
+  }, [isCleanAdmin]);
 
   useEffect(() => {
     const handleOpenAdminEvent = (e: any) => {
@@ -1339,9 +1351,11 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                   >
                     <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-rose-400" />
                     <span className="flex-1 truncate">Reports & Bugs</span>
-                    <span className="ml-auto inline-flex items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white min-w-[18px]">
-                      3
-                    </span>
+                    {adminUnreadReports > 0 && (
+                      <span className="ml-auto inline-flex items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white min-w-[18px]">
+                        {adminUnreadReports}
+                      </span>
+                    )}
                   </button>
 
                   <div className="my-0.5 h-px bg-white/[0.06]" />
