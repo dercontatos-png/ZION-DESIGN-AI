@@ -400,6 +400,9 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
   useEffect(() => {
     if (isOpen) {
       setActiveTab(initialTab);
+      if (typeof window !== "undefined") {
+        window.history.pushState({}, "", `/admin/${initialTab}`);
+      }
       loadDashboardStats();
       loadAgents();
       loadGlobalGenerations();
@@ -411,6 +414,20 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
     }
   }, [isOpen, initialTab]);
 
+  const handleSelectTab = (tabId: string) => {
+    setActiveTab(tabId);
+    if (typeof window !== "undefined") {
+      window.history.pushState({}, "", `/admin/${tabId}`);
+    }
+  };
+
+  const handleClose = () => {
+    if (typeof window !== "undefined" && window.location.pathname.startsWith("/admin")) {
+      window.history.pushState({}, "", "/");
+    }
+    onClose();
+  };
+
   if (!isOpen) return null;
 
   const unreadReportsCount = reports.filter(r => r.status === "pendente").length;
@@ -419,7 +436,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
   return (
     <div
       className="fixed inset-0 z-[10090] flex items-center justify-center bg-black/85 p-2 sm:p-4 backdrop-blur-xl animate-in fade-in duration-200"
-      onClick={onClose}
+      onClick={handleClose}
     >
       <div
         className="relative flex flex-col h-[94vh] w-full max-w-6xl overflow-hidden rounded-3xl border border-white/10 bg-[#090710] shadow-2xl text-left"
@@ -473,7 +490,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
             </button>
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="flex h-9 w-9 items-center justify-center rounded-xl text-zinc-400 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
               aria-label="Fechar"
             >
@@ -500,7 +517,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => handleSelectTab(tab.id as any)}
                 className={`flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold transition-all cursor-pointer ${
                   isActive
                     ? "bg-violet-600 text-white shadow-md shadow-violet-600/30"

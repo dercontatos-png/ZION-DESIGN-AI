@@ -1244,6 +1244,15 @@ export default function App() {
   const [adminActiveTab, setAdminActiveTab] = useState<any>("dashboard");
 
   useEffect(() => {
+    // Sincronização direta de rota /admin 1:1 Oficial do DesignBuilder
+    if (typeof window !== "undefined" && window.location.pathname.startsWith("/admin")) {
+      const sub = window.location.pathname.replace("/admin/", "").replace("/admin", "").split("/")[0] || "dashboard";
+      const validTabs = ["dashboard", "agents", "generations", "live", "hydra", "ratings", "reports", "subscribers"];
+      const targetTab = validTabs.includes(sub) ? sub : "dashboard";
+      setAdminActiveTab(targetTab);
+      setIsAdminSuiteOpen(true);
+    }
+
     const handleOpenSuite = (e: any) => {
       const tab = e?.detail?.tab || "dashboard";
       setAdminActiveTab(tab);
