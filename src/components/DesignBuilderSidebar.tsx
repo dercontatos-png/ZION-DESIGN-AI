@@ -1324,19 +1324,48 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
 
                   <div className="my-0.5 h-px bg-white/[0.06]" />
 
-                  {/* Hydra */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAdminActiveTab("hydra");
-                      setIsAdminSuiteOpen(true);
-                      window.dispatchEvent(new CustomEvent("open-admin-suite", { detail: { tab: "hydra" } }));
-                    }}
-                    className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-zinc-300 hover:bg-white/[0.06] hover:text-white transition-colors text-left cursor-pointer"
-                  >
-                    <Package className="h-3.5 w-3.5 shrink-0 text-amber-400" />
-                    <span className="flex-1 truncate">Hydra Objectives</span>
-                  </button>
+                  {/* Hydra com Submenu 1:1 Oficial */}
+                  <div className="group/sub relative">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAdminActiveTab("hydra");
+                        setIsAdminSuiteOpen(true);
+                        window.dispatchEvent(new CustomEvent("open-admin-suite", { detail: { tab: "hydra" } }));
+                      }}
+                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-zinc-300 hover:bg-white/[0.06] hover:text-white transition-colors text-left cursor-pointer"
+                    >
+                      <Package className="h-3.5 w-3.5 shrink-0 text-amber-400" />
+                      <span className="flex-1 truncate">Hydra</span>
+                      <ChevronRight className="h-3 w-3 text-zinc-500 transition-transform group-hover/sub:translate-x-0.5" />
+                    </button>
+                    <div className="pointer-events-none absolute left-full top-0 pl-1.5 opacity-0 transition-all duration-150 group-hover/sub:pointer-events-auto group-hover/sub:opacity-100 z-50">
+                      <div className="flex flex-col gap-0.5 rounded-xl bg-zinc-900 p-1.5 shadow-2xl shadow-black/60 ring-1 ring-white/[0.08] min-w-[170px]">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAdminActiveTab("hydra");
+                            setIsAdminSuiteOpen(true);
+                            window.dispatchEvent(new CustomEvent("open-admin-suite", { detail: { tab: "hydra" } }));
+                          }}
+                          className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12px] text-zinc-300 hover:bg-white/[0.06] hover:text-white transition-colors text-left cursor-pointer"
+                        >
+                          <span>Objetivos</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAdminActiveTab("hydra");
+                            setIsAdminSuiteOpen(true);
+                            window.dispatchEvent(new CustomEvent("open-admin-suite", { detail: { tab: "hydra" } }));
+                          }}
+                          className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12px] text-zinc-300 hover:bg-white/[0.06] hover:text-white transition-colors text-left cursor-pointer"
+                        >
+                          <span>Taxonomia</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
 
                   <div className="my-0.5 h-px bg-white/[0.06]" />
 

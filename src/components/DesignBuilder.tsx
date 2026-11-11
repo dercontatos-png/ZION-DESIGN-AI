@@ -1591,6 +1591,9 @@ const hasFotoDot = Boolean(
         }}
         onOpenAdmin={() => {
           setIsAdminSubscribersOpen(true);
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("open-admin-suite", { detail: { tab: "dashboard" } }));
+          }
         }}
         onOpenAgentes={handleOpenApps}
         onSelectAgent={(slug) => handleSwitchAgent(slug)}
@@ -3126,7 +3129,12 @@ const hasFotoDot = Boolean(
       {isCreditsModalOpen && (
         <CreditsModal
           onClose={() => setIsCreditsModalOpen(false)}
-          onOpenAdmin={() => setIsAdminSubscribersOpen(true)}
+          onOpenAdmin={() => {
+            setIsAdminSubscribersOpen(true);
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new CustomEvent("open-admin-suite", { detail: { tab: "subscribers" } }));
+            }
+          }}
           userEmail={currentUser?.email || userEmail}
           userName={currentUser?.name || userName}
         />
