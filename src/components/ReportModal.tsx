@@ -5,9 +5,19 @@ interface ReportModalProps {
   isOpen: boolean;
   onClose: () => void;
   showToast?: (message: string, type: "success" | "error" | "info" | "warning") => void;
+  userEmail?: string;
+  generationId?: string;
+  agentSlug?: string;
 }
 
-export const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, showToast }) => {
+export const ReportModal: React.FC<ReportModalProps> = ({
+  isOpen,
+  onClose,
+  showToast,
+  userEmail,
+  generationId,
+  agentSlug
+}) => {
   const [tipo, setTipo] = useState<"Bug" | "Sugestão" | "Outro">("Bug");
   const [isTipoOpen, setIsTipoOpen] = useState(false);
   const [titulo, setTitulo] = useState("");
@@ -54,22 +64,73 @@ export const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, showT
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!titulo.trim() || !descricao.trim()) {
       if (showToast) showToast("Por favor, preencha o título e a descrição.", "warning");
       return;
     }
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      let base64Screenshot: string | undefined = undefined;
+      if (printFile) {
+        base64Screenshot = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve((reader.result as string) || "");
+          reader.onerror = () => resolve("");
+          reader.readAsDataURL(printFile);
+        });
+      } else if (printPreview && printPreview.startsWith("data:")) {
+        base64Screenshot = printPreview;
+      }
+
+      let callerEmail = userEmail;
+      if (!callerEmail) {
+        try {
+          const stored = localStorage.getItem("zion_current_user") || localStorage.getItem("user");
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            callerEmail = parsed.email || parsed.user;
+          }
+        } catch (_) {}
+      }
+
+      const payload = {
+        user: callerEmail || "usuario@zion.ai",
+        agent: agentSlug || "Ref Builder",
+        type: tipo,
+        title: titulo.trim(),
+        message: descricao.trim(),
+        screenshot: base64Screenshot,
+        generationId: generationId || null
+      };
+
+      const res = await fetch("/api/reports", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+
+      // Dispara o evento oficial DesignBuilder (0q4y5mkf2t8dd.js) e o evento Zion
+      window.dispatchEvent(new Event("reports-changed"));
+      window.dispatchEvent(new CustomEvent("zion:reports_changed"));
+
       if (showToast) showToast("Report enviado com sucesso! Agradecemos o feedback.", "success");
       setTitulo("");
       setDescricao("");
       setPrintFile(null);
       setPrintPreview(null);
       onClose();
-    }, 600);
+    } catch (err: any) {
+      console.error("Erro ao enviar report:", err);
+      if (showToast) showToast("Erro ao enviar report. Tente novamente.", "error");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

@@ -24,10 +24,14 @@ import {
   updateAdminReportStatus,
   deleteAdminReport,
   getUnreadReportsCount,
+  getReportsCounts,
+  getDistinctReportAgents,
   getAdminRatings,
   saveAdminRating,
   updateAdminRatingNotes,
   updateAdminRatingStatus,
+  batchUpdateRatingStatus,
+  getDistinctRatingAgents,
   getAdminRatingStats,
   getAgentsPolicy,
   updateAgentPolicy,
@@ -5402,8 +5406,26 @@ CRITICAL RULES:
   // 1. REPORTS & BUGS
   app.get("/api/admin/reports", async (req, res) => {
     try {
-      const reports = getAdminReports();
-      return res.json({ success: true, reports });
+      let reports = getAdminReports();
+      const { status, type, search, agent_slug } = req.query as any;
+      if (status && status !== "todos") {
+        reports = reports.filter(r => r.status === status);
+      }
+      if (type) {
+        reports = reports.filter(r => r.type?.toLowerCase() === String(type).toLowerCase());
+      }
+      if (agent_slug) {
+        reports = reports.filter(r => r.agent?.toLowerCase().includes(String(agent_slug).toLowerCase()));
+      }
+      if (search) {
+        const q = String(search).toLowerCase();
+        reports = reports.filter(r =>
+          (r.title || "").toLowerCase().includes(q) ||
+          (r.message || "").toLowerCase().includes(q) ||
+          (r.user || "").toLowerCase().includes(q)
+        );
+      }
+      return res.json({ success: true, reports, items: reports, total: reports.length });
     } catch (err: any) {
       return res.status(500).json({ error: err.message });
     }
@@ -5418,9 +5440,43 @@ CRITICAL RULES:
     }
   });
 
-  app.post("/api/reports", async (req, res) => {
+  app.get("/api/admin/reports/counts", async (_req, res) => {
     try {
-      const rep = saveAdminReport(req.body);
+      const counts = getReportsCounts();
+      return res.json({ success: true, ...counts });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message, by_type: {}, unread: 0 });
+    }
+  });
+
+  app.get("/api/admin/reports/agents", async (_req, res) => {
+    try {
+      const agents = getDistinctReportAgents();
+      return res.json({ success: true, agents });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message, agents: [] });
+    }
+  });
+
+  app.get("/api/admin/reports/user-generations", async (_req, res) => {
+    try {
+      return res.json({ success: true, items: [] });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message, items: [] });
+    }
+  });
+
+  app.post("/api/reports", (upload.any() as any), async (req: any, res: any) => {
+    try {
+      let bodyData: any = { ...req.body };
+      if (req.files && Array.isArray(req.files) && req.files.length > 0) {
+        const file = (req.files as Express.Multer.File[])[0];
+        if (file && file.buffer) {
+          const mime = file.mimetype || "image/png";
+          bodyData.screenshot = `data:${mime};base64,${file.buffer.toString("base64")}`;
+        }
+      }
+      const rep = saveAdminReport(bodyData);
       return res.json({ success: true, report: rep });
     } catch (err: any) {
       return res.status(400).json({ error: err.message });
@@ -5451,8 +5507,15 @@ CRITICAL RULES:
   // 2. RATINGS & FEEDBACKS
   app.get("/api/admin/ratings", async (req, res) => {
     try {
-      const ratings = getAdminRatings();
-      return res.json({ success: true, ratings });
+      let ratings = getAdminRatings();
+      const { admin_status, agent_slug } = req.query as any;
+      if (admin_status) {
+        ratings = ratings.filter(r => r.adminStatus === admin_status);
+      }
+      if (agent_slug) {
+        ratings = ratings.filter(r => r.agent?.toLowerCase().includes(String(agent_slug).toLowerCase()));
+      }
+      return res.json({ success: true, ratings, items: ratings, total: ratings.length });
     } catch (err: any) {
       return res.status(500).json({ error: err.message });
     }
@@ -5462,6 +5525,25 @@ CRITICAL RULES:
     try {
       const stats = getAdminRatingStats();
       return res.json({ success: true, ...stats });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/admin/ratings/agents", async (_req, res) => {
+    try {
+      const agents = getDistinctRatingAgents();
+      return res.json({ success: true, agents });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message, agents: [] });
+    }
+  });
+
+  app.patch("/api/admin/ratings/batch-status", async (req, res) => {
+    try {
+      const { ids, status } = req.body;
+      const count = batchUpdateRatingStatus(Array.isArray(ids) ? ids : [], status);
+      return res.json({ success: true, updated: count });
     } catch (err: any) {
       return res.status(500).json({ error: err.message });
     }
@@ -5529,9 +5611,36 @@ CRITICAL RULES:
     }
   });
 
+  app.get("/api/admin/live/sessions", async (_req, res) => {
+    try {
+      const session = getLiveSession();
+      return res.json({ success: true, sessions: [session] });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/admin/live/sessions/:id", async (_req, res) => {
+    try {
+      const session = getLiveSession();
+      return res.json({ success: true, session });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
   app.post("/api/admin/live/sessions", async (req, res) => {
     try {
       const session = updateLiveSession({ ...req.body, status: "live", startedAt: new Date().toISOString() });
+      return res.json({ success: true, session });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/admin/live/sessions/:id/start", async (_req, res) => {
+    try {
+      const session = updateLiveSession({ status: "live", startedAt: new Date().toISOString() });
       return res.json({ success: true, session });
     } catch (err: any) {
       return res.status(500).json({ error: err.message });

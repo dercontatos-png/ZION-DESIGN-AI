@@ -213,8 +213,8 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
     try {
       const res = await fetch("/api/admin/reports");
       const data = await res.json();
-      if (data && data.reports) {
-        setReports(data.reports);
+      if (data && (data.reports || data.items)) {
+        setReports(data.reports || data.items);
       }
     } catch (_) {}
   };
@@ -228,6 +228,8 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
       });
       showToast?.(`Status alterado para ${status.toUpperCase()}!`, "success");
       loadReports();
+      window.dispatchEvent(new Event("reports-changed"));
+      window.dispatchEvent(new CustomEvent("zion:reports_changed"));
     } catch (_) {
       showToast?.("Erro ao atualizar status do report.", "error");
     }
@@ -239,6 +241,8 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
       await fetch(`/api/admin/reports/${id}`, { method: "DELETE" });
       showToast?.("Chamado excluído.", "info");
       loadReports();
+      window.dispatchEvent(new Event("reports-changed"));
+      window.dispatchEvent(new CustomEvent("zion:reports_changed"));
     } catch (_) {
       showToast?.("Erro ao excluir report.", "error");
     }
@@ -258,7 +262,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
       ]);
       const rData = await rRes.json();
       const sData = await sRes.json();
-      if (rData && rData.ratings) setRatings(rData.ratings);
+      if (rData && (rData.ratings || rData.items)) setRatings(rData.ratings || rData.items);
       if (sData && sData.success) setRatingStats(sData);
     } catch (_) {}
   };
@@ -273,6 +277,8 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
       showToast?.("Anotação interna salva!", "success");
       setEditingNotesId(null);
       loadRatings();
+      window.dispatchEvent(new Event("ratings-changed"));
+      window.dispatchEvent(new CustomEvent("zion:ratings_changed"));
     } catch (_) {
       showToast?.("Erro ao salvar anotação.", "error");
     }

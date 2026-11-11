@@ -144,6 +144,26 @@ export function getUnreadReportsCount(): number {
   return reports.filter(r => r.status === "pendente").length;
 }
 
+export function getReportsCounts(): { by_type: Record<string, number>; unread: number } {
+  const reports = getAdminReports();
+  const by_type: Record<string, number> = {};
+  let unread = 0;
+  for (const r of reports) {
+    by_type[r.type] = (by_type[r.type] || 0) + 1;
+    if (r.status === "pendente") unread++;
+  }
+  return { by_type, unread };
+}
+
+export function getDistinctReportAgents(): string[] {
+  const reports = getAdminReports();
+  const set = new Set<string>();
+  for (const r of reports) {
+    if (r.agent) set.add(r.agent);
+  }
+  return Array.from(set);
+}
+
 // ── 2. FEEDBACKS & RATINGS ──
 export interface AdminRating {
   id: string;
@@ -228,6 +248,30 @@ export function updateAdminRatingStatus(id: string, status: "novo" | "lido" | "a
   r.adminStatus = status;
   writeJsonFile("admin_ratings.json", ratings);
   return true;
+}
+
+export function batchUpdateRatingStatus(ids: string[], status: "novo" | "lido" | "arquivado"): number {
+  const ratings = getAdminRatings();
+  let count = 0;
+  for (const r of ratings) {
+    if (ids.includes(r.id)) {
+      r.adminStatus = status;
+      count++;
+    }
+  }
+  if (count > 0) {
+    writeJsonFile("admin_ratings.json", ratings);
+  }
+  return count;
+}
+
+export function getDistinctRatingAgents(): string[] {
+  const ratings = getAdminRatings();
+  const set = new Set<string>();
+  for (const r of ratings) {
+    if (r.agent) set.add(r.agent);
+  }
+  return Array.from(set);
 }
 
 export function getAdminRatingStats() {

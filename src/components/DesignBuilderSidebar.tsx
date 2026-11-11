@@ -116,19 +116,36 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
 
   useEffect(() => {
     if (isCleanAdmin) {
-      fetch("/api/admin/reports/unread-count")
-        .then(r => r.json())
-        .then(d => {
-          if (typeof d?.unread === "number") setAdminUnreadReports(d.unread);
-        })
-        .catch(() => {});
+      const fetchCounts = () => {
+        fetch("/api/admin/reports/unread-count")
+          .then(r => r.json())
+          .then(d => {
+            if (typeof d?.unread === "number") setAdminUnreadReports(d.unread);
+          })
+          .catch(() => {});
 
-      fetch("/api/admin/ratings/stats")
-        .then(r => r.json())
-        .then(d => {
-          if (typeof d?.unread === "number") setAdminUnreadRatings(d.unread);
-        })
-        .catch(() => {});
+        fetch("/api/admin/ratings/stats")
+          .then(r => r.json())
+          .then(d => {
+            if (typeof d?.unread === "number") setAdminUnreadRatings(d.unread);
+          })
+          .catch(() => {});
+      };
+
+      fetchCounts();
+
+      // Listeners oficiais 1:1 e Zion para atualização dinâmica dos badges
+      window.addEventListener("reports-changed", fetchCounts);
+      window.addEventListener("zion:reports_changed", fetchCounts);
+      window.addEventListener("ratings-changed", fetchCounts);
+      window.addEventListener("zion:ratings_changed", fetchCounts);
+
+      return () => {
+        window.removeEventListener("reports-changed", fetchCounts);
+        window.removeEventListener("zion:reports_changed", fetchCounts);
+        window.removeEventListener("ratings-changed", fetchCounts);
+        window.removeEventListener("zion:ratings_changed", fetchCounts);
+      };
     }
   }, [isCleanAdmin]);
 
