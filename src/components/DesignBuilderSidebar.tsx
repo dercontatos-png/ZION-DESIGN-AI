@@ -26,7 +26,9 @@ import {
   Radio,
   Package,
   Star,
-  Users
+  Users,
+  Target,
+  Network
 } from "lucide-react";
 import { DesignBuilderSettingsModal } from "./DesignBuilderSettingsModal";
 import { DesignBuilderAdminSuite } from "./DesignBuilderAdminSuite";
@@ -1263,9 +1265,9 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                 <Shield className="h-[18px] w-[18px]" aria-hidden="true" />
               </button>
 
-              {/* Flyout Hover Menu 1:1 Oficial */}
+              {/* Flyout Hover Menu 1:1 Oficial extraído diretamente de 1bw1wdln_kukr.js */}
               <div className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 pl-3 opacity-0 transition-all duration-200 group-hover/admin:pointer-events-auto group-hover/admin:opacity-100 z-50">
-                <div className="flex flex-col gap-0.5 rounded-xl bg-zinc-900 p-1.5 shadow-2xl shadow-black/60 ring-1 ring-white/[0.08] min-w-[200px]">
+                <div className="flex flex-col gap-0.5 rounded-xl bg-zinc-900 p-1.5 shadow-2xl shadow-black/60 ring-1 ring-white/[0.08] min-w-[190px]">
                   {/* Dashboard */}
                   <button
                     type="button"
@@ -1274,9 +1276,13 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                       setIsAdminSuiteOpen(true);
                       window.dispatchEvent(new CustomEvent("open-admin-suite", { detail: { tab: "dashboard" } }));
                     }}
-                    className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-zinc-300 hover:bg-white/[0.06] hover:text-white transition-colors text-left cursor-pointer"
+                    className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition-colors text-left cursor-pointer ${
+                      isAdminSuiteOpen && adminActiveTab === "dashboard"
+                        ? "bg-violet-500/15 text-violet-300"
+                        : "text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100"
+                    }`}
                   >
-                    <BarChart3 className="h-3.5 w-3.5 shrink-0 text-violet-400" />
+                    <BarChart3 className="h-3.5 w-3.5 shrink-0" />
                     <span className="flex-1 truncate">Dashboard</span>
                   </button>
 
@@ -1288,9 +1294,13 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                       setIsAdminSuiteOpen(true);
                       window.dispatchEvent(new CustomEvent("open-admin-suite", { detail: { tab: "agents" } }));
                     }}
-                    className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-zinc-300 hover:bg-white/[0.06] hover:text-white transition-colors text-left cursor-pointer"
+                    className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition-colors text-left cursor-pointer ${
+                      isAdminSuiteOpen && adminActiveTab === "agents"
+                        ? "bg-violet-500/15 text-violet-300"
+                        : "text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100"
+                    }`}
                   >
-                    <Bot className="h-3.5 w-3.5 shrink-0 text-sky-400" />
+                    <Bot className="h-3.5 w-3.5 shrink-0" />
                     <span className="flex-1 truncate">Política de IA</span>
                   </button>
 
@@ -1302,9 +1312,13 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                       setIsAdminSuiteOpen(true);
                       window.dispatchEvent(new CustomEvent("open-admin-suite", { detail: { tab: "generations" } }));
                     }}
-                    className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-zinc-300 hover:bg-white/[0.06] hover:text-white transition-colors text-left cursor-pointer"
+                    className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition-colors text-left cursor-pointer ${
+                      isAdminSuiteOpen && adminActiveTab === "generations"
+                        ? "bg-violet-500/15 text-violet-300"
+                        : "text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100"
+                    }`}
                   >
-                    <Images className="h-3.5 w-3.5 shrink-0 text-fuchsia-400" />
+                    <Images className="h-3.5 w-3.5 shrink-0" />
                     <span className="flex-1 truncate">Galeria Global</span>
                   </button>
 
@@ -1316,15 +1330,19 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                       setIsAdminSuiteOpen(true);
                       window.dispatchEvent(new CustomEvent("open-admin-suite", { detail: { tab: "live" } }));
                     }}
-                    className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-zinc-300 hover:bg-white/[0.06] hover:text-white transition-colors text-left cursor-pointer"
+                    className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition-colors text-left cursor-pointer ${
+                      isAdminSuiteOpen && adminActiveTab === "live"
+                        ? "bg-violet-500/15 text-violet-300"
+                        : "text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100"
+                    }`}
                   >
-                    <Radio className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
+                    <Radio className="h-3.5 w-3.5 shrink-0" />
                     <span className="flex-1 truncate">Modo Live</span>
                   </button>
 
                   <div className="my-0.5 h-px bg-white/[0.06]" />
 
-                  {/* Hydra com Submenu 1:1 Oficial */}
+                  {/* Hydra com Submenu 1:1 Oficial de 1bw1wdln_kukr.js */}
                   <div className="group/sub relative">
                     <button
                       type="button"
@@ -1333,14 +1351,18 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                         setIsAdminSuiteOpen(true);
                         window.dispatchEvent(new CustomEvent("open-admin-suite", { detail: { tab: "hydra" } }));
                       }}
-                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-zinc-300 hover:bg-white/[0.06] hover:text-white transition-colors text-left cursor-pointer"
+                      className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition-colors text-left cursor-pointer ${
+                        isAdminSuiteOpen && adminActiveTab === "hydra"
+                          ? "bg-violet-500/15 text-violet-300"
+                          : "text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100"
+                      }`}
                     >
-                      <Package className="h-3.5 w-3.5 shrink-0 text-amber-400" />
+                      <Package className="h-3.5 w-3.5 shrink-0" />
                       <span className="flex-1 truncate">Hydra</span>
-                      <ChevronRight className="h-3 w-3 text-zinc-500 transition-transform group-hover/sub:translate-x-0.5" />
+                      <ChevronRight className="h-3 w-3 opacity-50" />
                     </button>
                     <div className="pointer-events-none absolute left-full top-0 pl-1.5 opacity-0 transition-all duration-150 group-hover/sub:pointer-events-auto group-hover/sub:opacity-100 z-50">
-                      <div className="flex flex-col gap-0.5 rounded-xl bg-zinc-900 p-1.5 shadow-2xl shadow-black/60 ring-1 ring-white/[0.08] min-w-[170px]">
+                      <div className="flex flex-col gap-0.5 rounded-xl bg-zinc-900 p-1.5 shadow-2xl shadow-black/60 ring-1 ring-white/[0.08] min-w-[180px]">
                         <button
                           type="button"
                           onClick={() => {
@@ -1348,9 +1370,10 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                             setIsAdminSuiteOpen(true);
                             window.dispatchEvent(new CustomEvent("open-admin-suite", { detail: { tab: "hydra" } }));
                           }}
-                          className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12px] text-zinc-300 hover:bg-white/[0.06] hover:text-white transition-colors text-left cursor-pointer"
+                          className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition-colors text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100 text-left cursor-pointer"
                         >
-                          <span>Objetivos</span>
+                          <Target className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate">Objetivos</span>
                         </button>
                         <button
                           type="button"
@@ -1359,9 +1382,10 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                             setIsAdminSuiteOpen(true);
                             window.dispatchEvent(new CustomEvent("open-admin-suite", { detail: { tab: "hydra" } }));
                           }}
-                          className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12px] text-zinc-300 hover:bg-white/[0.06] hover:text-white transition-colors text-left cursor-pointer"
+                          className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition-colors text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100 text-left cursor-pointer"
                         >
-                          <span>Taxonomia</span>
+                          <Network className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate">Taxonomia</span>
                         </button>
                       </div>
                     </div>
@@ -1377,9 +1401,13 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                       setIsAdminSuiteOpen(true);
                       window.dispatchEvent(new CustomEvent("open-admin-suite", { detail: { tab: "ratings" } }));
                     }}
-                    className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-zinc-300 hover:bg-white/[0.06] hover:text-white transition-colors text-left cursor-pointer"
+                    className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition-colors text-left cursor-pointer ${
+                      isAdminSuiteOpen && adminActiveTab === "ratings"
+                        ? "bg-violet-500/15 text-violet-300"
+                        : "text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100"
+                    }`}
                   >
-                    <Star className="h-3.5 w-3.5 shrink-0 text-amber-300" />
+                    <Star className="h-3.5 w-3.5 shrink-0" />
                     <span className="flex-1 truncate">Feedbacks</span>
                   </button>
 
@@ -1391,10 +1419,14 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                       setIsAdminSuiteOpen(true);
                       window.dispatchEvent(new CustomEvent("open-admin-suite", { detail: { tab: "reports" } }));
                     }}
-                    className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-zinc-300 hover:bg-white/[0.06] hover:text-white transition-colors text-left cursor-pointer"
+                    className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition-colors text-left cursor-pointer ${
+                      isAdminSuiteOpen && adminActiveTab === "reports"
+                        ? "bg-violet-500/15 text-violet-300"
+                        : "text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100"
+                    }`}
                   >
-                    <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-rose-400" />
-                    <span className="flex-1 truncate">Reports & Bugs</span>
+                    <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                    <span className="flex-1 truncate">Reports</span>
                     {adminUnreadReports > 0 && (
                       <span className="ml-auto inline-flex items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white min-w-[18px]">
                         {adminUnreadReports}
@@ -1412,9 +1444,13 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                       setIsAdminSuiteOpen(true);
                       window.dispatchEvent(new CustomEvent("open-admin-suite", { detail: { tab: "subscribers" } }));
                     }}
-                    className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] text-amber-300 hover:bg-amber-500/10 transition-colors text-left cursor-pointer font-medium"
+                    className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition-colors text-left cursor-pointer ${
+                      isAdminSuiteOpen && adminActiveTab === "subscribers"
+                        ? "bg-violet-500/15 text-violet-300"
+                        : "text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100"
+                    }`}
                   >
-                    <Users className="h-3.5 w-3.5 shrink-0 text-amber-400" />
+                    <Users className="h-3.5 w-3.5 shrink-0" />
                     <span className="flex-1 truncate">Assinantes & Créditos</span>
                   </button>
                 </div>
