@@ -502,11 +502,11 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
             { id: "dashboard", label: "Dashboard", icon: BarChart3 },
             { id: "agents", label: "Política de IA", icon: Bot },
             { id: "generations", label: "Galeria Global", icon: Images },
-            { id: "subscribers", label: "Assinantes & Créditos", icon: Users },
-            { id: "reports", label: "Reports & Bugs", icon: AlertTriangle, badge: unreadReportsCount > 0 ? String(unreadReportsCount) : undefined },
-            { id: "ratings", label: "Feedbacks", icon: Star, badge: ratingStats.unread > 0 ? String(ratingStats.unread) : undefined },
             { id: "live", label: "Modo Live", icon: Radio, pulse: isLiveActive },
-            { id: "hydra", label: "Hydra Objectives", icon: Package }
+            { id: "hydra", label: "Hydra Objectives", icon: Package },
+            { id: "ratings", label: "Feedbacks", icon: Star, badge: ratingStats.unread > 0 ? String(ratingStats.unread) : undefined },
+            { id: "reports", label: "Reports", icon: AlertTriangle, badge: unreadReportsCount > 0 ? String(unreadReportsCount) : undefined },
+            { id: "subscribers", label: "Assinantes & Créditos", icon: Users }
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;

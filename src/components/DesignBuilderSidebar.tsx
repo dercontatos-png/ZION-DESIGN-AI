@@ -112,6 +112,7 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
   const [isAdminSuiteOpen, setIsAdminSuiteOpen] = useState(false);
   const [adminActiveTab, setAdminActiveTab] = useState<any>("dashboard");
   const [adminUnreadReports, setAdminUnreadReports] = useState(0);
+  const [adminUnreadRatings, setAdminUnreadRatings] = useState(0);
 
   useEffect(() => {
     if (isCleanAdmin) {
@@ -119,6 +120,13 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
         .then(r => r.json())
         .then(d => {
           if (typeof d?.unread === "number") setAdminUnreadReports(d.unread);
+        })
+        .catch(() => {});
+
+      fetch("/api/admin/ratings/stats")
+        .then(r => r.json())
+        .then(d => {
+          if (typeof d?.unread === "number") setAdminUnreadRatings(d.unread);
         })
         .catch(() => {});
     }
@@ -156,6 +164,7 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
   const effectiveCredits = realCredits;
 
   const handleHomeClick = () => {
+    setIsAdminSuiteOpen(false);
     if (typeof window !== "undefined") {
       window.history.pushState({ path: "/" }, "", "/");
       window.dispatchEvent(new CustomEvent("db:go_home"));
@@ -166,6 +175,7 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
   };
 
   const handleAppsClick = () => {
+    setIsAdminSuiteOpen(false);
     if (typeof window !== "undefined") {
       window.history.pushState({ path: "/apps" }, "", "/apps");
       window.dispatchEvent(new CustomEvent("db:open_apps"));
@@ -176,6 +186,7 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
   };
 
   const handleAgentClick = (slug: string) => {
+    setIsAdminSuiteOpen(false);
     const agentObj = AGENTS.find(a => a.slug === slug);
     const targetPath = agentObj ? agentObj.href : `/${slug}`;
     if (typeof window !== "undefined") {
@@ -1218,6 +1229,7 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
             href="/projetos"
             onClick={(e) => {
               e.preventDefault();
+              setIsAdminSuiteOpen(false);
               if (onOpenProjects) onOpenProjects();
               else onNavigateTab("projetos");
             }}
@@ -1237,6 +1249,7 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
             href="/gallery"
             onClick={(e) => {
               e.preventDefault();
+              setIsAdminSuiteOpen(false);
               if (onOpenGallery) onOpenGallery();
               else onNavigateTab("gallery");
             }}
@@ -1256,6 +1269,7 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
             href="/community"
             onClick={(e) => {
               e.preventDefault();
+              setIsAdminSuiteOpen(false);
               if (onOpenCommunity) onOpenCommunity();
               else onNavigateTab("community");
             }}
@@ -1432,6 +1446,11 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                   >
                     <Star className="h-3.5 w-3.5 shrink-0" />
                     <span className="flex-1 truncate">Feedbacks</span>
+                    {adminUnreadRatings > 0 && (
+                      <span className="ml-auto inline-flex items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white min-w-[18px]">
+                        {adminUnreadRatings}
+                      </span>
+                    )}
                   </button>
 
                   {/* Reports */}
