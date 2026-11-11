@@ -111,3 +111,4 @@ export const TermsOfUseModal: React.FC<TermsOfUseModalProps> = ({ isOpen, onClos
     </div>
   );
 };
+

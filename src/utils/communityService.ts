@@ -409,3 +409,4 @@ export async function upvoteCommunityPost(id: string): Promise<number> {
 
   return target.upvote_count;
 }
+
