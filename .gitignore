@@ -1,4 +1,7 @@
 node_modules/
+bun.lock*
+pnpm-lock.yaml
+yarn.lock
 build/
 dist/demo.mp4
 dist/generated-images/
