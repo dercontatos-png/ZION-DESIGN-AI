@@ -28,12 +28,13 @@ import {
   Star,
   Users,
   Target,
-  Network
+  Network,
+  Eye
 } from "lucide-react";
 import { DesignBuilderSettingsModal } from "./DesignBuilderSettingsModal";
 import { DesignBuilderAdminSuite } from "./DesignBuilderAdminSuite";
 import { isUserAdmin } from "../utils/userAuth";
-import { getClientPreviewSession, ClientPreviewSession } from "../utils/clientPreviewService";
+import { getClientPreviewSession, exitClientPreview, ClientPreviewSession } from "../utils/clientPreviewService";
 
 export const AGENTS = [
   { slug: "ref", name: "REF", href: "/agent/ref", color: "rgb(139, 92, 246)" },
@@ -121,7 +122,7 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
   const userPlan = clientPreview.active ? clientPreview.simulatedPlan : rawUserPlan;
   const cleanEmail = (userEmail || "").toLowerCase().trim();
   const isRealAdmin = cleanEmail === "der.contatos@gmail.com" || cleanEmail === "ricardo.jrsr.gov@gmail.com" || isUserAdmin() || (typeof window !== "undefined" && (window.location.search.includes("admin=true") || localStorage.getItem("zion_admin_override") === "true"));
-  const isCleanAdmin = isRealAdmin && !clientPreview.active;
+  const isCleanAdmin = isRealAdmin;
   const [isAdminSuiteOpen, setIsAdminSuiteOpen] = useState(false);
   const [adminActiveTab, setAdminActiveTab] = useState<any>("dashboard");
   const [adminUnreadReports, setAdminUnreadReports] = useState(0);
@@ -464,24 +465,44 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
               </button>
 
               {/* Linha de Painel Admin (para administradores) */}
-              {isCleanAdmin && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsMobileAccountOpen(false);
-                    setAdminActiveTab("dashboard");
-                    setIsAdminSuiteOpen(true);
-                    window.dispatchEvent(new CustomEvent("open-admin-suite", { detail: { tab: "dashboard" } }));
-                    if (onOpenAdmin) onOpenAdmin();
-                  }}
-                  className="mb-6 flex w-full items-center justify-between rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3.5 text-left transition-all hover:bg-amber-500/20 cursor-pointer"
-                >
-                  <div className="flex items-center gap-3">
-                    <Shield className="h-5 w-5 text-amber-400 shrink-0" />
-                    <span className="text-sm font-bold text-amber-400">Painel Admin</span>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-amber-500/70" />
-                </button>
+              {isRealAdmin && (
+                <div className="mb-6 space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileAccountOpen(false);
+                      setAdminActiveTab("dashboard");
+                      setIsAdminSuiteOpen(true);
+                      window.dispatchEvent(new CustomEvent("open-admin-suite", { detail: { tab: "dashboard" } }));
+                      if (onOpenAdmin) onOpenAdmin();
+                    }}
+                    className="flex w-full items-center justify-between rounded-2xl border border-[#702bf7]/40 bg-[#702bf7]/15 px-4 py-3.5 text-left transition-all hover:bg-[#702bf7]/25 cursor-pointer shadow-[0_0_16px_rgba(112,43,247,0.2)]"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Shield className="h-5 w-5 text-[#a855f7] shrink-0" />
+                      <span className="text-sm font-bold text-white">Painel Admin</span>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-purple-400" />
+                  </button>
+
+                  {clientPreview.active && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        exitClientPreview();
+                        setIsMobileAccountOpen(false);
+                        window.dispatchEvent(new CustomEvent("zion:toast", { detail: { message: "Modo Administrador Restaurado!", type: "success" } }));
+                      }}
+                      className="flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-left text-xs text-zinc-300 hover:bg-white/10 hover:text-white transition-all cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <Eye className="h-4 w-4 text-[#a855f7]" />
+                        <span>Sair da Visão do Cliente ({clientPreview.simulatedPlan})</span>
+                      </div>
+                      <span className="text-[10px] text-purple-400 font-semibold">Voltar Admin</span>
+                    </button>
+                  )}
+                </div>
               )}
 
               {/* Links Úteis */}
@@ -1316,7 +1337,7 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
           </a>
 
           {/* Botão Admin Oculto 1:1 Oficial do DesignBuilder (apenas visível para administradores) */}
-          {isCleanAdmin && (
+          {isRealAdmin && (
             <div className="group/admin relative">
               <button
                 type="button"
@@ -1337,6 +1358,19 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
               {/* Flyout Hover Menu 1:1 Oficial extraído diretamente de 1bw1wdln_kukr.js */}
               <div className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 pl-3 opacity-0 transition-all duration-200 group-hover/admin:pointer-events-auto group-hover/admin:opacity-100 z-50">
                 <div className="flex flex-col gap-0.5 rounded-xl bg-zinc-900 p-1.5 shadow-2xl shadow-black/60 ring-1 ring-white/[0.08] min-w-[190px]">
+                  {clientPreview.active && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        exitClientPreview();
+                        window.dispatchEvent(new CustomEvent("zion:toast", { detail: { message: "Modo Administrador Restaurado!", type: "success" } }));
+                      }}
+                      className="flex items-center gap-2.5 rounded-lg bg-[#702bf7]/20 border border-[#702bf7]/40 px-3 py-2 text-[12px] font-semibold text-[#c4b4ff] hover:bg-[#702bf7] hover:text-white transition-all cursor-pointer mb-1 shadow-[0_0_10px_rgba(112,43,247,0.2)]"
+                    >
+                      <Eye className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">Sair da Visão do Cliente</span>
+                    </button>
+                  )}
                   {/* Dashboard */}
                   <button
                     type="button"

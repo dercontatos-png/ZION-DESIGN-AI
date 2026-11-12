@@ -1144,7 +1144,6 @@ import { ProfileCompletePopup } from "./components/ProfileCompletePopup";
 import { EmDesenvolvimentoScreen } from "./components/EmDesenvolvimentoScreen";
 import { AdminSubscribersModal } from "./components/AdminSubscribersModal";
 import { DesignBuilderAdminSuite } from "./components/DesignBuilderAdminSuite";
-import { ClientPreviewBanner } from "./components/ClientPreviewBanner";
 import { getClientPreviewSession, ClientPreviewSession } from "./utils/clientPreviewService";
 
 export default function App() {
@@ -4623,14 +4622,6 @@ ${textContent}`
 
   return (
     <div className="flex flex-col h-screen h-[100dvh] bg-black text-zinc-100 overflow-hidden relative" style={{ fontFamily: "Montserrat, sans-serif" }}>
-      {/* Barra Superior do Modo Visão do Cliente Oficial */}
-      <ClientPreviewBanner
-        onReturnToAdmin={() => {
-          setAdminActiveTab("dashboard");
-          setIsAdminSuiteOpen(true);
-        }}
-        showToast={showToast}
-      />
 
       {isOffline && (
         <div className="absolute top-0 left-0 right-0 z-50 bg-red-500 text-white text-center py-2 text-sm font-medium flex items-center justify-center gap-2 animate-in slide-in-from-top-full shadow-lg shadow-red-500/20">

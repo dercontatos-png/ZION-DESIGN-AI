@@ -42,7 +42,7 @@ import {
   ArrowLeft
 } from "lucide-react";
 import { Subscriber } from "../utils/subscriberService";
-import { startClientPreview } from "../utils/clientPreviewService";
+import { startClientPreview, exitClientPreview, isClientPreviewActive } from "../utils/clientPreviewService";
 
 interface AdminSuiteProps {
   isOpen: boolean;
@@ -476,22 +476,41 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
           <button
             type="button"
             onClick={() => {
-              startClientPreview({
-                simulatedEmail: "cliente.pro@zion.ai",
-                simulatedName: "Designer Pro (Simulado)",
-                simulatedPlan: "Plano Pro",
-                simulatedCredits: 500,
-                simulatedUnlimited: false
-              });
-              showToast?.("👁️ Modo Visão do Cliente ativado!", "info");
-              handleClose();
+              if (isClientPreviewActive()) {
+                exitClientPreview();
+                showToast?.("Modo Administrador Restaurado!", "success");
+              } else {
+                startClientPreview({
+                  simulatedEmail: "cliente.pro@zion.ai",
+                  simulatedName: "Designer Pro (Simulado)",
+                  simulatedPlan: "Plano Pro",
+                  simulatedCredits: 500,
+                  simulatedUnlimited: false
+                });
+                showToast?.("👁️ Modo Visão do Cliente ativado!", "info");
+                handleClose();
+              }
             }}
-            className="flex h-8 items-center gap-1 sm:gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 sm:px-3.5 text-xs font-medium text-zinc-300 hover:border-[#702bf7]/40 hover:bg-[#702bf7]/15 hover:text-white transition-all cursor-pointer shadow-sm"
-            title="Visualizar a plataforma exatamente como o cliente vê"
+            className={`flex h-8 items-center gap-1 sm:gap-1.5 rounded-full border px-2.5 sm:px-3.5 text-xs font-medium transition-all cursor-pointer shadow-sm ${
+              isClientPreviewActive()
+                ? "border-[#702bf7]/50 bg-[#702bf7]/20 text-[#c4b4ff] hover:bg-[#702bf7] hover:text-white"
+                : "border-white/10 bg-white/5 text-zinc-300 hover:border-[#702bf7]/40 hover:bg-[#702bf7]/15 hover:text-white"
+            }`}
+            title="Alternar simulação de visão do cliente"
           >
-            <Eye className="h-3.5 w-3.5 text-[#a855f7]" />
-            <span className="hidden md:inline">Visão do Cliente</span>
-            <span className="md:hidden text-[11px]">Cliente</span>
+            {isClientPreviewActive() ? (
+              <>
+                <Shield className="h-3.5 w-3.5 text-[#a855f7]" />
+                <span className="hidden md:inline">Sair da Visão do Cliente</span>
+                <span className="md:hidden text-[11px]">Sair Simulação</span>
+              </>
+            ) : (
+              <>
+                <Eye className="h-3.5 w-3.5 text-[#a855f7]" />
+                <span className="hidden md:inline">Visão do Cliente</span>
+                <span className="md:hidden text-[11px]">Cliente</span>
+              </>
+            )}
           </button>
           <button
             type="button"
