@@ -5778,6 +5778,28 @@ CRITICAL RULES:
     }
   });
 
+  // Sentinela de versão do sistema (Zero-Loss Update Sentinel)
+  const SERVER_BOOT_TIMESTAMP = Date.now();
+  app.get("/api/system/version", (_req, res) => {
+    try {
+      let buildHash = String(SERVER_BOOT_TIMESTAMP);
+      const indexPath = path.join(process.cwd(), "dist", "index.html");
+      if (fs.existsSync(indexPath)) {
+        const stats = fs.statSync(indexPath);
+        buildHash = `${Math.floor(stats.mtimeMs)}`;
+      }
+      return res.json({
+        success: true,
+        buildId: buildHash,
+        bootTime: SERVER_BOOT_TIMESTAMP,
+        version: "2.5.0",
+        timestamp: Date.now()
+      });
+    } catch (_) {
+      return res.json({ success: true, buildId: String(SERVER_BOOT_TIMESTAMP), bootTime: SERVER_BOOT_TIMESTAMP });
+    }
+  });
+
   // Consumo de crédito após geração bem-sucedida
   app.post("/api/subscriber/consume-credit", async (req, res) => {
     try {

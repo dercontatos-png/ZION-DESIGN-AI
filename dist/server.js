@@ -8381,6 +8381,26 @@ data: ${JSON.stringify({ type: "ping", timestamp: Date.now() })}
       return res.status(500).json({ error: err.message || "Erro ao checar assinatura" });
     }
   });
+  const SERVER_BOOT_TIMESTAMP = Date.now();
+  app.get("/api/system/version", (_req, res) => {
+    try {
+      let buildHash = String(SERVER_BOOT_TIMESTAMP);
+      const indexPath = path5.join(process.cwd(), "dist", "index.html");
+      if (fs5.existsSync(indexPath)) {
+        const stats = fs5.statSync(indexPath);
+        buildHash = `${Math.floor(stats.mtimeMs)}`;
+      }
+      return res.json({
+        success: true,
+        buildId: buildHash,
+        bootTime: SERVER_BOOT_TIMESTAMP,
+        version: "2.5.0",
+        timestamp: Date.now()
+      });
+    } catch (_) {
+      return res.json({ success: true, buildId: String(SERVER_BOOT_TIMESTAMP), bootTime: SERVER_BOOT_TIMESTAMP });
+    }
+  });
   app.post("/api/subscriber/consume-credit", async (req, res) => {
     try {
       const email = (req.body?.email || req.headers["x-user-email"] || "").toLowerCase().trim();

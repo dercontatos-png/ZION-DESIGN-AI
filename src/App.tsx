@@ -1144,6 +1144,7 @@ import { ProfileCompletePopup } from "./components/ProfileCompletePopup";
 import { EmDesenvolvimentoScreen } from "./components/EmDesenvolvimentoScreen";
 import { AdminSubscribersModal } from "./components/AdminSubscribersModal";
 import { DesignBuilderAdminSuite } from "./components/DesignBuilderAdminSuite";
+import { PlatformUpdateBanner } from "./components/PlatformUpdateBanner";
 import { getClientPreviewSession, ClientPreviewSession } from "./utils/clientPreviewService";
 
 export default function App() {
@@ -8367,6 +8368,9 @@ ${textContent}`
           src="/WhatsApp.svg"
         />
       </a>
+
+      {/* Sentinela de Atualizações da Plataforma (Zero-Loss Update Sentinel) */}
+      <PlatformUpdateBanner showToast={showToast} />
     </div>
   );
 }

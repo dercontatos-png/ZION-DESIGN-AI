@@ -47,6 +47,8 @@ import PromptsGallery from "./PromptsGallery";
 import { MagicRefineBar } from "./MagicRefineBar";
 import { AdminSubscribersModal } from "./AdminSubscribersModal";
 import { DesignBuilderSidebar } from "./DesignBuilderSidebar";
+import { PlatformUpdateBanner } from "./PlatformUpdateBanner";
+import { setupProjectSafetyGuard, getEmergencySnapshot } from "../utils/projectSafetyService";
 
 import {
   Search,
@@ -355,6 +357,49 @@ const hasFotoDot = Boolean(
     window.addEventListener("orion:section_changed", handleOrionSection);
     return () => window.removeEventListener("orion:section_changed", handleOrionSection);
   }, []);
+
+  // ── GUARDA DE SEGURANÇA E AUTO-RECUPERAÇÃO DO PROJETO (1:1 COM O ORIGINAL) ──
+  useEffect(() => {
+    // 1. Instala guardião contra fechamento acidental e salva snapshots contínuos
+    const cleanupGuard = setupProjectSafetyGuard({
+      isBusyCheck: () => store.isGenerating,
+      getSnapshotData: () => ({
+        activeProjectId: store.activeProjectId || undefined,
+        promptSujeito: store.promptSujeito,
+        promptCenario: store.promptCenario,
+        additionalPrompt: store.additionalPrompt,
+        sujeitoBase64: store.sujeitoBase64,
+        cenarioBase64: store.cenarioBase64,
+        dimensao: store.dimensao,
+        resolucao: store.resolucao,
+        camadasTexto: store.camadasTexto,
+        referenciasEstilo: store.referenciasEstilo,
+        agent: selectedAgent
+      })
+    });
+
+    // 2. Checa se existe snapshot de emergência pendente para restaurar após atualização/queda
+    getEmergencySnapshot().then((snapshot) => {
+      if (snapshot && (snapshot.promptSujeito || snapshot.promptCenario || snapshot.additionalPrompt || snapshot.sujeitoBase64)) {
+        if (!store.promptSujeito && snapshot.promptSujeito) {
+          store.updateConfig({
+            promptSujeito: snapshot.promptSujeito,
+            promptCenario: snapshot.promptCenario || store.promptCenario,
+            additionalPrompt: snapshot.additionalPrompt || store.additionalPrompt,
+            sujeitoBase64: snapshot.sujeitoBase64 || store.sujeitoBase64,
+            cenarioBase64: snapshot.cenarioBase64 || store.cenarioBase64,
+            dimensao: snapshot.dimensao || store.dimensao,
+            resolucao: snapshot.resolucao || store.resolucao
+          });
+          showToast("✨ Projeto recuperado automaticamente do rascunho seguro!", "info");
+        }
+      }
+    });
+
+    return () => {
+      cleanupGuard();
+    };
+  }, [store.isGenerating, store.activeProjectId, selectedAgent]);
 
   // Navegação suave e precisa entre seções/categorias do formulário no celular
   const handleSelectMobileCategory = useCallback((cat: string) => {
@@ -3534,6 +3579,24 @@ const hasFotoDot = Boolean(
           setIsCreditsModalOpen(true);
         }}
         buyUrl="https://link.designbuilder.co/comprar"
+      />
+
+      {/* Sentinela de Atualizações da Plataforma (Zero-Loss Update Sentinel) */}
+      <PlatformUpdateBanner
+        getSnapshotData={() => ({
+          activeProjectId: store.activeProjectId || undefined,
+          promptSujeito: store.promptSujeito,
+          promptCenario: store.promptCenario,
+          additionalPrompt: store.additionalPrompt,
+          sujeitoBase64: store.sujeitoBase64,
+          cenarioBase64: store.cenarioBase64,
+          dimensao: store.dimensao,
+          resolucao: store.resolucao,
+          camadasTexto: store.camadasTexto,
+          referenciasEstilo: store.referenciasEstilo,
+          agent: selectedAgent
+        })}
+        showToast={showToast}
       />
     </div>
   );
