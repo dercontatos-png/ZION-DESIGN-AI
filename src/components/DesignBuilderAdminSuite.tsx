@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   XCircle,
   Plus,
+  Minus,
   Trash2,
   RefreshCw,
   Zap,
@@ -145,6 +146,72 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
     plan: "Plano Pro",
     credits: 500
   });
+
+  const [adjustCreditModal, setAdjustCreditModal] = useState<{
+    isOpen: boolean;
+    sub: Subscriber | null;
+    mode: "add" | "remove" | "set";
+    amount: number;
+    unlimited: boolean;
+  }>({
+    isOpen: false,
+    sub: null,
+    mode: "add",
+    amount: 100,
+    unlimited: false
+  });
+
+  const handleOpenCreditModal = (sub: Subscriber, defaultMode: "add" | "remove" | "set" = "add") => {
+    setAdjustCreditModal({
+      isOpen: true,
+      sub,
+      mode: defaultMode,
+      amount: defaultMode === "set" ? (sub.credits || 0) : 100,
+      unlimited: Boolean(sub.unlimited)
+    });
+  };
+
+  const handleSaveCreditsAdjustment = async () => {
+    if (!adjustCreditModal.sub) return;
+    const sub = adjustCreditModal.sub;
+    let newCredits = sub.credits || 0;
+
+    if (adjustCreditModal.unlimited) {
+      newCredits = 999999;
+    } else if (adjustCreditModal.mode === "add") {
+      newCredits = Math.max(0, (sub.credits || 0) + Number(adjustCreditModal.amount || 0));
+    } else if (adjustCreditModal.mode === "remove") {
+      newCredits = Math.max(0, (sub.credits || 0) - Number(adjustCreditModal.amount || 0));
+    } else if (adjustCreditModal.mode === "set") {
+      newCredits = Math.max(0, Number(adjustCreditModal.amount || 0));
+    }
+
+    try {
+      const res = await fetch("/api/admin/subscribers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          adminEmail: adminEmail || "der.contatos@gmail.com",
+          email: sub.email,
+          name: sub.name,
+          credits: newCredits,
+          unlimited: adjustCreditModal.unlimited,
+          status: sub.status || "ativo",
+          plan: sub.plan || "Plano Pro"
+        })
+      });
+      const data = await res.json();
+      if (data && data.success) {
+        showToast?.(`Créditos de ${sub.email} atualizados para ${adjustCreditModal.unlimited ? "∞ Ilimitado" : newCredits}!`, "success");
+        setAdjustCreditModal({ isOpen: false, sub: null, mode: "add", amount: 100, unlimited: false });
+        loadSubscribers();
+      } else {
+        showToast?.(data?.error || "Erro ao atualizar créditos.", "error");
+      }
+    } catch (_) {
+      showToast?.("Erro ao comunicar com o servidor.", "error");
+    }
+  };
 
   const loadSubscribers = async () => {
     setIsLoading(true);
@@ -1093,9 +1160,15 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                       </div>
                       <div className="flex items-center justify-between text-xs pt-1 border-t border-white/5">
                         <span className="text-[#c4b4ff] font-medium text-[11px]">{sub.plan || "Plano Pro"}</span>
-                        <span className="font-mono font-bold text-emerald-400 text-xs">
-                          {sub.unlimited ? "∞ Ilimitado" : `${(sub.credits || 0).toLocaleString("pt-BR")} cr`}
-                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenCreditModal(sub, "set")}
+                          className="font-mono font-bold text-emerald-400 text-xs hover:text-emerald-300 flex items-center gap-1 cursor-pointer"
+                          title="Clique para ajustar créditos"
+                        >
+                          <span>{sub.unlimited ? "∞ Ilimitado" : `${(sub.credits || 0).toLocaleString("pt-BR")} cr`}</span>
+                          <Sliders className="h-2.5 w-2.5 text-zinc-500" />
+                        </button>
                       </div>
                       <div className="flex items-center justify-between gap-2 pt-1 border-t border-white/5">
                         <button
@@ -1118,28 +1191,11 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                         </button>
                         <button
                           type="button"
-                          onClick={async () => {
-                            const addAmount = 500;
-                            try {
-                              await fetch("/api/admin/subscribers", {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({
-                                  adminEmail: adminEmail || "der.contatos@gmail.com",
-                                  email: sub.email,
-                                  name: sub.name,
-                                  credits: (sub.credits || 0) + addAmount,
-                                  status: "ativo",
-                                  plan: sub.plan
-                                })
-                              });
-                              loadSubscribers();
-                              showToast?.(`+${addAmount} créditos adicionados!`, "success");
-                            } catch (_) {}
-                          }}
-                          className="flex-1 rounded-full border border-[#702bf7]/40 bg-[#702bf7]/15 py-1.5 text-[11px] font-semibold text-[#c4b4ff] hover:bg-[#702bf7] hover:text-white text-center shadow-[0_0_10px_rgba(112,43,247,0.2)]"
+                          onClick={() => handleOpenCreditModal(sub, "add")}
+                          className="flex-1 flex items-center justify-center gap-1 rounded-full border border-[#702bf7]/40 bg-[#702bf7]/15 py-1.5 text-[11px] font-semibold text-[#c4b4ff] hover:bg-[#702bf7] hover:text-white text-center shadow-[0_0_10px_rgba(112,43,247,0.2)]"
                         >
-                          +500 cr
+                          <Zap className="h-3 w-3 text-[#a855f7]" />
+                          <span>± Créditos</span>
                         </button>
                         <button
                           type="button"
@@ -1179,7 +1235,15 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                             {sub.plan || "Plano Pro"}
                           </td>
                           <td className="px-4 py-3 font-mono font-bold text-emerald-400">
-                            {sub.unlimited ? "∞ Ilimitado" : (sub.credits || 0).toLocaleString("pt-BR")}
+                            <button
+                              type="button"
+                              onClick={() => handleOpenCreditModal(sub, "set")}
+                              className="flex items-center gap-1.5 hover:text-emerald-300 cursor-pointer group"
+                              title="Clique para ajustar créditos deste cliente"
+                            >
+                              <span>{sub.unlimited ? "∞ Ilimitado" : (sub.credits || 0).toLocaleString("pt-BR")}</span>
+                              <Sliders className="h-3 w-3 text-zinc-600 group-hover:text-emerald-400 transition-colors" />
+                            </button>
                           </td>
                           <td className="px-4 py-3">
                             <span className="rounded-full bg-emerald-500/15 text-emerald-400 text-[10px] font-semibold px-2.5 py-0.5 border border-emerald-500/30">
@@ -1209,28 +1273,12 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                               </button>
                               <button
                                 type="button"
-                                onClick={async () => {
-                                  const addAmount = 500;
-                                  try {
-                                    await fetch("/api/admin/subscribers", {
-                                      method: "POST",
-                                      headers: { "Content-Type": "application/json" },
-                                      body: JSON.stringify({
-                                        adminEmail: adminEmail || "der.contatos@gmail.com",
-                                        email: sub.email,
-                                        name: sub.name,
-                                        credits: (sub.credits || 0) + addAmount,
-                                        status: "ativo",
-                                        plan: sub.plan
-                                      })
-                                    });
-                                    loadSubscribers();
-                                    showToast?.(`+${addAmount} créditos adicionados para ${sub.email}!`, "success");
-                                  } catch (_) {}
-                                }}
-                                className="rounded-full border border-[#702bf7]/40 bg-[#702bf7]/15 px-3 py-1 text-[11px] font-semibold text-[#c4b4ff] hover:bg-[#702bf7] hover:text-white transition-all cursor-pointer shadow-[0_0_12px_rgba(112,43,247,0.2)]"
+                                onClick={() => handleOpenCreditModal(sub, "add")}
+                                className="flex items-center gap-1 rounded-full border border-[#702bf7]/40 bg-[#702bf7]/15 px-3 py-1 text-[11px] font-semibold text-[#c4b4ff] hover:bg-[#702bf7] hover:text-white transition-all cursor-pointer shadow-[0_0_12px_rgba(112,43,247,0.2)]"
+                                title="Adicionar ou retirar créditos deste cliente"
                               >
-                                +500 Créditos
+                                <Zap className="h-3 w-3 text-[#a855f7]" />
+                                <span>± Créditos</span>
                               </button>
                               <button
                                 type="button"
@@ -1331,6 +1379,223 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                   </div>
                 </div>
               )}
+
+              {/* Modal de Ajuste de Créditos (Adicionar / Tirar / Definir Saldo) */}
+              {adjustCreditModal.isOpen && adjustCreditModal.sub && (() => {
+                const current = adjustCreditModal.sub.credits || 0;
+                const isUnl = adjustCreditModal.unlimited;
+                let previewNewTotal = current;
+                if (isUnl) {
+                  previewNewTotal = 999999;
+                } else if (adjustCreditModal.mode === "add") {
+                  previewNewTotal = current + Math.max(0, Number(adjustCreditModal.amount || 0));
+                } else if (adjustCreditModal.mode === "remove") {
+                  previewNewTotal = Math.max(0, current - Math.max(0, Number(adjustCreditModal.amount || 0)));
+                } else if (adjustCreditModal.mode === "set") {
+                  previewNewTotal = Math.max(0, Number(adjustCreditModal.amount || 0));
+                }
+                const diff = previewNewTotal - current;
+
+                return (
+                  <div className="fixed inset-0 z-[10100] flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-xl animate-in fade-in">
+                    <div className="relative w-full max-w-md rounded-2xl border border-white/10 bg-[#0c0c0c] p-5 sm:p-6 shadow-[0_20px_70px_-15px_rgba(0,0,0,0.95),0_0_60px_-15px_rgba(112,43,247,0.35)] space-y-4 text-white ring-1 ring-white/5">
+                      {/* Linha Roxa do Topo */}
+                      <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#702bf7] to-transparent rounded-t-2xl" />
+
+                      <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#702bf7]/20 border border-[#702bf7]/40 text-[#a855f7]">
+                            <Zap className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-bold text-white">Ajustar Créditos</h4>
+                            <p className="text-[11px] text-zinc-400 truncate max-w-[240px]">{adjustCreditModal.sub.email}</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setAdjustCreditModal({ ...adjustCreditModal, isOpen: false, sub: null })}
+                          className="p-1 rounded-full text-zinc-400 hover:text-white hover:bg-white/5 cursor-pointer"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      {/* Informações de Saldo */}
+                      <div className="grid grid-cols-2 gap-2.5 p-3 rounded-xl bg-white/[0.03] border border-white/5 text-xs">
+                        <div>
+                          <span className="text-[11px] text-zinc-400 block">Saldo Atual</span>
+                          <span className="text-sm font-bold font-mono text-zinc-200">
+                            {adjustCreditModal.sub.unlimited ? "∞ Ilimitado" : `${current.toLocaleString("pt-BR")} cr`}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[11px] text-zinc-400 block">Novo Saldo Previsto</span>
+                          <span className={`text-sm font-bold font-mono ${isUnl ? "text-[#c4b4ff]" : diff > 0 ? "text-emerald-400" : diff < 0 ? "text-rose-400" : "text-zinc-200"}`}>
+                            {isUnl ? "∞ Ilimitado" : `${previewNewTotal.toLocaleString("pt-BR")} cr`}
+                            {!isUnl && diff !== 0 && (
+                              <span className="text-[10px] ml-1 font-semibold">
+                                ({diff > 0 ? `+${diff}` : diff})
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Abas de Modo: Adicionar / Tirar / Definir */}
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 block">
+                          Ação desejada
+                        </label>
+                        <div className="grid grid-cols-3 gap-1.5 p-1 rounded-xl bg-white/[0.04] border border-white/10 text-xs">
+                          <button
+                            type="button"
+                            onClick={() => setAdjustCreditModal({ ...adjustCreditModal, mode: "add", amount: 100, unlimited: false })}
+                            className={`py-1.5 rounded-lg font-semibold transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                              adjustCreditModal.mode === "add" && !isUnl
+                                ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm"
+                                : "text-zinc-400 hover:text-white"
+                            }`}
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>Adicionar</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setAdjustCreditModal({ ...adjustCreditModal, mode: "remove", amount: 100, unlimited: false })}
+                            className={`py-1.5 rounded-lg font-semibold transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                              adjustCreditModal.mode === "remove" && !isUnl
+                                ? "bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-sm"
+                                : "text-zinc-400 hover:text-white"
+                            }`}
+                          >
+                            <Minus className="w-3.5 h-3.5" />
+                            <span>Tirar</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setAdjustCreditModal({ ...adjustCreditModal, mode: "set", amount: current, unlimited: false })}
+                            className={`py-1.5 rounded-lg font-semibold transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                              adjustCreditModal.mode === "set" && !isUnl
+                                ? "bg-[#702bf7]/25 text-[#c4b4ff] border border-[#702bf7]/50 shadow-sm"
+                                : "text-zinc-400 hover:text-white"
+                            }`}
+                          >
+                            <Sliders className="w-3.5 h-3.5" />
+                            <span>Definir Saldo</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Atalhos Rápidos */}
+                      {!isUnl && (
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] font-medium text-zinc-400 block">
+                            {adjustCreditModal.mode === "add" && "Valores Rápidos de Adição:"}
+                            {adjustCreditModal.mode === "remove" && "Valores Rápidos de Dedução:"}
+                            {adjustCreditModal.mode === "set" && "Valores Rápidos de Saldo Fixo:"}
+                          </label>
+                          <div className="grid grid-cols-4 gap-1.5">
+                            {adjustCreditModal.mode === "add" && [50, 100, 250, 500].map((val) => (
+                              <button
+                                key={val}
+                                type="button"
+                                onClick={() => setAdjustCreditModal({ ...adjustCreditModal, amount: val })}
+                                className={`py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
+                                  adjustCreditModal.amount === val
+                                    ? "bg-emerald-500/30 border-emerald-500/50 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.3)]"
+                                    : "border-white/10 bg-white/[0.03] text-zinc-400 hover:text-white hover:border-white/20"
+                                }`}
+                              >
+                                +{val}
+                              </button>
+                            ))}
+                            {adjustCreditModal.mode === "remove" && [50, 100, 250, 500].map((val) => (
+                              <button
+                                key={val}
+                                type="button"
+                                onClick={() => setAdjustCreditModal({ ...adjustCreditModal, amount: val })}
+                                className={`py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
+                                  adjustCreditModal.amount === val
+                                    ? "bg-rose-500/30 border-rose-500/50 text-rose-300 shadow-[0_0_10px_rgba(244,63,94,0.3)]"
+                                    : "border-white/10 bg-white/[0.03] text-zinc-400 hover:text-white hover:border-white/20"
+                                }`}
+                              >
+                                -{val}
+                              </button>
+                            ))}
+                            {adjustCreditModal.mode === "set" && [0, 100, 500, 1000].map((val) => (
+                              <button
+                                key={val}
+                                type="button"
+                                onClick={() => setAdjustCreditModal({ ...adjustCreditModal, amount: val })}
+                                className={`py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
+                                  adjustCreditModal.amount === val
+                                    ? "bg-[#702bf7] border-[#702bf7] text-white shadow-[0_0_10px_rgba(112,43,247,0.4)]"
+                                    : "border-white/10 bg-white/[0.03] text-zinc-400 hover:text-white hover:border-white/20"
+                                }`}
+                              >
+                                {val === 0 ? "0 (Zerar)" : `${val} cr`}
+                              </button>
+                            ))}
+                          </div>
+
+                          {/* Input Manual */}
+                          <div className="pt-1">
+                            <label className="text-[11px] text-zinc-400 block mb-1">
+                              {adjustCreditModal.mode === "add" && "Ou digite a quantidade a adicionar:"}
+                              {adjustCreditModal.mode === "remove" && "Ou digite a quantidade a tirar:"}
+                              {adjustCreditModal.mode === "set" && "Ou digite o saldo exato desejado:"}
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={adjustCreditModal.amount}
+                              onChange={(e) => setAdjustCreditModal({ ...adjustCreditModal, amount: Math.max(0, Number(e.target.value)) })}
+                              className="w-full px-3 py-2 bg-black/60 border border-white/10 rounded-xl text-xs font-mono font-bold text-white focus:outline-none focus:border-[#702bf7]"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Opção de Crédito Ilimitado */}
+                      <div className="pt-2 border-t border-white/10 flex items-center justify-between">
+                        <div className="text-xs">
+                          <span className="font-semibold text-white block">Créditos Ilimitados (∞)</span>
+                          <span className="text-[11px] text-zinc-500">Ignora limite de créditos para este cliente</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setAdjustCreditModal({ ...adjustCreditModal, unlimited: !isUnl })}
+                          className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors cursor-pointer ${
+                            isUnl ? "bg-[#702bf7]" : "bg-zinc-800 border border-white/10"
+                          }`}
+                        >
+                          <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${isUnl ? "translate-x-5" : "translate-x-0"}`} />
+                        </button>
+                      </div>
+
+                      {/* Botões de Ação */}
+                      <div className="flex items-center gap-2 pt-2 border-t border-white/10">
+                        <button
+                          type="button"
+                          onClick={() => setAdjustCreditModal({ ...adjustCreditModal, isOpen: false, sub: null })}
+                          className="flex-1 py-2 rounded-full border border-white/10 bg-white/[0.04] text-xs font-semibold text-zinc-400 hover:text-white cursor-pointer"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleSaveCreditsAdjustment}
+                          className="flex-1 py-2 rounded-full bg-[#702bf7] hover:bg-[#5e21d6] text-xs font-bold text-white shadow-[0_0_16px_rgba(112,43,247,0.4)] cursor-pointer transition-all"
+                        >
+                          Confirmar Alteração
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
 
