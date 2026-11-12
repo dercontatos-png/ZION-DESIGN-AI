@@ -4892,7 +4892,7 @@ ${textContent}`
                           <p className="text-[11px] text-zinc-500">{clientPreview.active ? clientPreview.simulatedEmail : (currentUser?.email || "")}</p>
                         </div>
                       </div>
-                      <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
+                      <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20 whitespace-nowrap shrink-0">
                         {clientPreview.active ? clientPreview.simulatedPlan : "Proprietário / Admin"}
                       </span>
                     </div>
