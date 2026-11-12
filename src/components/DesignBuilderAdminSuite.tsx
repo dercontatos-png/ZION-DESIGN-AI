@@ -486,10 +486,10 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
               showToast?.("👁️ Modo Visão do Cliente ativado!", "info");
               handleClose();
             }}
-            className="flex h-9 items-center gap-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 text-xs font-semibold text-amber-300 hover:bg-amber-500/20 hover:text-white transition-colors cursor-pointer shadow-md shadow-amber-500/10"
+            className="flex h-9 items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 text-xs font-medium text-zinc-300 hover:border-[#702bf7]/40 hover:bg-[#702bf7]/15 hover:text-white transition-all cursor-pointer shadow-sm"
             title="Visualizar a plataforma exatamente como o cliente vê"
           >
-            <Eye className="h-3.5 w-3.5 text-amber-400" />
+            <Eye className="h-3.5 w-3.5 text-[#a855f7]" />
             <span className="hidden sm:inline">Visão do Cliente</span>
           </button>
           <button
@@ -1101,10 +1101,10 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                                   showToast?.(`👁️ Visualizando como ${sub.name || sub.email} (${sub.plan})!`, "info");
                                   handleClose();
                                 }}
-                                className="flex items-center gap-1 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[11px] font-semibold text-amber-300 hover:bg-amber-500 hover:text-white transition-colors cursor-pointer"
+                                className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[11px] font-medium text-zinc-300 hover:border-[#702bf7]/40 hover:bg-[#702bf7]/15 hover:text-white transition-all cursor-pointer"
                                 title={`Simular visão deste cliente (${sub.email})`}
                               >
-                                <Eye className="h-3 w-3" />
+                                <Eye className="h-3 w-3 text-[#a855f7]" />
                                 <span className="hidden sm:inline">Ver como</span>
                               </button>
                               <button

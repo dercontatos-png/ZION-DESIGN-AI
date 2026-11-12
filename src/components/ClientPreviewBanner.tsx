@@ -61,41 +61,35 @@ export const ClientPreviewBanner: React.FC<ClientPreviewBannerProps> = ({
     <div
       role="region"
       aria-label="Barra de visualização do cliente"
-      className="sticky top-0 left-0 right-0 z-[99999] w-full shrink-0 flex flex-wrap items-center justify-between gap-2 border-b border-amber-500/30 bg-gradient-to-r from-amber-950/95 via-zinc-950/95 to-amber-950/95 px-4 py-2 text-xs backdrop-blur-xl shadow-2xl animate-in slide-in-from-top-2 duration-200"
+      className="fixed top-3 left-1/2 -translate-x-1/2 z-[99999] pointer-events-auto flex max-w-[95vw] items-center gap-2.5 sm:gap-4 rounded-full border border-white/10 bg-[#090611]/90 px-3.5 py-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.6)] backdrop-blur-2xl ring-1 ring-white/5 animate-in fade-in slide-in-from-top-3 duration-300"
     >
       {/* Lado Esquerdo: Identificação do Modo */}
-      <div className="flex items-center gap-2.5">
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30">
-          <Eye className="h-4 w-4 animate-pulse" />
+      <div className="flex items-center gap-2">
+        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#702bf7]/20 text-[#a855f7] ring-1 ring-[#702bf7]/30">
+          <Eye className="h-3.5 w-3.5 animate-pulse" />
         </div>
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="font-extrabold tracking-wider text-amber-400 text-[11px] uppercase">
-              Modo Visão do Cliente Ativo
-            </span>
-            <span className="rounded-full bg-amber-400/10 px-2 py-0.5 text-[10px] font-semibold text-amber-300 border border-amber-500/20">
-              O escudo e o painel admin estão ocultos para o cliente
-            </span>
-          </div>
-          <div className="text-[11px] text-zinc-300">
-            Simulando: <strong className="text-white">{session.simulatedName}</strong> ({session.simulatedEmail}) ·{" "}
-            <span className="text-amber-300 font-semibold">{session.simulatedPlan}</span> (
-            {session.simulatedUnlimited ? "∞ Ilimitado" : `${session.simulatedCredits} créditos`})
-          </div>
+        <div className="flex items-center gap-1.5">
+          <span className="font-semibold text-white text-xs truncate max-w-[120px] sm:max-w-[180px]">
+            {session.simulatedName}
+          </span>
+          <span className="hidden md:inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-zinc-400">
+            {session.simulatedPlan} · {session.simulatedUnlimited ? "∞ Ilimitado" : `${session.simulatedCredits} cr`}
+          </span>
         </div>
       </div>
 
       {/* Lado Direito: Ações Rápidas & Voltar ao Admin */}
       <div className="flex items-center gap-2">
-        {/* Seletor Rápido de Plano para teste */}
+        {/* Seletor Rápido de Plano */}
         <div className="relative">
           <button
             type="button"
             onClick={() => setIsPlanDropdownOpen(!isPlanDropdownOpen)}
-            className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-medium text-zinc-300 hover:bg-white/10 transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-medium text-zinc-300 hover:bg-white/10 hover:text-white transition-all cursor-pointer"
           >
-            <Zap className="h-3 w-3 text-amber-400" />
-            <span>Mudar Plano Simulado</span>
+            <Zap className="h-3 w-3 text-[#a855f7]" />
+            <span className="hidden sm:inline">Plano:</span>
+            <span className="text-white font-medium text-[11px]">{session.simulatedPlan.replace("Plano ", "")}</span>
             <ChevronDown className="h-3 w-3 text-zinc-400" />
           </button>
 
@@ -105,46 +99,46 @@ export const ClientPreviewBanner: React.FC<ClientPreviewBannerProps> = ({
                 className="fixed inset-0 z-10"
                 onClick={() => setIsPlanDropdownOpen(false)}
               />
-              <div className="absolute right-0 top-full mt-1.5 z-20 w-52 rounded-xl border border-white/10 bg-zinc-950/95 p-1.5 shadow-2xl backdrop-blur-xl">
+              <div className="absolute right-0 top-full mt-2 z-20 w-52 rounded-2xl border border-white/10 bg-[#090611]/95 p-1.5 shadow-[0_12px_36px_rgba(0,0,0,0.8)] backdrop-blur-2xl ring-1 ring-white/5">
                 <button
                   type="button"
                   onClick={() => handleSwitchPlan("Plano Inicial Free", 20, false)}
-                  className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-[11px] text-zinc-300 hover:bg-white/5 text-left cursor-pointer"
+                  className="flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-[11px] text-zinc-300 hover:bg-white/5 text-left cursor-pointer transition-colors"
                 >
                   <div>
                     <div className="font-semibold text-white">Plano Gratuito</div>
                     <div className="text-[10px] text-zinc-500">20 créditos</div>
                   </div>
                   {session.simulatedPlan === "Plano Inicial Free" && (
-                    <Check className="h-3.5 w-3.5 text-amber-400" />
+                    <Check className="h-3.5 w-3.5 text-[#a855f7]" />
                   )}
                 </button>
 
                 <button
                   type="button"
                   onClick={() => handleSwitchPlan("Plano Pro", 500, false)}
-                  className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-[11px] text-zinc-300 hover:bg-white/5 text-left cursor-pointer"
+                  className="flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-[11px] text-zinc-300 hover:bg-white/5 text-left cursor-pointer transition-colors"
                 >
                   <div>
                     <div className="font-semibold text-white">Plano Pro</div>
                     <div className="text-[10px] text-zinc-500">500 créditos</div>
                   </div>
                   {session.simulatedPlan === "Plano Pro" && (
-                    <Check className="h-3.5 w-3.5 text-amber-400" />
+                    <Check className="h-3.5 w-3.5 text-[#a855f7]" />
                   )}
                 </button>
 
                 <button
                   type="button"
                   onClick={() => handleSwitchPlan("Plano Ilimitado", 999999, true)}
-                  className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-[11px] text-zinc-300 hover:bg-white/5 text-left cursor-pointer"
+                  className="flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-[11px] text-zinc-300 hover:bg-white/5 text-left cursor-pointer transition-colors"
                 >
                   <div>
                     <div className="font-semibold text-white">Plano Ilimitado</div>
                     <div className="text-[10px] text-zinc-500">Créditos infinitos (∞)</div>
                   </div>
                   {session.simulatedPlan === "Plano Ilimitado" && (
-                    <Check className="h-3.5 w-3.5 text-amber-400" />
+                    <Check className="h-3.5 w-3.5 text-[#a855f7]" />
                   )}
                 </button>
               </div>
@@ -156,10 +150,10 @@ export const ClientPreviewBanner: React.FC<ClientPreviewBannerProps> = ({
         <button
           type="button"
           onClick={handleExit}
-          className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 px-3 py-1.5 text-[11px] font-bold text-white shadow-lg shadow-violet-600/30 hover:from-violet-500 hover:to-indigo-500 transition-all cursor-pointer"
+          className="flex items-center gap-1.5 rounded-full bg-[#702bf7] px-3.5 py-1 text-[11px] font-semibold text-white shadow-[0_0_16px_rgba(112,43,247,0.4)] hover:bg-[#5e21d6] transition-all cursor-pointer"
         >
           <Shield className="h-3.5 w-3.5" />
-          <span>Voltar ao Modo Admin</span>
+          <span>Voltar ao Admin</span>
         </button>
       </div>
     </div>
