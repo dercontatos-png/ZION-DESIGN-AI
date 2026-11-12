@@ -443,12 +443,12 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-40 flex flex-col h-[100dvh] w-screen overflow-hidden bg-[#090710] text-left lg:pl-[72px] animate-in fade-in duration-150"
+      className="fixed inset-0 z-40 flex flex-col h-[100dvh] w-screen overflow-hidden bg-[#090611] text-left lg:pl-[72px] animate-in fade-in duration-150 font-sans"
     >
       {/* Top Header */}
-      <header className="flex shrink-0 items-center justify-between border-b border-white/10 px-6 py-4 bg-zinc-950/70">
+      <header className="flex shrink-0 items-center justify-between border-b border-white/[0.08] px-6 py-3.5 bg-[#090611]/90 backdrop-blur-xl">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-600/20 text-violet-400 border border-violet-500/30 shadow-lg shadow-violet-500/10">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#702bf7]/20 text-[#a855f7] border border-[#702bf7]/30 shadow-[0_0_16px_rgba(112,43,247,0.3)]">
             <Shield className="h-5 w-5" />
           </div>
           <div>
@@ -456,7 +456,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
               <h1 className="text-base font-bold text-white tracking-tight">
                 DesignBuilder Admin Master Suite
               </h1>
-              <span className="rounded-full bg-violet-500/20 border border-violet-500/30 px-2 py-0.5 text-[10px] font-bold text-violet-300">
+              <span className="rounded-full bg-[#702bf7]/15 border border-[#702bf7]/30 px-2.5 py-0.5 text-[10px] font-semibold text-[#c4b4ff] shadow-[0_0_10px_rgba(112,43,247,0.2)]">
                 ROOT / SUPERADMIN
               </span>
               {isLiveActive && (
@@ -486,7 +486,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
               showToast?.("👁️ Modo Visão do Cliente ativado!", "info");
               handleClose();
             }}
-            className="flex h-9 items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 text-xs font-medium text-zinc-300 hover:border-[#702bf7]/40 hover:bg-[#702bf7]/15 hover:text-white transition-all cursor-pointer shadow-sm"
+            className="flex h-8 items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3.5 text-xs font-medium text-zinc-300 hover:border-[#702bf7]/40 hover:bg-[#702bf7]/15 hover:text-white transition-all cursor-pointer shadow-sm"
             title="Visualizar a plataforma exatamente como o cliente vê"
           >
             <Eye className="h-3.5 w-3.5 text-[#a855f7]" />
@@ -505,7 +505,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
               loadHydraObjectives();
               showToast?.("Todos os dados foram atualizados!", "info");
             }}
-            className="flex h-9 items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 text-xs font-medium text-zinc-300 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
+            className="flex h-8 items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 text-xs font-medium text-zinc-300 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
           >
             <RefreshCw className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Atualizar</span>
@@ -513,7 +513,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
           <button
             type="button"
             onClick={handleClose}
-            className="flex h-9 items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3.5 text-xs font-semibold text-zinc-300 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
+            className="flex h-8 items-center gap-1.5 rounded-full bg-[#702bf7] px-4 text-xs font-semibold text-white hover:bg-[#5e21d6] shadow-[0_0_16px_rgba(112,43,247,0.4)] transition-all cursor-pointer"
             title="Voltar ao estúdio"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
@@ -522,42 +522,42 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
         </div>
       </header>
 
-        {/* Navigation Tabs Bar */}
-        <div className="flex shrink-0 items-center gap-1 border-b border-white/10 bg-zinc-950/40 px-6 py-2 overflow-x-auto scrollbar-hide">
-          {[
-            { id: "dashboard", label: "Dashboard", icon: BarChart3 },
-            { id: "agents", label: "Política de IA", icon: Bot },
-            { id: "generations", label: "Galeria Global", icon: Images },
-            { id: "live", label: "Modo Live", icon: Radio, pulse: isLiveActive },
-            { id: "hydra", label: "Hydra Objectives", icon: Package },
-            { id: "ratings", label: "Feedbacks", icon: Star, badge: ratingStats.unread > 0 ? String(ratingStats.unread) : undefined },
-            { id: "reports", label: "Reports", icon: AlertTriangle, badge: unreadReportsCount > 0 ? String(unreadReportsCount) : undefined },
-            { id: "subscribers", label: "Assinantes & Créditos", icon: Users }
-          ].map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => handleSelectTab(tab.id as any)}
-                className={`flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold transition-all cursor-pointer ${
-                  isActive
-                    ? "bg-violet-600 text-white shadow-md shadow-violet-600/30"
-                    : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
-                }`}
-              >
-                <Icon className={`h-3.5 w-3.5 shrink-0 ${tab.pulse ? "text-red-400 animate-pulse" : ""}`} />
-                <span>{tab.label}</span>
-                {tab.badge && (
-                  <span className="rounded-full bg-red-500/20 text-red-400 border border-red-500/30 px-1.5 py-0.2 text-[9px] font-bold">
-                    {tab.badge}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
+      {/* Navigation Tabs Bar */}
+      <div className="flex shrink-0 items-center gap-1.5 border-b border-white/[0.06] bg-[#0c0c0c]/90 px-6 py-2.5 overflow-x-auto scrollbar-hide backdrop-blur-xl">
+        {[
+          { id: "dashboard", label: "Dashboard", icon: BarChart3 },
+          { id: "agents", label: "Política de IA", icon: Bot },
+          { id: "generations", label: "Galeria Global", icon: Images },
+          { id: "live", label: "Modo Live", icon: Radio, pulse: isLiveActive },
+          { id: "hydra", label: "Hydra Objectives", icon: Package },
+          { id: "ratings", label: "Feedbacks", icon: Star, badge: ratingStats.unread > 0 ? String(ratingStats.unread) : undefined },
+          { id: "reports", label: "Reports", icon: AlertTriangle, badge: unreadReportsCount > 0 ? String(unreadReportsCount) : undefined },
+          { id: "subscribers", label: "Assinantes & Créditos", icon: Users }
+        ].map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => handleSelectTab(tab.id as any)}
+              className={`flex shrink-0 items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
+                isActive
+                  ? "bg-[#702bf7] text-white shadow-[0_0_16px_rgba(112,43,247,0.45)]"
+                  : "text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-200"
+              }`}
+            >
+              <Icon className={`h-3.5 w-3.5 shrink-0 ${tab.pulse ? "text-red-400 animate-pulse" : ""}`} />
+              <span>{tab.label}</span>
+              {tab.badge && (
+                <span className="rounded-full bg-red-500/20 text-red-400 border border-red-500/30 px-1.5 py-0.2 text-[9px] font-bold">
+                  {tab.badge}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
 
         {/* Content Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
@@ -771,7 +771,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                       <button
                         type="button"
                         onClick={() => setEditingAgent({ ...ag })}
-                        className="rounded-lg bg-violet-600/20 text-violet-300 border border-violet-500/30 px-3 py-1.5 text-[11px] font-semibold hover:bg-violet-600 hover:text-white transition-all cursor-pointer"
+                        className="rounded-full bg-[#702bf7]/15 text-[#c4b4ff] border border-[#702bf7]/40 px-3.5 py-1 text-[11px] font-semibold hover:bg-[#702bf7] hover:text-white transition-all cursor-pointer shadow-[0_0_12px_rgba(112,43,247,0.2)]"
                       >
                         Editar Diretrizes
                       </button>
@@ -782,14 +782,14 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
 
               {/* Modal de Edição de Agente */}
               {editingAgent && (
-                <div className="fixed inset-0 z-[10100] flex items-center justify-center bg-black/80 p-4 backdrop-blur-md">
-                  <div className="w-full max-w-lg rounded-3xl border border-white/10 bg-zinc-950 p-6 space-y-4 shadow-2xl">
+                <div className="fixed inset-0 z-[10100] flex items-center justify-center bg-black/85 p-4 backdrop-blur-2xl">
+                  <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-[#0c0c0c]/98 p-6 space-y-4 shadow-[0_30px_90px_-20px_rgba(0,0,0,0.95),0_0_60px_-15px_rgba(112,43,247,0.25)] ring-1 ring-white/5 backdrop-blur-2xl">
                     <div className="flex items-center justify-between border-b border-white/10 pb-3">
                       <div className="flex items-center gap-2">
-                        <Bot className="h-5 w-5 text-violet-400" />
+                        <Bot className="h-5 w-5 text-[#a855f7]" />
                         <h4 className="text-sm font-bold text-white">Editar Diretrizes: {editingAgent.name}</h4>
                       </div>
-                      <button onClick={() => setEditingAgent(null)} className="text-zinc-400 hover:text-white cursor-pointer">
+                      <button onClick={() => setEditingAgent(null)} className="p-1 rounded-full text-zinc-400 hover:text-white hover:bg-white/5 cursor-pointer">
                         <X className="h-5 w-5" />
                       </button>
                     </div>
@@ -800,7 +800,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                         <select
                           value={editingAgent.model}
                           onChange={(e) => setEditingAgent({ ...editingAgent, model: e.target.value })}
-                          className="w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-zinc-200 outline-none"
+                          className="w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-zinc-200 outline-none focus:border-[#702bf7]"
                         >
                           <option value="Google Cloud Vertex AI (Imagen 3 High Quality)">Google Cloud Vertex AI (Imagen 3 High Quality)</option>
                           <option value="Google GenAI Multi-modal Pro">Google GenAI Multi-modal Pro</option>
@@ -826,7 +826,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                                 safeMargins: `${val}% Safe Headroom`
                               });
                             }}
-                            className="w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-zinc-200 outline-none"
+                            className="w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-zinc-200 outline-none focus:border-[#702bf7]"
                           />
                         </div>
 
@@ -835,7 +835,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                           <select
                             value={editingAgent.priority}
                             onChange={(e) => setEditingAgent({ ...editingAgent, priority: e.target.value })}
-                            className="w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-zinc-200 outline-none"
+                            className="w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-zinc-200 outline-none focus:border-[#702bf7]"
                           >
                             <option value="Ultra Alta">Ultra Alta (Prioridade Root)</option>
                             <option value="Alta">Alta</option>
@@ -849,7 +849,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                         <select
                           value={editingAgent.status}
                           onChange={(e) => setEditingAgent({ ...editingAgent, status: e.target.value })}
-                          className="w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-zinc-200 outline-none"
+                          className="w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-zinc-200 outline-none focus:border-[#702bf7]"
                         >
                           <option value="Ativo">Ativo</option>
                           <option value="Manutenção">Manutenção</option>
@@ -863,7 +863,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                           rows={4}
                           value={editingAgent.promptGuidelines || ""}
                           onChange={(e) => setEditingAgent({ ...editingAgent, promptGuidelines: e.target.value })}
-                          className="w-full rounded-xl border border-white/10 bg-zinc-900 p-3 text-zinc-200 outline-none resize-none"
+                          className="w-full rounded-xl border border-white/10 bg-zinc-900 p-3 text-zinc-200 outline-none resize-none focus:border-[#702bf7]"
                           placeholder="Instruções e diretrizes de renderização..."
                         />
                       </div>
@@ -873,14 +873,14 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                       <button
                         type="button"
                         onClick={() => setEditingAgent(null)}
-                        className="rounded-xl border border-white/10 px-4 py-2 text-xs font-semibold text-zinc-400 hover:bg-white/5 cursor-pointer"
+                        className="rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-zinc-400 hover:bg-white/5 cursor-pointer"
                       >
                         Cancelar
                       </button>
                       <button
                         type="button"
                         onClick={() => handleSaveAgent(editingAgent)}
-                        className="rounded-xl bg-violet-600 px-4 py-2 text-xs font-bold text-white hover:bg-violet-500 cursor-pointer shadow-lg shadow-violet-600/30"
+                        className="rounded-full bg-[#702bf7] hover:bg-[#5e21d6] px-5 py-2 text-xs font-semibold text-white cursor-pointer shadow-[0_0_16px_rgba(112,43,247,0.4)] transition-all"
                       >
                         Salvar Diretrizes de IA
                       </button>
@@ -908,7 +908,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                     placeholder="Filtrar por prompt ou autor..."
                     value={searchGen}
                     onChange={(e) => setSearchGen(e.target.value)}
-                    className="w-full rounded-xl border border-white/10 bg-zinc-900/80 pl-9 pr-3 py-1.5 text-xs text-white placeholder-zinc-500 outline-none focus:border-violet-500"
+                    className="w-full rounded-full border border-white/10 bg-zinc-900/80 pl-9 pr-3 py-1.5 text-xs text-white placeholder-zinc-500 outline-none focus:border-[#702bf7]"
                   />
                 </div>
               </div>
@@ -922,7 +922,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                       <div
                         key={idx}
                         onClick={() => setInspectGen(gen)}
-                        className="group relative rounded-xl border border-white/10 bg-zinc-900/40 overflow-hidden flex flex-col justify-between cursor-pointer hover:border-violet-500/50 transition-all hover:scale-[1.02]"
+                        className="group relative rounded-xl border border-white/10 bg-zinc-900/40 overflow-hidden flex flex-col justify-between cursor-pointer hover:border-[#702bf7]/50 transition-all hover:scale-[1.02]"
                       >
                         <div className="aspect-[4/5] w-full overflow-hidden bg-black/40 relative">
                           <img
@@ -932,7 +932,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                             loading="lazy"
                           />
                           <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <span className="flex items-center gap-1 text-[11px] font-bold text-white bg-violet-600/90 px-2.5 py-1 rounded-full shadow-lg">
+                            <span className="flex items-center gap-1 text-[11px] font-semibold text-white bg-[#702bf7] px-3 py-1 rounded-full shadow-[0_0_12px_rgba(112,43,247,0.4)]">
                               <Eye className="h-3 w-3" /> Inspecionar
                             </span>
                           </div>
@@ -948,20 +948,20 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
 
               {/* Lightbox de Inspeção de Imagem */}
               {inspectGen && (
-                <div className="fixed inset-0 z-[10100] flex items-center justify-center bg-black/85 p-4 backdrop-blur-md" onClick={() => setInspectGen(null)}>
-                  <div className="flex flex-col md:flex-row h-[85vh] w-full max-w-4xl overflow-hidden rounded-3xl border border-white/10 bg-[#0c0915] shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                <div className="fixed inset-0 z-[10100] flex items-center justify-center bg-black/85 p-4 backdrop-blur-2xl" onClick={() => setInspectGen(null)}>
+                  <div className="flex flex-col md:flex-row h-[85vh] w-full max-w-4xl overflow-hidden rounded-2xl border border-white/10 bg-[#0c0c0c]/98 shadow-[0_40px_120px_-20px_rgba(0,0,0,0.95),0_0_80px_-20px_rgba(112,43,247,0.25)] ring-1 ring-white/5" onClick={(e) => e.stopPropagation()}>
                     <div className="flex-1 bg-black/80 flex items-center justify-center p-4">
                       <img
                         src={inspectGen.src || inspectGen.image_url || inspectGen.thumbnail_url}
                         alt="Arte inspecionada"
-                        className="max-h-full max-w-full rounded-2xl object-contain shadow-2xl"
+                        className="max-h-full max-w-full rounded-xl object-contain shadow-2xl"
                       />
                     </div>
-                    <div className="w-full md:w-80 flex flex-col justify-between p-5 border-l border-white/10 bg-zinc-950 text-xs space-y-4">
+                    <div className="w-full md:w-80 flex flex-col justify-between p-5 border-l border-white/10 bg-[#0c0c0c] text-xs space-y-4">
                       <div className="space-y-3">
                         <div className="flex items-center justify-between border-b border-white/10 pb-2">
                           <span className="font-bold text-white text-sm">Metadados da Criação</span>
-                          <button onClick={() => setInspectGen(null)} className="text-zinc-400 hover:text-white cursor-pointer">
+                          <button onClick={() => setInspectGen(null)} className="p-1 rounded-full text-zinc-400 hover:text-white hover:bg-white/5 cursor-pointer">
                             <X className="h-4 w-4" />
                           </button>
                         </div>
@@ -985,7 +985,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                           </div>
                           <div className="bg-white/[0.02] p-2 rounded-lg border border-white/5">
                             <span className="text-zinc-500 block">Motor</span>
-                            <span className="font-bold text-violet-400">Vertex AI Imagen 3</span>
+                            <span className="font-bold text-[#c4b4ff]">Vertex AI Imagen 3</span>
                           </div>
                         </div>
                       </div>
@@ -998,7 +998,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                             setCopiedPrompt(true);
                             setTimeout(() => setCopiedPrompt(false), 2000);
                           }}
-                          className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-white/10 px-3 py-2 font-semibold text-zinc-200 hover:bg-white/15 transition-colors cursor-pointer"
+                          className="flex w-full items-center justify-center gap-1.5 rounded-full bg-white/10 px-4 py-2 font-semibold text-zinc-200 hover:bg-white/15 transition-colors cursor-pointer"
                         >
                           {copiedPrompt ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
                           <span>{copiedPrompt ? "Prompt Copiado!" : "Copiar Prompt"}</span>
@@ -1009,7 +1009,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                           download={`criacao-${Date.now()}.png`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-violet-600 px-3 py-2 font-bold text-white hover:bg-violet-500 transition-colors cursor-pointer shadow-lg shadow-violet-600/30"
+                          className="flex w-full items-center justify-center gap-1.5 rounded-full bg-[#702bf7] hover:bg-[#5e21d6] px-4 py-2 font-semibold text-white transition-colors cursor-pointer shadow-[0_0_16px_rgba(112,43,247,0.4)]"
                         >
                           <Download className="h-3.5 w-3.5" />
                           <span>Baixar Resolução Máxima</span>
@@ -1040,13 +1040,13 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                       placeholder="Filtrar assinantes..."
                       value={searchSub}
                       onChange={(e) => setSearchSub(e.target.value)}
-                      className="w-full rounded-xl border border-white/10 bg-zinc-900/80 pl-9 pr-3 py-1.5 text-xs text-white placeholder-zinc-500 outline-none focus:border-violet-500"
+                      className="w-full rounded-full border border-white/10 bg-zinc-900/80 pl-9 pr-3 py-1.5 text-xs text-white placeholder-zinc-500 outline-none focus:border-[#702bf7]"
                     />
                   </div>
                   <button
                     type="button"
                     onClick={() => setIsAddSubOpen(true)}
-                    className="flex items-center gap-1.5 rounded-xl bg-violet-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-violet-500 transition-colors shadow-lg shadow-violet-600/30 cursor-pointer"
+                    className="flex items-center gap-1.5 rounded-full bg-[#702bf7] hover:bg-[#5e21d6] px-4 py-1.5 text-xs font-semibold text-white transition-all shadow-[0_0_16px_rgba(112,43,247,0.4)] cursor-pointer active:scale-[0.98]"
                   >
                     <Plus className="h-3.5 w-3.5" />
                     <span>Novo Assinante</span>
@@ -1075,14 +1075,14 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                             <div className="font-semibold text-white">{sub.name || sub.email.split("@")[0]}</div>
                             <div className="text-[11px] text-zinc-500">{sub.email}</div>
                           </td>
-                          <td className="px-4 py-3 font-medium text-violet-300">
+                          <td className="px-4 py-3 font-medium text-[#c4b4ff]">
                             {sub.plan || "Plano Pro"}
                           </td>
                           <td className="px-4 py-3 font-mono font-bold text-emerald-400">
                             {sub.unlimited ? "∞ Ilimitado" : (sub.credits || 0).toLocaleString("pt-BR")}
                           </td>
                           <td className="px-4 py-3">
-                            <span className="rounded-full bg-emerald-500/15 text-emerald-400 text-[10px] font-semibold px-2 py-0.5 border border-emerald-500/30">
+                            <span className="rounded-full bg-emerald-500/15 text-emerald-400 text-[10px] font-semibold px-2.5 py-0.5 border border-emerald-500/30">
                               {sub.status || "Ativo"}
                             </span>
                           </td>
@@ -1101,7 +1101,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                                   showToast?.(`👁️ Visualizando como ${sub.name || sub.email} (${sub.plan})!`, "info");
                                   handleClose();
                                 }}
-                                className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[11px] font-medium text-zinc-300 hover:border-[#702bf7]/40 hover:bg-[#702bf7]/15 hover:text-white transition-all cursor-pointer"
+                                className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-medium text-zinc-300 hover:border-[#702bf7]/40 hover:bg-[#702bf7]/15 hover:text-white transition-all cursor-pointer"
                                 title={`Simular visão deste cliente (${sub.email})`}
                               >
                                 <Eye className="h-3 w-3 text-[#a855f7]" />
@@ -1128,14 +1128,14 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                                     showToast?.(`+${addAmount} créditos adicionados para ${sub.email}!`, "success");
                                   } catch (_) {}
                                 }}
-                                className="rounded-lg bg-violet-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-violet-500 transition-colors cursor-pointer"
+                                className="rounded-full border border-[#702bf7]/40 bg-[#702bf7]/15 px-3 py-1 text-[11px] font-semibold text-[#c4b4ff] hover:bg-[#702bf7] hover:text-white transition-all cursor-pointer shadow-[0_0_12px_rgba(112,43,247,0.2)]"
                               >
                                 +500 Créditos
                               </button>
                               <button
                                 type="button"
                                 onClick={() => handleDeleteSubscriber(sub.email)}
-                                className="rounded-lg bg-red-500/10 text-red-400 p-1 hover:bg-red-500/20 transition-colors cursor-pointer"
+                                className="rounded-full bg-red-500/10 text-red-400 p-1.5 hover:bg-red-500 hover:text-white transition-colors cursor-pointer"
                                 title="Excluir assinante"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
@@ -1150,14 +1150,14 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
 
               {/* Modal Adicionar Assinante */}
               {isAddSubOpen && (
-                <div className="fixed inset-0 z-[10100] flex items-center justify-center bg-black/80 p-4 backdrop-blur-md">
-                  <div className="w-full max-w-md rounded-3xl border border-white/10 bg-zinc-950 p-6 space-y-4 shadow-2xl text-left">
+                <div className="fixed inset-0 z-[10100] flex items-center justify-center bg-black/85 p-4 backdrop-blur-2xl">
+                  <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0c0c0c]/98 p-6 space-y-4 shadow-[0_30px_90px_-20px_rgba(0,0,0,0.95),0_0_60px_-15px_rgba(112,43,247,0.25)] ring-1 ring-white/5 backdrop-blur-2xl text-left">
                     <div className="flex items-center justify-between border-b border-white/10 pb-3">
                       <div className="flex items-center gap-2">
-                        <UserPlus className="h-5 w-5 text-violet-400" />
+                        <UserPlus className="h-5 w-5 text-[#a855f7]" />
                         <h4 className="text-sm font-bold text-white">Cadastrar Novo Assinante</h4>
                       </div>
-                      <button onClick={() => setIsAddSubOpen(false)} className="text-zinc-400 hover:text-white cursor-pointer">
+                      <button onClick={() => setIsAddSubOpen(false)} className="p-1 rounded-full text-zinc-400 hover:text-white hover:bg-white/5 cursor-pointer">
                         <X className="h-5 w-5" />
                       </button>
                     </div>
@@ -1170,7 +1170,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                           placeholder="Ex: João Designer"
                           value={newSubForm.name}
                           onChange={(e) => setNewSubForm({ ...newSubForm, name: e.target.value })}
-                          className="w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-zinc-200 outline-none"
+                          className="w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-zinc-200 outline-none focus:border-[#702bf7]"
                         />
                       </div>
 
@@ -1182,7 +1182,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                           placeholder="cliente@design.com"
                           value={newSubForm.email}
                           onChange={(e) => setNewSubForm({ ...newSubForm, email: e.target.value })}
-                          className="w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-zinc-200 outline-none"
+                          className="w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-zinc-200 outline-none focus:border-[#702bf7]"
                         />
                       </div>
 
@@ -1192,7 +1192,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                           <select
                             value={newSubForm.plan}
                             onChange={(e) => setNewSubForm({ ...newSubForm, plan: e.target.value })}
-                            className="w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-zinc-200 outline-none"
+                            className="w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-zinc-200 outline-none focus:border-[#702bf7]"
                           >
                             <option value="Plano Pro">Plano Pro</option>
                             <option value="Plano Ilimitado">Plano Ilimitado</option>
@@ -1207,7 +1207,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                             min="0"
                             value={newSubForm.credits}
                             onChange={(e) => setNewSubForm({ ...newSubForm, credits: Number(e.target.value) })}
-                            className="w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-zinc-200 outline-none"
+                            className="w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-zinc-200 outline-none focus:border-[#702bf7]"
                           />
                         </div>
                       </div>
@@ -1216,13 +1216,13 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                         <button
                           type="button"
                           onClick={() => setIsAddSubOpen(false)}
-                          className="rounded-xl border border-white/10 px-4 py-2 text-xs font-semibold text-zinc-400 hover:bg-white/5 cursor-pointer"
+                          className="rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-zinc-400 hover:bg-white/5 cursor-pointer"
                         >
                           Cancelar
                         </button>
                         <button
                           type="submit"
-                          className="rounded-xl bg-violet-600 px-4 py-2 text-xs font-bold text-white hover:bg-violet-500 cursor-pointer shadow-lg shadow-violet-600/30"
+                          className="rounded-full bg-[#702bf7] hover:bg-[#5e21d6] px-5 py-2 text-xs font-semibold text-white cursor-pointer shadow-[0_0_16px_rgba(112,43,247,0.4)] transition-all"
                         >
                           Salvar Assinante
                         </button>
@@ -1250,10 +1250,10 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                       key={st}
                       type="button"
                       onClick={() => setReportFilter(st)}
-                      className={`rounded-xl px-3 py-1.5 font-semibold capitalize transition-colors cursor-pointer ${
+                      className={`rounded-full px-3.5 py-1 text-xs font-semibold capitalize transition-all cursor-pointer ${
                         reportFilter === st
-                          ? "bg-violet-600 text-white"
-                          : "bg-white/5 text-zinc-400 hover:bg-white/10"
+                          ? "bg-[#702bf7] text-white shadow-[0_0_14px_rgba(112,43,247,0.4)]"
+                          : "border border-white/10 bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white"
                       }`}
                     >
                       {st}
@@ -1271,7 +1271,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-white">{rep.user}</span>
                           <span className="text-zinc-500">· {rep.agent}</span>
-                          <span className="rounded bg-white/5 px-2 py-0.5 text-[10px] font-semibold text-zinc-300">
+                          <span className="rounded-full bg-white/5 border border-white/10 px-2.5 py-0.5 text-[10px] font-semibold text-zinc-300">
                             {rep.type}
                           </span>
                         </div>
@@ -1279,7 +1279,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                       </div>
 
                       {rep.title && (
-                        <div className="text-xs font-bold text-violet-300">{rep.title}</div>
+                        <div className="text-xs font-bold text-[#c4b4ff]">{rep.title}</div>
                       )}
 
                       <p className="text-xs text-zinc-300 leading-relaxed bg-black/30 p-3 rounded-xl border border-white/5">
@@ -1306,7 +1306,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                             <button
                               type="button"
                               onClick={() => handleUpdateReportStatus(rep.id, "resolvido")}
-                              className="rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-1 text-[11px] font-semibold hover:bg-emerald-500 hover:text-white transition-colors cursor-pointer"
+                              className="rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 text-[11px] font-semibold hover:bg-emerald-500 hover:text-white transition-colors cursor-pointer"
                             >
                               Marcar como Resolvido
                             </button>
@@ -1314,7 +1314,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                             <button
                               type="button"
                               onClick={() => handleUpdateReportStatus(rep.id, "pendente")}
-                              className="rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-1 text-[11px] font-semibold hover:bg-amber-500 hover:text-white transition-colors cursor-pointer"
+                              className="rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 px-3 py-1 text-[11px] font-semibold hover:bg-amber-500 hover:text-white transition-colors cursor-pointer"
                             >
                               Reabrir Chamado
                             </button>
@@ -1322,7 +1322,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                           <button
                             type="button"
                             onClick={() => handleDeleteReport(rep.id)}
-                            className="text-zinc-500 hover:text-red-400 p-1 cursor-pointer"
+                            className="p-1.5 rounded-full text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
                             title="Excluir report"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -1340,7 +1340,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
              ══════════════════════════════════════════════════ */}
           {activeTab === "ratings" && (
             <div className="space-y-4 animate-in fade-in-50 duration-150">
-              <div className="rounded-2xl border border-white/10 bg-gradient-to-r from-violet-500/10 via-zinc-900/80 to-zinc-950 p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="rounded-2xl border border-white/10 bg-gradient-to-r from-[#702bf7]/10 via-zinc-900/80 to-[#0c0c0c] p-6 flex flex-col md:flex-row items-center justify-between gap-4">
                 <div>
                   <h3 className="text-lg font-bold text-white flex items-center gap-2">
                     <Star className="h-5 w-5 text-amber-400 fill-amber-400" />
@@ -1389,12 +1389,12 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                               type="text"
                               value={tempNotes}
                               onChange={(e) => setTempNotes(e.target.value)}
-                              className="rounded-lg border border-white/10 bg-zinc-900 px-2 py-0.5 text-xs text-zinc-200 outline-none"
+                              className="rounded-xl border border-white/10 bg-zinc-900 px-2.5 py-1 text-xs text-zinc-200 outline-none focus:border-[#702bf7]"
                             />
                             <button
                               type="button"
                               onClick={() => handleSaveRatingNotes(item.id)}
-                              className="rounded bg-violet-600 px-2 py-0.5 text-[11px] font-bold text-white cursor-pointer"
+                              className="rounded-full bg-[#702bf7] hover:bg-[#5e21d6] px-3 py-1 text-[11px] font-semibold text-white shadow-[0_0_10px_rgba(112,43,247,0.3)] cursor-pointer"
                             >
                               Salvar
                             </button>
@@ -1405,7 +1405,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                               setEditingNotesId(item.id);
                               setTempNotes(item.notes || "");
                             }}
-                            className="text-violet-400 hover:underline cursor-pointer"
+                            className="text-[#c4b4ff] hover:underline cursor-pointer"
                           >
                             {item.notes || "+ Adicionar nota interna"}
                           </span>
@@ -1456,7 +1456,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                   <button
                     type="button"
                     onClick={handleToggleLiveStatus}
-                    className={`rounded-2xl px-6 py-3 text-xs font-bold text-white transition-all shadow-xl cursor-pointer ${
+                    className={`rounded-full px-7 py-3 text-xs font-semibold text-white transition-all shadow-xl cursor-pointer ${
                       isLiveActive
                         ? "bg-zinc-800 hover:bg-zinc-700"
                         : "bg-red-600 hover:bg-red-500 shadow-red-600/30"
@@ -1483,7 +1483,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                       type="button"
                       onClick={() => handleToggleLiveRule("unlimitedCreditsRule", !liveSession.unlimitedCreditsRule)}
                       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
-                        liveSession.unlimitedCreditsRule ? "bg-violet-600" : "bg-zinc-700"
+                        liveSession.unlimitedCreditsRule ? "bg-[#702bf7]" : "bg-zinc-700"
                       }`}
                     >
                       <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
@@ -1501,7 +1501,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                       type="button"
                       onClick={() => handleToggleLiveRule("unlockProAgentsRule", !liveSession.unlockProAgentsRule)}
                       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
-                        liveSession.unlockProAgentsRule ? "bg-violet-600" : "bg-zinc-700"
+                        liveSession.unlockProAgentsRule ? "bg-[#702bf7]" : "bg-zinc-700"
                       }`}
                     >
                       <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
@@ -1527,7 +1527,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsAddObjOpen(true)}
-                  className="flex items-center gap-1.5 rounded-xl bg-violet-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-violet-500 transition-colors shadow-lg shadow-violet-600/30 cursor-pointer"
+                  className="flex items-center gap-1.5 rounded-full bg-[#702bf7] hover:bg-[#5e21d6] px-4 py-1.5 text-xs font-semibold text-white transition-all shadow-[0_0_16px_rgba(112,43,247,0.4)] cursor-pointer active:scale-[0.98]"
                 >
                   <Plus className="h-3.5 w-3.5" />
                   <span>Novo Objetivo</span>
@@ -1540,7 +1540,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                     <div>
                       <div className="flex items-center justify-between">
                         <span className="font-bold text-white">{obj.title}</span>
-                        <span className="rounded-full bg-violet-500/15 text-violet-400 text-[10px] font-semibold px-2 py-0.5 border border-violet-500/30">
+                        <span className="rounded-full bg-[#702bf7]/15 text-[#c4b4ff] text-[10px] font-semibold px-2.5 py-0.5 border border-[#702bf7]/30">
                           {obj.category}
                         </span>
                       </div>
@@ -1568,7 +1568,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                       <button
                         type="button"
                         onClick={() => handleDeleteHydraObjective(obj.id)}
-                        className="text-zinc-500 hover:text-red-400 p-1 cursor-pointer"
+                        className="p-1.5 rounded-full text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
                         title="Excluir objetivo"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -1580,14 +1580,14 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
 
               {/* Modal Criar Objetivo Hydra */}
               {isAddObjOpen && (
-                <div className="fixed inset-0 z-[10100] flex items-center justify-center bg-black/80 p-4 backdrop-blur-md">
-                  <div className="w-full max-w-md rounded-3xl border border-white/10 bg-zinc-950 p-6 space-y-4 shadow-2xl text-left">
+                <div className="fixed inset-0 z-[10100] flex items-center justify-center bg-black/85 p-4 backdrop-blur-2xl">
+                  <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0c0c0c]/98 p-6 space-y-4 shadow-[0_30px_90px_-20px_rgba(0,0,0,0.95),0_0_60px_-15px_rgba(112,43,247,0.25)] ring-1 ring-white/5 backdrop-blur-2xl text-left">
                     <div className="flex items-center justify-between border-b border-white/10 pb-3">
                       <div className="flex items-center gap-2">
                         <Package className="h-5 w-5 text-amber-400" />
                         <h4 className="text-sm font-bold text-white">Adicionar Objetivo Hydra</h4>
                       </div>
-                      <button onClick={() => setIsAddObjOpen(false)} className="text-zinc-400 hover:text-white cursor-pointer">
+                      <button onClick={() => setIsAddObjOpen(false)} className="p-1 rounded-full text-zinc-400 hover:text-white hover:bg-white/5 cursor-pointer">
                         <X className="h-5 w-5" />
                       </button>
                     </div>
@@ -1601,7 +1601,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                           placeholder="Ex: Hambúrguer Rústico Dark"
                           value={newObjForm.title}
                           onChange={(e) => setNewObjForm({ ...newObjForm, title: e.target.value })}
-                          className="w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-zinc-200 outline-none"
+                          className="w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-zinc-200 outline-none focus:border-[#702bf7]"
                         />
                       </div>
 
@@ -1612,7 +1612,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                           placeholder="Ex: Alimentos & Bebidas"
                           value={newObjForm.category}
                           onChange={(e) => setNewObjForm({ ...newObjForm, category: e.target.value })}
-                          className="w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-zinc-200 outline-none"
+                          className="w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-zinc-200 outline-none focus:border-[#702bf7]"
                         />
                       </div>
 
@@ -1623,7 +1623,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                           placeholder="Ex: Tons de madeira, fogo e dourado"
                           value={newObjForm.palette}
                           onChange={(e) => setNewObjForm({ ...newObjForm, palette: e.target.value })}
-                          className="w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-zinc-200 outline-none"
+                          className="w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-zinc-200 outline-none focus:border-[#702bf7]"
                         />
                       </div>
 
@@ -1634,7 +1634,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                           placeholder="Ex: Rim light forte e luz difusa de estúdio"
                           value={newObjForm.lighting}
                           onChange={(e) => setNewObjForm({ ...newObjForm, lighting: e.target.value })}
-                          className="w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-zinc-200 outline-none"
+                          className="w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-zinc-200 outline-none focus:border-[#702bf7]"
                         />
                       </div>
 
@@ -1645,7 +1645,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                           placeholder="Ex: Macro 50mm f/1.8"
                           value={newObjForm.lens}
                           onChange={(e) => setNewObjForm({ ...newObjForm, lens: e.target.value })}
-                          className="w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-zinc-200 outline-none"
+                          className="w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2 text-zinc-200 outline-none focus:border-[#702bf7]"
                         />
                       </div>
 
@@ -1653,13 +1653,13 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                         <button
                           type="button"
                           onClick={() => setIsAddObjOpen(false)}
-                          className="rounded-xl border border-white/10 px-4 py-2 text-xs font-semibold text-zinc-400 hover:bg-white/5 cursor-pointer"
+                          className="rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-zinc-400 hover:bg-white/5 cursor-pointer"
                         >
                           Cancelar
                         </button>
                         <button
                           type="submit"
-                          className="rounded-xl bg-violet-600 px-4 py-2 text-xs font-bold text-white hover:bg-violet-500 cursor-pointer shadow-lg shadow-violet-600/30"
+                          className="rounded-full bg-[#702bf7] hover:bg-[#5e21d6] px-5 py-2 text-xs font-semibold text-white cursor-pointer shadow-[0_0_16px_rgba(112,43,247,0.4)] transition-all"
                         >
                           Salvar Objetivo
                         </button>

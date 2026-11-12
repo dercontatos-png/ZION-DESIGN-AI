@@ -229,24 +229,24 @@ export const AdminSubscribersModal: React.FC<AdminSubscribersModalProps> = ({
   const totalCreditos = subscribers.reduce((acc, s) => acc + (s.unlimited ? 0 : (s.credits || 0)), 0);
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-xl animate-fade-in font-sans">
-      <div className="relative w-full max-w-4xl max-h-[92vh] flex flex-col rounded-3xl border border-white/10 bg-[#0d0b18] shadow-2xl shadow-purple-950/50 overflow-hidden text-white">
-        
-        {/* Glow Top Accent */}
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-violet-600 via-fuchsia-500 to-amber-400" />
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-2xl animate-fade-in font-sans">
+      <div className="relative w-full max-w-4xl max-h-[92vh] flex flex-col rounded-2xl border border-white/10 bg-[#0c0c0c]/98 shadow-[0_40px_120px_-20px_rgba(0,0,0,0.95),0_0_80px_-20px_rgba(112,43,247,0.25)] overflow-hidden text-white backdrop-blur-2xl ring-1 ring-white/5">
+
+        {/* DesignBuilder Purple Top Line */}
+        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#702bf7] to-transparent" />
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-white/10 shrink-0">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.08] bg-[#090611]/80 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-violet-600 to-fuchsia-600 flex items-center justify-center shadow-lg shadow-violet-600/30">
-              <Users className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 rounded-xl bg-[#702bf7]/20 text-[#a855f7] border border-[#702bf7]/30 flex items-center justify-center shadow-[0_0_16px_rgba(112,43,247,0.3)]">
+              <Users className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold tracking-tight text-white">
+                <h2 className="text-base font-bold tracking-tight text-white">
                   Controle de Clientes & Assinaturas
                 </h2>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-400/10 text-amber-300 border border-amber-400/20">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-[#702bf7]/15 text-[#c4b4ff] border border-[#702bf7]/30 shadow-[0_0_10px_rgba(112,43,247,0.2)]">
                   Painel Admin
                 </span>
               </div>
@@ -261,15 +261,15 @@ export const AdminSubscribersModal: React.FC<AdminSubscribersModalProps> = ({
               type="button"
               onClick={loadSubscribers}
               disabled={isLoading}
-              className="p-2 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white transition-all cursor-pointer"
+              className="p-2 rounded-full border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white transition-all cursor-pointer"
               title="Atualizar lista"
             >
-              <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin text-violet-400" : ""}`} />
+              <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin text-[#a855f7]" : ""}`} />
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="p-2 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white transition-all cursor-pointer"
+              className="p-2 rounded-full border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white transition-all cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -277,9 +277,9 @@ export const AdminSubscribersModal: React.FC<AdminSubscribersModalProps> = ({
         </div>
 
         {/* Stat Badges Strip */}
-        <div className="grid grid-cols-3 gap-3 px-6 py-3.5 bg-black/40 border-b border-white/5 shrink-0 text-xs">
+        <div className="grid grid-cols-3 gap-3 px-6 py-3.5 bg-black/40 border-b border-white/[0.06] shrink-0 text-xs">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400">
+            <div className="w-7 h-7 rounded-lg bg-[#702bf7]/15 border border-[#702bf7]/30 flex items-center justify-center text-[#a855f7]">
               <Users className="w-3.5 h-3.5" />
             </div>
             <div>
@@ -313,10 +313,10 @@ export const AdminSubscribersModal: React.FC<AdminSubscribersModalProps> = ({
         <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
 
           {/* 1. Form de Adicionar Novo Assinante */}
-          <div className="p-5 rounded-2xl border border-violet-500/20 bg-gradient-to-b from-violet-950/20 to-black/40 shadow-inner">
+          <div className="p-5 rounded-2xl border border-white/[0.08] bg-white/[0.02] shadow-inner">
             <div className="flex items-center gap-2 mb-3.5">
-              <UserPlus className="w-4 h-4 text-violet-400" />
-              <h3 className="text-xs font-bold uppercase tracking-wider text-violet-300">
+              <UserPlus className="w-4 h-4 text-[#a855f7]" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-200">
                 Liberar Acesso para Nova Conta
               </h3>
             </div>
@@ -334,7 +334,7 @@ export const AdminSubscribersModal: React.FC<AdminSubscribersModalProps> = ({
                     value={newEmail}
                     onChange={(e) => setNewEmail(e.target.value)}
                     placeholder="cliente@gmail.com"
-                    className="w-full px-3 py-2 bg-black/60 border border-white/10 rounded-xl text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-violet-500 transition-colors"
+                    className="w-full px-3 py-2 bg-black/60 border border-white/10 rounded-xl text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-[#702bf7] transition-colors"
                   />
                 </div>
 
@@ -348,7 +348,7 @@ export const AdminSubscribersModal: React.FC<AdminSubscribersModalProps> = ({
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
                     placeholder="Ex: João da Agência"
-                    className="w-full px-3 py-2 bg-black/60 border border-white/10 rounded-xl text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-violet-500 transition-colors"
+                    className="w-full px-3 py-2 bg-black/60 border border-white/10 rounded-xl text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-[#702bf7] transition-colors"
                   />
                 </div>
 
@@ -360,7 +360,7 @@ export const AdminSubscribersModal: React.FC<AdminSubscribersModalProps> = ({
                   <select
                     value={newPlan}
                     onChange={(e) => setNewPlan(e.target.value)}
-                    className="w-full px-3 py-2 bg-[#090714] border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-violet-500 transition-colors"
+                    className="w-full px-3 py-2 bg-[#090714] border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-[#702bf7] transition-colors"
                   >
                     <option value="Plano Pro">Plano Pro (Gerações IAs)</option>
                     <option value="Plano VIP">Plano VIP Completo</option>
@@ -375,12 +375,12 @@ export const AdminSubscribersModal: React.FC<AdminSubscribersModalProps> = ({
                       <Zap className="w-3 h-3 text-amber-400" />
                       Créditos Iniciais
                     </span>
-                    <label className="flex items-center gap-1 cursor-pointer text-[10px] text-violet-400 hover:text-violet-300">
+                    <label className="flex items-center gap-1 cursor-pointer text-[10px] text-[#a855f7] hover:text-purple-300">
                       <input
                         type="checkbox"
                         checked={newUnlimited}
                         onChange={(e) => setNewUnlimited(e.target.checked)}
-                        className="rounded accent-violet-600"
+                        className="rounded accent-[#702bf7]"
                       />
                       Ilimitado
                     </label>
@@ -392,7 +392,7 @@ export const AdminSubscribersModal: React.FC<AdminSubscribersModalProps> = ({
                     max="100000"
                     value={newUnlimited ? 999999 : newCredits}
                     onChange={(e) => setNewCredits(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-black/60 border border-white/10 rounded-xl text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-violet-500 disabled:opacity-50 transition-colors"
+                    className="w-full px-3 py-2 bg-black/60 border border-white/10 rounded-xl text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-[#702bf7] disabled:opacity-50 transition-colors"
                   />
                 </div>
               </div>
@@ -406,11 +406,10 @@ export const AdminSubscribersModal: React.FC<AdminSubscribersModalProps> = ({
                       key={val}
                       type="button"
                       onClick={() => setNewCredits(val)}
-                      className={`px-2 py-0.5 rounded-lg border text-[11px] font-semibold transition-all cursor-pointer ${
-                        newCredits === val
-                          ? "bg-violet-600 border-violet-500 text-white"
+                      className={`px-3 py-1 rounded-full border text-[11px] font-semibold transition-all cursor-pointer ${newCredits === val
+                          ? "bg-[#702bf7] border-[#702bf7] text-white shadow-[0_0_12px_rgba(112,43,247,0.4)]"
                           : "border-white/10 bg-white/[0.04] text-zinc-400 hover:text-white hover:border-white/20"
-                      }`}
+                        }`}
                     >
                       {val}
                     </button>
@@ -422,7 +421,7 @@ export const AdminSubscribersModal: React.FC<AdminSubscribersModalProps> = ({
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 via-fuchsia-600 to-violet-700 hover:brightness-110 text-white font-bold text-xs shadow-lg shadow-violet-600/30 transition-all cursor-pointer disabled:opacity-50"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#702bf7] hover:bg-[#5e21d6] text-white font-semibold text-xs shadow-[0_0_18px_rgba(112,43,247,0.4)] transition-all cursor-pointer disabled:opacity-50 active:scale-[0.98]"
                 >
                   <Shield className="w-3.5 h-3.5" />
                   <span>{isSubmitting ? "Liberando..." : "Salvar & Liberar Acesso"}</span>
@@ -440,7 +439,7 @@ export const AdminSubscribersModal: React.FC<AdminSubscribersModalProps> = ({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Buscar por e-mail, nome ou plano..."
-                className="w-full pl-9 pr-4 py-2 bg-black/40 border border-white/10 rounded-xl text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-violet-500"
+                className="w-full pl-9 pr-4 py-2 bg-black/40 border border-white/10 rounded-full text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#702bf7] transition-colors"
               />
             </div>
             <span className="text-xs text-zinc-500 shrink-0">
@@ -464,11 +463,11 @@ export const AdminSubscribersModal: React.FC<AdminSubscribersModalProps> = ({
                 return (
                   <div
                     key={sub.email}
-                    className="p-4 rounded-2xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+                    className="p-4 rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/10 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
                   >
                     {/* Informações do Usuário */}
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-violet-900/50 to-fuchsia-900/50 border border-white/10 flex items-center justify-center font-bold text-sm text-violet-300 shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-[#702bf7]/20 border border-[#702bf7]/30 flex items-center justify-center font-bold text-xs text-[#c4b4ff] shrink-0 shadow-[0_0_12px_rgba(112,43,247,0.25)]">
                         {(sub.name || sub.email).substring(0, 2).toUpperCase()}
                       </div>
                       <div className="min-w-0">
@@ -477,11 +476,10 @@ export const AdminSubscribersModal: React.FC<AdminSubscribersModalProps> = ({
                             {sub.name || sub.email.split("@")[0]}
                           </span>
                           <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 ${
-                              isAtivo
+                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold flex items-center gap-1 ${isAtivo
                                 ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
                                 : "bg-red-500/10 text-red-400 border border-red-500/20"
-                            }`}
+                              }`}
                           >
                             <span className={`w-1.5 h-1.5 rounded-full ${isAtivo ? "bg-emerald-400" : "bg-red-400"}`} />
                             {isAtivo ? "Ativo" : "Bloqueado"}
@@ -496,11 +494,11 @@ export const AdminSubscribersModal: React.FC<AdminSubscribersModalProps> = ({
                     </div>
 
                     {/* Créditos e Ações */}
-                    <div className="flex items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-end shrink-0">
+                    <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end shrink-0">
                       {/* Badge de Créditos */}
-                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-500/20 bg-amber-500/10 text-amber-300">
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 text-amber-300">
                         <Zap className="w-3.5 h-3.5" />
-                        <span className="text-xs font-bold">
+                        <span className="text-xs font-semibold">
                           {sub.unlimited ? "Ilimitado" : `${sub.credits ?? 0} créditos`}
                         </span>
                       </div>
@@ -516,7 +514,7 @@ export const AdminSubscribersModal: React.FC<AdminSubscribersModalProps> = ({
                             addAmount: 50
                           })
                         }
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-violet-600 hover:border-violet-500 text-xs font-semibold text-zinc-300 hover:text-white transition-all cursor-pointer"
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-[#702bf7]/40 bg-[#702bf7]/15 hover:bg-[#702bf7] hover:text-white text-xs font-semibold text-[#c4b4ff] shadow-[0_0_12px_rgba(112,43,247,0.2)] transition-all cursor-pointer"
                         title="Adicionar mais créditos"
                       >
                         <Plus className="w-3.5 h-3.5" />
@@ -527,11 +525,10 @@ export const AdminSubscribersModal: React.FC<AdminSubscribersModalProps> = ({
                       <button
                         type="button"
                         onClick={() => handleToggleStatus(sub)}
-                        className={`px-2.5 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
-                          isAtivo
-                            ? "border-red-500/20 bg-red-500/10 text-red-400 hover:bg-red-500/20"
-                            : "border-emerald-500/20 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
-                        }`}
+                        className={`px-3 py-1.5 rounded-full border text-xs font-semibold transition-all cursor-pointer ${isAtivo
+                            ? "border-red-500/20 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white"
+                            : "border-emerald-500/20 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-white"
+                          }`}
                         title={isAtivo ? "Bloquear acesso" : "Reativar acesso"}
                       >
                         {isAtivo ? "Bloquear" : "Ativar"}
@@ -541,7 +538,7 @@ export const AdminSubscribersModal: React.FC<AdminSubscribersModalProps> = ({
                       <button
                         type="button"
                         onClick={() => handleDeleteSubscriber(sub.email)}
-                        className="p-1.5 rounded-xl border border-white/10 bg-white/[0.04] text-zinc-500 hover:text-red-400 hover:border-red-500/30 transition-all cursor-pointer"
+                        className="p-1.5 rounded-full border border-white/10 bg-white/[0.04] text-zinc-500 hover:text-red-400 hover:border-red-500/30 hover:bg-red-500/10 transition-all cursor-pointer"
                         title="Remover cliente"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -555,14 +552,14 @@ export const AdminSubscribersModal: React.FC<AdminSubscribersModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-white/10 flex items-center justify-between text-xs text-zinc-500 shrink-0 bg-black/40">
+        <div className="px-6 py-4 border-t border-white/[0.08] flex items-center justify-between text-xs text-zinc-500 shrink-0 bg-black/40">
           <span>
             Qualquer alteração entra em vigor instantaneamente em produção na Vercel e no R2.
           </span>
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 hover:text-white font-medium transition-all cursor-pointer"
+            className="px-5 py-2 rounded-full border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 hover:text-white font-medium text-xs transition-all cursor-pointer"
           >
             Fechar Painel
           </button>
@@ -571,9 +568,9 @@ export const AdminSubscribersModal: React.FC<AdminSubscribersModalProps> = ({
 
       {/* Modal Rápido de Adicionar Créditos */}
       {creditAdjustModal.isOpen && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-          <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#120f22] p-5 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/85 backdrop-blur-2xl animate-fade-in">
+          <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#0c0c0c]/98 p-5 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.9),0_0_50px_-15px_rgba(112,43,247,0.3)] space-y-4 text-white ring-1 ring-white/5">
+            <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
               <h4 className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-1.5">
                 <Zap className="w-3.5 h-3.5 text-amber-400" />
                 Adicionar Créditos
@@ -581,7 +578,7 @@ export const AdminSubscribersModal: React.FC<AdminSubscribersModalProps> = ({
               <button
                 type="button"
                 onClick={() => setCreditAdjustModal({ ...creditAdjustModal, isOpen: false })}
-                className="text-zinc-500 hover:text-white"
+                className="p-1 rounded-full text-zinc-400 hover:text-white hover:bg-white/5 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -605,11 +602,10 @@ export const AdminSubscribersModal: React.FC<AdminSubscribersModalProps> = ({
                     key={val}
                     type="button"
                     onClick={() => setCreditAdjustModal({ ...creditAdjustModal, addAmount: val })}
-                    className={`py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
-                      creditAdjustModal.addAmount === val
-                        ? "bg-violet-600 border-violet-500 text-white"
-                        : "border-white/10 bg-white/[0.04] text-zinc-400 hover:text-white"
-                    }`}
+                    className={`py-1.5 rounded-full border text-xs font-bold transition-all cursor-pointer ${creditAdjustModal.addAmount === val
+                        ? "bg-[#702bf7] border-[#702bf7] text-white shadow-[0_0_12px_rgba(112,43,247,0.4)]"
+                        : "border-white/10 bg-white/[0.04] text-zinc-400 hover:text-white hover:border-white/20"
+                      }`}
                   >
                     +{val}
                   </button>
@@ -623,7 +619,7 @@ export const AdminSubscribersModal: React.FC<AdminSubscribersModalProps> = ({
                 onChange={(e) =>
                   setCreditAdjustModal({ ...creditAdjustModal, addAmount: Number(e.target.value) })
                 }
-                className="w-full mt-2 px-3 py-2 bg-black/60 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-violet-500"
+                className="w-full mt-2 px-3 py-2 bg-black/60 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-[#702bf7]"
               />
             </div>
 
@@ -631,14 +627,14 @@ export const AdminSubscribersModal: React.FC<AdminSubscribersModalProps> = ({
               <button
                 type="button"
                 onClick={() => setCreditAdjustModal({ ...creditAdjustModal, isOpen: false })}
-                className="flex-1 py-2 rounded-xl border border-white/10 bg-white/[0.04] text-xs font-semibold text-zinc-400 hover:text-white cursor-pointer"
+                className="flex-1 py-2 rounded-full border border-white/10 bg-white/[0.04] text-xs font-semibold text-zinc-400 hover:text-white cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="button"
                 onClick={handleApplyCreditsAdjustment}
-                className="flex-1 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-xs font-bold text-white shadow-lg shadow-violet-600/30 cursor-pointer"
+                className="flex-1 py-2 rounded-full bg-[#702bf7] hover:bg-[#5e21d6] text-xs font-bold text-white shadow-[0_0_16px_rgba(112,43,247,0.4)] cursor-pointer"
               >
                 Confirmar +{creditAdjustModal.addAmount}
               </button>
