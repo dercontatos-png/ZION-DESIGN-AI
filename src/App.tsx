@@ -1144,6 +1144,8 @@ import { ProfileCompletePopup } from "./components/ProfileCompletePopup";
 import { EmDesenvolvimentoScreen } from "./components/EmDesenvolvimentoScreen";
 import { AdminSubscribersModal } from "./components/AdminSubscribersModal";
 import { DesignBuilderAdminSuite } from "./components/DesignBuilderAdminSuite";
+import { ClientPreviewBanner } from "./components/ClientPreviewBanner";
+import { getClientPreviewSession, ClientPreviewSession } from "./utils/clientPreviewService";
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<{ email: string; role: "admin" | "client" } | null>(() => {
@@ -1242,6 +1244,21 @@ export default function App() {
   const [isAdminSubscribersModalOpen, setIsAdminSubscribersModalOpen] = useState(false);
   const [isAdminSuiteOpen, setIsAdminSuiteOpen] = useState(false);
   const [adminActiveTab, setAdminActiveTab] = useState<any>("dashboard");
+  const [clientPreview, setClientPreview] = useState<ClientPreviewSession>(getClientPreviewSession);
+
+  useEffect(() => {
+    const handlePreviewChange = (e: any) => {
+      if (e?.detail) {
+        setClientPreview({ ...getClientPreviewSession(), ...e.detail });
+      } else {
+        setClientPreview(getClientPreviewSession());
+      }
+    };
+    window.addEventListener("zion:client_preview_changed", handlePreviewChange);
+    return () => {
+      window.removeEventListener("zion:client_preview_changed", handlePreviewChange);
+    };
+  }, []);
 
   useEffect(() => {
     // Sincronização direta de rota /admin 1:1 Oficial do DesignBuilder
@@ -4509,7 +4526,8 @@ ${textContent}`
   // ── CONTROLE DE ACESSO: ADMIN (der.contatos@gmail.com), LOCALHOST OU ASSINANTE ATIVO COM CRÉDITOS ──
   const isLocalhost = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" || window.location.search.includes("ws="));
   const isExclusiveAdmin = (currentUser && (currentUser.email?.toLowerCase().trim() === "der.contatos@gmail.com" || currentUser.role === "admin")) || isLocalhost;
-  const hasAppAccess = isExclusiveAdmin || subscriberStatus.isSubscriber || paywallDismissed;
+  const isCleanAdmin = isExclusiveAdmin && !clientPreview.active;
+  const hasAppAccess = isExclusiveAdmin || clientPreview.active || subscriberStatus.isSubscriber || paywallDismissed;
 
   if (!isAuthLoading && (!currentUser || !hasAppAccess) && !isLocalhost && !paywallDismissed) {
     return (
@@ -4605,6 +4623,15 @@ ${textContent}`
 
   return (
     <div className="flex flex-col h-screen h-[100dvh] bg-black text-zinc-100 overflow-hidden relative" style={{ fontFamily: "Montserrat, sans-serif" }}>
+      {/* Barra Superior do Modo Visão do Cliente Oficial */}
+      <ClientPreviewBanner
+        onReturnToAdmin={() => {
+          setAdminActiveTab("dashboard");
+          setIsAdminSuiteOpen(true);
+        }}
+        showToast={showToast}
+      />
+
       {isOffline && (
         <div className="absolute top-0 left-0 right-0 z-50 bg-red-500 text-white text-center py-2 text-sm font-medium flex items-center justify-center gap-2 animate-in slide-in-from-top-full shadow-lg shadow-red-500/20">
           <WifiOff size={16} />
@@ -4630,7 +4657,7 @@ ${textContent}`
       )}
 
       {/* Conteúdo Principal + Barra Lateral */}
-      <div className="flex h-screen h-[100dvh] mt-0 overflow-hidden relative w-full">
+      <div className="flex flex-1 min-h-0 mt-0 overflow-hidden relative w-full">
         
         {/* Menu Lateral Unificado Oficial: Design Builder Vitrine & Mobile Nav */}
         {activeTab !== "ai-tools" && (
@@ -4655,12 +4682,12 @@ ${textContent}`
               onOpenAdmin={() => { setAdminActiveTab("dashboard"); setIsAdminSuiteOpen(true); }}
               currentLang={currentLang}
               setLanguage={setLanguage}
-              userInitials={(myProfile?.name || currentUser?.email || "EQ").substring(0, 2).toUpperCase()}
-              userName={myProfile?.name || "Equipe Zion"}
-              userEmail={currentUser?.email || ""}
-              userCredits={typeof subscriberStatus.credits === "number" && subscriberStatus.credits !== 45 ? subscriberStatus.credits : 6612}
-              isUnlimited={false}
-              userPlan={subscriberStatus.plan || "Profissional (Vertex AI)"}
+              userInitials={clientPreview.active ? clientPreview.simulatedName.substring(0, 2).toUpperCase() : (myProfile?.name || currentUser?.email || "EQ").substring(0, 2).toUpperCase()}
+              userName={clientPreview.active ? clientPreview.simulatedName : (myProfile?.name || "Equipe Zion")}
+              userEmail={clientPreview.active ? clientPreview.simulatedEmail : (currentUser?.email || "")}
+              userCredits={clientPreview.active ? clientPreview.simulatedCredits : (typeof subscriberStatus.credits === "number" && subscriberStatus.credits !== 45 ? subscriberStatus.credits : 6612)}
+              isUnlimited={clientPreview.active ? clientPreview.simulatedUnlimited : false}
+              userPlan={clientPreview.active ? clientPreview.simulatedPlan : (subscriberStatus.plan || "Profissional (Vertex AI)")}
               onOpenProfile={() => setActiveTab("profile")}
               onSignOut={handleSignOut}
             />
@@ -4858,19 +4885,19 @@ ${textContent}`
                     <div className="py-3 flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-bold flex items-center justify-center text-sm">
-                          {(myProfile?.name || "R").substring(0, 1)}
+                          {(clientPreview.active ? clientPreview.simulatedName : (myProfile?.name || "R")).substring(0, 1)}
                         </div>
                         <div>
-                          <p className="text-xs font-bold text-white">{myProfile?.name || "Ricardo"}</p>
-                          <p className="text-[11px] text-zinc-500">{currentUser?.email || ""}</p>
+                          <p className="text-xs font-bold text-white">{clientPreview.active ? clientPreview.simulatedName : (myProfile?.name || "Ricardo")}</p>
+                          <p className="text-[11px] text-zinc-500">{clientPreview.active ? clientPreview.simulatedEmail : (currentUser?.email || "")}</p>
                         </div>
                       </div>
                       <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
-                        Proprietário / Admin
+                        {clientPreview.active ? clientPreview.simulatedPlan : "Proprietário / Admin"}
                       </span>
                     </div>
 
-                    {isExclusiveAdmin && (
+                    {isCleanAdmin && (
                       <div className="pt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-t border-white/5">
                         <div>
                           <p className="text-xs font-bold text-white flex items-center gap-1.5">
@@ -5563,12 +5590,12 @@ ${textContent}`
           {activeTab === "ai-tools" && (
             <DesignBuilder
               customApiKey={getActiveApiKey()}
-              myProfile={myProfile}
+              myProfile={clientPreview.active ? { name: clientPreview.simulatedName, email: clientPreview.simulatedEmail } : myProfile}
               onNavigateTab={(tab: string) => setActiveTab(tab)}
               activeMainTab={activeTab}
-              userEmail={myProfile?.email || currentUser?.email || ""}
-              userName={myProfile?.name || "Equipe Zion"}
-              userTokens={typeof subscriberStatus.credits === "number" && subscriberStatus.credits !== 45 ? subscriberStatus.credits : 6612}
+              userEmail={clientPreview.active ? clientPreview.simulatedEmail : (myProfile?.email || currentUser?.email || "")}
+              userName={clientPreview.active ? clientPreview.simulatedName : (myProfile?.name || "Equipe Zion")}
+              userTokens={clientPreview.active ? (clientPreview.simulatedUnlimited ? 999999 : clientPreview.simulatedCredits) : (typeof subscriberStatus.credits === "number" && subscriberStatus.credits !== 45 ? subscriberStatus.credits : 6612)}
             />
           )}
 

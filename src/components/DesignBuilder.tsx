@@ -13,6 +13,7 @@ import { useProjectStore } from "../store/useProjectStore";
 import { useGenerateImage } from "../hooks/useGenerateImage";
 import { downloadImage } from "../utils/downloadImage";
 import { checkAdminOrOpenPlan, getAuthHeaders, openPlanModal, performSignOut, getCurrentUser, UserProfile, getCurrentUserEmail, isUserAdmin } from "../utils/userAuth";
+import { isClientPreviewActive, getClientPreviewSession, ClientPreviewSession } from "../utils/clientPreviewService";
 import { AuthModal } from "./AuthModal";
 import { PublicEntryModal } from "./PublicEntryModal";
 import { NoCreditsModal } from "./NoCreditsModal";
@@ -125,7 +126,26 @@ const hasFotoDot = Boolean(
   );
   const hasSaidaDot = Boolean((store as any).aspectRatio || store.dimensao || store.resolucao);
   
+  const [clientPreview, setClientPreview] = useState<ClientPreviewSession>(getClientPreviewSession);
+
+  useEffect(() => {
+    const handlePreviewChange = (e: any) => {
+      if (e?.detail) {
+        setClientPreview({ ...getClientPreviewSession(), ...e.detail });
+      } else {
+        setClientPreview(getClientPreviewSession());
+      }
+    };
+    window.addEventListener("zion:client_preview_changed", handlePreviewChange);
+    return () => {
+      window.removeEventListener("zion:client_preview_changed", handlePreviewChange);
+    };
+  }, []);
+
   const realCredits = (() => {
+    if (clientPreview.active) {
+      return clientPreview.simulatedUnlimited ? 999999 : clientPreview.simulatedCredits;
+    }
     try {
       const s = localStorage.getItem("zion_real_credits");
       if (s !== null && !isNaN(Number(s)) && Number(s) > 100) return Number(s);
@@ -623,6 +643,7 @@ const hasFotoDot = Boolean(
     };
 
     const handleOpenAdmin = () => {
+      if (clientPreview.active) return;
       const email = (currentUser?.email || userEmail || getCurrentUserEmail()).toLowerCase().trim();
       if (email === "der.contatos@gmail.com" || email === "ricardo.jrsr.gov@gmail.com" || isUserAdmin()) {
         setIsAdminSubscribersOpen(true);
@@ -1335,6 +1356,7 @@ const hasFotoDot = Boolean(
             window.history.pushState({ path: "/projetos" }, "", "/projetos");
           }}
           onOpenAdmin={() => {
+            if (clientPreview.active) return;
             setIsAdminSubscribersOpen(true);
             if (onNavigateTab) onNavigateTab("admin");
           }}
@@ -1445,6 +1467,7 @@ const hasFotoDot = Boolean(
             window.history.pushState({ path: "/prompts" }, "", "/prompts");
           }}
           onOpenAdmin={() => {
+            if (clientPreview.active) return;
             setIsAdminSubscribersOpen(true);
             if (onNavigateTab) onNavigateTab("admin");
           }}
@@ -1590,6 +1613,7 @@ const hasFotoDot = Boolean(
           if (typeof window !== "undefined") window.history.pushState({ path: "/community" }, "", "/community");
         }}
         onOpenAdmin={() => {
+          if (clientPreview.active) return;
           setIsAdminSubscribersOpen(true);
           if (typeof window !== "undefined") {
             window.dispatchEvent(new CustomEvent("open-admin-suite", { detail: { tab: "dashboard" } }));

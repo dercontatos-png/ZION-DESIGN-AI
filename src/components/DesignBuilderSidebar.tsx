@@ -33,6 +33,7 @@ import {
 import { DesignBuilderSettingsModal } from "./DesignBuilderSettingsModal";
 import { DesignBuilderAdminSuite } from "./DesignBuilderAdminSuite";
 import { isUserAdmin } from "../utils/userAuth";
+import { getClientPreviewSession, ClientPreviewSession } from "../utils/clientPreviewService";
 
 export const AGENTS = [
   { slug: "ref", name: "REF", href: "/agent/ref", color: "rgb(139, 92, 246)" },
@@ -106,9 +107,21 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [creditState, setCreditState] = useState<CreditState>(getCreditState);
 
-  const userPlan = propUserPlan || "Profissional (Vertex AI)";
+  const [clientPreview, setClientPreview] = useState<ClientPreviewSession>(getClientPreviewSession);
+
+  useEffect(() => {
+    const handlePreviewChange = (e: any) => {
+      setClientPreview(getClientPreviewSession());
+    };
+    window.addEventListener("zion:client_preview_changed", handlePreviewChange);
+    return () => window.removeEventListener("zion:client_preview_changed", handlePreviewChange);
+  }, []);
+
+  const rawUserPlan = propUserPlan || "Profissional (Vertex AI)";
+  const userPlan = clientPreview.active ? clientPreview.simulatedPlan : rawUserPlan;
   const cleanEmail = (userEmail || "").toLowerCase().trim();
-  const isCleanAdmin = cleanEmail === "der.contatos@gmail.com" || cleanEmail === "ricardo.jrsr.gov@gmail.com" || isUserAdmin() || (typeof window !== "undefined" && (window.location.search.includes("admin=true") || localStorage.getItem("zion_admin_override") === "true"));
+  const isRealAdmin = cleanEmail === "der.contatos@gmail.com" || cleanEmail === "ricardo.jrsr.gov@gmail.com" || isUserAdmin() || (typeof window !== "undefined" && (window.location.search.includes("admin=true") || localStorage.getItem("zion_admin_override") === "true"));
+  const isCleanAdmin = isRealAdmin && !clientPreview.active;
   const [isAdminSuiteOpen, setIsAdminSuiteOpen] = useState(false);
   const [adminActiveTab, setAdminActiveTab] = useState<any>("dashboard");
   const [adminUnreadReports, setAdminUnreadReports] = useState(0);
@@ -178,7 +191,9 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
     ? Number(storedReal)
     : (typeof propUserCredits === "number" && propUserCredits > 100 && propUserCredits !== 999999 ? propUserCredits : 6612);
 
-  const effectiveCredits = realCredits;
+  const effectiveCredits = clientPreview.active
+    ? (clientPreview.simulatedUnlimited ? 999999 : clientPreview.simulatedCredits)
+    : realCredits;
 
   const handleHomeClick = () => {
     setIsAdminSuiteOpen(false);

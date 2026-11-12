@@ -42,6 +42,7 @@ import {
   ArrowLeft
 } from "lucide-react";
 import { Subscriber } from "../utils/subscriberService";
+import { startClientPreview } from "../utils/clientPreviewService";
 
 interface AdminSuiteProps {
   isOpen: boolean;
@@ -472,6 +473,25 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              startClientPreview({
+                simulatedEmail: "cliente.pro@zion.ai",
+                simulatedName: "Designer Pro (Simulado)",
+                simulatedPlan: "Plano Pro",
+                simulatedCredits: 500,
+                simulatedUnlimited: false
+              });
+              showToast?.("👁️ Modo Visão do Cliente ativado!", "info");
+              handleClose();
+            }}
+            className="flex h-9 items-center gap-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 text-xs font-semibold text-amber-300 hover:bg-amber-500/20 hover:text-white transition-colors cursor-pointer shadow-md shadow-amber-500/10"
+            title="Visualizar a plataforma exatamente como o cliente vê"
+          >
+            <Eye className="h-3.5 w-3.5 text-amber-400" />
+            <span className="hidden sm:inline">Visão do Cliente</span>
+          </button>
           <button
             type="button"
             onClick={() => {
@@ -1068,6 +1088,25 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                           </td>
                           <td className="px-4 py-3 text-right">
                             <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  startClientPreview({
+                                    simulatedEmail: sub.email,
+                                    simulatedName: sub.name || sub.email.split("@")[0],
+                                    simulatedPlan: sub.plan || "Plano Pro",
+                                    simulatedCredits: sub.credits || 0,
+                                    simulatedUnlimited: !!sub.unlimited
+                                  });
+                                  showToast?.(`👁️ Visualizando como ${sub.name || sub.email} (${sub.plan})!`, "info");
+                                  handleClose();
+                                }}
+                                className="flex items-center gap-1 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[11px] font-semibold text-amber-300 hover:bg-amber-500 hover:text-white transition-colors cursor-pointer"
+                                title={`Simular visão deste cliente (${sub.email})`}
+                              >
+                                <Eye className="h-3 w-3" />
+                                <span className="hidden sm:inline">Ver como</span>
+                              </button>
                               <button
                                 type="button"
                                 onClick={async () => {

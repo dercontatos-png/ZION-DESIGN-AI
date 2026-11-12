@@ -1,3 +1,5 @@
+import { isClientPreviewActive, getClientPreviewSession } from "./clientPreviewService";
+
 export interface UserProfile {
   email: string;
   name: string;
@@ -10,6 +12,18 @@ export const ADMIN_EMAIL = "der.contatos@gmail.com";
 export function getCurrentUser(): UserProfile | null {
   try {
     if (typeof window !== "undefined") {
+      // Se o modo Visão do Cliente estiver ativo, retorna o perfil simulado do cliente
+      if (isClientPreviewActive()) {
+        const preview = getClientPreviewSession();
+        const cleanName = preview.simulatedName || "Cliente";
+        return {
+          email: preview.simulatedEmail || "cliente@designbuilder.co",
+          name: cleanName,
+          role: "client",
+          initials: cleanName.slice(0, 2).toUpperCase()
+        };
+      }
+
       const isLoggedOut =
         sessionStorage.getItem("db_explicitly_logged_out") === "true" ||
         localStorage.getItem("zion_logged_out") === "true";
@@ -55,6 +69,7 @@ export function getCurrentUser(): UserProfile | null {
 
 export function getCurrentUserRole(): "admin" | "client" {
   try {
+    if (isClientPreviewActive()) return "client";
     const user = getCurrentUser();
     if (user) return user.role;
   } catch (e) {}
@@ -71,6 +86,7 @@ export function getCurrentUserEmail(): string {
 
 export function isUserAdmin(): boolean {
   try {
+    if (isClientPreviewActive()) return false;
     const user = getCurrentUser();
     if (!user) return false;
     const email = (user.email || "").toLowerCase().trim();
