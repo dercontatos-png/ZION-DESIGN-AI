@@ -73,14 +73,14 @@ export const ClientPreviewBanner: React.FC<ClientPreviewBannerProps> = ({
     <div
       role="region"
       aria-label="Barra de visualização do cliente"
-      className="fixed top-3 left-1/2 -translate-x-1/2 z-[99999] pointer-events-auto flex flex-nowrap items-center whitespace-nowrap gap-2 sm:gap-3 rounded-full border border-white/10 bg-[#090611]/95 px-3 py-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.7)] backdrop-blur-2xl ring-1 ring-white/10 animate-in fade-in slide-in-from-top-2 duration-200 select-none max-w-[calc(100vw-24px)]"
+      className="fixed top-2.5 sm:top-3 left-1/2 -translate-x-1/2 z-[99999] pointer-events-auto flex flex-nowrap items-center whitespace-nowrap gap-1.5 sm:gap-2.5 rounded-full border border-white/10 bg-[#090611]/95 px-2.5 sm:px-3 py-1 sm:py-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.75)] backdrop-blur-2xl ring-1 ring-white/10 animate-in fade-in slide-in-from-top-2 duration-200 select-none max-w-[calc(100vw-16px)] sm:max-w-[calc(100vw-24px)]"
     >
       {/* Lado Esquerdo: Identificação */}
       <div className="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
         <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#702bf7]/20 text-[#a855f7] ring-1 ring-[#702bf7]/40">
           <Eye className="h-3 w-3 animate-pulse" />
         </div>
-        <span className="font-semibold text-white text-[11px] shrink-0 whitespace-nowrap hidden xs:inline">
+        <span className="font-semibold text-white text-[11px] shrink-0 whitespace-nowrap hidden md:inline">
           Visão do Cliente
         </span>
         <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-medium text-zinc-300 whitespace-nowrap">
@@ -100,7 +100,7 @@ export const ClientPreviewBanner: React.FC<ClientPreviewBannerProps> = ({
           <button
             type="button"
             onClick={() => setIsPlanDropdownOpen(!isPlanDropdownOpen)}
-            className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-medium text-zinc-300 hover:bg-white/10 hover:text-white transition-all cursor-pointer shrink-0 whitespace-nowrap"
+            className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 sm:px-2.5 py-1 text-[11px] font-medium text-zinc-300 hover:bg-white/10 hover:text-white transition-all cursor-pointer shrink-0 whitespace-nowrap"
           >
             <Zap className="h-3 w-3 text-[#a855f7] shrink-0" />
             <span className="text-zinc-400 text-[10px] hidden sm:inline">Plano:</span>
@@ -165,10 +165,12 @@ export const ClientPreviewBanner: React.FC<ClientPreviewBannerProps> = ({
         <button
           type="button"
           onClick={handleExit}
-          className="flex items-center gap-1 rounded-full bg-[#702bf7] px-3 py-1 text-[11px] font-semibold text-white shadow-[0_0_14px_rgba(112,43,247,0.45)] hover:bg-[#5e21d6] transition-all cursor-pointer shrink-0 whitespace-nowrap"
+          className="flex items-center gap-1 rounded-full bg-[#702bf7] px-2.5 sm:px-3 py-1 text-[11px] font-semibold text-white shadow-[0_0_14px_rgba(112,43,247,0.45)] hover:bg-[#5e21d6] transition-all cursor-pointer shrink-0 whitespace-nowrap active:scale-95"
+          title="Sair da simulação e voltar ao painel administrativo"
         >
           <Shield className="h-3 w-3 shrink-0" />
-          <span className="whitespace-nowrap">Voltar ao Admin</span>
+          <span className="hidden sm:inline whitespace-nowrap">Voltar ao Admin</span>
+          <span className="sm:hidden whitespace-nowrap">Admin</span>
         </button>
       </div>
     </div>

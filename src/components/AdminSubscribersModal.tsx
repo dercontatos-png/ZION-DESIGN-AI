@@ -236,81 +236,90 @@ export const AdminSubscribersModal: React.FC<AdminSubscribersModalProps> = ({
         <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#702bf7] to-transparent" />
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.08] bg-[#090611]/80 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#702bf7]/20 text-[#a855f7] border border-[#702bf7]/30 flex items-center justify-center shadow-[0_0_16px_rgba(112,43,247,0.3)]">
-              <Users className="w-5 h-5" />
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-5 border-b border-white/[0.08] bg-[#090611]/80 shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-[#702bf7]/20 text-[#a855f7] border border-[#702bf7]/30 flex items-center justify-center shadow-[0_0_16px_rgba(112,43,247,0.3)] shrink-0">
+              <Users className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold tracking-tight text-white">
-                  Controle de Clientes & Assinaturas
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <h2 className="text-sm sm:text-base font-bold tracking-tight text-white truncate">
+                  Controle de Assinaturas
                 </h2>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-[#702bf7]/15 text-[#c4b4ff] border border-[#702bf7]/30 shadow-[0_0_10px_rgba(112,43,247,0.2)]">
-                  Painel Admin
+                <span className="px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-semibold bg-[#702bf7]/15 text-[#c4b4ff] border border-[#702bf7]/30 shadow-[0_0_10px_rgba(112,43,247,0.2)] shrink-0">
+                  Admin
                 </span>
               </div>
-              <p className="text-xs text-zinc-400">
+              <p className="text-[11px] sm:text-xs text-zinc-400 hidden sm:block truncate">
                 Libere acesso, defina créditos e gerencie quem pode utilizar o Zion Design AI.
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               type="button"
               onClick={loadSubscribers}
               disabled={isLoading}
-              className="p-2 rounded-full border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white transition-all cursor-pointer"
+              className="p-1.5 sm:p-2 rounded-full border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white transition-all cursor-pointer"
               title="Atualizar lista"
             >
-              <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin text-[#a855f7]" : ""}`} />
+              <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isLoading ? "animate-spin text-[#a855f7]" : ""}`} />
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="p-2 rounded-full border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white transition-all cursor-pointer"
+              className="p-1.5 sm:p-2 rounded-full border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white transition-all cursor-pointer"
             >
-              <X className="w-4 h-4" />
+              <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
           </div>
         </div>
 
         {/* Stat Badges Strip */}
-        <div className="grid grid-cols-3 gap-3 px-6 py-3.5 bg-black/40 border-b border-white/[0.06] shrink-0 text-xs">
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-[#702bf7]/15 border border-[#702bf7]/30 flex items-center justify-center text-[#a855f7]">
-              <Users className="w-3.5 h-3.5" />
+        <div className="grid grid-cols-3 gap-2 sm:gap-3 px-3 sm:px-6 py-2.5 sm:py-3.5 bg-black/40 border-b border-white/[0.06] shrink-0 text-xs">
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-[#702bf7]/15 border border-[#702bf7]/30 flex items-center justify-center text-[#a855f7] shrink-0">
+              <Users className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
             </div>
-            <div>
-              <span className="text-[11px] text-zinc-400 block">Total Cadastrados</span>
-              <span className="font-bold text-white text-sm">{subscribers.length}</span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-            </div>
-            <div>
-              <span className="text-[11px] text-zinc-400 block">Assinantes Ativos</span>
-              <span className="font-bold text-emerald-400 text-sm">{totalAtivos}</span>
+            <div className="min-w-0">
+              <span className="text-[10px] sm:text-[11px] text-zinc-400 block truncate">
+                <span className="sm:hidden">Cadastros</span>
+                <span className="hidden sm:inline">Total Cadastrados</span>
+              </span>
+              <span className="font-bold text-white text-xs sm:text-sm">{subscribers.length}</span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
-              <Zap className="w-3.5 h-3.5" />
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+              <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
             </div>
-            <div>
-              <span className="text-[11px] text-zinc-400 block">Créditos em Circulação</span>
-              <span className="font-bold text-amber-300 text-sm">{totalCreditos}</span>
+            <div className="min-w-0">
+              <span className="text-[10px] sm:text-[11px] text-zinc-400 block truncate">
+                <span className="sm:hidden">Ativos</span>
+                <span className="hidden sm:inline">Assinantes Ativos</span>
+              </span>
+              <span className="font-bold text-emerald-400 text-xs sm:text-sm">{totalAtivos}</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
+              <Zap className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[10px] sm:text-[11px] text-zinc-400 block truncate">
+                <span className="sm:hidden">Créditos</span>
+                <span className="hidden sm:inline">Em Circulação</span>
+              </span>
+              <span className="font-bold text-amber-300 text-xs sm:text-sm">{totalCreditos}</span>
             </div>
           </div>
         </div>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-3.5 sm:p-6 space-y-4 sm:space-y-6 custom-scrollbar">
 
           {/* 1. Form de Adicionar Novo Assinante */}
           <div className="p-5 rounded-2xl border border-white/[0.08] bg-white/[0.02] shadow-inner">
@@ -494,12 +503,12 @@ export const AdminSubscribersModal: React.FC<AdminSubscribersModalProps> = ({
                     </div>
 
                     {/* Créditos e Ações */}
-                    <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end shrink-0">
+                    <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-between sm:justify-end shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
                       {/* Badge de Créditos */}
-                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 text-amber-300">
+                      <div className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 text-amber-300">
                         <Zap className="w-3.5 h-3.5" />
-                        <span className="text-xs font-semibold">
-                          {sub.unlimited ? "Ilimitado" : `${sub.credits ?? 0} créditos`}
+                        <span className="text-[11px] sm:text-xs font-semibold">
+                          {sub.unlimited ? "Ilimitado" : `${sub.credits ?? 0} cr`}
                         </span>
                       </div>
 
@@ -514,7 +523,7 @@ export const AdminSubscribersModal: React.FC<AdminSubscribersModalProps> = ({
                             addAmount: 50
                           })
                         }
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-[#702bf7]/40 bg-[#702bf7]/15 hover:bg-[#702bf7] hover:text-white text-xs font-semibold text-[#c4b4ff] shadow-[0_0_12px_rgba(112,43,247,0.2)] transition-all cursor-pointer"
+                        className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full border border-[#702bf7]/40 bg-[#702bf7]/15 hover:bg-[#702bf7] hover:text-white text-[11px] sm:text-xs font-semibold text-[#c4b4ff] shadow-[0_0_12px_rgba(112,43,247,0.2)] transition-all cursor-pointer"
                         title="Adicionar mais créditos"
                       >
                         <Plus className="w-3.5 h-3.5" />
@@ -525,7 +534,7 @@ export const AdminSubscribersModal: React.FC<AdminSubscribersModalProps> = ({
                       <button
                         type="button"
                         onClick={() => handleToggleStatus(sub)}
-                        className={`px-3 py-1.5 rounded-full border text-xs font-semibold transition-all cursor-pointer ${isAtivo
+                        className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full border text-[11px] sm:text-xs font-semibold transition-all cursor-pointer ${isAtivo
                             ? "border-red-500/20 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white"
                             : "border-emerald-500/20 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-white"
                           }`}
@@ -538,7 +547,7 @@ export const AdminSubscribersModal: React.FC<AdminSubscribersModalProps> = ({
                       <button
                         type="button"
                         onClick={() => handleDeleteSubscriber(sub.email)}
-                        className="p-1.5 rounded-full border border-white/10 bg-white/[0.04] text-zinc-500 hover:text-red-400 hover:border-red-500/30 hover:bg-red-500/10 transition-all cursor-pointer"
+                        className="p-1 sm:p-1.5 rounded-full border border-white/10 bg-white/[0.04] text-zinc-500 hover:text-red-400 hover:border-red-500/30 hover:bg-red-500/10 transition-all cursor-pointer"
                         title="Remover cliente"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -552,7 +561,7 @@ export const AdminSubscribersModal: React.FC<AdminSubscribersModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-white/[0.08] flex items-center justify-between text-xs text-zinc-500 shrink-0 bg-black/40">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-white/[0.08] flex flex-col sm:flex-row items-center justify-between gap-2.5 text-[11px] sm:text-xs text-zinc-500 shrink-0 bg-black/40 text-center sm:text-left">
           <span>
             Qualquer alteração entra em vigor instantaneamente em produção na Vercel e no R2.
           </span>

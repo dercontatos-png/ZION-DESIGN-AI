@@ -446,33 +446,33 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
       className="fixed inset-0 z-40 flex flex-col h-[100dvh] w-screen overflow-hidden bg-[#090611] text-left lg:pl-[72px] animate-in fade-in duration-150 font-sans"
     >
       {/* Top Header */}
-      <header className="flex shrink-0 items-center justify-between border-b border-white/[0.08] px-6 py-3.5 bg-[#090611]/90 backdrop-blur-xl">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#702bf7]/20 text-[#a855f7] border border-[#702bf7]/30 shadow-[0_0_16px_rgba(112,43,247,0.3)]">
-            <Shield className="h-5 w-5" />
+      <header className="flex shrink-0 items-center justify-between border-b border-white/[0.08] px-3 sm:px-6 py-2.5 sm:py-3.5 bg-[#090611]/90 backdrop-blur-xl">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className="flex h-8 w-8 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-[#702bf7]/20 text-[#a855f7] border border-[#702bf7]/30 shadow-[0_0_16px_rgba(112,43,247,0.3)]">
+            <Shield className="h-4 w-4 sm:h-5 sm:w-5" />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-base font-bold text-white tracking-tight">
-                DesignBuilder Admin Master Suite
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <h1 className="text-sm sm:text-base font-bold text-white tracking-tight truncate">
+                Admin Master Suite
               </h1>
-              <span className="rounded-full bg-[#702bf7]/15 border border-[#702bf7]/30 px-2.5 py-0.5 text-[10px] font-semibold text-[#c4b4ff] shadow-[0_0_10px_rgba(112,43,247,0.2)]">
+              <span className="hidden sm:inline-block rounded-full bg-[#702bf7]/15 border border-[#702bf7]/30 px-2.5 py-0.5 text-[10px] font-semibold text-[#c4b4ff] shadow-[0_0_10px_rgba(112,43,247,0.2)]">
                 ROOT / SUPERADMIN
               </span>
               {isLiveActive && (
                 <span className="flex items-center gap-1 rounded-full bg-red-500/20 border border-red-500/40 px-2 py-0.5 text-[10px] font-bold text-red-400 animate-pulse">
                   <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
-                  LIVE ON AIR
+                  LIVE
                 </span>
               )}
             </div>
-            <p className="text-xs text-zinc-400">
+            <p className="text-[11px] sm:text-xs text-zinc-400 hidden sm:block truncate">
               Painel Oficial de Controle, Gestão de Clientes, Métricas e Políticas de IA 1:1
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <button
             type="button"
             onClick={() => {
@@ -486,11 +486,12 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
               showToast?.("👁️ Modo Visão do Cliente ativado!", "info");
               handleClose();
             }}
-            className="flex h-8 items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3.5 text-xs font-medium text-zinc-300 hover:border-[#702bf7]/40 hover:bg-[#702bf7]/15 hover:text-white transition-all cursor-pointer shadow-sm"
+            className="flex h-8 items-center gap-1 sm:gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 sm:px-3.5 text-xs font-medium text-zinc-300 hover:border-[#702bf7]/40 hover:bg-[#702bf7]/15 hover:text-white transition-all cursor-pointer shadow-sm"
             title="Visualizar a plataforma exatamente como o cliente vê"
           >
             <Eye className="h-3.5 w-3.5 text-[#a855f7]" />
-            <span className="hidden sm:inline">Visão do Cliente</span>
+            <span className="hidden md:inline">Visão do Cliente</span>
+            <span className="md:hidden text-[11px]">Cliente</span>
           </button>
           <button
             type="button"
@@ -505,25 +506,27 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
               loadHydraObjectives();
               showToast?.("Todos os dados foram atualizados!", "info");
             }}
-            className="flex h-8 items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 text-xs font-medium text-zinc-300 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
+            className="flex h-8 items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 sm:px-3 text-xs font-medium text-zinc-300 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
+            title="Atualizar dados"
           >
             <RefreshCw className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Atualizar</span>
+            <span className="hidden lg:inline">Atualizar</span>
           </button>
           <button
             type="button"
             onClick={handleClose}
-            className="flex h-8 items-center gap-1.5 rounded-full bg-[#702bf7] px-4 text-xs font-semibold text-white hover:bg-[#5e21d6] shadow-[0_0_16px_rgba(112,43,247,0.4)] transition-all cursor-pointer"
+            className="flex h-8 items-center gap-1 sm:gap-1.5 rounded-full bg-[#702bf7] px-3 sm:px-4 text-xs font-semibold text-white hover:bg-[#5e21d6] shadow-[0_0_16px_rgba(112,43,247,0.4)] transition-all cursor-pointer"
             title="Voltar ao estúdio"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
-            <span>Voltar ao App</span>
+            <span className="hidden sm:inline">Voltar ao App</span>
+            <span className="sm:hidden">Sair</span>
           </button>
         </div>
       </header>
 
       {/* Navigation Tabs Bar */}
-      <div className="flex shrink-0 items-center gap-1.5 border-b border-white/[0.06] bg-[#0c0c0c]/90 px-6 py-2.5 overflow-x-auto scrollbar-hide backdrop-blur-xl">
+      <div className="flex shrink-0 items-center gap-1 sm:gap-1.5 border-b border-white/[0.06] bg-[#0c0c0c]/90 px-3 sm:px-6 py-2 sm:py-2.5 overflow-x-auto scrollbar-hide backdrop-blur-xl">
         {[
           { id: "dashboard", label: "Dashboard", icon: BarChart3 },
           { id: "agents", label: "Política de IA", icon: Bot },
@@ -541,7 +544,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
               key={tab.id}
               type="button"
               onClick={() => handleSelectTab(tab.id as any)}
-              className={`flex shrink-0 items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
+              className={`flex shrink-0 items-center gap-1.5 sm:gap-2 rounded-full px-3 sm:px-4 py-1 sm:py-1.5 text-[11px] sm:text-xs font-semibold transition-all cursor-pointer ${
                 isActive
                   ? "bg-[#702bf7] text-white shadow-[0_0_16px_rgba(112,43,247,0.45)]"
                   : "text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-200"
@@ -559,8 +562,8 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
         })}
       </div>
 
-        {/* Content Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      {/* Content Body */}
+      <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4 sm:space-y-6">
           
           {/* ══════════════════════════════════════════════════
               ── 1. DASHBOARD ──
@@ -1032,8 +1035,8 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                   <h3 className="text-sm font-bold text-white">Gestão de Clientes e Assinaturas (SaaS)</h3>
                   <p className="text-xs text-zinc-400">Controle permissões de acesso, recarga de saldo e status dos planos</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="relative w-60">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+                  <div className="relative flex-1 sm:w-60">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-500" />
                     <input
                       type="text"
@@ -1046,7 +1049,7 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                   <button
                     type="button"
                     onClick={() => setIsAddSubOpen(true)}
-                    className="flex items-center gap-1.5 rounded-full bg-[#702bf7] hover:bg-[#5e21d6] px-4 py-1.5 text-xs font-semibold text-white transition-all shadow-[0_0_16px_rgba(112,43,247,0.4)] cursor-pointer active:scale-[0.98]"
+                    className="flex items-center justify-center gap-1.5 rounded-full bg-[#702bf7] hover:bg-[#5e21d6] px-4 py-1.5 text-xs font-semibold text-white transition-all shadow-[0_0_16px_rgba(112,43,247,0.4)] cursor-pointer active:scale-[0.98]"
                   >
                     <Plus className="h-3.5 w-3.5" />
                     <span>Novo Assinante</span>
@@ -1054,8 +1057,86 @@ export const DesignBuilderAdminSuite: React.FC<AdminSuiteProps> = ({
                 </div>
               </div>
 
-              {/* Tabela de Assinantes */}
-              <div className="overflow-x-auto rounded-2xl border border-white/10 bg-zinc-900/30">
+              {/* Mobile Subscribers Cards (<md) */}
+              <div className="md:hidden space-y-2.5">
+                {subscribers
+                  .filter((s) => s.email.toLowerCase().includes(searchSub.toLowerCase()) || (s.name || "").toLowerCase().includes(searchSub.toLowerCase()))
+                  .map((sub) => (
+                    <div key={sub.email} className="rounded-2xl border border-white/[0.08] bg-[#0c0c0c]/80 p-3.5 space-y-2.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="font-semibold text-white text-xs truncate">{sub.name || sub.email.split("@")[0]}</div>
+                          <div className="text-[11px] text-zinc-400 truncate">{sub.email}</div>
+                        </div>
+                        <span className="rounded-full bg-emerald-500/15 text-emerald-400 text-[10px] font-semibold px-2 py-0.5 border border-emerald-500/30 shrink-0">
+                          {sub.status || "Ativo"}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs pt-1 border-t border-white/5">
+                        <span className="text-[#c4b4ff] font-medium text-[11px]">{sub.plan || "Plano Pro"}</span>
+                        <span className="font-mono font-bold text-emerald-400 text-xs">
+                          {sub.unlimited ? "∞ Ilimitado" : `${(sub.credits || 0).toLocaleString("pt-BR")} cr`}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-2 pt-1 border-t border-white/5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            startClientPreview({
+                              simulatedEmail: sub.email,
+                              simulatedName: sub.name || sub.email.split("@")[0],
+                              simulatedPlan: sub.plan || "Plano Pro",
+                              simulatedCredits: sub.credits || 0,
+                              simulatedUnlimited: !!sub.unlimited
+                            });
+                            showToast?.(`👁️ Visualizando como ${sub.name || sub.email}!`, "info");
+                            handleClose();
+                          }}
+                          className="flex-1 flex items-center justify-center gap-1 rounded-full border border-white/10 bg-white/5 py-1.5 text-[11px] font-medium text-zinc-300 hover:border-[#702bf7]/40 hover:bg-[#702bf7]/15 hover:text-white"
+                        >
+                          <Eye className="h-3 w-3 text-[#a855f7]" />
+                          <span>Ver como</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const addAmount = 500;
+                            try {
+                              await fetch("/api/admin/subscribers", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                  adminEmail: adminEmail || "der.contatos@gmail.com",
+                                  email: sub.email,
+                                  name: sub.name,
+                                  credits: (sub.credits || 0) + addAmount,
+                                  status: "ativo",
+                                  plan: sub.plan
+                                })
+                              });
+                              loadSubscribers();
+                              showToast?.(`+${addAmount} créditos adicionados!`, "success");
+                            } catch (_) {}
+                          }}
+                          className="flex-1 rounded-full border border-[#702bf7]/40 bg-[#702bf7]/15 py-1.5 text-[11px] font-semibold text-[#c4b4ff] hover:bg-[#702bf7] hover:text-white text-center shadow-[0_0_10px_rgba(112,43,247,0.2)]"
+                        >
+                          +500 cr
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteSubscriber(sub.email)}
+                          className="rounded-full bg-red-500/10 text-red-400 p-2 hover:bg-red-500 hover:text-white shrink-0"
+                          title="Excluir assinante"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+
+              {/* Tabela Desktop de Assinantes (>=md) */}
+              <div className="hidden md:block overflow-x-auto rounded-2xl border border-white/10 bg-zinc-900/30">
                 <table className="w-full text-left text-xs text-zinc-300">
                   <thead className="border-b border-white/10 bg-zinc-950/50 text-[11px] uppercase tracking-wider text-zinc-400">
                     <tr>
