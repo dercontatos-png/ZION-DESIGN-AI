@@ -1955,6 +1955,18 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
         ? await optimizeBase64Image(refPhotoBase64, 1536, 0.88)
         : (optRefList[0] || "");
 
+      const referenceImagesMeta = referenceImages.map((img, idx) => ({
+        index: idx + 1,
+        desc: img.desc?.trim() || "",
+        url: optRefList[idx] || img.url
+      }));
+
+      const subjectImagesMeta = subjectImages.map((img, idx) => ({
+        index: idx + 1,
+        desc: img.desc?.trim() || "",
+        url: optSubjectList[idx] || img.url
+      }));
+
       const apiKey = localStorage.getItem("custom_gemini_api_key") || "";
       const res = await fetch("/api/gerar", {
         method: "POST",
@@ -1965,7 +1977,9 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
           agent_slug: "ref-builder",
           base64DoSujeito: optSubject,
           sujeitosBase64List: optSubjectList.length > 0 ? optSubjectList : (optSubject ? [optSubject] : []),
+          subjectImagesMeta,
           referenciasEstilo: optRefList.length > 0 ? optRefList : (optPrimaryRef ? [optPrimaryRef] : []),
+          referenceImagesMeta,
           designRefBase64: optPrimaryRef || "",
           designRefsList: optRefList.length > 1 ? optRefList.slice(1) : (optPrimaryRef ? [optPrimaryRef] : []),
           logoBase64: assetImages[0]?.url || assetsPhotoBase64 || "",

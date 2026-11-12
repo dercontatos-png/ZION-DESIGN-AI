@@ -1,23 +1,10 @@
 [
   {
-    "id": "img_1794525403523_z6qf5",
+    "id": "img_1794526460839_528mu",
     "status": "done",
-    "result_url": "/generated-images/img_1794525403523_z6qf5.png",
-    "thumbnail_url": "/generated-images/img_1794525403523_z6qf5.png",
-    "created_at": "2026-11-12T23:16:43.546Z",
-    "agent_slug": "design-builder1-2",
-    "dimensions": "4:5",
-    "form_data": {
-      "quality": "4K",
-      "dimensions": "4:5"
-    }
-  },
-  {
-    "id": "img_1794525324178_tdw2n",
-    "status": "done",
-    "result_url": "/generated-images/img_1794525324178_tdw2n.png",
-    "thumbnail_url": "/generated-images/img_1794525324178_tdw2n.png",
-    "created_at": "2026-11-12T23:15:24.180Z",
+    "result_url": "/generated-images/img_1794526460839_528mu.png",
+    "thumbnail_url": "/generated-images/img_1794526460839_528mu.png",
+    "created_at": "2026-11-12T23:34:20.842Z",
     "agent_slug": "design-builder1-2",
     "dimensions": "4:5",
     "form_data": {

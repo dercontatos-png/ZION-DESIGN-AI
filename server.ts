@@ -9276,15 +9276,27 @@ MANDATORY REFORMATTING RULES:
         if (designRefBase64) addImagePart(designRefBase64, "Referência de Design Auxiliar");
         if (logoBase64) addImagePart(logoBase64, "Referência de Logotipo Oficial");
       } else if (isRefBuilder) {
-        // Função inteligente para extrair comandos negativos e exclusões do usuário (Ex: "não colocar X", "sem Y", "tirar Z")
+        // =========================================================================
+        // UNIVERSAL SOVEREIGN USER DIRECTIVE & MULTI-REFERENCE DISAMBIGUATION ENGINE
+        // =========================================================================
+        const combinedUserText = [
+          req.body.additionalPrompt,
+          promptTraduzido,
+          req.body.editInstruction,
+          req.body.prompt,
+          req.body.userNotes,
+          req.body.negativePrompt
+        ].filter(Boolean).join("\n");
+
+        // 1. EXTRACT NEGATIVE EXCLUSIONS (SUBTRACTIONS: "não colocar X", "sem Y", "tirar Z", etc.)
         const extractNegativeExclusions = (text: string): { exclusions: string[]; hasExclusions: boolean } => {
           if (!text) return { exclusions: [], hasExclusions: false };
           const exclusions: string[] = [];
           const patterns = [
-            /n[aã]o\s+(?:coloque|colocar|ponha|p[oô]r|bota|botar|use|usar|adicione|adicionar|inclua|incluir|queira|quero|deve\s+ter)\s+([^.,;:\n]+)/gi,
-            /sem\s+(?:o\s+|a\s+|os\s+|as\s+|nenhum\s+|nenhuma\s+|nada\s+de\s+)?([^.,;:\n]+)/gi,
-            /(?:tirar|tire|remover|remova|retirar|retire|eliminar|elimine|deletar|delete)\s+(?:o\s+|a\s+|os\s+|as\s+)?([^.,;:\n]+)/gi,
-            /(?:without|do\s+not\s+include|do\s+not\s+put|do\s+not\s+add|do\s+not\s+use|no)\s+([^.,;:\n]+)/gi
+            /n[aã]o\s+(?:coloque|colocar|ponha|p[oô]r|bota|botar|use|usar|adicione|adicionar|inclua|incluir|queira|quero|deve\s+ter|precisa\s+ter|deixar|deixe|gerar|gere)\s+([^.,;:\n]+)/gi,
+            /sem\s+(?:o\s+|a\s+|os\s+|as\s+|nenhum\s+|nenhuma\s+|nada\s+de\s+|qualquer\s+)?([^.,;:\n]+)/gi,
+            /(?:tirar|tire|remover|remova|retirar|retire|eliminar|elimine|deletar|delete|apagar|apague|excluir|exclua|dispenso|dispensar)\s+(?:o\s+|a\s+|os\s+|as\s+)?([^.,;:\n]+)/gi,
+            /(?:without|do\s+not\s+include|do\s+not\s+put|do\s+not\s+add|do\s+not\s+use|no|omit|remove)\s+([^.,;:\n]+)/gi
           ];
           for (const regex of patterns) {
             let match;
@@ -9292,8 +9304,9 @@ MANDATORY REFORMATTING RULES:
               if (match[1]) {
                 let item = match[1].trim();
                 item = item.replace(/\s+(da|do|de|na|no|em)\s+refer[eê]ncia.*$/i, "").trim();
-                item = item.replace(/\s+(que\s+tem|presente|mostrado|vis[ií]vel).*$/i, "").trim();
-                if (item.length >= 2 && item.length < 80) {
+                item = item.replace(/\s+(que\s+tem|que\s+est[aá]|presente|mostrado|vis[ií]vel).*$/i, "").trim();
+                item = item.replace(/\s+(por\s+favor|pfv|obrigado|blz|ok).*$/i, "").trim();
+                if (item.length >= 2 && item.length < 90) {
                   if (!exclusions.some(e => e.toLowerCase() === item.toLowerCase())) {
                     exclusions.push(item);
                   }
@@ -9301,8 +9314,199 @@ MANDATORY REFORMATTING RULES:
               }
             }
           }
+          if (req.body.negativePrompt && typeof req.body.negativePrompt === "string") {
+            const rawNegs = req.body.negativePrompt.split(/[,;\n]/).map((s: string) => s.trim()).filter((s: string) => s.length >= 2 && s.length < 90);
+            for (const neg of rawNegs) {
+              if (!exclusions.some(e => e.toLowerCase() === neg.toLowerCase())) {
+                exclusions.push(neg);
+              }
+            }
+          }
           return { exclusions, hasExclusions: exclusions.length > 0 };
         };
+
+        // 2. EXTRACT POSITIVE ADDITIONS (INCLUSIONS: "adicione X", "coloque Y", "inclua Z", etc.)
+        const extractPositiveAdditions = (text: string, currentExclusions: string[]): { additions: string[]; hasAdditions: boolean } => {
+          if (!text) return { additions: [], hasAdditions: false };
+          const additions: string[] = [];
+          const patterns = [
+            /(?:adicione|adicionar|acrescente|acrescentar|inclua|incluir|insira|inserir)\s+(?:o\s+|a\s+|os\s+|as\s+|um\s+|uma\s+|uns\s+|umas\s+)?([^.,;:\n]+)/gi,
+            /(?:coloque|colocar|ponha|p[oô]r|bota|botar)\s+(?:o\s+|a\s+|os\s+|as\s+|um\s+|uma\s+|uns\s+|umas\s+)?([^.,;:\n]+)/gi,
+            /(?:quero\s+com|com\s+bastante|com\s+muito)\s+([^.,;:\n]+)/gi
+          ];
+          for (const regex of patterns) {
+            let match;
+            while ((match = regex.exec(text)) !== null) {
+              if (match[1]) {
+                let item = match[1].trim();
+                item = item.replace(/\s+(na|no|em|pelo|pela)\s+(imagem|arte|flyer|banner|design).*$/i, "").trim();
+                item = item.replace(/\s+(por\s+favor|pfv|obrigado).*$/i, "").trim();
+                if (
+                  item.length >= 2 &&
+                  item.length < 90 &&
+                  !currentExclusions.some(e => e.toLowerCase().includes(item.toLowerCase()))
+                ) {
+                  if (!additions.some(a => a.toLowerCase() === item.toLowerCase())) {
+                    additions.push(item);
+                  }
+                }
+              }
+            }
+          }
+          return { additions, hasAdditions: additions.length > 0 };
+        };
+
+        // 3. EXTRACT AND RESOLVE SPATIAL POSITIONING
+        const resolveSubjectPosition = (
+          explicitPosition: string | undefined,
+          text: string
+        ): { position: "left" | "right" | "center"; directive: string; isExplicit: boolean } => {
+          let pos: "left" | "right" | "center" = "center";
+          let isExplicit = false;
+
+          if (explicitPosition === "left" || /(?:na\s+esquerda|no\s+lado\s+esquerdo|à\s+esquerda|a\s+esquerda|posicione\s+na\s+esquerda|alinhad[ao]\s+[aà]\s+esquerda|left\s+side|on\s+the\s+left)/i.test(text)) {
+            pos = "left";
+            isExplicit = true;
+          } else if (explicitPosition === "right" || /(?:na\s+direita|no\s+lado\s+direito|à\s+direita|a\s+direita|posicione\s+na\s+direita|alinhad[ao]\s+[aà]\s+direita|right\s+side|on\s+the\s+right)/i.test(text)) {
+            pos = "right";
+            isExplicit = true;
+          } else if (explicitPosition === "center" || /(?:no\s+centro|centralizad[ao]|ao\s+centro|no\s+meio|center|centered)/i.test(text)) {
+            pos = "center";
+            isExplicit = explicitPosition === "center" || /(?:no\s+centro|centralizad[ao]|ao\s+centro)/i.test(text);
+          }
+
+          const directive = pos === "left"
+            ? `[COMPOSITION & SUBJECT PLACEMENT — USER POSITION OVERRIDE (RANK 0)]\n👉 Position and frame the main subject(s) strictly on the LEFT THIRD of the canvas following cinematic rule-of-thirds, leaving wide open negative space on the right side for headlines, typography, and graphics.\n🚨 CRITICAL LAW: This position 100% OVERRULES any positioning in the reference images! DO NOT place the subject in the center or right just because the reference had it there!`
+            : pos === "right"
+            ? `[COMPOSITION & SUBJECT PLACEMENT — USER POSITION OVERRIDE (RANK 0)]\n👉 Position and frame the main subject(s) strictly on the RIGHT THIRD of the canvas following cinematic rule-of-thirds, leaving wide open negative space on the left side for headlines, typography, and graphics.\n🚨 CRITICAL LAW: This position 100% OVERRULES any positioning in the reference images! DO NOT place the subject in the center or left just because the reference had it there!`
+            : `[COMPOSITION & SUBJECT PLACEMENT — BALANCED EDITORIAL SYMMETRY]\n👉 Position and frame the main subject(s) cleanly CENTERED with balanced, majestic editorial hierarchy and breathing room around borders.`;
+
+          return { position: pos, directive, isExplicit };
+        };
+
+        // 4. DISAMBIGUATE MULTI-REFERENCE ROLES (TEXTURE VS TYPOGRAPHY VS LAYOUT VS LIGHTING)
+        const resolveReferenceRoles = (
+          refImages: any[],
+          refMetas: any[],
+          userText: string
+        ): Array<{
+          index: number;
+          role: "texture" | "typography" | "layout" | "lighting_color" | "general";
+          title: string;
+          instructions: string;
+        }> => {
+          return refImages.map((ref, idx) => {
+            const num = idx + 1;
+            const metaDesc = (refMetas.find((m: any) => m.index === num)?.desc || "").toLowerCase();
+            const textLower = userText.toLowerCase();
+
+            const isTargetedInPrompt =
+              textLower.includes(`ref ${num}`) ||
+              textLower.includes(`ref${num}`) ||
+              textLower.includes(`referência ${num}`) ||
+              textLower.includes(`referencia ${num}`) ||
+              textLower.includes(`imagem ${num}`) ||
+              textLower.includes(`foto ${num}`);
+
+            let targetContext = "";
+            if (isTargetedInPrompt) {
+              const match = textLower.match(new RegExp(`(?:ref(?:er[eê]ncia)?|imagem|foto)\\s*#?${num}[^.,;:\n]*`, "i"));
+              if (match) targetContext = match[0];
+            }
+
+            const isTexture =
+              /textura|texture|material|m[aá]rmore|marble|ouro|gold|dourad|metal|brilho|glitter|couro|leather|papel|paper|grain|superf[ií]cie/i.test(metaDesc) ||
+              (isTargetedInPrompt && /textura|texture|material|m[aá]rmore|ouro|gold|dourad|metal|brilho|glitter|couro|papel|grain/i.test(targetContext)) ||
+              (num > 1 && /textura/i.test(textLower) && !metaDesc.includes("layout") && !metaDesc.includes("flyer"));
+
+            const isTypography =
+              /tipografia|typography|fonte|font|estilo\s+de\s+texto|letras|letrismo|3d\s+chrome|neon\s+text|t[ií]tulo/i.test(metaDesc) ||
+              (isTargetedInPrompt && /tipografia|typography|fonte|font|estilo\s+de\s+texto|letras|letrismo|3d\s+chrome|neon/i.test(targetContext)) ||
+              (num > 1 && /estilo\s+de\s+texto|fonte\s+da\s+ref/i.test(textLower));
+
+            const isLightingColor =
+              /ilumina[cç][aã]o|lighting|luz|luzes|cores|colors|paleta|palette|tonalidade|grading/i.test(metaDesc) ||
+              (isTargetedInPrompt && /ilumina[cç][aã]o|luz|cores|paleta|tonalidade/i.test(targetContext));
+
+            if (isTexture) {
+              return {
+                index: num,
+                role: "texture" as const,
+                title: `REFERENCE #${num}: SOLE SOURCE FOR TEXTURE & MATERIAL ONLY`,
+                instructions: `The user explicitly commanded: USE ONLY THE SURFACE TEXTURE, PHYSICAL MATERIAL, GRAIN, AND TACTILE FINISH from this reference image (${metaDesc || "texture/material source"})! DO NOT copy the layout, subjects, faces, or typography from this image. Apply this exact texture to the corresponding background or surfaces.`
+              };
+            } else if (isTypography) {
+              return {
+                index: num,
+                role: "typography" as const,
+                title: `REFERENCE #${num}: SOLE SOURCE FOR TYPOGRAPHY & FONT STYLING ONLY`,
+                instructions: `The user explicitly commanded: USE ONLY THE FONT STYLING, 3D CHROME/BEVEL TREATMENT, AND TYPOGRAPHIC AESTHETIC from this reference image (${metaDesc || "typography source"})! Apply this exact typographic style to the user's explicit words. DO NOT copy the words themselves or the layout from this image.`
+              };
+            } else if (isLightingColor) {
+              return {
+                index: num,
+                role: "lighting_color" as const,
+                title: `REFERENCE #${num}: LIGHTING & COLOR PALETTE SOURCE ONLY`,
+                instructions: `The user explicitly commanded: EXTRACT ONLY THE LIGHTING DIRECTION, COLOR GRADING, AND CHROMATIC PALETTE from this reference image (${metaDesc || "lighting/color source"})! DO NOT copy the subjects or text from this image.`
+              };
+            } else if (num === 1 || metaDesc.includes("layout") || metaDesc.includes("flyer") || metaDesc.includes("composição")) {
+              return {
+                index: num,
+                role: "layout" as const,
+                title: `REFERENCE #${num}: MASTER COMPOSITION & LAYOUT GRID`,
+                instructions: `Replicate the graphic composition, spatial zones, visual hierarchy, lighting atmosphere, and design language from this master design reference. IMPORTANT: ERASE and purge all old placeholder text from this image!`
+              };
+            } else {
+              return {
+                index: num,
+                role: "general" as const,
+                title: `REFERENCE #${num}: STYLE & AESTHETIC INSPIRATION`,
+                instructions: `Extract visual elegance, atmospheric mood, and design quality from this reference (${metaDesc || "style inspiration"}). Do NOT duplicate elements or mix contradictory layouts.`
+              };
+            }
+          });
+        };
+
+        const { exclusions, hasExclusions } = extractNegativeExclusions(combinedUserText);
+        const { additions, hasAdditions } = extractPositiveAdditions(combinedUserText, exclusions);
+        const posResult = resolveSubjectPosition(req.body.subjectPosition, combinedUserText);
+
+        // Pool all unique reference images without duplicates
+        const allRefImages: any[] = [];
+        if (Array.isArray(referenciasEstilo)) {
+          for (const r of referenciasEstilo) {
+            if (r && !allRefImages.includes(r)) allRefImages.push(r);
+          }
+        }
+        if (designRefBase64 && !allRefImages.includes(designRefBase64)) {
+          allRefImages.unshift(designRefBase64);
+        }
+
+        const refMetas: any[] = Array.isArray(req.body.referenceImagesMeta) ? req.body.referenceImagesMeta : [];
+        const resolvedRefRoles = resolveReferenceRoles(allRefImages, refMetas, combinedUserText);
+
+        const exclusionBlock = hasExclusions
+          ? `\n[🚨 CRITICAL OVERRIDING EXCLUSION DIRECTIVE — HIGHEST SUPREME PRIORITY 🚨]\nTHE USER HAS EXPLICITLY ORDERED THAT THE FOLLOWING ELEMENTS ARE STRICTLY FORBIDDEN AND MUST BE 100% EXCLUDED / REMOVED:\n👉 FORBIDDEN ITEMS TO OMIT COMPLETELY: "${exclusions.join('", "')}"\nABSOLUTE GOVERNING LAW:\nEVEN IF THE ATTACHED DESIGN REFERENCE IMAGE OR SUBJECT PHOTO CLEARLY FEATURES THESE ELEMENTS, YOU ARE STRICTLY PROHIBITED FROM GENERATING THEM!\nTHE USER'S EXCLUSION MANDATE OVERRULES ALL REFERENCE IMAGES 100%.\nYOU MUST COMPLETELY PURGE, ERASE, AND OMIT "${exclusions.join('", "')}", REPLACING THEM WITH NATURAL CLEAN SURFACES, BARE NATURAL SKIN, NATURAL EYES/HAIR, OR NEUTRAL BACKGROUND!\n\n`
+          : "";
+
+        const additionBlock = hasAdditions
+          ? `\n[✨ CRITICAL OVERRIDING ADDITION DIRECTIVE — HIGHEST SUPREME PRIORITY ✨]\nTHE USER HAS EXPLICITLY ORDERED THAT THE FOLLOWING ELEMENTS MUST BE ADDED / INCLUDED:\n👉 MANDATORY ITEMS TO INCLUDE: "${additions.join('", "')}"\nYOU MUST INTEGRATE THESE ELEMENTS BEAUTIFULLY AND NATURALLY INTO THE COMPOSITION!\n\n`
+          : "";
+
+        const refExclusionWarning = hasExclusions
+          ? ` CRITICAL EXCLUSION: The user explicitly commanded: DO NOT generate or copy [${exclusions.join(', ')}] from this reference! Omit those elements completely!`
+          : "";
+
+        const subjectExclusionWarning = hasExclusions
+          ? ` CRITICAL: The user ordered to remove/exclude [${exclusions.join(', ')}]. If this person's photo features any of those elements (e.g., glasses, crown, hat, beard, accessories), YOU MUST OMIT THEM and render bare natural skin/hair/eyes!`
+          : "";
+
+        const multiRefRolesSummary = resolvedRefRoles.length > 0
+          ? `\n[🎯 MULTI-REFERENCE SPECIALIZATION & ROLE ASSIGNMENT]\n${resolvedRefRoles.map(r => `👉 Image ${r.index} Role: ${r.title}\n   Directive: ${r.instructions}`).join("\n")}\n\n`
+          : "";
+
+        const userNotes = (req.body.additionalPrompt || promptTraduzido || "").trim();
+        const sovereignMandate = `${exclusionBlock}${additionBlock}${posResult.directive}\n\n${multiRefRolesSummary}${userNotes ? `[USER CUSTOM SPECIFICATIONS & OVERRIDES - RANK 1 PRIORITY]\n${userNotes}\n\n` : ""}`;
 
         const isGraphicCardOrFlyer =
           hasFlyerTypography ||
@@ -9311,18 +9515,8 @@ MANDATORY REFORMATTING RULES:
 
         if (isGraphicCardOrFlyer) {
           console.log("[api/gerar] === REF BUILDER GRAPHIC DESIGN & COMMERCIAL AD MASTER ENGINE (8K) ACTIVATED ===");
-          const userNotes = (req.body.additionalPrompt || promptTraduzido || "").trim();
-          const { exclusions, hasExclusions } = extractNegativeExclusions(userNotes);
 
-          const exclusionBlock = hasExclusions
-            ? `\n[🚨 CRITICAL OVERRIDING EXCLUSION DIRECTIVE — HIGHEST SUPREME PRIORITY 🚨]\nTHE USER HAS EXPLICITLY ORDERED THAT THE FOLLOWING ELEMENTS ARE STRICTLY FORBIDDEN AND MUST BE 100% EXCLUDED / REMOVED:\n👉 FORBIDDEN ITEMS TO OMIT COMPLETELY: "${exclusions.join('", "')}"\nABSOLUTE GOVERNING LAW:\nEVEN IF THE ATTACHED DESIGN REFERENCE IMAGE OR SUBJECT PHOTO CLEARLY FEATURES THESE ELEMENTS, YOU ARE STRICTLY PROHIBITED FROM GENERATING THEM!\nTHE USER'S EXCLUSION MANDATE OVERRULES ALL REFERENCE IMAGES 100%.\nYOU MUST COMPLETELY PURGE, ERASE, AND OMIT "${exclusions.join('", "')}", REPLACING THEM WITH NATURAL CLEAN SURFACES, BARE NATURAL SKIN, NATURAL EYES/HAIR, OR NEUTRAL BACKGROUND!\n\n`
-            : "";
-
-          const refExclusionWarning = hasExclusions
-            ? ` CRITICAL EXCLUSION: The user explicitly commanded: DO NOT generate or copy [${exclusions.join(', ')}] from this reference! Omit those elements completely!`
-            : "";
-
-          fullPrompt = `${exclusionBlock}${userNotes ? `[USER CUSTOM SPECIFICATIONS & OVERRIDES - RANK 1 PRIORITY]\n${userNotes}\n\n` : ""}=== REF MASTER GRAPHIC DESIGN, FLYER & VISUAL CLONING DIRECTIVE (8K) ===
+          fullPrompt = `${sovereignMandate}=== REF MASTER GRAPHIC DESIGN, FLYER & VISUAL CLONING DIRECTIVE (8K) ===
 [ROLE & EXPERTISE]
 You are a World-Class Creative Director and Master Graphic Designer executing an agency-grade flyer, poster, social media card, or commercial marketing visual.
 
@@ -9334,8 +9528,8 @@ Look at the attached Design Layout & Style Inspiration Reference:
    - ABSOLUTE PROHIBITION OF PODIUMS: NEVER generate modern 3D geometric platforms, podiums, cubes, or pedestals unless the reference itself has one or the user explicitly asks for a product podium!
    - If the reference features an ornate decorative bottom element (like a golden baroque altar border, floral garland, or wave), replicate that decorative bottom frame naturally.
 
-2. COMPOSITION & SUBJECT PLACEMENT:
-   - Place the main subject(s) in the exact prominent position indicated by the Design Reference (e.g. centered, elevated, dignified).
+2. COMPOSITION & SUBJECT PLACEMENT (USER PRECEDENCE):
+   - ${posResult.isExplicit ? `Place the main subject(s) strictly on the ${posResult.position.toUpperCase()} side as explicitly commanded by the user, leaving open negative space on the opposite side for typography and graphic balance. DO NOT mirror the reference position!` : `Place the main subject(s) in the prominent position indicated by the Design Reference (e.g. centered, elevated, dignified).`}
    - If the subject is a person (or people), integrate them naturally into the scene's lighting, depth, and sacred/editorial atmosphere.
 
 [100% REAL BIOMETRIC IDENTITY LOCK (SWAP SLOT)]
@@ -9362,8 +9556,8 @@ Look at the attached Main Subject Real Identity Reference:
 
 [DYNAMIC REFERENCE REVERSE-ENGINEERING & 1:1 SPATIAL MIRRORING]
 You MUST NOT follow any rigid generic template or hardcoded layout! Instead, deeply analyze the attached Design Reference image to understand its unique visual balance, hierarchy, and spatial arrangement:
-1. SUBJECT POSITION & FRAMING:
-   - Analyze WHERE and HOW the main subject is placed in the Design Reference (e.g. centered, elevated, left-aligned, right-aligned, bust portrait, or full-length). Place the new subject in that exact corresponding position, scale, and framing.
+1. SUBJECT POSITION & FRAMING (USER MANDATE HAS SUPREME PRECEDENCE):
+   - ${posResult.isExplicit ? `THE USER HAS EXPLICITLY ORDERED THAT THE SUBJECT MUST BE POSITIONED: ${posResult.position.toUpperCase()}! YOU MUST OBEY THIS USER POSITION 100%, COMPLETELY OVERRULING WHERE THE REFERENCE IMAGE PLACED THE SUBJECT! DO NOT place the subject where the reference has it. Place it strictly on the ${posResult.position.toUpperCase()} side!` : `Analyze WHERE and HOW the main subject is placed in the Design Reference (e.g. centered, elevated, left-aligned, right-aligned, bust portrait, or full-length). Place the new subject in that exact corresponding position, scale, and framing.`}
 2. LOGO POSITION & PROPORTION:
    - Analyze WHERE the logo or brand emblem is located in the Design Reference (e.g. bottom-left footer, top-left corner, top-right corner, or centered). Embed the user's brand logo in that EXACT corresponding position and relative scale. NEVER force the logo to a fixed arbitrary corner!
 3. TYPOGRAPHY ZONES & HIERARCHY:
@@ -9380,7 +9574,9 @@ ${hasExclusions ? `${exclusions.join(', ')}, ` : ""}podium, geometric platform, 
 
           expandedSystemInstruction = `You are an elite commercial graphic designer and art director. You execute pristine advertising posters, religious event flyers, social media cards, and commercial marketing layouts with vector-sharp typographic precision.
 RULES:
-${hasExclusions ? `0. ABSOLUTE EXCLUSION MANDATE (SUPREME LAW): Under no circumstance generate: ${exclusions.join(', ')}. The user explicitly demanded their exclusion, which 100% overrides any elements in the reference image.\n` : ""}1. DYNAMIC REFERENCE ANALYSIS & REPLICATION: Visually analyze the Design Reference to understand its unique composition and layout. Replicate the environment, color palette, lighting mood, and composition grid from the Design Reference. Position the logo, titles, subject, and badges in the corresponding spatial zones where the reference placed them, without applying any fixed arbitrary template. NO modern 3D podiums or plastic cubes on non-product flyers.
+0. 👑 SUPREME USER SOVEREIGNTY LAW (RANK 0): Any addition, exclusion, positioning, texture choice, or text requested by the user 100% OVERRULES any elements in the reference images.
+${hasExclusions ? `   - STRICT EXCLUSIONS: Under NO circumstance generate: ${exclusions.join(', ')}. If present in reference or photo, PURGE AND ERASE THEM COMPLETELY.\n` : ""}${hasAdditions ? `   - MANDATORY ADDITIONS: You must include: ${additions.join(', ')}.\n` : ""}${posResult.isExplicit ? `   - POSITIONING: Position the subject on the ${posResult.position.toUpperCase()} as ordered by the user.\n` : ""}   - MULTI-REFERENCE SPECIALIZATION: Strictly respect each reference's assigned role (texture only, typography only, layout only). Never blend contradictory layouts.
+1. DYNAMIC REFERENCE ANALYSIS & REPLICATION: Visually analyze the Design Reference to understand its unique composition and layout. Replicate the environment, color palette, lighting mood, and composition grid from the Design Reference. Position the logo, titles, subject, and badges in the corresponding spatial zones where the reference placed them, without applying any fixed arbitrary template. NO modern 3D podiums or plastic cubes on non-product flyers.
 2. STRICT TEXT PURGE: Completely erase all old text from the reference image. Render ONLY the text explicitly requested by the user. Respect all negative constraints (e.g. no crown, no whatsapp, no instagram).
 3. REAL BIOMETRIC IDENTITY: Keep the exact facial identity, skin tone, hair, and clothing of the person in the Subject image. Authentic human realism.
 4. BRAZILIAN PORTUGUESE ONLY: Render all requested text exactly in Brazilian Portuguese as provided.`;
@@ -9390,7 +9586,7 @@ ${hasExclusions ? `0. ABSOLUTE EXCLUSION MANDATE (SUPREME LAW): Under no circums
           if (base64DoSujeito) {
             addImagePart(
               base64DoSujeito,
-              "MAIN SUBJECT REAL IDENTITY REFERENCE (SWAP SLOT) — Replicate 100% of the authentic facial identity, hair, skin tone, and features of the person/people in this image. Keep their real faces identical to the photo."
+              `MAIN SUBJECT REAL IDENTITY REFERENCE (SWAP SLOT) — Replicate 100% of the authentic facial identity, hair, skin tone, and features of the person/people in this image. Keep their real faces identical to the photo.${subjectExclusionWarning}`
             );
           }
           if (Array.isArray(sujeitosBase64List)) {
@@ -9398,26 +9594,21 @@ ${hasExclusions ? `0. ABSOLUTE EXCLUSION MANDATE (SUPREME LAW): Under no circums
               if (ref && ref !== base64DoSujeito) {
                 addImagePart(
                   ref,
-                  `ADDITIONAL PRODUCT/SUBJECT REFERENCE #${idx + 1}`
+                  `ADDITIONAL PRODUCT/SUBJECT REFERENCE #${idx + 1}${subjectExclusionWarning}`
                 );
               }
             });
           }
-          if (Array.isArray(referenciasEstilo) && referenciasEstilo.length > 0) {
-            referenciasEstilo.forEach((ref: any, idx: number) => {
-              if (ref) {
+          if (resolvedRefRoles.length > 0) {
+            resolvedRefRoles.forEach((roleInfo, idx) => {
+              const refImg = allRefImages[idx];
+              if (refImg) {
                 addImagePart(
-                  ref,
-                  `DESIGN LAYOUT & STYLE INSPIRATION REFERENCE #${idx + 1} — Replicate this visual aesthetic, colors, lighting mood, and composition grid.${refExclusionWarning} IMPORTANT: ERASE and IGNORE all text in this image; render ONLY the text explicitly requested by the user.`
+                  refImg,
+                  `[${roleInfo.title}]\n${roleInfo.instructions}${refExclusionWarning} IMPORTANT: ERASE and IGNORE all text in this image; render ONLY the text explicitly requested by the user.`
                 );
               }
             });
-          }
-          if (designRefBase64) {
-            addImagePart(
-              designRefBase64,
-              `PRIMARY DESIGN LAYOUT & STYLE INSPIRATION REFERENCE — Replicate this graphic composition, spatial layout, lighting, and style.${refExclusionWarning} IMPORTANT: ERASE and IGNORE all text in this image; render ONLY the text explicitly requested by the user.`
-            );
           }
           if (logoBase64) {
             addImagePart(
@@ -9436,26 +9627,9 @@ ${hasExclusions ? `0. ABSOLUTE EXCLUSION MANDATE (SUPREME LAW): Under no circums
             addImagePart(prevImgBase64, "IMAGEM MASTER ANTERIOR A SER REFINADA / ADAPTADA");
           }
         } else {
-        console.log("[api/gerar] === REF BUILDER PHOTOGRAPHIC MASTER ENGINE (8K) ACTIVATED ===");
-        const refSubjectPosition = req.body.subjectPosition || "center";
-        const positionDirective = refSubjectPosition === "left"
-          ? "[COMPOSITION & FRAMING] Position and frame the main subject strictly on the LEFT THIRD of the composition following cinematic rule-of-thirds, leaving open negative space on the right side."
-          : refSubjectPosition === "right"
-          ? "[COMPOSITION & FRAMING] Position and frame the main subject strictly on the RIGHT THIRD of the composition following cinematic rule-of-thirds, leaving open negative space on the left side."
-          : "[COMPOSITION & FRAMING] Position and frame the main subject cleanly CENTERED with balanced, powerful medium-format commercial editorial symmetry.";
+          console.log("[api/gerar] === REF BUILDER PHOTOGRAPHIC MASTER ENGINE (8K) ACTIVATED ===");
 
-        const userNotes = (req.body.additionalPrompt || promptTraduzido || "").trim();
-        const { exclusions, hasExclusions } = extractNegativeExclusions(userNotes);
-
-        const exclusionBlock = hasExclusions
-          ? `\n[🚨 CRITICAL OVERRIDING EXCLUSION DIRECTIVE — HIGHEST SUPREME PRIORITY 🚨]\nTHE USER HAS EXPLICITLY ORDERED THAT THE FOLLOWING ELEMENTS ARE STRICTLY FORBIDDEN AND MUST BE 100% EXCLUDED / REMOVED:\n👉 FORBIDDEN ITEMS TO OMIT COMPLETELY: "${exclusions.join('", "')}"\nABSOLUTE GOVERNING LAW:\nEVEN IF THE ATTACHED DESIGN REFERENCE IMAGE OR SUBJECT PHOTO CLEARLY FEATURES THESE ELEMENTS, YOU ARE STRICTLY PROHIBITED FROM GENERATING THEM!\nTHE USER'S EXCLUSION MANDATE OVERRULES ALL REFERENCE IMAGES 100%.\nYOU MUST COMPLETELY PURGE, ERASE, AND OMIT "${exclusions.join('", "')}", REPLACING THEM WITH NATURAL CLEAN SURFACES, BARE NATURAL SKIN, NATURAL EYES/HAIR, OR NEUTRAL BACKGROUND!\n\n`
-          : "";
-
-        const refExclusionWarning = hasExclusions
-          ? ` CRITICAL EXCLUSION: The user explicitly commanded: DO NOT generate or copy [${exclusions.join(', ')}] from this reference! Omit those elements completely!`
-          : "";
-
-        fullPrompt = `${exclusionBlock}${userNotes ? `[USER CUSTOM SPECIFICATIONS & OVERRIDES - RANK 1 PRIORITY]\n${userNotes}\n\n` : ""}=== REF MASTER EDITORIAL & COMMERCIAL PHOTOGRAPHY DIRECTIVE ===
+          fullPrompt = `${sovereignMandate}=== REF MASTER EDITORIAL & COMMERCIAL PHOTOGRAPHY DIRECTIVE ===
 [ROLE & OPTICAL PLATFORM]
 You are an elite Director of Photography and World-Class Commercial Portraitist executing a master-grade editorial fashion and commercial photograph.
 Simulate a medium-format Hasselblad H6D-100c paired with a prime HC 100mm f/2.2 lens stopped down to f/2.8, ISO 64, or a Sony Alpha 1 with an FE 85mm f/1.4 GM prime lens.
@@ -9493,75 +9667,72 @@ STRICT MANDATE: COMPLETELY IGNORE the person's face, identity, ethnicity, and al
 7. FABRIC & TACTILE TEXTURE: Crisp optical weave on clothing fabrics, specular highlights on jewelry or leather, physical contact shadows.
 8. ABSOLUTE ZERO PLASTIC SMOOTHING: No airbrushing, no digital beauty filters, no waxy CGI sheen, no AI cartooning. Flawless 8K medium format optical clarity.
 
-${positionDirective}
+${posResult.directive}
 
 [NEGATIVE CONSTRAINTS]
 ${hasExclusions ? `${exclusions.join(', ')}, ` : ""}blurry, low resolution, soft focus, out of focus, motion blur, plastic skin, airbrushed skin, waxy skin, CGI rendering, 3D model, cartoon, anime, illustration, painting, flyer, poster, cards, text boxes, headlines, watermark, logo, split panels, contact info, deformed eyes, extra fingers, fused fingers, solid white chalk teeth, neon pink lips, lipstick bleed.`;
 
-        expandedSystemInstruction = `You are an elite medium-format editorial photographer. You render hyper-realistic commercial portrait photographs with Hasselblad H6D-100c medium-format optical clarity.
+          expandedSystemInstruction = `You are an elite medium-format editorial photographer. You render hyper-realistic commercial portrait photographs with Hasselblad H6D-100c medium-format optical clarity.
 RULES:
-${hasExclusions ? `0. ABSOLUTE EXCLUSION MANDATE (SUPREME LAW): Under no circumstance generate: ${exclusions.join(', ')}. The user explicitly demanded their exclusion, which 100% overrides any elements in the reference image.\n` : ""}1. Generate ONLY an authentic photograph. NEVER generate graphic design flyers, text cards, split panels, headlines, footers, or advertising overlays.
+0. 👑 SUPREME USER SOVEREIGNTY LAW (RANK 0): Any addition, exclusion, positioning, texture choice, or text requested by the user 100% OVERRULES any elements in the reference images.
+${hasExclusions ? `   - STRICT EXCLUSIONS: Under NO circumstance generate: ${exclusions.join(', ')}. If present in reference or photo, PURGE AND ERASE THEM COMPLETELY.\n` : ""}${hasAdditions ? `   - MANDATORY ADDITIONS: You must include: ${additions.join(', ')}.\n` : ""}${posResult.isExplicit ? `   - POSITIONING: Position the subject on the ${posResult.position.toUpperCase()} as ordered by the user.\n` : ""}1. Generate ONLY an authentic photograph. NEVER generate graphic design flyers, text cards, split panels, headlines, footers, or advertising overlays.
 2. 100% FACIAL IDENTITY LOCK: The subject's face MUST match the Subject Identity Reference with 100% anatomical fidelity.
 3. STYLE & LIGHTING: Take only lighting, color grading, pose, and background atmosphere from the Style Reference. COMPLETELY IGNORE the face and identity of the style reference.
 4. MICRO-PORES & TEXTURES: Resolve microscopic skin pores, individual hair strands, natural lip texture, authentic individual teeth, and corneal reflections. ZERO plastic AI smoothing, ZERO waxy skin.`;
 
-        parts.push({ text: fullPrompt });
+          parts.push({ text: fullPrompt });
 
-        // 1. Add Subject References (SWAP SLOT)
-        if (base64DoSujeito) {
-          addImagePart(
-            base64DoSujeito,
-            "SWAP SLOT — Main Subject Identity Reference. Replicate 100% of this person's exact face, eyes, nose, lips, jawline, skin tone, and natural micro-pore texture with flawless photographic fidelity."
-          );
-        }
-        if (Array.isArray(sujeitosBase64List)) {
-          sujeitosBase64List.forEach((ref: any, idx: number) => {
-            if (ref && ref !== base64DoSujeito) {
-              addImagePart(
-                ref,
-                `SWAP SLOT — Additional Subject Identity Reference #${idx + 1}. Replicate 100% of this person's facial features and micro-pore skin texture.`
-              );
-            }
-          });
-        }
+          // 1. Add Subject References (SWAP SLOT)
+          if (base64DoSujeito) {
+            addImagePart(
+              base64DoSujeito,
+              `SWAP SLOT — Main Subject Identity Reference. Replicate 100% of this person's exact face, eyes, nose, lips, jawline, skin tone, and natural micro-pore texture with flawless photographic fidelity.${subjectExclusionWarning}`
+            );
+          }
+          if (Array.isArray(sujeitosBase64List)) {
+            sujeitosBase64List.forEach((ref: any, idx: number) => {
+              if (ref && ref !== base64DoSujeito) {
+                addImagePart(
+                  ref,
+                  `SWAP SLOT — Additional Subject Identity Reference #${idx + 1}. Replicate 100% of this person's facial features and micro-pore skin texture.${subjectExclusionWarning}`
+                );
+              }
+            });
+          }
 
-        // 2. Add Style / Lighting Inspiration References
-        if (Array.isArray(referenciasEstilo) && referenciasEstilo.length > 0) {
-          referenciasEstilo.forEach((ref: any, idx: number) => {
-            if (ref) {
-              addImagePart(
-                ref,
-                `STYLE & LIGHTING INSPIRATION REFERENCE #${idx + 1} — Extract ONLY lighting quality, color grading, camera angle, pose, and atmosphere.${refExclusionWarning} DO NOT copy this person's face; the face comes 100% from the Subject Identity Reference.`
-              );
-            }
-          });
-        } else if (designRefBase64) {
-          addImagePart(
-            designRefBase64,
-            `STYLE & LIGHTING INSPIRATION REFERENCE — Extract ONLY lighting quality, color grading, camera angle, pose, and atmosphere.${refExclusionWarning} DO NOT copy this person's face; the face comes 100% from the Subject Identity Reference.`
-          );
-        }
+          // 2. Add Style / Lighting Inspiration References (Specialized Roles)
+          if (resolvedRefRoles.length > 0) {
+            resolvedRefRoles.forEach((roleInfo, idx) => {
+              const refImg = allRefImages[idx];
+              if (refImg) {
+                addImagePart(
+                  refImg,
+                  `[${roleInfo.title}]\n${roleInfo.instructions}${refExclusionWarning} DO NOT copy this person's face; the face comes 100% from the Subject Identity Reference.`
+                );
+              }
+            });
+          }
 
-        // 3. Add Assets (if any)
-        if (logoBase64) {
-          addImagePart(
-            logoBase64,
-            "ASSET REFERENCE — Faithfully integrate this object/product/accessory into the photographic scene with physically accurate contact shadows and reflections."
-          );
-        }
-        if (Array.isArray(logosList)) {
-          logosList.forEach((asset: any, idx: number) => {
-            if (asset && asset !== logoBase64) {
-              addImagePart(
-                asset,
-                `ASSET REFERENCE #${idx + 1} — Faithfully integrate this object/product into the photographic scene with physically accurate contact shadows and reflections.`
-              );
-            }
-          });
-        }
-        if (prevImgBase64) {
-          addImagePart(prevImgBase64, "IMAGEM MASTER ANTERIOR A SER REFINADA / ADAPTADA");
-        }
+          // 3. Add Assets (if any)
+          if (logoBase64) {
+            addImagePart(
+              logoBase64,
+              "ASSET REFERENCE — Faithfully integrate this object/product/accessory into the photographic scene with physically accurate contact shadows and reflections."
+            );
+          }
+          if (Array.isArray(logosList)) {
+            logosList.forEach((asset: any, idx: number) => {
+              if (asset && asset !== logoBase64) {
+                addImagePart(
+                  asset,
+                  `ASSET REFERENCE #${idx + 1} — Faithfully integrate this object/product into the photographic scene with physically accurate contact shadows and reflections.`
+                );
+              }
+            });
+          }
+          if (prevImgBase64) {
+            addImagePart(prevImgBase64, "IMAGEM MASTER ANTERIOR A SER REFINADA / ADAPTADA");
+          }
         } // end of !isGraphicCardOrFlyer portrait branch
       } else {
         if (prevImgBase64 && isExplicitEdit) {
