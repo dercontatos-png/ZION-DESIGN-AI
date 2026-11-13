@@ -9933,6 +9933,10 @@ You MUST NOT follow any rigid generic template or hardcoded layout! Instead, dee
    - ${posResult.isExplicit ? `THE USER HAS EXPLICITLY ORDERED THAT THE SUBJECT MUST BE POSITIONED: ${posResult.position.toUpperCase()}! YOU MUST OBEY THIS USER POSITION 100%, COMPLETELY OVERRULING WHERE THE REFERENCE IMAGE PLACED THE SUBJECT! DO NOT place the subject where the reference has it. Place it strictly on the ${posResult.position.toUpperCase()} side!` : `Analyze WHERE and HOW the main subject is placed in the Design Reference (e.g. centered, elevated, left-aligned, right-aligned, bust portrait, or full-length). Place the new subject in that exact corresponding position, scale, and framing.`}
 2. LOGO POSITION & PROPORTION (SOVEREIGN USER COMMAND):
    - ${logoPlacement.isExplicit ? `THE USER HAS EXPLICITLY ORDERED THAT THE BRAND LOGO MUST BE POSITIONED: ${logoPlacement.position.toUpperCase()}! You MUST place the brand logo strictly ${logoPlacement.directive}. DO NOT place it where the reference has it!` : `If the Design Reference has a visible brand logo, position the client's logo in that corresponding zone. IF THE REFERENCE HAS NO VISIBLE LOGO (e.g. religious art or decorative flyer without logo), DO NOT place the logo in random arbitrary spots! Place the client's brand logo harmoniously in the UPPER TOP-CENTER HEADER ZONE (minimum 16% down from top border) or in the bottom-center footer with clean safe margins.`}
+   - 🚨 ZERO SOLID BLACK DISK / STICKER BEHIND LOGO: DO NOT draw a solid black circular disc, black badge, dark sticker, or heavy container behind the logo! The logo must float seamlessly and transparently directly on the background.
+   - 🚨 AUTOMATIC CONTRAST ADAPTATION FOR LIGHT CANVASES: If the brand logo is a white vector on a transparent background and the canvas background is light (cream, beige, white, light gold), DO NOT enclose it in a black circle! Instead, render the logo line art, circular ring, and typography in clean dark monochrome (charcoal/black #111111) or refined metallic gold (#C59B27), floating transparently on the canvas!
+   - 🚨 GEOMETRIC & TYPOGRAPHIC FIDELITY: Preserve the authentic geometric contours of the logo symbol (e.g. symmetrical mountain peak and clean radiant folds) and exact brand typography without wavy, wobbly, or deformed lines.
+   - NEVER place the logo directly on top of the subject's face, hands, or body. Keep minimum 16% safe margin from all edges.
 3. TYPOGRAPHY ZONES & HIERARCHY:
    - Observe where the Design Reference places its main headline (top, middle, over the subject, or bottom). Replicate that exact spatial placement and typographic styling for the user's primary headline.
    - Replicate the layout of secondary text blocks, quotes, and badges (e.g. pill badges, script subtitles) in the same spatial zones where the reference placed them.
@@ -9947,7 +9951,7 @@ You MUST NOT follow any rigid generic template or hardcoded layout! Instead, dee
    - Think like a master art director: evaluate the reference's composition and determine the optimal, most faithful way to assemble the user's elements so the resulting artwork looks indistinguishable from the agency style of the reference flyer!
 
 [NEGATIVE CONSTRAINTS]
-${hasExclusions ? `${exclusions.join(', ')}, ` : ""}podium, geometric platform, 3D display cube, pedestal, blurry, low resolution, soft focus, out of focus, motion blur, plastic skin, airbrushed, cartoon, anime, 3D model, messy layout, overlapping text, illegible font, unrequested English words, missing text, cut-off borders, glued-to-edge text, unrequested old text from reference, crown, whatsapp icon, instagram handle.`;
+${hasExclusions ? `${exclusions.join(', ')}, ` : ""}black circle behind logo, solid black circular disc, black badge container behind logo, sticker box behind logo, distorted logo lines, squiggly logo curves, deformed logo geometry, podium, geometric platform, 3D display cube, pedestal, blurry, low resolution, soft focus, out of focus, motion blur, plastic skin, airbrushed, cartoon, anime, 3D model, messy layout, overlapping text, illegible font, unrequested English words, missing text, cut-off borders, glued-to-edge text, unrequested old text from reference, crown, whatsapp icon, instagram handle.`;
 
           expandedSystemInstruction = `You are an elite commercial graphic designer and art director. You execute pristine advertising posters, religious event flyers, social media cards, and commercial marketing layouts with vector-sharp typographic precision.
 RULES:
@@ -10002,7 +10006,7 @@ ${hasExclusions ? `   - STRICT EXCLUSIONS: Under NO circumstance generate: ${exc
             const firstAssetMeta = assetMetas[0]?.desc ? ` USER DIRECTIVE: "${assetMetas[0].desc}".` : "";
             addImagePart(
               logoBase64,
-              `BRAND LOGO REFERENCE — Embed this brand logo into the artwork with clean integration without obscuring the subject.${logoColorNote}${logoPosNote}${firstAssetMeta}`
+              `BRAND LOGO REFERENCE — Replicate this official brand logo symbol and typography. IMPORTANT: The transparent background of this logo PNG may decode as black, but that black is NOT part of the logo mark! DO NOT draw a solid black circular disk, black cookie, or dark sticker behind the logo! On light canvas backgrounds, render the circular ring, mountain lines, and brand name in clean dark monochrome (charcoal/black) or refined metallic gold, floating transparently on the canvas without any enclosing black background plate.${logoColorNote}${logoPosNote}${firstAssetMeta}`
             );
           }
           if (Array.isArray(logosList)) {
