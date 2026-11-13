@@ -1,5 +1,83 @@
 [
   {
+    "id": "img_1794610089488_31f4w",
+    "status": "done",
+    "result_url": "/generated-images/img_1794610089488_31f4w.png",
+    "thumbnail_url": "/generated-images/img_1794610089488_31f4w.png",
+    "created_at": "2026-11-13T22:48:09.524Z",
+    "agent_slug": "design-builder1-2",
+    "dimensions": "4:5",
+    "form_data": {
+      "quality": "4K",
+      "dimensions": "4:5"
+    }
+  },
+  {
+    "id": "img_1794609943370_llw4x",
+    "status": "done",
+    "result_url": "/generated-images/img_1794609943370_llw4x.png",
+    "thumbnail_url": "/generated-images/img_1794609943370_llw4x.png",
+    "created_at": "2026-11-13T22:45:43.430Z",
+    "agent_slug": "design-builder1-2",
+    "dimensions": "4:5",
+    "form_data": {
+      "quality": "4K",
+      "dimensions": "4:5"
+    }
+  },
+  {
+    "id": "img_1794609824642_cofvc",
+    "status": "done",
+    "result_url": "/generated-images/img_1794609824642_cofvc.png",
+    "thumbnail_url": "/generated-images/img_1794609824642_cofvc.png",
+    "created_at": "2026-11-13T22:43:44.676Z",
+    "agent_slug": "design-builder1-2",
+    "dimensions": "4:5",
+    "form_data": {
+      "quality": "4K",
+      "dimensions": "4:5"
+    }
+  },
+  {
+    "id": "img_1794609690189_bph85",
+    "status": "done",
+    "result_url": "/generated-images/img_1794609690189_bph85.png",
+    "thumbnail_url": "/generated-images/img_1794609690189_bph85.png",
+    "created_at": "2026-11-13T22:41:30.236Z",
+    "agent_slug": "design-builder1-2",
+    "dimensions": "4:5",
+    "form_data": {
+      "quality": "4K",
+      "dimensions": "4:5"
+    }
+  },
+  {
+    "id": "img_1794609593827_kudhb",
+    "status": "done",
+    "result_url": "/generated-images/img_1794609593827_kudhb.png",
+    "thumbnail_url": "/generated-images/img_1794609593827_kudhb.png",
+    "created_at": "2026-11-13T22:39:53.865Z",
+    "agent_slug": "design-builder1-2",
+    "dimensions": "4:5",
+    "form_data": {
+      "quality": "4K",
+      "dimensions": "4:5"
+    }
+  },
+  {
+    "id": "img_1794609520210_35gly",
+    "status": "done",
+    "result_url": "/generated-images/img_1794609520210_35gly.png",
+    "thumbnail_url": "/generated-images/img_1794609520210_35gly.png",
+    "created_at": "2026-11-13T22:38:40.263Z",
+    "agent_slug": "design-builder1-2",
+    "dimensions": "4:5",
+    "form_data": {
+      "quality": "4K",
+      "dimensions": "4:5"
+    }
+  },
+  {
     "id": "img_1794608787731_rkika",
     "status": "done",
     "result_url": "/generated-images/img_1794608787731_rkika.png",

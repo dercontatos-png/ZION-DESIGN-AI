@@ -10112,7 +10112,7 @@ Extract ONLY the photographic and optical atmosphere:
 4. Body pose, torque, posture, and mood.
 STRICT MANDATE: COMPLETELY IGNORE the person's face, identity, ethnicity, clothing, and all text in the Style Reference! The face and clothing belong 100% to the Subject Reference.
 
-[MACRO-LEVEL OPTICAL PORE REALISM & 3-LAYER SUBSURFACE SCATTERING]
+[NEGATIVE CONSTRAINTS]
 ${hasExclusions ? `${exclusions.join(', ')}, ` : ""}blurry, low resolution, soft focus, out of focus, motion blur, plastic skin, airbrushed skin, waxy skin, CGI rendering, 3D model, cartoon, anime, illustration, painting, flyer, poster, cards, text boxes, headlines, watermark, logo, split panels, contact info, deformed eyes, extra fingers, fused fingers, solid white chalk teeth, neon pink lips, lipstick bleed.`;
 
           expandedSystemInstruction = `You are an elite medium-format editorial photographer. You render hyper-realistic commercial portrait photographs with Hasselblad H6D-100c medium-format optical clarity.

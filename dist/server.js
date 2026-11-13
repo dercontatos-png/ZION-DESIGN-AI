@@ -11773,22 +11773,40 @@ You are a World-Class Creative Director and Master Graphic Designer executing an
    - ${posResult.isExplicit ? `Place the main subject(s) strictly on the ${posResult.position.toUpperCase()} side as explicitly commanded by the user, leaving open negative space on the opposite side for typography and graphic balance. DO NOT mirror the reference position!` : `Place the main subject(s) in the prominent position indicated by the Design Reference (e.g. centered, elevated, dignified).`}
    - If the subject is a person (or people), integrate them naturally into the scene's lighting, depth, and editorial atmosphere.
 
-[100% REAL BIOMETRIC IDENTITY & NATURAL EXPRESSION LOCK (SWAP SLOT)]
+[\u{1F464} 100% REAL SUBJECT SWAP & ZERO REFERENCE PERSON CONTAMINATION LAW]
 Look at the attached Main Subject Real Identity Reference:
-1. FAITHFUL HUMAN BIOMETRICS, EXPRESSION & WARDROBE PRESERVATION:
+1. COMPLETE ELIMINATION & SWAP OF ANY PERSON IN THE REFERENCE IMAGE:
+   - If the attached Design Reference or Style Reference image contains ANY human person, model, priest, actor, saint, silhouette, or presenter:
+     * THAT PERSON IS 100% A TEMPORARY DUMMY PLACEHOLDER, EXACTLY LIKE DUMMY PLACEHOLDER TEXT!
+     * YOU MUST COMPLETELY DISCARD, PURGE, AND ERASE THAT PERSON!
+     * UNDER NO CIRCUMSTANCES should you render the person from the reference image, blend their features, or borrow their body/face!
+     * The ONLY human subject allowed on the canvas is the real person provided in [MAIN SUBJECT REAL IDENTITY REFERENCE]!
+2. COMPLETE PRESERVATION OF THE SUBJECT'S POSE, POSTURE, HANDS & BODY ANGLE:
+   - "S\xD3 PODE MUDAR ALGO SE O USU\xC1RIO PEDIR": YOU ARE STRICTLY FORBIDDEN from inventing new poses, changing body posture, or copying the pose of the reference person!
+   - Preserve 100% of the person's exact head tilt, body angle, shoulder alignment, posture, and natural hands from their Subject Photo.
+   - DO NOT force the subject to clasp/fold their hands in prayer, cross their arms, or make gestures seen in the reference image unless the user EXPLICITLY requested that pose in text! If the subject in their photo has a natural bust shot without folded hands, render them in their exact authentic posture!
+3. FAITHFUL HUMAN BIOMETRICS & NATURAL EXPRESSION LOCK:
    - Replicate 100% of the exact faces, facial geometry, authentic expressions (including natural smile, open smile, teeth, warmth, or serious gaze matching the source photo), eye shape, nose, mouth, authentic skin tone, and hair of the person/people in the Subject image.
    - ABSOLUTE SMILE PRESERVATION: If the person in the photo is smiling, YOU MUST PRESERVE THEIR RADIANT NATURAL SMILE! DO NOT erase their smile, do NOT close their mouth, and do NOT make them look serious, stern, or solemn unless explicitly ordered by the user!
-   - ABSOLUTE CLOTHING & WARDROBE LOCK: Preserve 100% of the person's exact clothing, outfit, suit, shirt, dress, jacket, uniform, collar, and colors as worn in the Subject photo! DO NOT change, redesign, or replace their clothing! DO NOT copy clothing from the Design Reference unless the user explicitly commanded a wardrobe change in the prompt (e.g. "vestir de terno", "trocar roupa")!
+4. ABSOLUTE CLOTHING & WARDROBE LOCK:
+   - Preserve 100% of the person's exact clothing, outfit, suit, shirt, dress, jacket, uniform, collar, and colors as worn in the Subject photo! DO NOT change, redesign, or replace their clothing! DO NOT copy clothing, vestments, or robes from the Design Reference unless the user explicitly commanded a wardrobe change in the prompt (e.g. "vestir de terno", "trocar roupa")!
    - The person must look identical to their real photo. Real biological human skin texture with 3-layer subsurface scattering and micro-pores.
    - ZERO waxy plastic sheen, ZERO cartoon or anime smoothing, ZERO caricature.
 
 ${typographicHierarchy.directiveBlock}
 
-[STRICT TYPOGRAPHIC PURGE & ZERO TEXT MIXING LAW]
+[\u{1F6AB} STRICT PURGE OF REFERENCE TEXT, OLD LOGOS & WATERMARKS \u2014 BRAND ASSET SUPREMACY LAW]
 1. COMPLETE PURGE OF OLD REFERENCE TEXT:
    - All written text, words, headlines, slogans, dates, times, phone numbers, addresses, and details inside the Design Reference image are TEMPORARY DUMMY PLACEHOLDERS.
    - You MUST 100% ERASE AND PURGE all text from the reference image! NEVER copy, borrow, or carry over any word from the reference image into the new generation!
-2. RENDER ONLY THE USER'S EXPLICIT TEXT REQUESTS:
+2. COMPLETE PURGE OF ALL OLD LOGOS, CRESTS, EMBLEMS & SEALS FROM REFERENCE:
+   - If the Design Reference or Style Reference image contains ANY logo, diocesan crest, parish emblem, sponsor mark, seal, watermark, or symbol:
+     * YOU MUST 100% PURGE, ERASE, AND DISCARD THAT OLD LOGO FROM THE CANVAS!
+     * NEVER copy, draw, or carry over any logo, badge, or crest from the reference image!
+3. RENDER ONLY THE USER'S EXPLICIT BRAND LOGO (FROM ASSETS):
+   - When the user attaches a logo in Assets / Brand Logo Reference (e.g. TV Chapada logo), that is the SOLE, EXCLUSIVE BRAND LOGO allowed on the canvas.
+   - Render ONLY the user's uploaded logo! Do NOT blend it with any reference logo, and do NOT draw any secondary logos unless explicitly ordered in text!
+4. RENDER ONLY THE USER'S EXPLICIT TEXT REQUESTS:
    - Render ONLY AND EXCLUSIVELY the exact text phrases explicitly provided by the user in [USER CUSTOM SPECIFICATIONS & OVERRIDES] and [\u{1F3DB}\uFE0F MASTER TYPOGRAPHIC ARCHITECTURE].
    - Map each requested text item into the corresponding visual zone of the Design Reference:
      * Headlines map to the primary large title zone of the reference.
@@ -11863,10 +11881,14 @@ ${hasExclusions ? `   - STRICT EXCLUSIONS: Under NO circumstance generate: ${exc
               const metaDesc = meta?.desc ? `
 USER SPECIFIC DIRECTIVE FOR THIS REFERENCE: "${meta.desc}"` : "";
               if (refImg) {
+                const purgePersonNote = base64DoSujeito ? `
+\u{1F6A8} CRITICAL SUBJECT SWAP: If this reference image contains ANY person, model, priest, or face, DO NOT render that person! That person must be 100% REPLACED by the user's Subject. Keep the subject's exact pose, posture, clothing, and natural smile from their photo!` : "";
+                const purgeLogoNote = logoBase64 ? `
+\u{1F6A8} CRITICAL LOGO SWAP: If this reference image contains ANY logo, crest, diocese seal, or emblem, DO NOT render it! Render ONLY the user's brand logo provided in assets.` : "";
                 addImagePart(
                   refImg,
                   `[${roleInfo.title}]
-${roleInfo.instructions}${metaDesc}${refExclusionWarning} IMPORTANT: ERASE and IGNORE all text in this image; render ONLY the text explicitly requested by the user.`
+${roleInfo.instructions}${metaDesc}${refExclusionWarning}${purgePersonNote}${purgeLogoNote} IMPORTANT: ERASE and IGNORE all text in this image; render ONLY the text explicitly requested by the user.`
                 );
               }
             });
@@ -11925,18 +11947,6 @@ Extract ONLY the photographic and optical atmosphere:
 3. Camera angle, lens focal length perspective, authentic shallow depth of field (f/2.2-f/2.8) with creamy circular background bokeh.
 4. Body pose, torque, posture, and mood.
 STRICT MANDATE: COMPLETELY IGNORE the person's face, identity, ethnicity, clothing, and all text in the Style Reference! The face and clothing belong 100% to the Subject Reference.
-
-[MACRO-LEVEL OPTICAL PORE REALISM & 3-LAYER SUBSURFACE SCATTERING]
-1. EPIDERMAL MICRO-PORES: Resolve microscopic skin pores on the nose, cheeks, forehead, chin, and neck under direct and grazing illumination. Micro-displacement skin grain must remain tack-sharp under zoom without pixel blur.
-2. 3-LAYER SUBSURFACE SCATTERING: True biological dermal translucency (epidermis, dermis, subcutaneous adipose) with natural warmth along shadow terminators.
-3. AUTHENTIC LIPS & ZERO PIGMENT BLEED: Render authentic human lip texture with fine vertical dermal creases, natural skin gradations, and neutral realistic lip color matching real human skin. ABSOLUTELY NO solid neon pink, NO artificial magenta lipstick, NO painted-on plastic lips, and NO color bleed or pink pigment leaking onto the mustache, philtrum, or surrounding skin.
-4. PRISTINE DENTAL ANATOMY: Render tack-sharp, anatomically distinct individual teeth with natural enamel translucency, realistic interdental depth, and subtle gumline shadows. ABSOLUTELY NO solid white chalk bars, NO flat white strips.
-5. OCULAR ENGAGEMENT: Pristine corneal catchlights reflecting the scene's key light, distinct iris striations, and delicate vascular sclera capillaries.
-6. HAIR & FOLLICLE DEFINITION: Individual crisp strands of hair, natural edge flyaways, and discrete eyebrow and eyelash follicles.
-7. FABRIC & TACTILE TEXTURE: Crisp optical weave on clothing fabrics, specular highlights on jewelry or leather, physical contact shadows.
-8. ABSOLUTE ZERO PLASTIC SMOOTHING: No airbrushing, no digital beauty filters, no waxy CGI sheen, no AI cartooning. Flawless 8K medium format optical clarity.
-
-${posResult.directive}
 
 [NEGATIVE CONSTRAINTS]
 ${hasExclusions ? `${exclusions.join(", ")}, ` : ""}blurry, low resolution, soft focus, out of focus, motion blur, plastic skin, airbrushed skin, waxy skin, CGI rendering, 3D model, cartoon, anime, illustration, painting, flyer, poster, cards, text boxes, headlines, watermark, logo, split panels, contact info, deformed eyes, extra fingers, fused fingers, solid white chalk teeth, neon pink lips, lipstick bleed.`;
@@ -12143,7 +12153,7 @@ The subject reference image may be a compressed digital photo. DO NOT replicate 
         }
         if (Array.isArray(referenciasEstilo)) {
           referenciasEstilo.forEach((ref, idx) => {
-            if (ref) addImagePart(ref, `Refer\xEAncia de Estilo ${idx + 1}`);
+            if (ref) addImagePart(ref, `Refer\xEAncia de Estilo ${idx + 1} \u2014 Extrair SOMENTE o estilo visual, paleta de cores, ilumina\xE7\xE3o e texturas. Se esta imagem contiver pessoas ou logotipos antigos, DESCARTE-OS 100%! O sujeito real vem da Foto do Sujeito e o logotipo vem dos Assets.`);
           });
         }
         const normalizeGenLogoKey = (str) => {
