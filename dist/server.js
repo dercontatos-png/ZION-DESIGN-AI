@@ -6032,7 +6032,7 @@ NEGATIVE RESTRICTIONS & BANNED ARTIFACTS:
                 const origMime = f.mimetype || "image/jpeg";
                 const norm = await normalizeImageForAi(f.buffer, origMime);
                 const isGroupPhoto = /todos|grupo|equipe|turma|pessoas|foto/i.test(body.subject_description || "") || body.categoria === "livre";
-                const swapSlotDirective = isGroupPhoto ? `SWAP SLOT (GROUP FIDELITY) \u2014 Image ${i + 1} is the subject identity reference containing the team/group. Replicate ALL people/individuals present in this reference photo (${body.subject_description || "all people in the photo"}). Preserve their faces, clothing/uniforms, group arrangement, authentic photographic fidelity, and natural expressions. Position them naturally in the scene.` : `SWAP SLOT \u2014 Image ${i + 1} is the identity reference, and it owns the entire person. From image ${i + 1} come the face, all its biometric features, AND THE EXACT EMOTIONAL EXPRESSION (including natural smile, teeth, warmth, and eye crinkles). If the person in Image ${i + 1} is smiling, YOU MUST PRESERVE THEIR NATURAL SMILE 100%! DO NOT neutralize, erase, or change their smile into a serious or solemn face unless the user explicitly requested it in the prompt. None of their facial features or natural expression are to be altered. From image ${i + 1} take the person and their authentic expression; take nothing else \u2014 not the original background, not the framing, not the original lighting. Preserve 100% authentic photographic fidelity.
+                const swapSlotDirective = isGroupPhoto ? `SWAP SLOT (GROUP FIDELITY) \u2014 Image ${i + 1} is the subject identity reference containing the team/group. Replicate ALL people/individuals present in this reference photo (${body.subject_description || "all people in the photo"}). Preserve their faces, clothing/uniforms, group arrangement, authentic photographic fidelity, and natural expressions. Position them naturally in the scene.` : `SWAP SLOT \u2014 Image ${i + 1} is the identity reference, and it owns the entire person. From image ${i + 1} come the face, all its biometric features, THE EXACT EMOTIONAL EXPRESSION (including natural smile, teeth, warmth, and eye crinkles), AND THE EXACT CLOTHING AND WARDROBE. If the person in Image ${i + 1} is smiling, YOU MUST PRESERVE THEIR NATURAL SMILE 100%! Replicate their exact clothing and outfit as seen in Image ${i + 1}. DO NOT neutralize their smile, and DO NOT change their clothing unless the user explicitly requested it in the prompt. None of their facial features, natural expression, or clothing are to be altered. From image ${i + 1} take the person, their authentic expression, and their clothing; take nothing else \u2014 not the original background, not the framing, not the original lighting. Preserve 100% authentic photographic fidelity.
 CRITICAL HIGH-FIDELITY FACIAL & DENTAL RECONSTRUCTION MANDATE:
 The subject reference image may be a compressed digital photo. DO NOT replicate low-resolution JPEG artifacts, pixelated mouths, or blurry teeth! Reconstruct razor-sharp 4K photographic micro-details:
 1. DENTAL ANATOMY & NATURAL SMILE: Render tack-sharp, anatomically distinct individual teeth with natural enamel translucency, realistic interdental depth, and subtle gumline shadows. ABSOLUTELY NO solid white chalk bars, NO flat white strips.
@@ -11540,6 +11540,33 @@ If the Design Reference has a visible brand logo, position the client's logo in 
             const fMatch = text.match(/(?:rodap[eé]|footer|endere[cç]o|local|contato|site|endereço)\s*[:=]\s*([^\n]+)/i);
             if (fMatch && fMatch[1]) footer = fMatch[1].trim();
           }
+          if (!headline || !subtitle || !badge || !footer) {
+            const isCommandOrReplacement = (str) => {
+              return /(?:mudar|mude|trocar|troque|substituir|substitua|alterar|altere)\s+[^\n]+?(?:para|pra|por)\s+/i.test(str) || /^(?:não\s+colocar|sem|remover|tirar|adicione|adicionar|coloque)\s+/i.test(str);
+            };
+            const lines = text.split(/[\n;]+/).map((l) => l.trim()).filter((l) => l.length > 1 && !isCommandOrReplacement(l));
+            const dateRegex = /(?:\d{1,2}\s+de\s+[a-zç]+|\d{1,2}[\/\.-]\d{1,2}|\b(?:dia|data|segunda|terça|quarta|quinta|sexta|s[aá]bado|domingo|janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|\d{4}|\d{1,2}h|\d{1,2}:\d{2})\b)/i;
+            const addressRegex = /(?:rua|av\b|avenida|travessa|alameda|rodovia|bairro|centro|rj|sp|mg|ba|n[ºo]\s*\d+|\bcep\b|\d{5}-\d{3}|estrada|praça)/i;
+            const remainingLines = [];
+            for (const line of lines) {
+              if (!footer && addressRegex.test(line)) {
+                footer = line;
+              } else if (!badge && dateRegex.test(line) && line.length < 60) {
+                badge = line;
+              } else {
+                remainingLines.push(line);
+              }
+            }
+            for (const line of remainingLines) {
+              if (!headline) {
+                headline = line;
+              } else if (!subtitle) {
+                subtitle = line;
+              } else if (!footer) {
+                footer = line;
+              }
+            }
+          }
           if (/(?:texto|t[ií]tulo|alinhamento)\s+(?:alinhad[ao]\s+)?(?:[aà]\s+|na\s+)?esquerda|alinhad[ao]\s+[aà]\s+esquerda/i.test(text)) {
             alignment = "left";
           } else if (/(?:texto|t[ií]tulo|alinhamento)\s+(?:alinhad[ao]\s+)?(?:[aà]\s+|na\s+)?direita|alinhad[ao]\s+[aà]\s+direita/i.test(text)) {
@@ -11549,17 +11576,26 @@ If the Design Reference has a visible brand logo, position the client's logo in 
           }
           const alignmentText = alignment === "left" ? "STRICTLY LEFT-ALIGNED (all titles, subtitles, and badges aligned to the left visual optical margin)" : alignment === "right" ? "STRICTLY RIGHT-ALIGNED (all titles, subtitles, and badges aligned to the right visual optical margin)" : "PERFECTLY CENTER-ALIGNED (all titles, subtitles, and badges aligned strictly along the canvas vertical center axis with balanced bilateral symmetry)";
           const directiveBlock = `
-[\u{1F3DB}\uFE0F MASTER TYPOGRAPHIC ARCHITECTURE, SPATIAL HIERARCHY & SIZING RULES]
-1. VISUAL HIERARCHY & RELATIVE SCALING:
-   - PRIMARY HEADLINE (LEVEL 1 \u2014 MAXIMUM VISUAL SCALE): ${headline ? `\u{1F449} RENDER THIS EXACT TITLE: "${headline.toUpperCase()}"` : "Render the user's main requested title in massive commanding display scale."}
-     * Typography style: Mirror the majestic, high-contrast serif/display letterforms from the Design Reference (e.g. ornate capital letters, luxury swashes, ligature curves, 3D golden/metallic bevels or crisp vector edges).
+[\u{1F3DB}\uFE0F MASTER TYPOGRAPHIC ARCHITECTURE, 2D SPATIAL SLOTTING & HIERARCHY]
+1. 1:1 2D SPATIAL ZONE MAPPING (STRICTLY MIRRORING THE DESIGN REFERENCE ARCHITECTURE):
+   - SLOT 1: UPPER KICKER / DATE BADGE (TOP ZONE):
+     ${badge ? `\u{1F449} RENDER THIS UPPER TAG: "${badge.toUpperCase()}"` : "If the reference has a top date/tag/badge, place the user's secondary tag here."}
+     * Spatial Coordinate: Exactly in the top optical header zone where the reference has its top date/tag (e.g. arched or centered above the main title).
+   - SLOT 2: PRIMARY HEADLINE (MASTER TITLE ZONE):
+     ${headline ? `\u{1F449} RENDER THIS EXACT TITLE: "${headline.toUpperCase()}"` : "Render the user's main requested title in massive commanding display scale."}
+     * Spatial Coordinate: Must occupy the EXACT spatial coordinate zone where the reference has its largest headline (e.g. upper-middle, centered).
+     * Style & Swash: Mirror the majestic, high-contrast serif/display letterforms from the Design Reference (e.g. ornate capital letters, luxury swashes, ligature curves, 3D golden/metallic bevels or crisp vector edges).
      * SIZING: Minimum 3x to 4x larger than any other text on the canvas. Must be the undeniable visual focal point of typography.
-   - SUPPORTING SUBTITLE / MESSAGE (LEVEL 2): ${subtitle ? `\u{1F449} RENDER THIS EXACT SUBTITLE: "${subtitle}"` : "If a subtitle/message is requested, render it in refined secondary typography, optically centered below the headline."}
-   - UPPER KICKER / BADGE (LEVEL 3): ${badge ? `\u{1F449} RENDER THIS UPPER TAG: "${badge.toUpperCase()}"` : "Small uppercase tag/date at the top with clean letter-spacing."}
-   - LOGISTICAL FOOTER (LEVEL 4): ${footer ? `\u{1F449} RENDER THIS FOOTER INFO: "${footer}"` : "Address, location, and logistical details placed strictly at the bottom with generous safe padding."}
+   - SLOT 3: SUPPORTING SUBTITLE / MESSAGE (RIBBON / BANNER ZONE):
+     ${subtitle ? `\u{1F449} RENDER THIS EXACT SUBTITLE: "${subtitle}"` : "If a subtitle/message is requested, render it in refined secondary typography, optically centered below the headline."}
+     * Spatial Coordinate: Place directly inside/on the banner, ribbon, card, or supporting horizontal zone where the reference places its quote or subtitle.
+   - SLOT 4: LOGISTICAL DETAILS / ADDRESS (BASE / FOOTER ZONE):
+     ${footer ? `\u{1F449} RENDER THIS FOOTER INFO: "${footer}"` : "Address, location, and logistical details placed strictly at the bottom base with generous safe padding."}
+     * Spatial Coordinate: Sit cleanly in the bottom ground/floor margin zone, exactly where the reference places its address/contact details.
+
 2. SPATIAL ALIGNMENT & ORDER:
    - ${alignmentText}
-   - NEVER scatter words randomly across the canvas! Every word belongs to its designated hierarchical zone.
+   - NEVER scatter words randomly across the canvas! Every word belongs to its designated 2D spatial coordinate zone mirroring the reference.
    - Maintain generous breathing room (respiro visual) of at least 15% from all canvas borders.`;
           return { headline, subtitle, badge, footer, alignment, directiveBlock };
         };
@@ -11657,9 +11693,10 @@ You are a World-Class Creative Director and Master Graphic Designer executing an
 
 [100% REAL BIOMETRIC IDENTITY & NATURAL EXPRESSION LOCK (SWAP SLOT)]
 Look at the attached Main Subject Real Identity Reference:
-1. FAITHFUL HUMAN BIOMETRICS & EXPRESSION PRESERVATION:
+1. FAITHFUL HUMAN BIOMETRICS, EXPRESSION & WARDROBE PRESERVATION:
    - Replicate 100% of the exact faces, facial geometry, authentic expressions (including natural smile, open smile, teeth, warmth, or serious gaze matching the source photo), eye shape, nose, mouth, authentic skin tone, and hair of the person/people in the Subject image.
    - ABSOLUTE SMILE PRESERVATION: If the person in the photo is smiling, YOU MUST PRESERVE THEIR RADIANT NATURAL SMILE! DO NOT erase their smile, do NOT close their mouth, and do NOT make them look serious, stern, or solemn unless explicitly ordered by the user!
+   - ABSOLUTE CLOTHING & WARDROBE LOCK: Preserve 100% of the person's exact clothing, outfit, suit, shirt, dress, jacket, uniform, collar, and colors as worn in the Subject photo! DO NOT change, redesign, or replace their clothing! DO NOT copy clothing from the Design Reference unless the user explicitly commanded a wardrobe change in the prompt (e.g. "vestir de terno", "trocar roupa")!
    - The person must look identical to their real photo. Real biological human skin texture with 3-layer subsurface scattering and micro-pores.
    - ZERO waxy plastic sheen, ZERO cartoon or anime smoothing, ZERO caricature.
 
@@ -11707,14 +11744,14 @@ ${hasExclusions ? `   - STRICT EXCLUSIONS: Under NO circumstance generate: ${exc
 ` : ""}   - MULTI-REFERENCE SPECIALIZATION: Strictly respect each reference's assigned role (texture only, typography only, layout only). Never blend contradictory layouts.
 1. DYNAMIC REFERENCE ANALYSIS & THEMATIC ADAPTATION: Visually analyze the Design Reference to clone its composition grid, panel layout, and typography hierarchy. MANDATORY NICHE ADAPTATION: If the user's requested topic differs from the reference (e.g. auto mechanic shop vs church, dental clinic vs party), purge all reference-specific props (crosses, altars, glasses) and replace them with props matching the user's requested niche! NO modern 3D podiums or plastic cubes on non-product flyers.
 2. STRICT TEXT PURGE & REPLACEMENTS: Completely erase all old text from the reference image. Render ONLY the text explicitly requested by the user. Respect all negative constraints (e.g. no crown, no whatsapp, no instagram) and all word replacements.
-3. REAL BIOMETRIC IDENTITY & NATURAL SMILE: Keep the exact facial identity, authentic facial expression (preserve their natural smile 100% if smiling, do NOT make them serious or solemn unless ordered), skin tone, hair, and clothing of the person in the Subject image. Authentic human realism.
+3. REAL BIOMETRIC IDENTITY, NATURAL SMILE & EXACT WARDROBE: Keep the exact facial identity, authentic facial expression (preserve their natural smile 100% if smiling, do NOT make them serious or solemn unless ordered), skin tone, hair, and EXACT CLOTHING/WARDROBE of the person in the Subject image. Do NOT change their clothes unless explicitly requested. Authentic human realism.
 4. BRAZILIAN PORTUGUESE ONLY: Render all requested text exactly in Brazilian Portuguese as provided.`;
           parts.push({ text: fullPrompt });
           if (base64DoSujeito) {
             const meta0 = subjectMetas[0]?.desc ? ` USER DIRECTIVE: "${subjectMetas[0].desc}".` : "";
             addImagePart(
               base64DoSujeito,
-              `MAIN SUBJECT REAL IDENTITY REFERENCE (SWAP SLOT) \u2014 Replicate 100% of the authentic facial identity, exact emotional expression (KEEP THEIR NATURAL SMILE IF SMILING, DO NOT NEUTRALIZE OR REMOVE THEIR SMILE), hair, skin tone, and features of the person/people in this image. Keep their real faces and authentic smile identical to the photo.${subjectExclusionWarning}${meta0 ? ` ${meta0}` : ""}`
+              `MAIN SUBJECT REAL IDENTITY REFERENCE (SWAP SLOT) \u2014 Replicate 100% of the authentic facial identity, exact emotional expression (KEEP THEIR NATURAL SMILE IF SMILING, DO NOT NEUTRALIZE OR REMOVE THEIR SMILE), AND PRESERVE THEIR EXACT CLOTHING/OUTFIT AS WORN IN THIS PHOTO. Keep their real faces, authentic smile, and real clothes identical to the photo.${subjectExclusionWarning}${meta0 ? ` ${meta0}` : ""}`
             );
           }
           if (Array.isArray(sujeitosBase64List)) {
@@ -11787,7 +11824,8 @@ You MUST replicate 100% of this exact person's anatomical facial geometry and au
 4. Exact skin undertone, natural melanin balance, authentic freckles, and beauty marks.
 5. Exact natural hair texture, hairline, hair color, and facial hair pattern.
 6. FAITHFUL EMOTIONAL EXPRESSION & SMILE LOCK: Replicate the person's exact authentic emotion, smile, lip curvature, dental display, and eye warmth. IF THE PERSON IS SMILING IN THE PHOTO, THEY MUST REMAIN SMILING WITH THE SAME NATURAL WARMTH AND TEETH! STRICTLY FORBIDDEN from converting a smiling, happy person into a cold, serious, stern, or solemn face!
-ABSOLUTE LAW: Take ONLY the person and their identity/expression from this reference. Do NOT contaminate, morph, or blend this person's facial features or emotion with any other reference!
+7. FAITHFUL WARDROBE & CLOTHING LOCK: Replicate 100% of the person's exact clothing, suit, shirt, dress, jacket, or uniform as seen in the Subject Reference. DO NOT dress them in the Style Reference's clothing!
+ABSOLUTE LAW: Take ONLY the person and their identity/expression/clothing from this reference. Do NOT contaminate, morph, or blend this person's facial features, emotion, or clothes with any other reference!
 
 [STYLE, LIGHTING & ATMOSPHERE TRANSFER \u2014 STYLE INSPIRATION REFERENCE]
 Look at the attached Style Inspiration Reference ("STYLE & LIGHTING INSPIRATION REFERENCE").
@@ -11796,7 +11834,7 @@ Extract ONLY the photographic and optical atmosphere:
 2. Color grading and tonal curve (Kodak Portra 400 richness, rich blacks, natural warm skin tones, cinema print contrast).
 3. Camera angle, lens focal length perspective, authentic shallow depth of field (f/2.2-f/2.8) with creamy circular background bokeh.
 4. Body pose, torque, posture, and mood.
-STRICT MANDATE: COMPLETELY IGNORE the person's face, identity, ethnicity, and all text in the Style Reference! The face belongs 100% to the Subject Reference.
+STRICT MANDATE: COMPLETELY IGNORE the person's face, identity, ethnicity, clothing, and all text in the Style Reference! The face and clothing belong 100% to the Subject Reference.
 
 [MACRO-LEVEL OPTICAL PORE REALISM & 3-LAYER SUBSURFACE SCATTERING]
 1. EPIDERMAL MICRO-PORES: Resolve microscopic skin pores on the nose, cheeks, forehead, chin, and neck under direct and grazing illumination. Micro-displacement skin grain must remain tack-sharp under zoom without pixel blur.
@@ -11967,7 +12005,7 @@ ${fullPrompt}`;
         parts.push({ text: fullPrompt });
         if (!desativarSujeito) {
           if (base64DoSujeito) {
-            const swapSlotDirective = `SWAP SLOT \u2014 Image 1 is the identity reference, and it owns the entire person. From image 1 come the face, all its biometric features, AND THE EXACT EMOTIONAL EXPRESSION (including natural smile, teeth, warmth, and eye crinkles). If the person in Image 1 is smiling, YOU MUST PRESERVE THEIR NATURAL SMILE 100%! DO NOT neutralize, erase, or change their smile into a serious or solemn face unless the user explicitly requested it in the prompt. None of their facial features or natural expression are to be altered. From image 1 take the person and their authentic expression; take nothing else \u2014 not the original background, not the framing, not the original lighting. Preserve 100% authentic photographic fidelity.
+            const swapSlotDirective = `SWAP SLOT \u2014 Image 1 is the identity reference, and it owns the entire person. From image 1 come the face, all its biometric features, THE EXACT EMOTIONAL EXPRESSION (including natural smile, teeth, warmth, and eye crinkles), AND THE EXACT CLOTHING AND WARDROBE. If the person in Image 1 is smiling, YOU MUST PRESERVE THEIR NATURAL SMILE 100%! Replicate their exact clothing and outfit as seen in Image 1. DO NOT neutralize their smile, and DO NOT change their clothing unless the user explicitly requested it in the prompt. None of their facial features, natural expression, or clothing are to be altered. From image 1 take the person, their authentic expression, and their clothing; take nothing else \u2014 not the original background, not the framing, not the original lighting. Preserve 100% authentic photographic fidelity.
 CRITICAL HIGH-FIDELITY FACIAL & DENTAL RECONSTRUCTION MANDATE:
 The subject reference image may be a compressed digital photo. DO NOT replicate low-resolution JPEG artifacts, pixelated mouths, or blurry teeth! Reconstruct razor-sharp 4K photographic micro-details:
 1. DENTAL ANATOMY & NATURAL SMILE: Render tack-sharp, anatomically distinct individual teeth with natural enamel translucency, realistic interdental depth, and subtle gumline shadows. ABSOLUTELY NO solid white chalk bars, NO flat white strips.
