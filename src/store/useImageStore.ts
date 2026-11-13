@@ -597,7 +597,8 @@ export const useImageStore = create<ImageStoreState>((set, get) => ({
   },
 
   extractPrompt: async (imageData, mimeType, customApiKey) => {
-    if (!checkAdminOrOpenPlan(customApiKey)) {
+    const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    if (!isLocalhost && !checkAdminOrOpenPlan(customApiKey)) {
       openPlanModal();
       alert("Apenas administradores podem extrair prompts. Assine um plano para continuar!");
       return;

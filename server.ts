@@ -1417,12 +1417,13 @@ async function executeGenerateContentWithFallbacks(
     return 0;
   });
 
-  // Fallback models: Gemini 3.7 Flash & Gemini 3.6 Flash (Tested & Active)
+  // Fallback models: Gemini 3.5 Flash, Gemini 3.6 Flash & Gemini Flash Lite (Tested & Active)
   const fallbackList = [
-    "gemini-2.5-flash",
-    "gemini-3.7-flash",         // Priority #1: State-of-the-art multimodal vision & text
+    "gemini-3.5-flash",         // Priority #1: State-of-the-art ultra-fast multimodal vision & text
     "gemini-3.6-flash",         // Priority #2: Ultra-fast 3.6 generation
-    "gemini-3.1-pro-preview",   // Advanced reasoning & multimodal analysis
+    "gemini-flash-lite-latest", // Priority #3: High-availability lightweight fallback
+    "gemini-3.7-flash",         // Priority #4: Advanced 3.7 model
+    "gemini-3.1-pro-preview",   // Priority #5: Advanced reasoning fallback
   ];
   const combinedModels = Array.from(new Set([...mappedModelNames, ...fallbackList]));
 
@@ -6327,7 +6328,7 @@ Input Text:
 ${textContent}`
       });
 
-      const parseModels = ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"];
+      const parseModels = ["gemini-3.5-flash", "gemini-3.6-flash", "gemini-flash-lite-latest", "gemini-3.7-flash"];
       let jsonStr = "";
       let parseErr: any = null;
 
@@ -7476,7 +7477,7 @@ Output ONLY the JSON object. Do not include conversational filler.`;
         const fallbackRes = await executeGenerateContentWithFallbacks(
           currentAi,
           customApiKey,
-          ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"],
+          ["gemini-3.5-flash", "gemini-3.6-flash", "gemini-flash-lite-latest", "gemini-3.7-flash"],
           {
             contents: [
               {
@@ -8005,7 +8006,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
       thinkParts.push({ text: thinkPrompt });
 
       let finalPrompt = "";
-      const thinkModels = ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"];
+      const thinkModels = ["gemini-3.5-flash", "gemini-3.6-flash", "gemini-flash-lite-latest", "gemini-3.7-flash"];
       try {
         const fallbackRes = await executeGenerateContentWithFallbacks(
           currentAi,
@@ -9903,6 +9904,17 @@ ${logisticalBlock}
 [ROLE & EXPERTISE]
 You are a World-Class Creative Director and Master Graphic Designer executing an agency-grade flyer, poster, social media card, or commercial marketing visual.
 
+[🎨 ABSOLUTE STYLE REFERENCE & COLOR PALETTE SUPREMACY LAW]
+1. 100% COLOR HARMONY & PALETTE CLONING:
+   - When a Style Reference, Design Reference, or visual aesthetic image is attached, you MUST extract and replicate its EXACT dominant color palette, color warmth, and chromatic atmosphere (e.g. majestic church gold, warm amber, deep burgundy/wine, cathedral glow, or luxury tones).
+   - ZERO ARBITRARY COLOR INVERSION: If the reference has a golden, warm amber, dark, or liturgical cathedral background, you are STRICTLY FORBIDDEN from generating a flat stark white background or turning it into a generic corporate red/white flyer!
+   - The user's requested words (e.g. "Transmissão ao Vivo", "Padre Rodolfo") must adapt to the REFERENCE'S color palette and luxury elegance — NEVER let the words force a generic television or sports graphics color scheme!
+2. 100% LIGHTING, DEPTH & ATMOSPHERE CLONING:
+   - Clone the exact lighting character: warm golden backlight, halo rim light on the subject, dramatic atmospheric haze, cathedral architectural depth, soft liturgical glow.
+   - Do NOT replace atmospheric depth with flat solid colors or random abstract shapes!
+3. 100% ORNAMENTATION & TEXTURAL FIDELITY:
+   - If the reference features gold foil accents, silk ribbons, sacred arches, or classical borders, replicate that level of noble sophistication.
+
 [🎯 DYNAMIC THEMATIC & CONTEXTUAL ELEMENT ADAPTATION — ABSOLUTE MANDATORY LAW]
 1. SUBJECT & NICHE DISAMBIGUATION:
    - Identify the user's requested flyer subject, business, or event niche from [USER CUSTOM SPECIFICATIONS & OVERRIDES] (e.g., auto repair shop, gym/fitness, law office, optics/eyewear, dental/medical clinic, restaurant/gastronomy, real estate, show/party, church/gospel, corporate conference).
@@ -9955,9 +9967,9 @@ You MUST NOT follow any rigid generic template or hardcoded layout! Instead, dee
    - ${posResult.isExplicit ? `THE USER HAS EXPLICITLY ORDERED THAT THE SUBJECT MUST BE POSITIONED: ${posResult.position.toUpperCase()}! YOU MUST OBEY THIS USER POSITION 100%, COMPLETELY OVERRULING WHERE THE REFERENCE IMAGE PLACED THE SUBJECT! DO NOT place the subject where the reference has it. Place it strictly on the ${posResult.position.toUpperCase()} side!` : `Analyze WHERE and HOW the main subject is placed in the Design Reference (e.g. centered, elevated, left-aligned, right-aligned, bust portrait, or full-length). Place the new subject in that exact corresponding position, scale, and framing.`}
 2. LOGO POSITION & PROPORTION (SOVEREIGN USER COMMAND):
    - ${logoPlacement.isExplicit ? `THE USER HAS EXPLICITLY ORDERED THAT THE BRAND LOGO MUST BE POSITIONED: ${logoPlacement.position.toUpperCase()}! You MUST place the brand logo strictly ${logoPlacement.directive}. DO NOT place it where the reference has it!` : `If the Design Reference has a visible brand logo, position the client's logo in that corresponding zone. IF THE REFERENCE HAS NO VISIBLE LOGO (e.g. religious art or decorative flyer without logo), DO NOT place the logo in random arbitrary spots! Place the client's brand logo harmoniously in the UPPER TOP-CENTER HEADER ZONE (minimum 16% down from top border) or in the bottom-center footer with clean safe margins.`}
-   - 🚨 ZERO SOLID BLACK DISK / STICKER BEHIND LOGO: DO NOT draw a solid black circular disc, black badge, dark sticker, or heavy container behind the logo! The logo must float seamlessly and transparently directly on the background.
-   - 🚨 AUTOMATIC CONTRAST ADAPTATION FOR LIGHT CANVASES: If the brand logo is a white vector on a transparent background and the canvas background is light (cream, beige, white, light gold), DO NOT enclose it in a black circle! Instead, render the logo line art, circular ring, and typography in clean dark monochrome (charcoal/black #111111) or refined metallic gold (#C59B27), floating transparently on the canvas!
-   - 🚨 GEOMETRIC & TYPOGRAPHIC FIDELITY: Preserve the authentic geometric contours of the logo symbol (e.g. symmetrical mountain peak and clean radiant folds) and exact brand typography without wavy, wobbly, or deformed lines.
+   - 🚨 ZERO SOLID BLACK DISK / ZERO BLACK CIRCLE CONTAINER: DO NOT draw a solid black circular disc, black badge, dark sticker, or heavy container behind the logo! The circular symbol of the TV Chapada logo has a thin circular outline and an inner tent. On light or gold backgrounds, DO NOT FILL THE CIRCLE WITH BLACK! The circle's interior MUST BE 100% TRANSPARENT so that the background artwork (cream, gold, or lit surface) shows completely through inside the circle!
+   - 🚨 AUTOMATIC CONTRAST ADAPTATION FOR LIGHT CANVASES: If the brand logo is a white vector on a transparent background and the canvas background is light (cream, beige, white, light gold), DO NOT enclose it in a black circle! Instead, render ONLY the thin circular outline, the inner tent lines, and the brand text in clean dark monochrome (charcoal/black #111111) or refined metallic gold (#C59B27), floating 100% transparently directly on the canvas!
+   - 🚨 GEOMETRIC & TYPOGRAPHIC FIDELITY: Preserve the authentic geometric contours of the logo symbol (e.g. symmetrical mountain peak and clean radiant folds) and exact brand typography without wavy, wobbly, or deformed lines. ZERO black cookie, ZERO black filled circle.
    - NEVER place the logo directly on top of the subject's face, hands, or body. Keep minimum 16% safe margin from all edges.
 3. TYPOGRAPHY ZONES & HIERARCHY:
    - Observe where the Design Reference places its main headline (top, middle, over the subject, or bottom). Replicate that exact spatial placement and typographic styling for the user's primary headline.
@@ -10637,7 +10649,7 @@ The subject reference image may be a compressed digital photo. DO NOT replicate 
       if (!currentAi) return res.status(400).json({ error: "API Key não configurada." });
 
       const { data: cleanData, mimeType: resolvedMime } = resolveImageInput(imageData);
-      const extractModels = ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"];
+      const extractModels = ["gemini-3.5-flash", "gemini-3.6-flash", "gemini-flash-lite-latest", "gemini-3.7-flash", "gemini-3.1-pro-preview"];
       let promptText = "";
       let lastErr: any = null;
 
@@ -10856,7 +10868,7 @@ Return ONLY a JSON object with this exact structure:
 }
 IMPORTANT: Return valid, strictly parseable JSON. Do not put unescaped raw newlines inside JSON string values like generatedXaml or summary; use \\n instead.`;
 
-      const scanModels = ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"];
+      const scanModels = ["gemini-3.5-flash", "gemini-3.6-flash", "gemini-flash-lite-latest", "gemini-3.7-flash"];
       let responseText = "";
       let lastErr: any = null;
 

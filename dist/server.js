@@ -4667,13 +4667,16 @@ async function executeGenerateContentWithFallbacks(client, customApiKey, modelNa
     return 0;
   });
   const fallbackList = [
-    "gemini-2.5-flash",
-    "gemini-3.7-flash",
-    // Priority #1: State-of-the-art multimodal vision & text
+    "gemini-3.5-flash",
+    // Priority #1: State-of-the-art ultra-fast multimodal vision & text
     "gemini-3.6-flash",
     // Priority #2: Ultra-fast 3.6 generation
+    "gemini-flash-lite-latest",
+    // Priority #3: High-availability lightweight fallback
+    "gemini-3.7-flash",
+    // Priority #4: Advanced 3.7 model
     "gemini-3.1-pro-preview"
-    // Advanced reasoning & multimodal analysis
+    // Priority #5: Advanced reasoning fallback
   ];
   const combinedModels = Array.from(/* @__PURE__ */ new Set([...mappedModelNames, ...fallbackList]));
   let lastError = null;
@@ -7827,27 +7830,39 @@ data: ${JSON.stringify({ type: "ping", timestamp: Date.now() })}
       }
       console.log(`[bff/generations DELETE] Excluindo gera\xE7\xE3o permanentemente: ${id}`);
       recordServerDeletedImage(id);
+      const matchClean = id.match(/(img_\d+_[a-z0-9]+|\d{13}_[a-z0-9]+)/i);
+      const cleanId = matchClean ? matchClean[1] : id.replace(/^(hist-gen-\d+-|ref-srv-|store-gen-)/, "");
+      const cleanBase = path5.basename(cleanId.split("?")[0]);
+      const rawClean = cleanBase.replace(/\.[^/.]+$/, "");
+      recordServerDeletedImage(cleanId);
+      recordServerDeletedImage(cleanBase);
+      recordServerDeletedImage(rawClean);
       const genDataPath = path5.join(process.cwd(), "public", "generations_data.json");
       if (fs5.existsSync(genDataPath)) {
         try {
           const genData = JSON.parse(fs5.readFileSync(genDataPath, "utf-8"));
+          const filterItem = (item) => {
+            const iId = String(item.id || "");
+            const rUrl = String(item.result_url || "");
+            const tUrl = String(item.thumbnail_url || "");
+            if (iId === id || iId === cleanId || iId === cleanBase || iId === rawClean) return false;
+            if (rUrl.includes(id) || rUrl.includes(cleanId) || rUrl.includes(cleanBase) || rUrl.includes(rawClean)) return false;
+            if (tUrl.includes(id) || tUrl.includes(cleanId) || tUrl.includes(cleanBase) || tUrl.includes(rawClean)) return false;
+            return true;
+          };
           if (Array.isArray(genData)) {
             const initialCount = genData.length;
-            const updated = genData.filter(
-              (item) => item.id !== id && !item.result_url?.includes(id) && !item.thumbnail_url?.includes(id)
-            );
+            const updated = genData.filter(filterItem);
             if (updated.length !== initialCount) {
               fs5.writeFileSync(genDataPath, JSON.stringify(updated, null, 2), "utf-8");
-              console.log(`[bff/generations DELETE] Removido de generations_data.json (array): ${id}`);
+              console.log(`[bff/generations DELETE] Removido de generations_data.json (array): ${cleanId}`);
             }
           } else if (Array.isArray(genData.items)) {
             const initialCount = genData.items.length;
-            genData.items = genData.items.filter(
-              (item) => item.id !== id && !item.result_url?.includes(id) && !item.thumbnail_url?.includes(id)
-            );
+            genData.items = genData.items.filter(filterItem);
             if (genData.items.length !== initialCount) {
               fs5.writeFileSync(genDataPath, JSON.stringify(genData, null, 2), "utf-8");
-              console.log(`[bff/generations DELETE] Removido de generations_data.json: ${id}`);
+              console.log(`[bff/generations DELETE] Removido de generations_data.json (items): ${cleanId}`);
             }
           }
         } catch (jErr) {
@@ -7934,18 +7949,29 @@ data: ${JSON.stringify({ type: "ping", timestamp: Date.now() })}
       if (fs5.existsSync(genDataPath)) {
         try {
           const genData = JSON.parse(fs5.readFileSync(genDataPath, "utf-8"));
-          if (Array.isArray(genData.items)) {
+          const filterItem = (item) => {
+            if (item.id === filename || item.id === rawName) return false;
+            if (item.result_url && (item.result_url.includes(filename) || item.result_url.includes(rawName))) return false;
+            if (item.thumbnail_url && (item.thumbnail_url.includes(filename) || item.thumbnail_url.includes(rawName))) return false;
+            return true;
+          };
+          if (Array.isArray(genData)) {
+            const beforeCount = genData.length;
+            const updated = genData.filter(filterItem);
+            if (updated.length !== beforeCount) {
+              try {
+                fs5.writeFileSync(genDataPath, JSON.stringify(updated, null, 2), "utf-8");
+                console.log(`[api/historico-imagens] Removido de generations_data.json (array): ${filename}`);
+              } catch (_) {
+              }
+            }
+          } else if (Array.isArray(genData.items)) {
             const beforeCount = genData.items.length;
-            genData.items = genData.items.filter((item) => {
-              if (item.id === filename || item.id === rawName) return false;
-              if (item.result_url && (item.result_url.includes(filename) || item.result_url.includes(rawName))) return false;
-              if (item.thumbnail_url && (item.thumbnail_url.includes(filename) || item.thumbnail_url.includes(rawName))) return false;
-              return true;
-            });
+            genData.items = genData.items.filter(filterItem);
             if (genData.items.length !== beforeCount) {
               try {
                 fs5.writeFileSync(genDataPath, JSON.stringify(genData, null, 2), "utf-8");
-                console.log(`[api/historico-imagens] Removido de generations_data.json: ${filename}`);
+                console.log(`[api/historico-imagens] Removido de generations_data.json (items): ${filename}`);
               } catch (_) {
               }
             }
@@ -8832,7 +8858,7 @@ Context for Clients:
 Input Text:
 ${textContent}`
       });
-      const parseModels = ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"];
+      const parseModels = ["gemini-3.5-flash", "gemini-3.6-flash", "gemini-flash-lite-latest", "gemini-3.7-flash"];
       let jsonStr = "";
       let parseErr = null;
       try {
@@ -9690,7 +9716,7 @@ Output ONLY the JSON object. Do not include conversational filler.`;
         const fallbackRes = await executeGenerateContentWithFallbacks(
           currentAi,
           customApiKey,
-          ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"],
+          ["gemini-3.5-flash", "gemini-3.6-flash", "gemini-flash-lite-latest", "gemini-3.7-flash"],
           {
             contents: [
               {
@@ -10126,7 +10152,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
       });
       thinkParts.push({ text: thinkPrompt });
       let finalPrompt = "";
-      const thinkModels = ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"];
+      const thinkModels = ["gemini-3.5-flash", "gemini-3.6-flash", "gemini-flash-lite-latest", "gemini-3.7-flash"];
       try {
         const fallbackRes = await executeGenerateContentWithFallbacks(
           currentAi,
@@ -11535,6 +11561,8 @@ If the Design Reference has a visible brand logo, position the client's logo in 
           let subtitle = rawHierarchy?.subtitle?.trim() || "";
           let badge = rawHierarchy?.badge?.trim() || "";
           let footer = rawHierarchy?.footer?.trim() || "";
+          let logisticalDate = "";
+          let logisticalLocation = "";
           let alignment = rawHierarchy?.alignment || "center";
           if (!headline && reps.length > 0) {
             headline = reps.map((r) => r.replacement).join(" ");
@@ -11548,39 +11576,46 @@ If the Design Reference has a visible brand logo, position the client's logo in 
             if (sMatch && sMatch[1]) subtitle = sMatch[1].trim();
           }
           if (!badge) {
-            const bMatch = text.match(/(?:tag|badge|kicker|data|dia)\s*[:=]\s*([^\n.,;]+)/i);
+            const bMatch = text.match(/(?:tag|badge|kicker|status)\s*[:=]\s*([^\n.,;]+)/i);
             if (bMatch && bMatch[1]) badge = bMatch[1].trim();
           }
           if (!footer) {
-            const fMatch = text.match(/(?:rodap[eé]|footer|endere[cç]o|local|contato|site|endereço)\s*[:=]\s*([^\n]+)/i);
+            const fMatch = text.match(/(?:rodap[eé]|footer|endere[cç]o|local|contato|site)\s*[:=]\s*([^\n]+)/i);
             if (fMatch && fMatch[1]) footer = fMatch[1].trim();
           }
-          if (!headline || !subtitle || !badge || !footer) {
-            const isCommandOrReplacement = (str) => {
-              return /(?:mudar|mude|trocar|troque|substituir|substitua|alterar|altere)\s+[^\n]+?(?:para|pra|por)\s+/i.test(str) || /^(?:não\s+colocar|sem|remover|tirar|adicione|adicionar|coloque)\s+/i.test(str);
-            };
-            const lines = text.split(/[\n;]+/).map((l) => l.trim()).filter((l) => l.length > 1 && !isCommandOrReplacement(l));
-            const dateRegex = /(?:\d{1,2}\s+de\s+[a-zç]+|\d{1,2}[\/\.-]\d{1,2}|\b(?:dia|data|segunda|terça|quarta|quinta|sexta|s[aá]bado|domingo|janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|\d{4}|\d{1,2}h|\d{1,2}:\d{2})\b)/i;
-            const addressRegex = /(?:rua|av\b|avenida|travessa|alameda|rodovia|bairro|centro|rj|sp|mg|ba|n[ºo]\s*\d+|\bcep\b|\d{5}-\d{3}|estrada|praça)/i;
-            const remainingLines = [];
-            for (const line of lines) {
-              if (!footer && addressRegex.test(line)) {
-                footer = line;
-              } else if (!badge && dateRegex.test(line) && line.length < 60) {
-                badge = line;
-              } else {
-                remainingLines.push(line);
-              }
+          const isCommandOrReplacement = (str) => {
+            return /(?:mudar|mude|trocar|troque|substituir|substitua|alterar|altere)\s+[^\n]+?(?:para|pra|por)\s+/i.test(str) || /^(?:não\s+colocar|sem|remover|tirar|adicione|adicionar|coloque)\s+/i.test(str);
+          };
+          const rawLines = text.split(/[\n;]+/).map((l) => l.trim()).filter((l) => l.length > 1 && !isCommandOrReplacement(l));
+          const dateRegex = /(?:\d{1,2}\s+de\s+[a-zç]+|\d{1,2}[\/\.-]\d{1,2}|\b(?:dia|data|segunda|terça|quarta|quinta|sexta|s[aá]bado|domingo|janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|\d{4}|\d{1,2}h|\d{1,2}:\d{2})\b)/i;
+          const addressRegex = /(?:rua|av\b|avenida|travessa|alameda|rodovia|bairro|centro|rj|sp|mg|ba|n[ºo]\s*\d+|\bcep\b|\d{5}-\d{3}|estrada|praça|\bem\s+[a-zçãõ]+|\bno\s+[a-zçãõ]+|\bna\s+[a-zçãõ]+)/i;
+          const kickerRegex = /^(?:transmiss[aã]o(?:\s+ao\s+vivo)?|ao\s+vivo|live\b|estreia|inscri[cç][oõ]es\s+abertas|save\s+the\s+date|comunicado|aviso|convite|exclusivo|apresenta)\b/i;
+          const brandChannelRegex = /^(?:tv\s+[a-z0-9]+|canal\s+[a-z0-9]+|youtube|instagram|facebook)\b/i;
+          const remainingLines = [];
+          for (const line of rawLines) {
+            if (kickerRegex.test(line) && !badge) {
+              badge = line;
+            } else if (dateRegex.test(line) && !logisticalDate) {
+              logisticalDate = line;
+            } else if (addressRegex.test(line) && !logisticalLocation) {
+              logisticalLocation = line;
+            } else if (brandChannelRegex.test(line)) {
+              if (!footer) footer = line;
+            } else {
+              remainingLines.push(line);
             }
-            for (const line of remainingLines) {
-              if (!headline) {
-                headline = line;
-              } else if (!subtitle) {
-                subtitle = line;
-              } else if (!footer) {
-                footer = line;
-              }
+          }
+          for (const line of remainingLines) {
+            if (!headline) {
+              headline = line;
+            } else if (!subtitle) {
+              subtitle = line;
+            } else if (!footer) {
+              footer = line;
             }
+          }
+          if (!footer && logisticalLocation) {
+            footer = logisticalLocation;
           }
           if (/(?:texto|t[ií]tulo|alinhamento)\s+(?:alinhad[ao]\s+)?(?:[aà]\s+|na\s+)?esquerda|alinhad[ao]\s+[aà]\s+esquerda/i.test(text)) {
             alignment = "left";
@@ -11590,10 +11625,22 @@ If the Design Reference has a visible brand logo, position the client's logo in 
             alignment = "center";
           }
           const alignmentText = alignment === "left" ? "STRICTLY LEFT-ALIGNED (all titles, subtitles, and badges aligned to the left visual optical margin)" : alignment === "right" ? "STRICTLY RIGHT-ALIGNED (all titles, subtitles, and badges aligned to the right visual optical margin)" : "PERFECTLY CENTER-ALIGNED (all titles, subtitles, and badges aligned strictly along the canvas vertical center axis with balanced bilateral symmetry)";
+          const hasLogisticalPair = Boolean(logisticalDate || logisticalLocation);
+          const logisticalBlock = hasLogisticalPair ? `
+[\u{1F4D0} UNIFIED LOGISTICAL DETAILS & ICONS ARCHITECTURE \u2014 EQUAL SIZING & GRID LAW]
+When rendering secondary logistical rows (such as Date/Time, Location/Address, Broadcast info, and Contacts):
+${logisticalDate ? `\u{1F449} ROW 1 (DATE / TIME): "\u{1F4C5} ${logisticalDate.toUpperCase()}"` : ""}
+${logisticalLocation ? `\u{1F449} ROW 2 (LOCATION / VENUE): "\u{1F4CD} ${logisticalLocation.toUpperCase()}"` : ""}
+\u{1F6A8} CRITICAL MANDATORY RULES FOR LOGISTICAL PAIR:
+1. STRICT IDENTICAL TYPOGRAPHIC SIZING: Row 1 and Row 2 MUST BE RENDERED AT THE EXACT SAME FONT HEIGHT AND WEIGHT! Under NO circumstance render one line larger, taller, thicker, or disproportionate to the other! Both rows must share the exact same font size, optical weight, and letter tracking.
+2. EQUAL ICON SCALE & OPTICAL ALIGNMENT: All icons (\u{1F4C5} calendar, \u{1F4CD} location pin, \u23F0 clock, \u{1F534} live broadcast) must have identical dimensions (1:1 square bounding box, same line thickness, same color accent). Center-align each icon vertically with its text row. Never make the location pin taller or larger than the calendar icon!
+3. UNIFIED CONTAINER / CARD / PILL FRAMING: Group the paired logistical lines inside a subtle, elegant semi-transparent pill container, dark/glassmorphic badge, or structured card mirroring the design reference (e.g. the rounded container from the reference flyer), or separate with crisp vertical dividers. NEVER leave the lines floating unevenly with mismatched sizes!
+4. BALANCED HORIZONTAL LEADING & BASELINE GRID: Maintain uniform vertical line-spacing (leading) between logistical lines. If one line has more characters than the other, do NOT stretch or warp the text! Keep uniform letter-tracking and clean left-alignment or optical center-alignment.
+` : "";
           const directiveBlock = `
 [\u{1F3DB}\uFE0F MASTER TYPOGRAPHIC ARCHITECTURE, 2D SPATIAL SLOTTING & HIERARCHY]
 1. 1:1 2D SPATIAL ZONE MAPPING (STRICTLY MIRRORING THE DESIGN REFERENCE ARCHITECTURE):
-   - SLOT 1: UPPER KICKER / DATE BADGE (TOP ZONE):
+   - SLOT 1: UPPER KICKER / STATUS BADGE (TOP ZONE):
      ${badge ? `\u{1F449} RENDER THIS UPPER TAG: "${badge.toUpperCase()}"` : "If the reference has a top date/tag/badge, place the user's secondary tag here."}
      * Spatial Coordinate: Exactly in the top optical header zone where the reference has its top date/tag (e.g. arched or centered above the main title).
    - SLOT 2: PRIMARY HEADLINE (MASTER TITLE ZONE):
@@ -11605,14 +11652,19 @@ If the Design Reference has a visible brand logo, position the client's logo in 
      ${subtitle ? `\u{1F449} RENDER THIS EXACT SUBTITLE: "${subtitle}"` : "If a subtitle/message is requested, render it in refined secondary typography, optically centered below the headline."}
      * Spatial Coordinate: Place directly inside/on the banner, ribbon, card, or supporting horizontal zone where the reference places its quote or subtitle.
    - SLOT 4: LOGISTICAL DETAILS / ADDRESS (BASE / FOOTER ZONE):
-     ${footer ? `\u{1F449} RENDER THIS FOOTER INFO: "${footer}"` : "Address, location, and logistical details placed strictly at the bottom base with generous safe padding."}
+     ${logisticalLocation || footer ? `\u{1F449} RENDER THIS FOOTER INFO: "${(logisticalLocation || footer).toUpperCase()}"` : "Address, location, and logistical details placed strictly at the bottom base with generous safe padding."}
      * Spatial Coordinate: Sit cleanly in the bottom ground/floor margin zone, exactly where the reference places its address/contact details.
 
+[\u{1F451} MASTER TITLE ORNAMENTAL SWASH & LIGATURE TREATMENT]
+When the Design Reference features high-end display typography with dramatic swashes, flourished initial capital letters (e.g. an oversized calligraphic initial 'C' looping under letters), or luxury metallic bevels:
+You MUST apply that EXACT SAME ORNAMENTAL CALLIGRAPHIC/SERIF TREATMENT to the user's requested headline or subject name! Render the initial capital letter with a majestic flowing flourish, swash loops, or decorative ligature matching the reference!
+
+${logisticalBlock}
 2. SPATIAL ALIGNMENT & ORDER:
    - ${alignmentText}
    - NEVER scatter words randomly across the canvas! Every word belongs to its designated 2D spatial coordinate zone mirroring the reference.
    - Maintain generous breathing room (respiro visual) of at least 15% from all canvas borders.`;
-          return { headline, subtitle, badge, footer, alignment, directiveBlock };
+          return { headline, subtitle, badge, footer, logisticalDate, logisticalLocation, alignment, directiveBlock };
         };
         const textReplacements = extractTextReplacements(combinedUserText);
         const { exclusions, hasExclusions } = extractNegativeExclusions(combinedUserText);
@@ -11690,6 +11742,17 @@ ${userNotes}
 [ROLE & EXPERTISE]
 You are a World-Class Creative Director and Master Graphic Designer executing an agency-grade flyer, poster, social media card, or commercial marketing visual.
 
+[\u{1F3A8} ABSOLUTE STYLE REFERENCE & COLOR PALETTE SUPREMACY LAW]
+1. 100% COLOR HARMONY & PALETTE CLONING:
+   - When a Style Reference, Design Reference, or visual aesthetic image is attached, you MUST extract and replicate its EXACT dominant color palette, color warmth, and chromatic atmosphere (e.g. majestic church gold, warm amber, deep burgundy/wine, cathedral glow, or luxury tones).
+   - ZERO ARBITRARY COLOR INVERSION: If the reference has a golden, warm amber, dark, or liturgical cathedral background, you are STRICTLY FORBIDDEN from generating a flat stark white background or turning it into a generic corporate red/white flyer!
+   - The user's requested words (e.g. "Transmiss\xE3o ao Vivo", "Padre Rodolfo") must adapt to the REFERENCE'S color palette and luxury elegance \u2014 NEVER let the words force a generic television or sports graphics color scheme!
+2. 100% LIGHTING, DEPTH & ATMOSPHERE CLONING:
+   - Clone the exact lighting character: warm golden backlight, halo rim light on the subject, dramatic atmospheric haze, cathedral architectural depth, soft liturgical glow.
+   - Do NOT replace atmospheric depth with flat solid colors or random abstract shapes!
+3. 100% ORNAMENTATION & TEXTURAL FIDELITY:
+   - If the reference features gold foil accents, silk ribbons, sacred arches, or classical borders, replicate that level of noble sophistication.
+
 [\u{1F3AF} DYNAMIC THEMATIC & CONTEXTUAL ELEMENT ADAPTATION \u2014 ABSOLUTE MANDATORY LAW]
 1. SUBJECT & NICHE DISAMBIGUATION:
    - Identify the user's requested flyer subject, business, or event niche from [USER CUSTOM SPECIFICATIONS & OVERRIDES] (e.g., auto repair shop, gym/fitness, law office, optics/eyewear, dental/medical clinic, restaurant/gastronomy, real estate, show/party, church/gospel, corporate conference).
@@ -11700,6 +11763,10 @@ You are a World-Class Creative Director and Master Graphic Designer executing an
        - Optics/medical references (glasses, ophthalmology charts) MUST BE PURGED if the user is creating a musical concert or religious event! Replace with stage lights, microphones, speakers.
        - NEVER blindly copy unrelated 3D props or background scenery that make no sense for the user's flyer topic!
    - If the user's requested topic matches the Design Reference topic, mirror the authentic environment and atmosphere naturally.
+   - SACRED & CHURCH EVENT ATMOSPHERE PRESERVATION:
+     If the flyer topic is ecclesiastical, pastoral, or religious (e.g., Ordena\xE7\xE3o Presbiteral, Missa, Culto, Di\xE1cono, Padre, Pastor, Vig\xEDlia, Celebra\xE7\xE3o, Congresso, Encontro da F\xE9) and the Design Reference features a sacred cathedral interior, golden church arches, warm holy lighting, and ceremonial banners/ribbons:
+     YOU MUST PRESERVE AND CLONE THAT EXACT SACRED CATHEDRAL ATMOSPHERE, MAJESTIC ARCHITECTURAL DEPTH, WARM AMBIENT GOLDEN LIGHTING, AND NOBLE CEREMONIAL ELEGANCE!
+     DO NOT turn this into a flat modern commercial flyer with random floating petals or stark red graphics! Keep the profound dignified sacred atmosphere of the reference!
    - ABSOLUTE PROHIBITION OF PODIUMS: NEVER generate modern 3D geometric platforms, podiums, cubes, or pedestals unless the user explicitly requests one.
 
 2. COMPOSITION & SUBJECT PLACEMENT (USER PRECEDENCE):
@@ -11738,17 +11805,25 @@ You MUST NOT follow any rigid generic template or hardcoded layout! Instead, dee
    - ${posResult.isExplicit ? `THE USER HAS EXPLICITLY ORDERED THAT THE SUBJECT MUST BE POSITIONED: ${posResult.position.toUpperCase()}! YOU MUST OBEY THIS USER POSITION 100%, COMPLETELY OVERRULING WHERE THE REFERENCE IMAGE PLACED THE SUBJECT! DO NOT place the subject where the reference has it. Place it strictly on the ${posResult.position.toUpperCase()} side!` : `Analyze WHERE and HOW the main subject is placed in the Design Reference (e.g. centered, elevated, left-aligned, right-aligned, bust portrait, or full-length). Place the new subject in that exact corresponding position, scale, and framing.`}
 2. LOGO POSITION & PROPORTION (SOVEREIGN USER COMMAND):
    - ${logoPlacement.isExplicit ? `THE USER HAS EXPLICITLY ORDERED THAT THE BRAND LOGO MUST BE POSITIONED: ${logoPlacement.position.toUpperCase()}! You MUST place the brand logo strictly ${logoPlacement.directive}. DO NOT place it where the reference has it!` : `If the Design Reference has a visible brand logo, position the client's logo in that corresponding zone. IF THE REFERENCE HAS NO VISIBLE LOGO (e.g. religious art or decorative flyer without logo), DO NOT place the logo in random arbitrary spots! Place the client's brand logo harmoniously in the UPPER TOP-CENTER HEADER ZONE (minimum 16% down from top border) or in the bottom-center footer with clean safe margins.`}
+   - \u{1F6A8} ZERO SOLID BLACK DISK / ZERO BLACK CIRCLE CONTAINER: DO NOT draw a solid black circular disc, black badge, dark sticker, or heavy container behind the logo! The circular symbol of the TV Chapada logo has a thin circular outline and an inner tent. On light or gold backgrounds, DO NOT FILL THE CIRCLE WITH BLACK! The circle's interior MUST BE 100% TRANSPARENT so that the background artwork (cream, gold, or lit surface) shows completely through inside the circle!
+   - \u{1F6A8} AUTOMATIC CONTRAST ADAPTATION FOR LIGHT CANVASES: If the brand logo is a white vector on a transparent background and the canvas background is light (cream, beige, white, light gold), DO NOT enclose it in a black circle! Instead, render ONLY the thin circular outline, the inner tent lines, and the brand text in clean dark monochrome (charcoal/black #111111) or refined metallic gold (#C59B27), floating 100% transparently directly on the canvas!
+   - \u{1F6A8} GEOMETRIC & TYPOGRAPHIC FIDELITY: Preserve the authentic geometric contours of the logo symbol (e.g. symmetrical mountain peak and clean radiant folds) and exact brand typography without wavy, wobbly, or deformed lines. ZERO black cookie, ZERO black filled circle.
+   - NEVER place the logo directly on top of the subject's face, hands, or body. Keep minimum 16% safe margin from all edges.
 3. TYPOGRAPHY ZONES & HIERARCHY:
    - Observe where the Design Reference places its main headline (top, middle, over the subject, or bottom). Replicate that exact spatial placement and typographic styling for the user's primary headline.
    - Replicate the layout of secondary text blocks, quotes, and badges (e.g. pill badges, script subtitles) in the same spatial zones where the reference placed them.
-4. SECONDARY DETAILS & ICONS:
+4. SECONDARY DETAILS & ICONS (STRICT EQUAL SIZING & GRID ARCHITECTURE):
    - Look at how the Design Reference groups logistical details and icons (e.g. whether it uses a dark footer bar, separate columns, rounded boxes, or floating tags). Mirror that exact design structure.
-   - If icons (calendars, clocks, location pins, broadcast badges) are requested, place each icon neatly integrated next to its respective text in the layout, strictly following the design language of the reference. NEVER scatter icons randomly across the subject's face or body.
+   - If icons (calendars, clocks, location pins, broadcast badges) are requested, place each icon neatly integrated next to its respective text in the layout, strictly following the design language of the reference.
+   - \u{1F6A8} STRICT IDENTICAL TYPOGRAPHIC SIZING LAW: When rendering paired logistical rows (Date/Time, Location/Address), Row 1 and Row 2 MUST HAVE THE EXACT SAME FONT HEIGHT AND FONT WEIGHT! Never enlarge or stretch one line over another!
+   - \u{1F6A8} EQUAL 1:1 ICON BOUNDING BOX: All icons (\u{1F4C5}, \u{1F4CD}, \u23F0) must have the exact same height and width (1:1 square box), vertically centered with their text row. Never draw the map pin larger than the calendar!
+   - \u{1F6A8} UNIFIED CONTAINER / CARD FRAMING: Enclose the paired logistical lines in a subtle, semi-transparent pill container or rounded card mirroring the reference, preventing loose floating text.
+   - NEVER scatter icons or text randomly across the subject's body, hands, or face. Keep minimum 16% safe margin from all edges.
 5. DESIGN HARMONY & REASONING:
    - Think like a master art director: evaluate the reference's composition and determine the optimal, most faithful way to assemble the user's elements so the resulting artwork looks indistinguishable from the agency style of the reference flyer!
 
 [NEGATIVE CONSTRAINTS]
-${hasExclusions ? `${exclusions.join(", ")}, ` : ""}podium, geometric platform, 3D display cube, pedestal, blurry, low resolution, soft focus, out of focus, motion blur, plastic skin, airbrushed, cartoon, anime, 3D model, messy layout, overlapping text, illegible font, unrequested English words, missing text, cut-off borders, glued-to-edge text, unrequested old text from reference, crown, whatsapp icon, instagram handle.`;
+${hasExclusions ? `${exclusions.join(", ")}, ` : ""}black circle behind logo, solid black circular disc, black badge container behind logo, sticker box behind logo, distorted logo lines, squiggly logo curves, deformed logo geometry, podium, geometric platform, 3D display cube, pedestal, blurry, low resolution, soft focus, out of focus, motion blur, plastic skin, airbrushed, cartoon, anime, 3D model, messy layout, overlapping text, illegible font, unrequested English words, missing text, cut-off borders, glued-to-edge text, unrequested old text from reference, crown, whatsapp icon, instagram handle.`;
           expandedSystemInstruction = `You are an elite commercial graphic designer and art director. You execute pristine advertising posters, religious event flyers, social media cards, and commercial marketing layouts with vector-sharp typographic precision.
 RULES:
 0. \u{1F451} SUPREME USER SOVEREIGNTY LAW (RANK 0): Any addition, exclusion, positioning, texture choice, or text requested by the user 100% OVERRULES any elements in the reference images.
@@ -11804,7 +11879,7 @@ CRITICAL POSITION OVERRIDE: Place the logo ${logoPlacement.position.toUpperCase(
             const firstAssetMeta = assetMetas[0]?.desc ? ` USER DIRECTIVE: "${assetMetas[0].desc}".` : "";
             addImagePart(
               logoBase64,
-              `BRAND LOGO REFERENCE \u2014 Embed this brand logo into the artwork with clean integration without obscuring the subject.${logoColorNote}${logoPosNote}${firstAssetMeta}`
+              `BRAND LOGO REFERENCE \u2014 Replicate this official brand logo symbol and typography. IMPORTANT: The transparent background of this logo PNG may decode as black, but that black is NOT part of the logo mark! DO NOT draw a solid black circular disk, black cookie, or dark sticker behind the logo! On light canvas backgrounds, render the circular ring, mountain lines, and brand name in clean dark monochrome (charcoal/black) or refined metallic gold, floating transparently on the canvas without any enclosing black background plate.${logoColorNote}${logoPosNote}${firstAssetMeta}`
             );
           }
           if (Array.isArray(logosList)) {
@@ -12327,7 +12402,7 @@ The subject reference image may be a compressed digital photo. DO NOT replicate 
       const currentAi = getAiClient(customApiKey);
       if (!currentAi) return res.status(400).json({ error: "API Key n\xE3o configurada." });
       const { data: cleanData, mimeType: resolvedMime } = resolveImageInput(imageData);
-      const extractModels = ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"];
+      const extractModels = ["gemini-3.5-flash", "gemini-3.6-flash", "gemini-flash-lite-latest", "gemini-3.7-flash", "gemini-3.1-pro-preview"];
       let promptText2 = "";
       let lastErr = null;
       try {
@@ -12534,7 +12609,7 @@ Return ONLY a JSON object with this exact structure:
   "summary": "Descri\xE7\xE3o t\xE9cnica detalhada e minuciosa do layout extra\xEDdo da imagem de refer\xEAncia."
 }
 IMPORTANT: Return valid, strictly parseable JSON. Do not put unescaped raw newlines inside JSON string values like generatedXaml or summary; use \\n instead.`;
-      const scanModels = ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"];
+      const scanModels = ["gemini-3.5-flash", "gemini-3.6-flash", "gemini-flash-lite-latest", "gemini-3.7-flash"];
       let responseText = "";
       let lastErr = null;
       try {
