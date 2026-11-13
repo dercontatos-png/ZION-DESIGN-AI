@@ -1967,6 +1967,12 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
         url: optSubjectList[idx] || img.url
       }));
 
+      const assetImagesMeta = assetImages.map((img, idx) => ({
+        index: idx + 1,
+        desc: img.desc?.trim() || (idx === 0 ? assetsPhotoDesc?.trim() : "") || "",
+        url: img.url
+      }));
+
       const apiKey = localStorage.getItem("custom_gemini_api_key") || "";
       const res = await fetch("/api/gerar", {
         method: "POST",
@@ -1984,6 +1990,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
           designRefsList: optRefList.length > 1 ? optRefList.slice(1) : (optPrimaryRef ? [optPrimaryRef] : []),
           logoBase64: assetImages[0]?.url || assetsPhotoBase64 || "",
           logosList: assetImages.length > 1 ? assetImages.slice(1).map(i => i.url) : [],
+          assetImagesMeta,
           useLogo: !!(assetImages.length > 0 || assetsPhotoBase64),
           logoInclusionType: "embedded",
           desativarSujeito: /n[aã]o\s*quero\s*pessoa|sem\s*pessoa|no\s*people/i.test(additionalDescription || ""),

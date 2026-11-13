@@ -9275,6 +9275,27 @@ MANDATORY REFORMATTING RULES:
         addImagePart(prevImgBase64, "IMAGEM MASTER ANTERIOR A SER REFORMATADA AO NOVO FORMATO");
         if (designRefBase64) addImagePart(designRefBase64, "Referência de Design Auxiliar");
         if (logoBase64) addImagePart(logoBase64, "Referência de Logotipo Oficial");
+      } else if (prevImgBase64 && isExplicitEdit) {
+        console.log(`[api/gerar] === INPAINTING & PRECISION SURGICAL EDIT ENGINE ACTIVATED: ${editInstruction} ===`);
+        fullPrompt = `Modify this attached original image ('Imagem Gerada Anterior a ser Editada') by preserving 100% of its exact overall composition, subject identity, hair style, hair length, hair color, clothing, layout, text, logos, background, and style, and applying ONLY this requested change/refinement: ${editInstruction}.
+CRITICAL IDENTITY & WARDROBE LOCK:
+- DO NOT change the person's hair style, hair length, or hair color! Keep the exact haircut and hair color from the original image! DO NOT add wigs, afro hair, or neon colors!
+- DO NOT change or remove their clothing or add unrequested logos!
+- Keep 100% of unmentioned elements completely identical.
+HIGH-FIDELITY FACIAL & DENTAL RECONSTRUCTION:
+1. DENTAL ANATOMY & NATURAL SMILE: Render tack-sharp, anatomically distinct individual teeth with natural enamel translucency, realistic interdental depth, and subtle gumline shadows. ABSOLUTELY NO solid white chalk bars, NO flat white strips.
+2. NATURAL LIPS & ZERO PIGMENT BLEED: Render authentic human lip texture with fine vertical dermal creases, natural skin gradations, and neutral realistic lip color matching real human skin. ABSOLUTELY NO solid neon pink, NO artificial magenta lipstick, NO painted-on plastic lips, and NO color bleed or pink pigment leaking onto the mustache, philtrum, or surrounding skin.`;
+
+        expandedSystemInstruction = `You are a world-class digital artist specializing in precision inpainting and surgical image modification. Preserve 100% of the original image and execute only the specific modification requested.`;
+
+        parts.push({ text: fullPrompt });
+        addImagePart(prevImgBase64, "Imagem Gerada Anterior a ser Editada");
+        if (req.body.maskBase64) {
+          addImagePart(req.body.maskBase64, "MÁSCARA DE INPAINTING (ÁREA A SER EDITADA)");
+        }
+        if (designRefBase64) addImagePart(designRefBase64, "Referência de Design Auxiliar");
+        if (logoBase64) addImagePart(logoBase64, "Referência de Logotipo Oficial");
+        if (base64DoSujeito) addImagePart(base64DoSujeito, "Referência de Identidade do Sujeito");
       } else if (isRefBuilder) {
         // =========================================================================
         // UNIVERSAL SOVEREIGN USER DIRECTIVE & MULTI-REFERENCE DISAMBIGUATION ENGINE
@@ -9288,6 +9309,10 @@ MANDATORY REFORMATTING RULES:
           req.body.negativePrompt
         ].filter(Boolean).join("\n");
 
+        const assetMetas: any[] = Array.isArray(req.body.assetImagesMeta) ? req.body.assetImagesMeta : [];
+        const subjectMetas: any[] = Array.isArray(req.body.subjectImagesMeta) ? req.body.subjectImagesMeta : [];
+        const refMetas: any[] = Array.isArray(req.body.referenceImagesMeta) ? req.body.referenceImagesMeta : [];
+
         // 1. EXTRACT NEGATIVE EXCLUSIONS (SUBTRACTIONS: "não colocar X", "sem Y", "tirar Z", etc.)
         const extractNegativeExclusions = (text: string): { exclusions: string[]; hasExclusions: boolean } => {
           if (!text) return { exclusions: [], hasExclusions: false };
@@ -9296,7 +9321,10 @@ MANDATORY REFORMATTING RULES:
             /n[aã]o\s+(?:coloque|colocar|ponha|p[oô]r|bota|botar|use|usar|adicione|adicionar|inclua|incluir|queira|quero|deve\s+ter|precisa\s+ter|deixar|deixe|gerar|gere)\s+([^.,;:\n]+)/gi,
             /sem\s+(?:o\s+|a\s+|os\s+|as\s+|nenhum\s+|nenhuma\s+|nada\s+de\s+|qualquer\s+)?([^.,;:\n]+)/gi,
             /(?:tirar|tire|remover|remova|retirar|retire|eliminar|elimine|deletar|delete|apagar|apague|excluir|exclua|dispenso|dispensar)\s+(?:o\s+|a\s+|os\s+|as\s+)?([^.,;:\n]+)/gi,
-            /(?:without|do\s+not\s+include|do\s+not\s+put|do\s+not\s+add|do\s+not\s+use|no|omit|remove)\s+([^.,;:\n]+)/gi
+            /(?:without|do\s+not\s+include|do\s+not\s+put|do\s+not\s+add|do\s+not\s+use|no|omit|remove)\s+([^.,;:\n]+)/gi,
+            /n[aã]o\s+([a-zA-ZÀ-ÿ\s]+?)\s+(?:na|no|da|do|em)\s+(?:logo|logotipo|marca|sujeito|modelo|pessoa|fundo|cen[aá]rio|flyer|arte)/gi,
+            /sem\s+([a-zA-ZÀ-ÿ\s]+?)\s+(?:na|no|da|do|em)\s+(?:logo|logotipo|marca|sujeito|modelo|pessoa|fundo|cen[aá]rio|flyer|arte)/gi,
+            /(?:zero|nenhum|nenhuma)\s+([a-zA-ZÀ-ÿ\s]+)/gi
           ];
           for (const regex of patterns) {
             let match;
@@ -9355,6 +9383,65 @@ MANDATORY REFORMATTING RULES:
           }
           return { additions, hasAdditions: additions.length > 0 };
         };
+
+        // 3. EXTRACT LOGO COLOR & STYLING OVERRIDES ("não verde na logo", "logo branca", "logo dourada", etc.)
+        const extractLogoDirectives = (
+          text: string,
+          metas: any[] = []
+        ): {
+          forbiddenColors: string[];
+          requestedColors: string[];
+          directiveBlock: string;
+          hasOverride: boolean;
+        } => {
+          const forbiddenColors: string[] = [];
+          const requestedColors: string[] = [];
+
+          const textsToScan = [
+            text,
+            ...metas.map(m => m.desc).filter(Boolean)
+          ].join("\n");
+
+          const forbiddenPatterns = [
+            /(?:n[aã]o\s+(?:use|usar|coloque|colocar|quero|tenha)?\s*|sem\s+|tirar\s+|remover\s+)(?:a\s+cor\s+|o\s+tom\s+)?(verde|azul|vermelh[oa]|amarel[oa]|preto|branc[oa]|roxo|lil[aá]s|laranja|dourad[oa]|pratead[oa]|cinza|marrom|rosa|pink)\s+(?:na|no|da|do)\s+(?:logo|logotipo|marca|emblema)/gi,
+            /(?:logo|logotipo|marca|emblema)\s+(?:sem|n[aã]o\s+(?:use|usar|coloque|colocar|ter)?)\s+(?:a\s+cor\s+|o\s+tom\s+)?(verde|azul|vermelh[oa]|amarel[oa]|preto|branc[oa]|roxo|lil[aá]s|laranja|dourad[oa]|pratead[oa]|cinza|marrom|rosa|pink)/gi
+          ];
+          for (const regex of forbiddenPatterns) {
+            let m;
+            while ((m = regex.exec(textsToScan)) !== null) {
+              if (m[1]) {
+                const color = m[1].toLowerCase().trim();
+                if (!forbiddenColors.includes(color)) forbiddenColors.push(color);
+              }
+            }
+          }
+
+          const requestedPatterns = [
+            /(?:logo|logotipo|marca|emblema)\s+(?:toda\s+|totalmente\s+|em\s+|na\s+cor\s+)?(branca|branco|dourada|dourado|preta|preto|prateada|prateado|monocrom[aá]tic[oa]|amarela|amarelo|azul|verde|vermelha|vermelho)/gi,
+            /(?:deixar|mudar|coloque|colocar|fazer|tornar)\s+(?:a\s+)?(?:logo|logotipo|marca|emblema)\s+(?:toda\s+|totalmente\s+|em\s+|na\s+cor\s+)?(branca|branco|dourada|dourado|preta|preto|prateada|prateado|monocrom[aá]tic[oa]|amarela|amarelo|azul|verde|vermelha|vermelho)/gi
+          ];
+          for (const regex of requestedPatterns) {
+            let m;
+            while ((m = regex.exec(textsToScan)) !== null) {
+              if (m[1]) {
+                const color = m[1].toLowerCase().trim();
+                if (!requestedColors.includes(color)) requestedColors.push(color);
+              }
+            }
+          }
+
+          const hasOverride = forbiddenColors.length > 0 || requestedColors.length > 0;
+          let directiveBlock = "";
+          if (hasOverride) {
+            directiveBlock = `\n[🎨 LOGO COLOR & BRAND ASSET CUSTOMIZATION LAW — USER OVERRIDE]
+The user explicitly ordered custom color modifications for the brand logo:
+${forbiddenColors.length > 0 ? `🚫 STRICTLY FORBIDDEN LOGO COLORS: DO NOT use ${forbiddenColors.join(', ')} in the logo! Strip and purge ${forbiddenColors.join(', ')} completely from the logo symbol and typography.\n` : ""}${requestedColors.length > 0 ? `✨ MANDATORY LOGO COLOR FINISH: Render the logo strictly in: ${requestedColors.join(', ')} (e.g. solid white vector, monochrome, or metallic gold)!\n` : ""}ABSOLUTE GOVERNING LAW: The user's logo color instructions OVERRULE the original reference image colors 100%. Replicate the logo's shapes and vector contours faithfully, but adapt its colors to match this user command.`;
+          }
+
+          return { forbiddenColors, requestedColors, directiveBlock, hasOverride };
+        };
+
+        const logoDirectives = extractLogoDirectives(combinedUserText, assetMetas);
 
         // 3. EXTRACT AND RESOLVE SPATIAL POSITIONING
         const resolveSubjectPosition = (
@@ -9482,7 +9569,6 @@ MANDATORY REFORMATTING RULES:
           allRefImages.unshift(designRefBase64);
         }
 
-        const refMetas: any[] = Array.isArray(req.body.referenceImagesMeta) ? req.body.referenceImagesMeta : [];
         const resolvedRefRoles = resolveReferenceRoles(allRefImages, refMetas, combinedUserText);
 
         const exclusionBlock = hasExclusions
@@ -9506,7 +9592,7 @@ MANDATORY REFORMATTING RULES:
           : "";
 
         const userNotes = (req.body.additionalPrompt || promptTraduzido || "").trim();
-        const sovereignMandate = `${exclusionBlock}${additionBlock}${posResult.directive}\n\n${multiRefRolesSummary}${userNotes ? `[USER CUSTOM SPECIFICATIONS & OVERRIDES - RANK 1 PRIORITY]\n${userNotes}\n\n` : ""}`;
+        const sovereignMandate = `${exclusionBlock}${additionBlock}${logoDirectives.directiveBlock}${posResult.directive}\n\n${multiRefRolesSummary}${userNotes ? `[USER CUSTOM SPECIFICATIONS & OVERRIDES - RANK 1 PRIORITY]\n${userNotes}\n\n` : ""}`;
 
         const isGraphicCardOrFlyer =
           hasFlyerTypography ||
@@ -9520,17 +9606,21 @@ MANDATORY REFORMATTING RULES:
 [ROLE & EXPERTISE]
 You are a World-Class Creative Director and Master Graphic Designer executing an agency-grade flyer, poster, social media card, or commercial marketing visual.
 
-[UNIVERSAL DESIGN REFERENCE REPLICATION — GOVERNING LAW]
-Look at the attached Design Layout & Style Inspiration Reference:
-1. REPLICATE THE ENVIRONMENT, BACKGROUND & ATMOSPHERE:
-   - Extract and mirror the authentic background environment from the Design Reference (e.g. cathedral basilica / church interior with glowing arches and divine stained-glass lighting, concert stage, neon city, nature, or studio).
-   - Replicate the exact color grading, atmospheric lighting beams, and artistic depth of the reference.
-   - ABSOLUTE PROHIBITION OF PODIUMS: NEVER generate modern 3D geometric platforms, podiums, cubes, or pedestals unless the reference itself has one or the user explicitly asks for a product podium!
-   - If the reference features an ornate decorative bottom element (like a golden baroque altar border, floral garland, or wave), replicate that decorative bottom frame naturally.
+[🎯 DYNAMIC THEMATIC & CONTEXTUAL ELEMENT ADAPTATION — ABSOLUTE MANDATORY LAW]
+1. SUBJECT & NICHE DISAMBIGUATION:
+   - Identify the user's requested flyer subject, business, or event niche from [USER CUSTOM SPECIFICATIONS & OVERRIDES] (e.g., auto repair shop, gym/fitness, law office, optics/eyewear, dental/medical clinic, restaurant/gastronomy, real estate, show/party, church/gospel, corporate conference).
+   - If the Design Reference image belongs to a DIFFERENT thematic niche than the user's requested subject:
+     * YOU MUST CLONE ONLY THE DESIGN STRUCTURE: Composition grid, card split panels, typography hierarchy, spatial balance, lighting direction, and visual quality.
+     * YOU MUST PURGE AND REPLACE ALL THEME-SPECIFIC PROPS, 3D ELEMENTS, AND BACKGROUND SCENERY:
+       - Church/Religious references (crosses, altars, stained glass, bibles, chalices, baroque borders) MUST BE COMPLETELY PURGED if the user is creating a flyer for an automotive shop, gym, lawyer, doctor, party, or business! Replace with authentic props matching the user's industry (e.g. tools, car parts, modern sleek lighting, dumbbells, office interior, clean geometric framing).
+       - Optics/medical references (glasses, ophthalmology charts) MUST BE PURGED if the user is creating a musical concert or religious event! Replace with stage lights, microphones, speakers.
+       - NEVER blindly copy unrelated 3D props or background scenery that make no sense for the user's flyer topic!
+   - If the user's requested topic matches the Design Reference topic, mirror the authentic environment and atmosphere naturally.
+   - ABSOLUTE PROHIBITION OF PODIUMS: NEVER generate modern 3D geometric platforms, podiums, cubes, or pedestals unless the user explicitly requests one.
 
 2. COMPOSITION & SUBJECT PLACEMENT (USER PRECEDENCE):
    - ${posResult.isExplicit ? `Place the main subject(s) strictly on the ${posResult.position.toUpperCase()} side as explicitly commanded by the user, leaving open negative space on the opposite side for typography and graphic balance. DO NOT mirror the reference position!` : `Place the main subject(s) in the prominent position indicated by the Design Reference (e.g. centered, elevated, dignified).`}
-   - If the subject is a person (or people), integrate them naturally into the scene's lighting, depth, and sacred/editorial atmosphere.
+   - If the subject is a person (or people), integrate them naturally into the scene's lighting, depth, and editorial atmosphere.
 
 [100% REAL BIOMETRIC IDENTITY LOCK (SWAP SLOT)]
 Look at the attached Main Subject Real Identity Reference:
@@ -9576,7 +9666,7 @@ ${hasExclusions ? `${exclusions.join(', ')}, ` : ""}podium, geometric platform, 
 RULES:
 0. 👑 SUPREME USER SOVEREIGNTY LAW (RANK 0): Any addition, exclusion, positioning, texture choice, or text requested by the user 100% OVERRULES any elements in the reference images.
 ${hasExclusions ? `   - STRICT EXCLUSIONS: Under NO circumstance generate: ${exclusions.join(', ')}. If present in reference or photo, PURGE AND ERASE THEM COMPLETELY.\n` : ""}${hasAdditions ? `   - MANDATORY ADDITIONS: You must include: ${additions.join(', ')}.\n` : ""}${posResult.isExplicit ? `   - POSITIONING: Position the subject on the ${posResult.position.toUpperCase()} as ordered by the user.\n` : ""}   - MULTI-REFERENCE SPECIALIZATION: Strictly respect each reference's assigned role (texture only, typography only, layout only). Never blend contradictory layouts.
-1. DYNAMIC REFERENCE ANALYSIS & REPLICATION: Visually analyze the Design Reference to understand its unique composition and layout. Replicate the environment, color palette, lighting mood, and composition grid from the Design Reference. Position the logo, titles, subject, and badges in the corresponding spatial zones where the reference placed them, without applying any fixed arbitrary template. NO modern 3D podiums or plastic cubes on non-product flyers.
+1. DYNAMIC REFERENCE ANALYSIS & THEMATIC ADAPTATION: Visually analyze the Design Reference to clone its composition grid, panel layout, and typography hierarchy. MANDATORY NICHE ADAPTATION: If the user's requested topic differs from the reference (e.g. auto mechanic shop vs church, dental clinic vs party), purge all reference-specific props (crosses, altars, glasses) and replace them with props matching the user's requested niche! NO modern 3D podiums or plastic cubes on non-product flyers.
 2. STRICT TEXT PURGE: Completely erase all old text from the reference image. Render ONLY the text explicitly requested by the user. Respect all negative constraints (e.g. no crown, no whatsapp, no instagram).
 3. REAL BIOMETRIC IDENTITY: Keep the exact facial identity, skin tone, hair, and clothing of the person in the Subject image. Authentic human realism.
 4. BRAZILIAN PORTUGUESE ONLY: Render all requested text exactly in Brazilian Portuguese as provided.`;
@@ -9584,17 +9674,20 @@ ${hasExclusions ? `   - STRICT EXCLUSIONS: Under NO circumstance generate: ${exc
           parts.push({ text: fullPrompt });
 
           if (base64DoSujeito) {
+            const meta0 = subjectMetas[0]?.desc ? ` USER DIRECTIVE: "${subjectMetas[0].desc}".` : "";
             addImagePart(
               base64DoSujeito,
-              `MAIN SUBJECT REAL IDENTITY REFERENCE (SWAP SLOT) — Replicate 100% of the authentic facial identity, hair, skin tone, and features of the person/people in this image. Keep their real faces identical to the photo.${subjectExclusionWarning}`
+              `MAIN SUBJECT REAL IDENTITY REFERENCE (SWAP SLOT) — Replicate 100% of the authentic facial identity, hair, skin tone, and features of the person/people in this image. Keep their real faces identical to the photo.${subjectExclusionWarning}${meta0 ? ` ${meta0}` : ""}`
             );
           }
           if (Array.isArray(sujeitosBase64List)) {
             sujeitosBase64List.forEach((ref: any, idx: number) => {
               if (ref && ref !== base64DoSujeito) {
+                const meta = subjectMetas[idx + 1] || subjectMetas[idx];
+                const metaDesc = meta?.desc ? ` USER DIRECTIVE: "${meta.desc}".` : "";
                 addImagePart(
                   ref,
-                  `ADDITIONAL PRODUCT/SUBJECT REFERENCE #${idx + 1}${subjectExclusionWarning}`
+                  `ADDITIONAL PRODUCT/SUBJECT REFERENCE #${idx + 1}${subjectExclusionWarning}${metaDesc ? ` ${metaDesc}` : ""}`
                 );
               }
             });
@@ -9602,24 +9695,32 @@ ${hasExclusions ? `   - STRICT EXCLUSIONS: Under NO circumstance generate: ${exc
           if (resolvedRefRoles.length > 0) {
             resolvedRefRoles.forEach((roleInfo, idx) => {
               const refImg = allRefImages[idx];
+              const meta = refMetas[idx];
+              const metaDesc = meta?.desc ? `\nUSER SPECIFIC DIRECTIVE FOR THIS REFERENCE: "${meta.desc}"` : "";
               if (refImg) {
                 addImagePart(
                   refImg,
-                  `[${roleInfo.title}]\n${roleInfo.instructions}${refExclusionWarning} IMPORTANT: ERASE and IGNORE all text in this image; render ONLY the text explicitly requested by the user.`
+                  `[${roleInfo.title}]\n${roleInfo.instructions}${metaDesc}${refExclusionWarning} IMPORTANT: ERASE and IGNORE all text in this image; render ONLY the text explicitly requested by the user.`
                 );
               }
             });
           }
           if (logoBase64) {
+            const logoColorNote = logoDirectives.hasOverride
+              ? `\nCRITICAL COLOR OVERRIDE: ${logoDirectives.forbiddenColors.length > 0 ? `DO NOT use ${logoDirectives.forbiddenColors.join(', ')}.` : ""} ${logoDirectives.requestedColors.length > 0 ? `Render strictly in ${logoDirectives.requestedColors.join(', ')}.` : ""}`
+              : "";
+            const firstAssetMeta = assetMetas[0]?.desc ? ` USER DIRECTIVE: "${assetMetas[0].desc}".` : "";
             addImagePart(
               logoBase64,
-              "BRAND LOGO REFERENCE — Embed this brand logo into the artwork, positioning it in the exact corresponding location where the logo or brand mark is located in the Design Reference image (e.g. bottom-left, top-corner, or header), maintaining authentic proportions and clean integration without obscuring the subject."
+              `BRAND LOGO REFERENCE — Embed this brand logo into the artwork, positioning it in the exact corresponding location where the logo or brand mark is located in the Design Reference image (e.g. bottom-left, top-corner, or header), maintaining authentic proportions and clean integration without obscuring the subject.${logoColorNote}${firstAssetMeta}`
             );
           }
           if (Array.isArray(logosList)) {
             logosList.forEach((asset: any, idx: number) => {
               if (asset && asset !== logoBase64) {
-                addImagePart(asset, `BRAND ASSET REFERENCE #${idx + 1}`);
+                const meta = assetMetas[idx + 1] || assetMetas[idx];
+                const metaDesc = meta?.desc ? ` — USER DIRECTIVE: "${meta.desc}".` : "";
+                addImagePart(asset, `BRAND ASSET REFERENCE #${idx + 1}${metaDesc}`);
               }
             });
           }
@@ -9684,17 +9785,20 @@ ${hasExclusions ? `   - STRICT EXCLUSIONS: Under NO circumstance generate: ${exc
 
           // 1. Add Subject References (SWAP SLOT)
           if (base64DoSujeito) {
+            const meta0 = subjectMetas[0]?.desc ? ` USER DIRECTIVE: "${subjectMetas[0].desc}".` : "";
             addImagePart(
               base64DoSujeito,
-              `SWAP SLOT — Main Subject Identity Reference. Replicate 100% of this person's exact face, eyes, nose, lips, jawline, skin tone, and natural micro-pore texture with flawless photographic fidelity.${subjectExclusionWarning}`
+              `SWAP SLOT — Main Subject Identity Reference. Replicate 100% of this person's exact face, eyes, nose, lips, jawline, skin tone, and natural micro-pore texture with flawless photographic fidelity.${subjectExclusionWarning}${meta0 ? ` ${meta0}` : ""}`
             );
           }
           if (Array.isArray(sujeitosBase64List)) {
             sujeitosBase64List.forEach((ref: any, idx: number) => {
               if (ref && ref !== base64DoSujeito) {
+                const meta = subjectMetas[idx + 1] || subjectMetas[idx];
+                const metaDesc = meta?.desc ? ` USER DIRECTIVE: "${meta.desc}".` : "";
                 addImagePart(
                   ref,
-                  `SWAP SLOT — Additional Subject Identity Reference #${idx + 1}. Replicate 100% of this person's facial features and micro-pore skin texture.${subjectExclusionWarning}`
+                  `SWAP SLOT — Additional Subject Identity Reference #${idx + 1}. Replicate 100% of this person's facial features and micro-pore skin texture.${subjectExclusionWarning}${metaDesc ? ` ${metaDesc}` : ""}`
                 );
               }
             });
@@ -9704,10 +9808,12 @@ ${hasExclusions ? `   - STRICT EXCLUSIONS: Under NO circumstance generate: ${exc
           if (resolvedRefRoles.length > 0) {
             resolvedRefRoles.forEach((roleInfo, idx) => {
               const refImg = allRefImages[idx];
+              const meta = refMetas[idx];
+              const metaDesc = meta?.desc ? `\nUSER SPECIFIC DIRECTIVE FOR THIS REFERENCE: "${meta.desc}"` : "";
               if (refImg) {
                 addImagePart(
                   refImg,
-                  `[${roleInfo.title}]\n${roleInfo.instructions}${refExclusionWarning} DO NOT copy this person's face; the face comes 100% from the Subject Identity Reference.`
+                  `[${roleInfo.title}]\n${roleInfo.instructions}${metaDesc}${refExclusionWarning} DO NOT copy this person's face; the face comes 100% from the Subject Identity Reference.`
                 );
               }
             });
@@ -9715,17 +9821,20 @@ ${hasExclusions ? `   - STRICT EXCLUSIONS: Under NO circumstance generate: ${exc
 
           // 3. Add Assets (if any)
           if (logoBase64) {
+            const firstAssetMeta = assetMetas[0]?.desc ? ` USER DIRECTIVE: "${assetMetas[0].desc}".` : "";
             addImagePart(
               logoBase64,
-              "ASSET REFERENCE — Faithfully integrate this object/product/accessory into the photographic scene with physically accurate contact shadows and reflections."
+              `ASSET REFERENCE — Faithfully integrate this object/product/accessory into the photographic scene with physically accurate contact shadows and reflections.${firstAssetMeta}`
             );
           }
           if (Array.isArray(logosList)) {
             logosList.forEach((asset: any, idx: number) => {
               if (asset && asset !== logoBase64) {
+                const meta = assetMetas[idx + 1] || assetMetas[idx];
+                const metaDesc = meta?.desc ? ` — USER DIRECTIVE: "${meta.desc}".` : "";
                 addImagePart(
                   asset,
-                  `ASSET REFERENCE #${idx + 1} — Faithfully integrate this object/product into the photographic scene with physically accurate contact shadows and reflections.`
+                  `ASSET REFERENCE #${idx + 1} — Faithfully integrate this object/product into the photographic scene with physically accurate contact shadows and reflections.${metaDesc}`
                 );
               }
             });
@@ -9735,19 +9844,7 @@ ${hasExclusions ? `   - STRICT EXCLUSIONS: Under NO circumstance generate: ${exc
           }
         } // end of !isGraphicCardOrFlyer portrait branch
       } else {
-        if (prevImgBase64 && isExplicitEdit) {
-        console.log(`[api/gerar] INPAINTING/EDIT MODE DETECTED: ${editInstruction}`);
-        fullPrompt = `Modify this attached original image ('Imagem Gerada Anterior a ser Editada') by preserving 100% of its exact overall composition, subject identity, hair style, hair length, hair color, clothing, layout, text, logos, background, and style, and applying ONLY this requested change/refinement: ${editInstruction}.
-CRITICAL IDENTITY & WARDROBE LOCK:
-- DO NOT change the person's hair style, hair length, or hair color! Keep the exact haircut and hair color from the original image! DO NOT add wigs, afro hair, or neon colors!
-- DO NOT change or remove their clothing or add unrequested logos!
-- Keep 100% of unmentioned elements completely identical.
-HIGH-FIDELITY FACIAL & DENTAL RECONSTRUCTION:
-1. DENTAL ANATOMY & NATURAL SMILE: Render tack-sharp, anatomically distinct individual teeth with natural enamel translucency, realistic interdental depth, and subtle gumline shadows. ABSOLUTELY NO solid white chalk bars, NO flat white strips.
-2. NATURAL LIPS & ZERO PIGMENT BLEED: Render authentic human lip texture with fine vertical dermal creases, natural skin gradations, and neutral realistic lip color matching real human skin. ABSOLUTELY NO solid neon pink, NO artificial magenta lipstick, NO painted-on plastic lips, and NO color bleed or pink pigment leaking onto the mustache, philtrum, or surrounding skin.`;
-      } else {
         fullPrompt = expandedPrompt;
-      }
 
       const typoMatch = (typeof promptTraduzido === "string" ? promptTraduzido : "").match(/=== TYPOGRAPHY & TEXT LAYOUT ===[\s\S]*?(?=\n===|$)/);
       if (typoMatch && typoMatch[0]) {
@@ -9770,7 +9867,7 @@ HIGH-FIDELITY FACIAL & DENTAL RECONSTRUCTION:
   1. EXACT LOGO SUBSTITUTION IN PLACE (ABSOLUTE MANDATORY RULE): If the Design Layout Reference photo contains an OLD logo in the BOTTOM-LEFT or BOTTOM-RIGHT FOOTER, REPLACE it with the client's brand logo AT THE EXACT SAME FOOTER POSITION and scale. If the old logo was in the top header, place the client's logo in the top header. NEVER move a footer logo to the top header!
   2. HAIR/FACE AVOIDANCE (ABSOLUTE MANDATORY RULE): The brand logo MUST NEVER be rendered on top of the subject's hair, head, face, or body.
   3. SEAMLESS BLENDING (NO ARTIFICIAL BLACK BOXES): Render the logo cleanly and seamlessly onto the background canvas. DO NOT draw an artificial black box, dark container rectangle, or inverted color background behind the logo unless those shapes are part of the original logo file itself.
-  4. 100% VISUAL & COLOR FIDELITY: Replicate 100% of the original logo's emblem shapes, typography, numbers, and true colors with perfect image-to-image accuracy. Do NOT print the logo's name as a separate text layer in typography.`)
+  4. 100% VISUAL & SHAPE FIDELITY (WITH USER COLOR OVERRIDE): Replicate 100% of the original logo's emblem shapes, typography, and numbers with perfect image-to-image accuracy. If the user explicitly commanded custom logo colors (e.g. 'não tal cor na logo', 'sem azul na logo', 'logo branca', 'logo dourada'), OBEY the user's color commands over the original logo colors; otherwise preserve authentic colors. Do NOT print the logo's name as a separate text layer in typography.`)
         : `- NO RANDOM LOGOS: Do not invent or hallucinate logos if not provided. Erase any existing logos from the reference image.`;
 
       // Foto-para-grade (photo-slot) mapping: layout com vários espaços de foto + várias fotos de pessoas enviadas
@@ -9811,7 +9908,7 @@ ${flyerVsLogoDisambiguation}
 - STRICT ORIGINAL BACKGROUND PRESERVATION (CRITICAL): When editing an existing photo or image reference, you MUST KEEP AND PRESERVE 100% OF THE ORIGINAL BACKGROUND SCENE, ROOM, WALLS, FURNITURE, AND ENVIRONMENT from the attached photo reference. DO NOT REPLACE, SWAP, GENERATE A DIFFERENT BACKGROUND, OR CHANGE THE SCENE. Keep the exact same wall, room, and setting from the reference photo, applying ONLY the specific edits requested.
 - MANDATORY OBJECT & SHADOW REMOVAL (CRITICAL): If the client requests to remove shadows or remove objects/clutter from tables/surfaces, you MUST MANDATORILY ERASE, OMIT, DISSOLVE AND PAINT OVER all shadows behind subjects, wall shadows, dark flash cast shadows, and table objects. Replace those shadow areas with the clean, bright, evenly lit wall texture matching the rest of the room.
 - TYPOGRAPHY & REFERENCE FIDELITY MANDATE (CRITICAL): If custom text is supplied in this prompt, replace the corresponding text blocks with the new text. If NO replacement text was provided, faithfully transcribe and replicate 100% of the original text, titles, dates, checklist items, and contact footer from the reference image with vector-sharp precision! NEVER hallucinate unrequested text or add unrequested 3D metallic bevels.
-- ICONS, EFFECTS, & 3D DEPTH (CRITICAL): You MUST perfectly clone all icons, visual effects, lighting glows, 3D elements, depth of field, and graphic adornments present in the Design Layout Reference. Do NOT simplify the design. If the reference has glowing icons, 3D shapes, shadow depth, or cinematic lighting, you MUST reproduce those exact effects and depths with 100% fidelity.
+- ICONS, EFFECTS, & 3D DEPTH (CRITICAL): Replicate visual effects, lighting glows, and graphic depth inspired by the Design Layout Reference. ADAPTATION MANDATE: If the reference contains industry-specific 3D props (such as church crosses, baroque altars, or optical eyeglasses) that contradict the user's requested flyer topic (e.g. mechanic shop, gym, corporate, doctor), PURGE and REPLACE them with authentic elements matching the user's requested topic!
 - BRAND COLOR PALETTE ENFORCEMENT (CRITICAL): ${!coresAutomaticas ? "The client HAS specified custom brand colors in the prompt. You MUST strictly and aggressively use those EXACT colors for the entire graphic composition, background panels, highlights, glows, and ambient lighting. You MUST completely OVERRIDE the original reference flyer's colors with the requested colors." : "The client HAS NOT specified custom colors. You MUST perfectly copy the exact original color palette of the Design Layout Reference."}
 - STRICT REPLACEMENT, SINGLE LOGO & ICON EXCLUSION MANDATE (CRITICAL):
   1. SINGLE LOGO INSTANCE: Render EXACTLY ONE single instance of the brand logo on the entire artwork. Absolute prohibition against duplicate logos, double logos, twin logos, extra logo placements, or repeating the logo anywhere else on the canvas.
@@ -9976,7 +10073,7 @@ The subject reference image may be a compressed digital photo. DO NOT replicate 
 
             addImagePart(preparedLogoInput, `LOGOTIPO DA MARCA DO CLIENTE (MANDATÓRIO — IDENTIDADE VISUAL EXATA):
 - Render EXACTLY ONE single instance of this brand logo cleanly positioned (typically in the header corner).
-- PROHIBITION: NEVER duplicate, clone, or place multiple copies of the logo. Do NOT keep any old logos or emblems from the design reference image. Replicate ONLY this exact brand logo provided, preserving its authentic symbols, typography, and colors.`);
+- PROHIBITION: NEVER duplicate, clone, or place multiple copies of the logo. Do NOT keep any old logos or emblems from the design reference image. Replicate ONLY this exact brand logo provided, preserving its authentic symbols and vector contours. If the user specified custom logo colors (e.g. 'não tal cor na logo', 'logo branca', 'logo dourada'), obey the requested colors over original colors.`);
           }
         }
       }
