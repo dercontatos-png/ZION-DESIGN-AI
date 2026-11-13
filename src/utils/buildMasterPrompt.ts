@@ -533,7 +533,8 @@ export const buildMasterSystemInstruction = (config: ProjectConfig): string => {
 CORE DIRECTIVES:
 1. FIDELITY TO REFERENCE: Replicate layout geometry, typography weights, color palettes, and spatial hierarchy from attached references with 100% fidelity.
 2. TEXT INTEGRITY & BAN ON LABELS: Render custom text layers cleanly in pt-BR with crisp edges. STRICT PROHIBITION: Render ONLY the clean text inside quotation marks! NEVER paint technical metadata labels such as 'H1', 'H2', 'CTA', 'Bullets', 'Headline', '[H1]', '[CTA]', '[BULLETS]' on the graphic canvas. Never print font family names or system alignment words.
-3. ABSOLUTE BAN ON FLOATING CARDS/BOXES: NEVER draw a floating white card, rounded rectangle container, or box in the center enclosing text. All text and elements must float seamlessly over the full-bleed artwork.
+3. HARMONIOUS CONTAINERS & BANNERS (REFERENCE FIDELITY): Do NOT draw generic white popup cards enclosing the whole scene. However, if the attached design reference features refined pill ribbons, thematic containers, or subtle glassmorphic badges for secondary quotes or logistical rows, mirror those graphic shapes faithfully.
+3.1. EQUAL LOGISTICAL SIZING: Paired date and location lines must share identical font size, uniform line-spacing, and matching 1:1 icon dimensions.
 4. LOGO CLONING: When logo image is attached, replicate the exact graphical mark with original colors, adapting text contrast dynamically to the background without background container boxes.
 5. PHOTO-REALISM: Biological skin realism with 3-layer subsurface scattering. Zero AI beauty filters, zero plastic smoothing.
 6. ANATOMY: Exactly 2 arms, 2 legs, 2 hands with 5 fingers each.
