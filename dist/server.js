@@ -11451,6 +11451,8 @@ ${forbiddenColors.length > 0 ? `\u{1F6AB} STRICTLY FORBIDDEN LOGO COLORS: DO NOT
             while ((m = regex.exec(text)) !== null) {
               if (m[1] && m[2]) {
                 let orig = m[1].trim().replace(/^(?:o\s+nome|a\s+palavra|o\s+texto|esse\s+nome|esse|este)\s+/i, "");
+                orig = orig.replace(/^(?:(?:com\s+)?(?:um\s+|o\s+)?[a-zA-Z]\s+(?:grande|maiusculo|maiúsculo|estilizado)\s+)/i, "");
+                orig = orig.replace(/^(?:(?:que\s+t[aá]\s+)?(?:com\s+)?(?:um\s+|o\s+)?[a-zA-Z]\s+(?:grande|maiusculo|maiúsculo|estilizado)\s+)/i, "");
                 let rep = m[2].trim().replace(/\s+(?:por\s+favor|pfv|etc|e\s+tal).*$/i, "");
                 if (orig.length >= 2 && rep.length >= 2 && orig.toLowerCase() !== rep.toLowerCase()) {
                   if (!reps.some((r) => r.original.toLowerCase() === orig.toLowerCase())) {
