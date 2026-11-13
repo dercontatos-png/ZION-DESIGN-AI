@@ -6032,7 +6032,7 @@ NEGATIVE RESTRICTIONS & BANNED ARTIFACTS:
                 const origMime = f.mimetype || "image/jpeg";
                 const norm = await normalizeImageForAi(f.buffer, origMime);
                 const isGroupPhoto = /todos|grupo|equipe|turma|pessoas|foto/i.test(body.subject_description || "") || body.categoria === "livre";
-                const swapSlotDirective = isGroupPhoto ? `SWAP SLOT (GROUP FIDELITY) \u2014 Image ${i + 1} is the subject identity reference containing the team/group. Replicate ALL people/individuals present in this reference photo (${body.subject_description || "all people in the photo"}). Preserve their faces, clothing/uniforms, group arrangement, authentic photographic fidelity, and natural expressions. Position them naturally in the scene.` : `SWAP SLOT \u2014 Image ${i + 1} is the identity reference, and it owns the entire person. From image ${i + 1} come the face and all its features, the eye colour, the skin tone and every mark on it, the age, the gender, the build, and the hair's colour, length, texture, curl pattern and density along with any facial hair. None of those are to be invented or altered. From image ${i + 1} take only the person; take nothing else \u2014 not the clothing, not the pose, not the expression, not the framing, not the lighting, not the background, not the colour palette. Preserve 100% authentic photographic fidelity.
+                const swapSlotDirective = isGroupPhoto ? `SWAP SLOT (GROUP FIDELITY) \u2014 Image ${i + 1} is the subject identity reference containing the team/group. Replicate ALL people/individuals present in this reference photo (${body.subject_description || "all people in the photo"}). Preserve their faces, clothing/uniforms, group arrangement, authentic photographic fidelity, and natural expressions. Position them naturally in the scene.` : `SWAP SLOT \u2014 Image ${i + 1} is the identity reference, and it owns the entire person. From image ${i + 1} come the face, all its biometric features, AND THE EXACT EMOTIONAL EXPRESSION (including natural smile, teeth, warmth, and eye crinkles). If the person in Image ${i + 1} is smiling, YOU MUST PRESERVE THEIR NATURAL SMILE 100%! DO NOT neutralize, erase, or change their smile into a serious or solemn face unless the user explicitly requested it in the prompt. None of their facial features or natural expression are to be altered. From image ${i + 1} take the person and their authentic expression; take nothing else \u2014 not the original background, not the framing, not the original lighting. Preserve 100% authentic photographic fidelity.
 CRITICAL HIGH-FIDELITY FACIAL & DENTAL RECONSTRUCTION MANDATE:
 The subject reference image may be a compressed digital photo. DO NOT replicate low-resolution JPEG artifacts, pixelated mouths, or blurry teeth! Reconstruct razor-sharp 4K photographic micro-details:
 1. DENTAL ANATOMY & NATURAL SMILE: Render tack-sharp, anatomically distinct individual teeth with natural enamel translucency, realistic interdental depth, and subtle gumline shadows. ABSOLUTELY NO solid white chalk bars, NO flat white strips.
@@ -11655,10 +11655,11 @@ You are a World-Class Creative Director and Master Graphic Designer executing an
    - ${posResult.isExplicit ? `Place the main subject(s) strictly on the ${posResult.position.toUpperCase()} side as explicitly commanded by the user, leaving open negative space on the opposite side for typography and graphic balance. DO NOT mirror the reference position!` : `Place the main subject(s) in the prominent position indicated by the Design Reference (e.g. centered, elevated, dignified).`}
    - If the subject is a person (or people), integrate them naturally into the scene's lighting, depth, and editorial atmosphere.
 
-[100% REAL BIOMETRIC IDENTITY LOCK (SWAP SLOT)]
+[100% REAL BIOMETRIC IDENTITY & NATURAL EXPRESSION LOCK (SWAP SLOT)]
 Look at the attached Main Subject Real Identity Reference:
-1. FAITHFUL HUMAN BIOMETRICS:
-   - Replicate 100% of the exact faces, facial geometry, expressions, eye shape, nose, mouth, authentic skin tone, and hair of the person/people in the Subject image.
+1. FAITHFUL HUMAN BIOMETRICS & EXPRESSION PRESERVATION:
+   - Replicate 100% of the exact faces, facial geometry, authentic expressions (including natural smile, open smile, teeth, warmth, or serious gaze matching the source photo), eye shape, nose, mouth, authentic skin tone, and hair of the person/people in the Subject image.
+   - ABSOLUTE SMILE PRESERVATION: If the person in the photo is smiling, YOU MUST PRESERVE THEIR RADIANT NATURAL SMILE! DO NOT erase their smile, do NOT close their mouth, and do NOT make them look serious, stern, or solemn unless explicitly ordered by the user!
    - The person must look identical to their real photo. Real biological human skin texture with 3-layer subsurface scattering and micro-pores.
    - ZERO waxy plastic sheen, ZERO cartoon or anime smoothing, ZERO caricature.
 
@@ -11706,14 +11707,14 @@ ${hasExclusions ? `   - STRICT EXCLUSIONS: Under NO circumstance generate: ${exc
 ` : ""}   - MULTI-REFERENCE SPECIALIZATION: Strictly respect each reference's assigned role (texture only, typography only, layout only). Never blend contradictory layouts.
 1. DYNAMIC REFERENCE ANALYSIS & THEMATIC ADAPTATION: Visually analyze the Design Reference to clone its composition grid, panel layout, and typography hierarchy. MANDATORY NICHE ADAPTATION: If the user's requested topic differs from the reference (e.g. auto mechanic shop vs church, dental clinic vs party), purge all reference-specific props (crosses, altars, glasses) and replace them with props matching the user's requested niche! NO modern 3D podiums or plastic cubes on non-product flyers.
 2. STRICT TEXT PURGE & REPLACEMENTS: Completely erase all old text from the reference image. Render ONLY the text explicitly requested by the user. Respect all negative constraints (e.g. no crown, no whatsapp, no instagram) and all word replacements.
-3. REAL BIOMETRIC IDENTITY: Keep the exact facial identity, skin tone, hair, and clothing of the person in the Subject image. Authentic human realism.
+3. REAL BIOMETRIC IDENTITY & NATURAL SMILE: Keep the exact facial identity, authentic facial expression (preserve their natural smile 100% if smiling, do NOT make them serious or solemn unless ordered), skin tone, hair, and clothing of the person in the Subject image. Authentic human realism.
 4. BRAZILIAN PORTUGUESE ONLY: Render all requested text exactly in Brazilian Portuguese as provided.`;
           parts.push({ text: fullPrompt });
           if (base64DoSujeito) {
             const meta0 = subjectMetas[0]?.desc ? ` USER DIRECTIVE: "${subjectMetas[0].desc}".` : "";
             addImagePart(
               base64DoSujeito,
-              `MAIN SUBJECT REAL IDENTITY REFERENCE (SWAP SLOT) \u2014 Replicate 100% of the authentic facial identity, hair, skin tone, and features of the person/people in this image. Keep their real faces identical to the photo.${subjectExclusionWarning}${meta0 ? ` ${meta0}` : ""}`
+              `MAIN SUBJECT REAL IDENTITY REFERENCE (SWAP SLOT) \u2014 Replicate 100% of the authentic facial identity, exact emotional expression (KEEP THEIR NATURAL SMILE IF SMILING, DO NOT NEUTRALIZE OR REMOVE THEIR SMILE), hair, skin tone, and features of the person/people in this image. Keep their real faces and authentic smile identical to the photo.${subjectExclusionWarning}${meta0 ? ` ${meta0}` : ""}`
             );
           }
           if (Array.isArray(sujeitosBase64List)) {
@@ -11777,15 +11778,16 @@ Simulate a medium-format Hasselblad H6D-100c paired with a prime HC 100mm f/2.2 
 STRICTLY FORBIDDEN: NEVER generate an advertising flyer, poster, graphic layout, floating rectangular cards, text boxes, split panels, banners, marketing headlines (H1/H2), bullet points, contact footers, phone numbers, @ social handles, or watermarks!
 Render EXCLUSIVELY a pure, unencumbered, high-fashion editorial photograph. Edge-to-edge full bleed photographic capture with authentic optical depth.
 
-[100% FACIAL IDENTITY LOCK \u2014 SUBJECT REFERENCE (SWAP SLOT)]
+[100% FACIAL IDENTITY & AUTHENTIC EXPRESSION LOCK \u2014 SUBJECT REFERENCE (SWAP SLOT)]
 Look at the attached Subject Identity Reference ("SWAP SLOT \u2014 Main Subject Identity Reference").
-You MUST replicate 100% of this exact person's anatomical facial geometry:
-1. Exact eye shape, eyelid creases, iris pigmentation, sclera tone, and gaze vector.
-2. Exact nose bridge, tip, nostril contours, and nasolabial proportions.
+You MUST replicate 100% of this exact person's anatomical facial geometry and authentic emotional expression:
+1. Exact eye shape, eyelid creases, iris pigmentation, sclera tone, smile crinkles (crow's feet), and gaze vector.
+2. Exact nose bridge, tip, nostril contours, and nasolabial smile folds.
 3. Exact jawline, cheekbone structure, chin contours, ear shape, and skull proportions.
 4. Exact skin undertone, natural melanin balance, authentic freckles, and beauty marks.
 5. Exact natural hair texture, hairline, hair color, and facial hair pattern.
-ABSOLUTE LAW: Take ONLY the person and their identity from this reference. Do NOT contaminate, morph, or blend this person's facial features with any other reference!
+6. FAITHFUL EMOTIONAL EXPRESSION & SMILE LOCK: Replicate the person's exact authentic emotion, smile, lip curvature, dental display, and eye warmth. IF THE PERSON IS SMILING IN THE PHOTO, THEY MUST REMAIN SMILING WITH THE SAME NATURAL WARMTH AND TEETH! STRICTLY FORBIDDEN from converting a smiling, happy person into a cold, serious, stern, or solemn face!
+ABSOLUTE LAW: Take ONLY the person and their identity/expression from this reference. Do NOT contaminate, morph, or blend this person's facial features or emotion with any other reference!
 
 [STYLE, LIGHTING & ATMOSPHERE TRANSFER \u2014 STYLE INSPIRATION REFERENCE]
 Look at the attached Style Inspiration Reference ("STYLE & LIGHTING INSPIRATION REFERENCE").
@@ -11965,7 +11967,7 @@ ${fullPrompt}`;
         parts.push({ text: fullPrompt });
         if (!desativarSujeito) {
           if (base64DoSujeito) {
-            const swapSlotDirective = `SWAP SLOT \u2014 Image 1 is the identity reference, and it owns the entire person. From image 1 come the face and all its features, the eye colour, the skin tone and every mark on it, the age, the gender, the build, and the hair's colour, length, texture, curl pattern and density along with any facial hair. None of those are to be invented or altered. From image 1 take only the person; take nothing else \u2014 not the clothing, not the pose, not the expression, not the framing, not the lighting, not the background, not the colour palette. Preserve 100% authentic photographic fidelity.
+            const swapSlotDirective = `SWAP SLOT \u2014 Image 1 is the identity reference, and it owns the entire person. From image 1 come the face, all its biometric features, AND THE EXACT EMOTIONAL EXPRESSION (including natural smile, teeth, warmth, and eye crinkles). If the person in Image 1 is smiling, YOU MUST PRESERVE THEIR NATURAL SMILE 100%! DO NOT neutralize, erase, or change their smile into a serious or solemn face unless the user explicitly requested it in the prompt. None of their facial features or natural expression are to be altered. From image 1 take the person and their authentic expression; take nothing else \u2014 not the original background, not the framing, not the original lighting. Preserve 100% authentic photographic fidelity.
 CRITICAL HIGH-FIDELITY FACIAL & DENTAL RECONSTRUCTION MANDATE:
 The subject reference image may be a compressed digital photo. DO NOT replicate low-resolution JPEG artifacts, pixelated mouths, or blurry teeth! Reconstruct razor-sharp 4K photographic micro-details:
 1. DENTAL ANATOMY & NATURAL SMILE: Render tack-sharp, anatomically distinct individual teeth with natural enamel translucency, realistic interdental depth, and subtle gumline shadows. ABSOLUTELY NO solid white chalk bars, NO flat white strips.
