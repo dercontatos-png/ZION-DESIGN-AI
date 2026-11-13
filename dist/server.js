@@ -11438,9 +11438,152 @@ ${forbiddenColors.length > 0 ? `\u{1F6AB} STRICTLY FORBIDDEN LOGO COLORS: DO NOT
             }
           });
         };
+        const extractTextReplacements = (text) => {
+          if (!text) return [];
+          const reps = [];
+          const patterns = [
+            /(?:mudar|mude|trocar|troque|substituir|substitua|alterar|altere)\s+(?:esse\s+|este\s+|o\s+|a\s+)?(?:nome|t[ií]tulo|palavra|texto|escrita)?\s*(?:que\s+t[aá]\s+com\s+[^\n.,;]+?\s+)?["']?([a-zA-ZÀ-ÿ0-9\s]+?)["']?\s+(?:para|pra|por)\s+["']?([a-zA-ZÀ-ÿ0-9\s]+?)["']?(?:[.,;\n]|$)/gi,
+            /(?:em\s+vez\s+de|ao\s+inv[eé]s\s+de)\s+["']?([a-zA-ZÀ-ÿ0-9\s]+?)["']?\s+(?:coloque|colocar|ponha|p[oô]r|use|usar|escreva|escrever)\s+["']?([a-zA-ZÀ-ÿ0-9\s]+?)["']?(?:[.,;\n]|$)/gi,
+            /(?:substitua|substituir)\s+["']?([a-zA-ZÀ-ÿ0-9\s]+?)["']?\s+por\s+["']?([a-zA-ZÀ-ÿ0-9\s]+?)["']?(?:[.,;\n]|$)/gi
+          ];
+          for (const regex of patterns) {
+            let m;
+            while ((m = regex.exec(text)) !== null) {
+              if (m[1] && m[2]) {
+                let orig = m[1].trim().replace(/^(?:o\s+nome|a\s+palavra|o\s+texto|esse\s+nome|esse|este)\s+/i, "");
+                let rep = m[2].trim().replace(/\s+(?:por\s+favor|pfv|etc|e\s+tal).*$/i, "");
+                if (orig.length >= 2 && rep.length >= 2 && orig.toLowerCase() !== rep.toLowerCase()) {
+                  if (!reps.some((r) => r.original.toLowerCase() === orig.toLowerCase())) {
+                    const directive = `\u{1F449} PURGE OLD WORD FROM REFERENCE: "${orig}" (STRICTLY FORBIDDEN TO DRAW ON CANVAS)
+\u{1F449} RENDER MANDATORY REPLACEMENT IN ITS PLACE: "${rep.toUpperCase()}" (render with the exact same large stylized display typography, ornate letter flourishes, and luxury styling as the original reference headline)`;
+                    reps.push({ original: orig, replacement: rep, directive });
+                  }
+                }
+              }
+            }
+          }
+          return reps;
+        };
+        const resolveLogoPlacement = (text, explicitPos) => {
+          let pos = "auto";
+          let isExplicit = false;
+          if (explicitPos && explicitPos !== "auto") {
+            pos = explicitPos;
+            isExplicit = true;
+          } else if (/(?:logo|logotipo|marca|emblema)\s+(?:alinhad[ao]\s+)?(?:ao\s+|no\s+)?(?:meio|centro|centralizad[ao]|center)/i.test(text) || /(?:alinhar|centralizar|coloque|colocar|deixar)\s+(?:a\s+)?(?:logo|logotipo)\s+(?:ao\s+|no\s+)?(?:meio|centro|centralizad[ao])/i.test(text)) {
+            if (/(?:no\s+rodap[eé]|embaixo|na\s+base)/i.test(text)) {
+              pos = "bottom_center";
+            } else {
+              pos = "top_center";
+            }
+            isExplicit = true;
+          } else if (/(?:logo|logotipo|marca|emblema)\s+(?:no\s+|no\s+canto\s+|[aà]\s+)?(?:topo|alto|header|superior)\s+(?:[aà]\s+|na\s+)?esquerda/i.test(text)) {
+            pos = "top_left";
+            isExplicit = true;
+          } else if (/(?:logo|logotipo|marca|emblema)\s+(?:no\s+|no\s+canto\s+|[aà]\s+)?(?:topo|alto|header|superior)\s+(?:[aà]\s+|na\s+)?direita/i.test(text)) {
+            pos = "top_right";
+            isExplicit = true;
+          } else if (/(?:logo|logotipo|marca|emblema)\s+(?:no\s+|no\s+canto\s+|[aà]\s+)?(?:rodap[eé]|baixo|footer|inferior)\s+(?:[aà]\s+|na\s+)?esquerda/i.test(text)) {
+            pos = "bottom_left";
+            isExplicit = true;
+          } else if (/(?:logo|logotipo|marca|emblema)\s+(?:no\s+|no\s+canto\s+|[aà]\s+)?(?:rodap[eé]|baixo|footer|inferior)\s+(?:[aà]\s+|na\s+)?direita/i.test(text)) {
+            pos = "bottom_right";
+            isExplicit = true;
+          } else if (/(?:logo|logotipo|marca|emblema)\s+(?:no\s+|no\s+canto\s+|[aà]\s+)?(?:rodap[eé]|baixo|footer|inferior)/i.test(text)) {
+            pos = "bottom_center";
+            isExplicit = true;
+          } else if (/(?:logo|logotipo|marca|emblema)\s+(?:no\s+|no\s+canto\s+|[aà]\s+)?(?:topo|alto|header|superior)/i.test(text)) {
+            pos = "top_center";
+            isExplicit = true;
+          }
+          const posDescriptions = {
+            center: "PERFECTLY CENTERED HORIZONTALLY ALONG THE CENTRAL VERTICAL AXIS (ALINHADA AO MEIO)",
+            top_center: "UPPER HEADER ZONE \u2014 HORIZONTALLY CENTERED (ALINHADA AO MEIO NO TOPO)",
+            bottom_center: "BOTTOM FOOTER ZONE \u2014 HORIZONTALLY CENTERED (ALINHADA AO MEIO NO RODAP\xC9)",
+            top_left: "TOP-LEFT CORNER (CANTO SUPERIOR ESQUERDO)",
+            top_right: "TOP-RIGHT CORNER (CANTO SUPERIOR DIREITO)",
+            bottom_left: "BOTTOM-LEFT FOOTER (RODAP\xC9 ESQUERDO)",
+            bottom_right: "BOTTOM-RIGHT FOOTER (RODAP\xC9 DIREITO)",
+            auto: "HARMONIOUS INSTITUTIONAL PLACEMENT"
+          };
+          const directive = isExplicit ? `[\u{1F451} LOGO SPATIAL PLACEMENT & ALIGNMENT \u2014 EXPLICIT USER MANDATE (RANK 0)]
+THE USER HAS EXPLICITLY COMMANDED THAT THE BRAND LOGO MUST BE POSITIONED: ${posDescriptions[pos] || pos.toUpperCase()}!
+\u{1F449} Position and embed the brand logo strictly ${posDescriptions[pos]}.
+\u{1F6A8} CRITICAL LAW: YOU ARE STRICTLY FORBIDDEN from scattering the logo or placing it in random arbitrary spots! Keep minimum 16% safe padding from borders and do NOT obscure main titles or subject.` : `[LOGO PLACEMENT LAW]
+If the Design Reference has a visible brand logo, position the client's logo in that corresponding zone. IF THE REFERENCE HAS NO VISIBLE LOGO (e.g. religious/artistic flyer without brand mark), DO NOT place the logo in random arbitrary spots! Place the client's brand logo harmoniously in the UPPER TOP-CENTER HEADER ZONE (minimum 16% down from top border) or in the bottom-center footer with clean safe margins.`;
+          return { position: pos, directive, isExplicit };
+        };
+        const parseTypographicHierarchy = (text, reps, rawHierarchy) => {
+          let headline = rawHierarchy?.headline?.trim() || "";
+          let subtitle = rawHierarchy?.subtitle?.trim() || "";
+          let badge = rawHierarchy?.badge?.trim() || "";
+          let footer = rawHierarchy?.footer?.trim() || "";
+          let alignment = rawHierarchy?.alignment || "center";
+          if (!headline && reps.length > 0) {
+            headline = reps.map((r) => r.replacement).join(" ");
+          }
+          if (!headline) {
+            const hMatch = text.match(/(?:t[ií]tulo(?:\s+principal)?|headline|h1|tema)\s*[:=]\s*([^\n.,;]+)/i);
+            if (hMatch && hMatch[1]) headline = hMatch[1].trim();
+          }
+          if (!subtitle) {
+            const sMatch = text.match(/(?:subt[ií]tulo|subtitle|h2|frase|mensagem|slogan)\s*[:=]\s*([^\n.,;]+)/i);
+            if (sMatch && sMatch[1]) subtitle = sMatch[1].trim();
+          }
+          if (!badge) {
+            const bMatch = text.match(/(?:tag|badge|kicker|data|dia)\s*[:=]\s*([^\n.,;]+)/i);
+            if (bMatch && bMatch[1]) badge = bMatch[1].trim();
+          }
+          if (!footer) {
+            const fMatch = text.match(/(?:rodap[eé]|footer|endere[cç]o|local|contato|site|endereço)\s*[:=]\s*([^\n]+)/i);
+            if (fMatch && fMatch[1]) footer = fMatch[1].trim();
+          }
+          if (/(?:texto|t[ií]tulo|alinhamento)\s+(?:alinhad[ao]\s+)?(?:[aà]\s+|na\s+)?esquerda|alinhad[ao]\s+[aà]\s+esquerda/i.test(text)) {
+            alignment = "left";
+          } else if (/(?:texto|t[ií]tulo|alinhamento)\s+(?:alinhad[ao]\s+)?(?:[aà]\s+|na\s+)?direita|alinhad[ao]\s+[aà]\s+direita/i.test(text)) {
+            alignment = "right";
+          } else if (/(?:texto|t[ií]tulo|alinhamento)\s+(?:alinhad[ao]\s+)?(?:ao\s+|no\s+)?(?:centro|meio)|centralizad[ao]/i.test(text)) {
+            alignment = "center";
+          }
+          const alignmentText = alignment === "left" ? "STRICTLY LEFT-ALIGNED (all titles, subtitles, and badges aligned to the left visual optical margin)" : alignment === "right" ? "STRICTLY RIGHT-ALIGNED (all titles, subtitles, and badges aligned to the right visual optical margin)" : "PERFECTLY CENTER-ALIGNED (all titles, subtitles, and badges aligned strictly along the canvas vertical center axis with balanced bilateral symmetry)";
+          const directiveBlock = `
+[\u{1F3DB}\uFE0F MASTER TYPOGRAPHIC ARCHITECTURE, SPATIAL HIERARCHY & SIZING RULES]
+1. VISUAL HIERARCHY & RELATIVE SCALING:
+   - PRIMARY HEADLINE (LEVEL 1 \u2014 MAXIMUM VISUAL SCALE): ${headline ? `\u{1F449} RENDER THIS EXACT TITLE: "${headline.toUpperCase()}"` : "Render the user's main requested title in massive commanding display scale."}
+     * Typography style: Mirror the majestic, high-contrast serif/display letterforms from the Design Reference (e.g. ornate capital letters, luxury swashes, ligature curves, 3D golden/metallic bevels or crisp vector edges).
+     * SIZING: Minimum 3x to 4x larger than any other text on the canvas. Must be the undeniable visual focal point of typography.
+   - SUPPORTING SUBTITLE / MESSAGE (LEVEL 2): ${subtitle ? `\u{1F449} RENDER THIS EXACT SUBTITLE: "${subtitle}"` : "If a subtitle/message is requested, render it in refined secondary typography, optically centered below the headline."}
+   - UPPER KICKER / BADGE (LEVEL 3): ${badge ? `\u{1F449} RENDER THIS UPPER TAG: "${badge.toUpperCase()}"` : "Small uppercase tag/date at the top with clean letter-spacing."}
+   - LOGISTICAL FOOTER (LEVEL 4): ${footer ? `\u{1F449} RENDER THIS FOOTER INFO: "${footer}"` : "Address, location, and logistical details placed strictly at the bottom with generous safe padding."}
+2. SPATIAL ALIGNMENT & ORDER:
+   - ${alignmentText}
+   - NEVER scatter words randomly across the canvas! Every word belongs to its designated hierarchical zone.
+   - Maintain generous breathing room (respiro visual) of at least 15% from all canvas borders.`;
+          return { headline, subtitle, badge, footer, alignment, directiveBlock };
+        };
+        const textReplacements = extractTextReplacements(combinedUserText);
         const { exclusions, hasExclusions } = extractNegativeExclusions(combinedUserText);
+        for (const rep of textReplacements) {
+          if (!exclusions.some((e) => e.toLowerCase() === rep.original.toLowerCase())) {
+            exclusions.push(rep.original);
+          }
+        }
         const { additions, hasAdditions } = extractPositiveAdditions(combinedUserText, exclusions);
+        for (const rep of textReplacements) {
+          if (!additions.some((a) => a.toLowerCase() === rep.replacement.toLowerCase())) {
+            additions.push(rep.replacement);
+          }
+        }
         const posResult = resolveSubjectPosition(req.body.subjectPosition, combinedUserText);
+        const logoPlacement = resolveLogoPlacement(combinedUserText, req.body.logoPosition);
+        const typographicHierarchy = parseTypographicHierarchy(combinedUserText, textReplacements, req.body.textHierarchy);
+        const textReplacementBlock = textReplacements.length > 0 ? `
+[\u{1F6A8} CRITICAL OCR TEXT REPLACEMENT & OVERWRITE DIRECTIVE (RANK 0) \u{1F6A8}]
+THE USER HAS ORDERED SPECIFIC TEXT REPLACEMENTS OVER THE REFERENCE IMAGE:
+${textReplacements.map((r) => r.directive).join("\n")}
+YOU ARE STRICTLY PROHIBITED FROM DRAWING THE WORDS: "${textReplacements.map((r) => r.original).join('", "')}"! RENDER INSTEAD: "${textReplacements.map((r) => r.replacement.toUpperCase()).join('", "')}".
+
+` : "";
         const allRefImages = [];
         if (Array.isArray(referenciasEstilo)) {
           for (const r of referenciasEstilo) {
@@ -11477,7 +11620,11 @@ ${resolvedRefRoles.map((r) => `\u{1F449} Image ${r.index} Role: ${r.title}
 
 ` : "";
         const userNotes = (req.body.additionalPrompt || promptTraduzido || "").trim();
-        const sovereignMandate = `${exclusionBlock}${additionBlock}${logoDirectives.directiveBlock}${posResult.directive}
+        const sovereignMandate = `${textReplacementBlock}${exclusionBlock}${additionBlock}${logoDirectives.directiveBlock}${logoPlacement.directive}
+
+${posResult.directive}
+
+${typographicHierarchy.directiveBlock}
 
 ${multiRefRolesSummary}${userNotes ? `[USER CUSTOM SPECIFICATIONS & OVERRIDES - RANK 1 PRIORITY]
 ${userNotes}
@@ -11513,12 +11660,14 @@ Look at the attached Main Subject Real Identity Reference:
    - The person must look identical to their real photo. Real biological human skin texture with 3-layer subsurface scattering and micro-pores.
    - ZERO waxy plastic sheen, ZERO cartoon or anime smoothing, ZERO caricature.
 
+${typographicHierarchy.directiveBlock}
+
 [STRICT TYPOGRAPHIC PURGE & ZERO TEXT MIXING LAW]
 1. COMPLETE PURGE OF OLD REFERENCE TEXT:
    - All written text, words, headlines, slogans, dates, times, phone numbers, addresses, and details inside the Design Reference image are TEMPORARY DUMMY PLACEHOLDERS.
    - You MUST 100% ERASE AND PURGE all text from the reference image! NEVER copy, borrow, or carry over any word from the reference image into the new generation!
 2. RENDER ONLY THE USER'S EXPLICIT TEXT REQUESTS:
-   - Render ONLY AND EXCLUSIVELY the exact text phrases explicitly provided by the user in [USER CUSTOM SPECIFICATIONS & OVERRIDES].
+   - Render ONLY AND EXCLUSIVELY the exact text phrases explicitly provided by the user in [USER CUSTOM SPECIFICATIONS & OVERRIDES] and [\u{1F3DB}\uFE0F MASTER TYPOGRAPHIC ARCHITECTURE].
    - Map each requested text item into the corresponding visual zone of the Design Reference:
      * Headlines map to the primary large title zone of the reference.
      * Subheaders, quotes, and badges map to the supporting typographic zones of the reference.
@@ -11532,8 +11681,8 @@ Look at the attached Main Subject Real Identity Reference:
 You MUST NOT follow any rigid generic template or hardcoded layout! Instead, deeply analyze the attached Design Reference image to understand its unique visual balance, hierarchy, and spatial arrangement:
 1. SUBJECT POSITION & FRAMING (USER MANDATE HAS SUPREME PRECEDENCE):
    - ${posResult.isExplicit ? `THE USER HAS EXPLICITLY ORDERED THAT THE SUBJECT MUST BE POSITIONED: ${posResult.position.toUpperCase()}! YOU MUST OBEY THIS USER POSITION 100%, COMPLETELY OVERRULING WHERE THE REFERENCE IMAGE PLACED THE SUBJECT! DO NOT place the subject where the reference has it. Place it strictly on the ${posResult.position.toUpperCase()} side!` : `Analyze WHERE and HOW the main subject is placed in the Design Reference (e.g. centered, elevated, left-aligned, right-aligned, bust portrait, or full-length). Place the new subject in that exact corresponding position, scale, and framing.`}
-2. LOGO POSITION & PROPORTION:
-   - Analyze WHERE the logo or brand emblem is located in the Design Reference (e.g. bottom-left footer, top-left corner, top-right corner, or centered). Embed the user's brand logo in that EXACT corresponding position and relative scale. NEVER force the logo to a fixed arbitrary corner!
+2. LOGO POSITION & PROPORTION (SOVEREIGN USER COMMAND):
+   - ${logoPlacement.isExplicit ? `THE USER HAS EXPLICITLY ORDERED THAT THE BRAND LOGO MUST BE POSITIONED: ${logoPlacement.position.toUpperCase()}! You MUST place the brand logo strictly ${logoPlacement.directive}. DO NOT place it where the reference has it!` : `If the Design Reference has a visible brand logo, position the client's logo in that corresponding zone. IF THE REFERENCE HAS NO VISIBLE LOGO (e.g. religious art or decorative flyer without logo), DO NOT place the logo in random arbitrary spots! Place the client's brand logo harmoniously in the UPPER TOP-CENTER HEADER ZONE (minimum 16% down from top border) or in the bottom-center footer with clean safe margins.`}
 3. TYPOGRAPHY ZONES & HIERARCHY:
    - Observe where the Design Reference places its main headline (top, middle, over the subject, or bottom). Replicate that exact spatial placement and typographic styling for the user's primary headline.
    - Replicate the layout of secondary text blocks, quotes, and badges (e.g. pill badges, script subtitles) in the same spatial zones where the reference placed them.
@@ -11551,9 +11700,10 @@ RULES:
 ${hasExclusions ? `   - STRICT EXCLUSIONS: Under NO circumstance generate: ${exclusions.join(", ")}. If present in reference or photo, PURGE AND ERASE THEM COMPLETELY.
 ` : ""}${hasAdditions ? `   - MANDATORY ADDITIONS: You must include: ${additions.join(", ")}.
 ` : ""}${posResult.isExplicit ? `   - POSITIONING: Position the subject on the ${posResult.position.toUpperCase()} as ordered by the user.
+` : ""}${logoPlacement.isExplicit ? `   - LOGO POSITION: Position the brand logo strictly ${logoPlacement.position.toUpperCase()} as ordered by the user.
 ` : ""}   - MULTI-REFERENCE SPECIALIZATION: Strictly respect each reference's assigned role (texture only, typography only, layout only). Never blend contradictory layouts.
 1. DYNAMIC REFERENCE ANALYSIS & THEMATIC ADAPTATION: Visually analyze the Design Reference to clone its composition grid, panel layout, and typography hierarchy. MANDATORY NICHE ADAPTATION: If the user's requested topic differs from the reference (e.g. auto mechanic shop vs church, dental clinic vs party), purge all reference-specific props (crosses, altars, glasses) and replace them with props matching the user's requested niche! NO modern 3D podiums or plastic cubes on non-product flyers.
-2. STRICT TEXT PURGE: Completely erase all old text from the reference image. Render ONLY the text explicitly requested by the user. Respect all negative constraints (e.g. no crown, no whatsapp, no instagram).
+2. STRICT TEXT PURGE & REPLACEMENTS: Completely erase all old text from the reference image. Render ONLY the text explicitly requested by the user. Respect all negative constraints (e.g. no crown, no whatsapp, no instagram) and all word replacements.
 3. REAL BIOMETRIC IDENTITY: Keep the exact facial identity, skin tone, hair, and clothing of the person in the Subject image. Authentic human realism.
 4. BRAZILIAN PORTUGUESE ONLY: Render all requested text exactly in Brazilian Portuguese as provided.`;
           parts.push({ text: fullPrompt });
@@ -11594,10 +11744,12 @@ ${roleInfo.instructions}${metaDesc}${refExclusionWarning} IMPORTANT: ERASE and I
           if (logoBase64) {
             const logoColorNote = logoDirectives.hasOverride ? `
 CRITICAL COLOR OVERRIDE: ${logoDirectives.forbiddenColors.length > 0 ? `DO NOT use ${logoDirectives.forbiddenColors.join(", ")}.` : ""} ${logoDirectives.requestedColors.length > 0 ? `Render strictly in ${logoDirectives.requestedColors.join(", ")}.` : ""}` : "";
+            const logoPosNote = logoPlacement.isExplicit ? `
+CRITICAL POSITION OVERRIDE: Place the logo ${logoPlacement.position.toUpperCase()} as commanded by the user.` : "\nIf the reference image has no logo, place this logo harmoniously in the top-center header (minimum 16% down from top border).";
             const firstAssetMeta = assetMetas[0]?.desc ? ` USER DIRECTIVE: "${assetMetas[0].desc}".` : "";
             addImagePart(
               logoBase64,
-              `BRAND LOGO REFERENCE \u2014 Embed this brand logo into the artwork, positioning it in the exact corresponding location where the logo or brand mark is located in the Design Reference image (e.g. bottom-left, top-corner, or header), maintaining authentic proportions and clean integration without obscuring the subject.${logoColorNote}${firstAssetMeta}`
+              `BRAND LOGO REFERENCE \u2014 Embed this brand logo into the artwork with clean integration without obscuring the subject.${logoColorNote}${logoPosNote}${firstAssetMeta}`
             );
           }
           if (Array.isArray(logosList)) {

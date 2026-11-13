@@ -66,6 +66,13 @@ interface RefTabState {
   mainPhotos: SubjectImageItem[];
   isManagingSujeitos: boolean;
   subjectPosition: "left" | "center" | "right";
+  logoPosition?: "auto" | "top_center" | "center" | "bottom_center" | "top_left" | "top_right" | "bottom_left" | "bottom_right";
+  customHeadline?: string;
+  customSubtitle?: string;
+  customBadge?: string;
+  customFooter?: string;
+  textAlignment?: "center" | "left" | "right";
+  showTypographyDrawer?: boolean;
   refPhotoBase64: string | null;
   refPhotoDesc: string;
   refPhotos: SubjectImageItem[];
@@ -89,6 +96,13 @@ const defaultTabState: RefTabState = {
   mainPhotos: [],
   isManagingSujeitos: false,
   subjectPosition: "center",
+  logoPosition: "auto",
+  customHeadline: "",
+  customSubtitle: "",
+  customBadge: "",
+  customFooter: "",
+  textAlignment: "center",
+  showTypographyDrawer: false,
   refPhotoBase64: null,
   refPhotoDesc: "",
   refPhotos: [],
@@ -330,6 +344,13 @@ export const RefBuilder: React.FC<RefBuilderProps> = ({
   const [pinterestSearch, setPinterestSearch] = useState<string>("");
 
   const subjectPosition = currentTab.subjectPosition;
+  const logoPosition = currentTab.logoPosition || "auto";
+  const customHeadline = currentTab.customHeadline || "";
+  const customSubtitle = currentTab.customSubtitle || "";
+  const customBadge = currentTab.customBadge || "";
+  const customFooter = currentTab.customFooter || "";
+  const textAlignment = currentTab.textAlignment || "center";
+  const showTypographyDrawer = currentTab.showTypographyDrawer || false;
   const refPhotoBase64 = currentTab.refPhotoBase64;
   const refPhotoDesc = currentTab.refPhotoDesc || "";
   const refPhotos = currentTab.refPhotos || [];
@@ -930,6 +951,34 @@ export const RefBuilder: React.FC<RefBuilderProps> = ({
 
   const setMasterPromptResult = (val: string) => {
     updateActiveTab({ masterPromptResult: val });
+  };
+
+  const setLogoPosition = (val: "auto" | "top_center" | "center" | "bottom_center" | "top_left" | "top_right" | "bottom_left" | "bottom_right") => {
+    updateActiveTab({ logoPosition: val });
+  };
+
+  const setCustomHeadline = (val: string) => {
+    updateActiveTab({ customHeadline: val });
+  };
+
+  const setCustomSubtitle = (val: string) => {
+    updateActiveTab({ customSubtitle: val });
+  };
+
+  const setCustomBadge = (val: string) => {
+    updateActiveTab({ customBadge: val });
+  };
+
+  const setCustomFooter = (val: string) => {
+    updateActiveTab({ customFooter: val });
+  };
+
+  const setTextAlignment = (val: "center" | "left" | "right") => {
+    updateActiveTab({ textAlignment: val });
+  };
+
+  const setShowTypographyDrawer = (val: boolean) => {
+    updateActiveTab({ showTypographyDrawer: val });
   };
 
   // Só pode Aba 1, Aba 2 e Aba 3 (máximo de 3 abas)
@@ -1912,6 +1961,12 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
       mainPhotoBase64,
       subjectImages,
       subjectPosition,
+      logoPosition,
+      customHeadline,
+      customSubtitle,
+      customBadge,
+      customFooter,
+      textAlignment,
       refPhotoBase64,
       referenceImages,
       refPhotoDesc,
@@ -1995,11 +2050,25 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
           logoInclusionType: "embedded",
           desativarSujeito: /n[aã]o\s*quero\s*pessoa|sem\s*pessoa|no\s*people/i.test(additionalDescription || ""),
           subjectPosition: subjectPosition,
+          logoPosition: logoPosition || "auto",
+          textHierarchy: {
+            headline: customHeadline?.trim() || "",
+            subtitle: customSubtitle?.trim() || "",
+            badge: customBadge?.trim() || "",
+            footer: customFooter?.trim() || "",
+            alignment: textAlignment || "center"
+          },
           additionalPrompt: additionalDescription?.trim() || "",
           promptTraduzido: [
             additionalDescription?.trim()
               ? `[USER DIRECT MANDATE - HIGHEST OVERRIDING PRIORITY]: ${additionalDescription.trim()}`
               : "",
+            customHeadline?.trim() ? `[MANDATORY HEADLINE (H1)]: "${customHeadline.trim().toUpperCase()}"` : "",
+            customSubtitle?.trim() ? `[MANDATORY SUBTITLE (H2)]: "${customSubtitle.trim()}"` : "",
+            customBadge?.trim() ? `[MANDATORY BADGE / TAG]: "${customBadge.trim().toUpperCase()}"` : "",
+            customFooter?.trim() ? `[MANDATORY FOOTER INFO]: "${customFooter.trim()}"` : "",
+            textAlignment ? `[MANDATORY TEXT ALIGNMENT]: ${textAlignment.toUpperCase()}` : "",
+            logoPosition && logoPosition !== "auto" ? `[MANDATORY LOGO ALIGNMENT]: ${logoPosition.toUpperCase()}` : "",
             isGraphicCardOrFlyer
               ? "[GRAPHIC DESIGN & ADVERTISING MANDATE]: Replicate the layout composition, color palette, lighting atmosphere, and visual style directly from the Design Reference image. STRICT TEXT MANDATE: Render ONLY the text explicitly requested by the user. Do NOT copy or carry over any text, words, or phone numbers from the reference image."
               : "[PHOTO ARCHITECTURE MANDATE]: Authentic commercial editorial portrait. Pure full-bleed photographic realism with authentic 3-layer SSS dermal micro-pores.",
@@ -2527,6 +2596,37 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                             }}
                           />
                         </div>
+
+                        {/* Posição da Logo / Assets (Mobile) */}
+                        <div className="flex flex-col gap-2 pt-2 border-t border-white/[0.06]">
+                          <label className="text-xs font-semibold text-zinc-300 flex items-center justify-between">
+                            <span>Posição da Logo</span>
+                            <span className="text-[10px] text-zinc-500 font-normal">Auto / Manual</span>
+                          </label>
+                          <div className="grid grid-cols-3 gap-1.5 text-xs">
+                            {[
+                              { id: "auto", label: "Auto (Ref)" },
+                              { id: "top_center", label: "Topo Centro" },
+                              { id: "center", label: "Centro" },
+                              { id: "bottom_center", label: "Rodapé Centro" },
+                              { id: "top_left", label: "Topo Esq" },
+                              { id: "top_right", label: "Topo Dir" },
+                            ].map((pos) => (
+                              <button
+                                key={pos.id}
+                                type="button"
+                                onClick={() => setLogoPosition(pos.id as any)}
+                                className={`px-2 py-1.5 rounded-lg text-[11px] font-medium transition-all cursor-pointer ${
+                                  logoPosition === pos.id
+                                    ? "bg-violet-600/40 text-white border border-violet-500/60 shadow-sm"
+                                    : "bg-white/[0.03] text-zinc-400 hover:text-zinc-200 border border-white/[0.05]"
+                                }`}
+                              >
+                                {pos.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     </div>
 
@@ -2678,6 +2778,110 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                     </button>
                   </div>
                 </div>
+              </div>
+
+              {/* ✨ Hierarquia Tipográfica & Textos do Flyer (Mobile) */}
+              <div className="flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowTypographyDrawer(!showTypographyDrawer)}
+                  className="flex items-center justify-between w-full px-3.5 py-2.5 rounded-xl bg-violet-950/20 hover:bg-violet-950/30 border border-violet-500/20 text-left transition-all cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-violet-600/30 text-violet-300">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 7 4 4 20 4 20 7"></polyline><line x1="9" y1="20" x2="15" y2="20"></line><line x1="12" y1="4" x2="12" y2="20"></line></svg>
+                    </span>
+                    <span className="text-xs font-semibold text-violet-200">Hierarquia de Textos & Títulos</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-300 font-medium">Layout Pro</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`text-zinc-400 transition-transform ${showTypographyDrawer ? "rotate-180" : ""}`}><path d="m6 9 6 6 6-6"/></svg>
+                  </div>
+                </button>
+
+                {showTypographyDrawer && (
+                  <div className="flex flex-col gap-3 p-3 rounded-xl bg-[#0e0c15] border border-violet-500/30 text-xs">
+                    <p className="text-[11px] text-zinc-400">
+                      Preencha os textos do flyer com clareza. A IA substituirá os títulos da referência mantendo a mesma escala visual dominante, sem distorções nem nomes antigos.
+                    </p>
+
+                    {/* Alinhamento dos Textos */}
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[11px] font-medium text-zinc-300">Alinhamento Tipográfico</label>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {[
+                          { id: "left", label: "Esquerda" },
+                          { id: "center", label: "Centro" },
+                          { id: "right", label: "Direita" }
+                        ].map((align) => (
+                          <button
+                            key={align.id}
+                            type="button"
+                            onClick={() => setTextAlignment(align.id as any)}
+                            className={`py-1 rounded-lg text-[11px] font-medium transition-all cursor-pointer ${
+                              textAlignment === align.id
+                                ? "bg-violet-600/40 text-white border border-violet-500/60"
+                                : "bg-white/[0.03] text-zinc-400 border border-white/[0.06]"
+                            }`}
+                          >
+                            {align.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Título Principal (H1) */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[11px] font-medium text-violet-300 flex items-center justify-between">
+                        <span>Título Principal / Nome em Destaque (H1)</span>
+                        <span className="text-[9px] text-amber-400/90 font-mono">Destaque Máximo</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={customHeadline}
+                        onChange={(e) => setCustomHeadline(e.target.value)}
+                        placeholder="Ex: RODOLFO (substitui o título com o mesmo peso)"
+                        className="w-full rounded-lg bg-black/40 border border-violet-500/30 px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-violet-500"
+                      />
+                    </div>
+
+                    {/* Subtítulo (H2) */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[11px] font-medium text-zinc-300">Subtítulo / Tema Secundário (H2)</label>
+                      <input
+                        type="text"
+                        value={customSubtitle}
+                        onChange={(e) => setCustomSubtitle(e.target.value)}
+                        placeholder="Ex: Dia Especial de Celebração"
+                        className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-violet-500"
+                      />
+                    </div>
+
+                    {/* Selo / Tag / Data */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[11px] font-medium text-zinc-300">Selo / Tag / Data Superior</label>
+                      <input
+                        type="text"
+                        value={customBadge}
+                        onChange={(e) => setCustomBadge(e.target.value)}
+                        placeholder="Ex: 19 DE JUNHO DIA DE"
+                        className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-violet-500"
+                      />
+                    </div>
+
+                    {/* Rodapé / Informações de Apoio */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[11px] font-medium text-zinc-300">Rodapé / Endereço / Contatos</label>
+                      <input
+                        type="text"
+                        value={customFooter}
+                        onChange={(e) => setCustomFooter(e.target.value)}
+                        placeholder="Ex: Rua Designer Premium, 3490 - Centro"
+                        className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-violet-500"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
                   </div>
                 </div>
@@ -4173,6 +4377,37 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                       }}
                     />
                   </div>
+
+                  {/* Posição da Logo / Assets (Desktop) */}
+                  <div className="flex flex-col gap-2 pt-2 border-t border-white/[0.06]">
+                    <label className="text-xs font-semibold text-zinc-300 flex items-center justify-between">
+                      <span>Posição da Logo</span>
+                      <span className="text-[10px] text-zinc-500 font-normal">Auto / Manual</span>
+                    </label>
+                    <div className="grid grid-cols-3 gap-1.5 text-xs">
+                      {[
+                        { id: "auto", label: "Auto (Ref)" },
+                        { id: "top_center", label: "Topo Centro" },
+                        { id: "center", label: "Centro" },
+                        { id: "bottom_center", label: "Rodapé Centro" },
+                        { id: "top_left", label: "Topo Esq" },
+                        { id: "top_right", label: "Topo Dir" },
+                      ].map((pos) => (
+                        <button
+                          key={pos.id}
+                          type="button"
+                          onClick={() => setLogoPosition(pos.id as any)}
+                          className={`px-2 py-1.5 rounded-lg text-[11px] font-medium transition-all cursor-pointer ${
+                            logoPosition === pos.id
+                              ? "bg-violet-600/40 text-white border border-violet-500/60 shadow-sm"
+                              : "bg-white/[0.03] text-zinc-400 hover:text-zinc-200 border border-white/[0.05]"
+                          }`}
+                        >
+                          {pos.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -4218,6 +4453,110 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                     </button>
                   </div>
                 </div>
+              </div>
+
+              {/* ✨ Hierarquia Tipográfica & Textos do Flyer (Desktop) */}
+              <div className="flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowTypographyDrawer(!showTypographyDrawer)}
+                  className="flex items-center justify-between w-full px-3.5 py-2.5 rounded-xl bg-violet-950/20 hover:bg-violet-950/30 border border-violet-500/20 text-left transition-all cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-violet-600/30 text-violet-300">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 7 4 4 20 4 20 7"></polyline><line x1="9" y1="20" x2="15" y2="20"></line><line x1="12" y1="4" x2="12" y2="20"></line></svg>
+                    </span>
+                    <span className="text-xs font-semibold text-violet-200">Hierarquia de Textos & Títulos</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-300 font-medium">Layout Pro</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`text-zinc-400 transition-transform ${showTypographyDrawer ? "rotate-180" : ""}`}><path d="m6 9 6 6 6-6"/></svg>
+                  </div>
+                </button>
+
+                {showTypographyDrawer && (
+                  <div className="flex flex-col gap-3 p-3 rounded-xl bg-[#0e0c15] border border-violet-500/30 text-xs">
+                    <p className="text-[11px] text-zinc-400">
+                      Preencha os textos do flyer com clareza. A IA substituirá os títulos da referência mantendo a mesma escala visual dominante, sem distorções nem nomes antigos.
+                    </p>
+
+                    {/* Alinhamento dos Textos */}
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[11px] font-medium text-zinc-300">Alinhamento Tipográfico</label>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {[
+                          { id: "left", label: "Esquerda" },
+                          { id: "center", label: "Centro" },
+                          { id: "right", label: "Direita" }
+                        ].map((align) => (
+                          <button
+                            key={align.id}
+                            type="button"
+                            onClick={() => setTextAlignment(align.id as any)}
+                            className={`py-1 rounded-lg text-[11px] font-medium transition-all cursor-pointer ${
+                              textAlignment === align.id
+                                ? "bg-violet-600/40 text-white border border-violet-500/60"
+                                : "bg-white/[0.03] text-zinc-400 border border-white/[0.06]"
+                            }`}
+                          >
+                            {align.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Título Principal (H1) */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[11px] font-medium text-violet-300 flex items-center justify-between">
+                        <span>Título Principal / Nome em Destaque (H1)</span>
+                        <span className="text-[9px] text-amber-400/90 font-mono">Destaque Máximo</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={customHeadline}
+                        onChange={(e) => setCustomHeadline(e.target.value)}
+                        placeholder="Ex: RODOLFO (substitui o título com o mesmo peso)"
+                        className="w-full rounded-lg bg-black/40 border border-violet-500/30 px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-violet-500"
+                      />
+                    </div>
+
+                    {/* Subtítulo (H2) */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[11px] font-medium text-zinc-300">Subtítulo / Tema Secundário (H2)</label>
+                      <input
+                        type="text"
+                        value={customSubtitle}
+                        onChange={(e) => setCustomSubtitle(e.target.value)}
+                        placeholder="Ex: Dia Especial de Celebração"
+                        className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-violet-500"
+                      />
+                    </div>
+
+                    {/* Selo / Tag / Data */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[11px] font-medium text-zinc-300">Selo / Tag / Data Superior</label>
+                      <input
+                        type="text"
+                        value={customBadge}
+                        onChange={(e) => setCustomBadge(e.target.value)}
+                        placeholder="Ex: 19 DE JUNHO DIA DE"
+                        className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-violet-500"
+                      />
+                    </div>
+
+                    {/* Rodapé / Informações de Apoio */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[11px] font-medium text-zinc-300">Rodapé / Endereço / Contatos</label>
+                      <input
+                        type="text"
+                        value={customFooter}
+                        onChange={(e) => setCustomFooter(e.target.value)}
+                        placeholder="Ex: Rua Designer Premium, 3490 - Centro"
+                        className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-violet-500"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
