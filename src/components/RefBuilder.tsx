@@ -1,6 +1,19 @@
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from "react";
-import { useProjectStore, addDeletedImage } from "../store/useProjectStore";
+import { useProjectStore, addDeletedImage, getDeletedImages, GENERIC_DELETED_NAMES } from "../store/useProjectStore";
 import { checkAdminOrOpenPlan, getAuthHeaders } from "../utils/userAuth";
+
+const isUrlDeleted = (urlOrId: string, delSet: Set<string>): boolean => {
+  if (!urlOrId || !delSet || delSet.size === 0) return false;
+  const clean = String(urlOrId).trim().toLowerCase();
+  if (delSet.has(clean)) return true;
+  const bname = (clean.split("/").pop() || "").split("?")[0].toLowerCase();
+  if (bname && !GENERIC_DELETED_NAMES.has(bname) && delSet.has(bname)) return true;
+  const raw = bname.replace(/\.[^/.]+$/, "");
+  if (raw && !GENERIC_DELETED_NAMES.has(raw) && delSet.has(raw)) return true;
+  const matchJob = clean.match(/(img_\d+_[a-z0-9]+|\d{13}_[a-z0-9]+)/i);
+  if (matchJob && (delSet.has(matchJob[1]) || delSet.has(matchJob[1].toLowerCase()))) return true;
+  return false;
+};
 import { downloadImage } from "../utils/downloadImage";
 import { deductCredit, getCreditState } from "../utils/creditsManager";
 import { set as idbSet, get as idbGet } from "idb-keyval";
@@ -670,20 +683,27 @@ export const RefBuilder: React.FC<RefBuilderProps> = ({
     if (e) e.stopPropagation();
     const itemToDelete = refGalleryItems.find((item) => item.id === id);
     const targetUrl = itemToDelete?.url || "";
-    const filename = targetUrl.split("/").pop() || "";
+    const filename = (targetUrl.split("/").pop() || "").split("?")[0];
 
     addDeletedImage(id);
     if (targetUrl) addDeletedImage(targetUrl);
     if (filename) addDeletedImage(filename);
 
     useProjectStore.getState().deleteGaleriaImage(targetUrl || id);
-    fetch(`/api/bff/api/generations/${id}`, { method: "DELETE" }).catch(() => {});
-    if (filename.endsWith(".png") || filename.endsWith(".avif") || filename.endsWith(".webp") || filename.endsWith(".jpg")) {
-      fetch(`/api/historico-imagens/${filename}`, { method: "DELETE" }).catch(() => {});
+
+    const matchClean = (id + " " + targetUrl).match(/(img_\d+_[a-z0-9]+|\d{13}_[a-z0-9]+)/i);
+    const cleanId = matchClean ? matchClean[1] : id.replace(/^(hist-gen-\d+-|ref-srv-|store-gen-)/, "");
+
+    fetch(`/api/bff/api/generations/${encodeURIComponent(cleanId)}`, { method: "DELETE" }).catch(() => {});
+    if (id !== cleanId) {
+      fetch(`/api/bff/api/generations/${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => {});
+    }
+    if (filename && (filename.endsWith(".png") || filename.endsWith(".avif") || filename.endsWith(".webp") || filename.endsWith(".jpg"))) {
+      fetch(`/api/historico-imagens/${encodeURIComponent(filename)}`, { method: "DELETE" }).catch(() => {});
     }
 
     setRefGalleryItems((prev) => {
-      const next = prev.filter((item) => item.id !== id);
+      const next = prev.filter((item) => item.id !== id && item.url !== targetUrl);
       try {
         localStorage.setItem("zion_ref_history", JSON.stringify(next));
       } catch {}
@@ -725,7 +745,13 @@ export const RefBuilder: React.FC<RefBuilderProps> = ({
   }>>(() => {
     try {
       const saved = localStorage.getItem("zion_ref_history");
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          const deleted = getDeletedImages();
+          return parsed.filter((item: any) => !isUrlDeleted(item.url, deleted) && !isUrlDeleted(item.id, deleted));
+        }
+      }
     } catch {}
     return [
       { id: "ref-demo-1", url: "/galeria/thumbnail(1).avif", type: "refino", timestamp: Date.now() - 120000, isFavorited: true },
@@ -759,10 +785,13 @@ export const RefBuilder: React.FC<RefBuilderProps> = ({
   const [isMobileHistoryOpen, setIsMobileHistoryOpen] = useState(false);
 
   const allRefHistory = React.useMemo(() => {
+    const deleted = getDeletedImages();
     const map = new Map<string, any>();
-    refGalleryItems.forEach((r) => map.set(r.url, r));
+    refGalleryItems
+      .filter((r) => !isUrlDeleted(r.url, deleted) && !isUrlDeleted(r.id, deleted))
+      .forEach((r) => map.set(r.url, r));
     (store.galeriaImages || []).forEach((url, idx) => {
-      if (!map.has(url)) {
+      if (!isUrlDeleted(url, deleted) && !map.has(url)) {
         map.set(url, {
           id: `store-ref-${idx}`,
           url,
@@ -812,10 +841,11 @@ export const RefBuilder: React.FC<RefBuilderProps> = ({
       if (!res.ok) return;
       const data = await res.json();
       if (data && Array.isArray(data.images) && data.images.length > 0) {
+        const deleted = getDeletedImages();
         setRefGalleryItems((prev) => {
           const existingUrls = new Set(prev.map((i) => i.url));
           const newServerItems = data.images
-            .filter((img: any) => !existingUrls.has(img.url))
+            .filter((img: any) => img.url && !existingUrls.has(img.url) && !isUrlDeleted(img.url, deleted) && !isUrlDeleted(img.filename, deleted))
             .map((img: any, idx: number) => ({
               id: `ref-srv-${img.filename || idx}`,
               url: img.url,
@@ -823,7 +853,8 @@ export const RefBuilder: React.FC<RefBuilderProps> = ({
               timestamp: img.mtimeMs || extractImageTimestamp(img.filename) || Date.now(),
               isFavorited: false
             }));
-          const merged = [...newServerItems, ...prev];
+          const filteredPrev = prev.filter((p) => !isUrlDeleted(p.url, deleted) && !isUrlDeleted(p.id, deleted));
+          const merged = [...newServerItems, ...filteredPrev];
           return sortImagesChronological(merged, true);
         });
       }

@@ -14,6 +14,7 @@ import { DesignBuilderSidebar } from "./DesignBuilderSidebar";
 import { CosmicBackground } from "./CosmicBackground";
 import { DesignBuilderAssistant } from "./DesignBuilderAssistant";
 import { DesignBuilderMobileNav } from "./DesignBuilderMobileNav";
+import { getDeletedImages } from "../store/useProjectStore";
 
 interface DesignBuilderVitrineProps {
   isLoggedIn?: boolean;
@@ -352,7 +353,11 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
         }
       } catch (e) {}
 
-      setRecentImages(urls);
+      const deleted = getDeletedImages();
+      setRecentImages(urls.filter((u) => {
+        const b = (u.split("/").pop() || "").split("?")[0].toLowerCase();
+        return !deleted.has(u) && !deleted.has(u.toLowerCase()) && !deleted.has(b);
+      }));
     };
     loadRecents();
   }, []);

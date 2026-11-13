@@ -5154,32 +5154,43 @@ CRITICAL RULES:
       console.log(`[bff/generations DELETE] Excluindo geração permanentemente: ${id}`);
       recordServerDeletedImage(id);
 
+      // Extrair identificadores limpos (sem prefixos sintéticos como hist-gen-0-, ref-srv-, store-gen-)
+      const matchClean = id.match(/(img_\d+_[a-z0-9]+|\d{13}_[a-z0-9]+)/i);
+      const cleanId = matchClean ? matchClean[1] : id.replace(/^(hist-gen-\d+-|ref-srv-|store-gen-)/, "");
+      const cleanBase = path.basename(cleanId.split("?")[0]);
+      const rawClean = cleanBase.replace(/\.[^/.]+$/, "");
+      recordServerDeletedImage(cleanId);
+      recordServerDeletedImage(cleanBase);
+      recordServerDeletedImage(rawClean);
+
       // 1. Remove from public/generations_data.json
       const genDataPath = path.join(process.cwd(), "public", "generations_data.json");
       if (fs.existsSync(genDataPath)) {
         try {
           const genData = JSON.parse(fs.readFileSync(genDataPath, "utf-8"));
+          const filterItem = (item: any) => {
+            const iId = String(item.id || "");
+            const rUrl = String(item.result_url || "");
+            const tUrl = String(item.thumbnail_url || "");
+            if (iId === id || iId === cleanId || iId === cleanBase || iId === rawClean) return false;
+            if (rUrl.includes(id) || rUrl.includes(cleanId) || rUrl.includes(cleanBase) || rUrl.includes(rawClean)) return false;
+            if (tUrl.includes(id) || tUrl.includes(cleanId) || tUrl.includes(cleanBase) || tUrl.includes(rawClean)) return false;
+            return true;
+          };
+
           if (Array.isArray(genData)) {
             const initialCount = genData.length;
-            const updated = genData.filter((item: any) =>
-              item.id !== id &&
-              !item.result_url?.includes(id) &&
-              !item.thumbnail_url?.includes(id)
-            );
+            const updated = genData.filter(filterItem);
             if (updated.length !== initialCount) {
               fs.writeFileSync(genDataPath, JSON.stringify(updated, null, 2), "utf-8");
-              console.log(`[bff/generations DELETE] Removido de generations_data.json (array): ${id}`);
+              console.log(`[bff/generations DELETE] Removido de generations_data.json (array): ${cleanId}`);
             }
           } else if (Array.isArray(genData.items)) {
             const initialCount = genData.items.length;
-            genData.items = genData.items.filter((item: any) =>
-              item.id !== id &&
-              !item.result_url?.includes(id) &&
-              !item.thumbnail_url?.includes(id)
-            );
+            genData.items = genData.items.filter(filterItem);
             if (genData.items.length !== initialCount) {
               fs.writeFileSync(genDataPath, JSON.stringify(genData, null, 2), "utf-8");
-              console.log(`[bff/generations DELETE] Removido de generations_data.json: ${id}`);
+              console.log(`[bff/generations DELETE] Removido de generations_data.json (items): ${cleanId}`);
             }
           }
         } catch (jErr) {
@@ -5280,18 +5291,29 @@ CRITICAL RULES:
       if (fs.existsSync(genDataPath)) {
         try {
           const genData = JSON.parse(fs.readFileSync(genDataPath, "utf-8"));
-          if (Array.isArray(genData.items)) {
+          const filterItem = (item: any) => {
+            if (item.id === filename || item.id === rawName) return false;
+            if (item.result_url && (item.result_url.includes(filename) || item.result_url.includes(rawName))) return false;
+            if (item.thumbnail_url && (item.thumbnail_url.includes(filename) || item.thumbnail_url.includes(rawName))) return false;
+            return true;
+          };
+
+          if (Array.isArray(genData)) {
+            const beforeCount = genData.length;
+            const updated = genData.filter(filterItem);
+            if (updated.length !== beforeCount) {
+              try {
+                fs.writeFileSync(genDataPath, JSON.stringify(updated, null, 2), "utf-8");
+                console.log(`[api/historico-imagens] Removido de generations_data.json (array): ${filename}`);
+              } catch (_) { }
+            }
+          } else if (Array.isArray(genData.items)) {
             const beforeCount = genData.items.length;
-            genData.items = genData.items.filter((item: any) => {
-              if (item.id === filename || item.id === rawName) return false;
-              if (item.result_url && (item.result_url.includes(filename) || item.result_url.includes(rawName))) return false;
-              if (item.thumbnail_url && (item.thumbnail_url.includes(filename) || item.thumbnail_url.includes(rawName))) return false;
-              return true;
-            });
+            genData.items = genData.items.filter(filterItem);
             if (genData.items.length !== beforeCount) {
               try {
                 fs.writeFileSync(genDataPath, JSON.stringify(genData, null, 2), "utf-8");
-                console.log(`[api/historico-imagens] Removido de generations_data.json: ${filename}`);
+                console.log(`[api/historico-imagens] Removido de generations_data.json (items): ${filename}`);
               } catch (_) { }
             }
           }

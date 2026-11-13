@@ -509,9 +509,15 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
     // 2. Remove do Zustand useProjectStore e IDB
     useProjectStore.getState().deleteGaleriaImage(targetUrl || id);
 
-    // 3. Aciona remoção física no backend
-    fetch(`/api/bff/api/generations/${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => {});
-    if (item?.id && item.id !== id) {
+    // 3. Aciona remoção física no backend com identificador limpo
+    const matchClean = (id + " " + targetUrl).match(/(img_\d+_[a-z0-9]+|\d{13}_[a-z0-9]+)/i);
+    const cleanId = matchClean ? matchClean[1] : id.replace(/^(hist-gen-\d+-|ref-srv-|store-gen-)/, "");
+
+    fetch(`/api/bff/api/generations/${encodeURIComponent(cleanId)}`, { method: "DELETE" }).catch(() => {});
+    if (id !== cleanId) {
+      fetch(`/api/bff/api/generations/${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => {});
+    }
+    if (item?.id && item.id !== id && item.id !== cleanId) {
       fetch(`/api/bff/api/generations/${encodeURIComponent(item.id)}`, { method: "DELETE" }).catch(() => {});
     }
     if (filename && (filename.endsWith(".png") || filename.endsWith(".avif") || filename.endsWith(".webp") || filename.endsWith(".jpg"))) {
@@ -565,7 +571,12 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
       if (filename && !GENERIC_DELETED_NAMES.has(filename.toLowerCase())) addDeletedImage(filename);
 
       useProjectStore.getState().deleteGaleriaImage(targetUrl || item.id);
-      fetch(`/api/bff/api/generations/${encodeURIComponent(item.id)}`, { method: "DELETE" }).catch(() => {});
+      const matchClean = (item.id + " " + targetUrl).match(/(img_\d+_[a-z0-9]+|\d{13}_[a-z0-9]+)/i);
+      const cleanId = matchClean ? matchClean[1] : item.id.replace(/^(hist-gen-\d+-|ref-srv-|store-gen-)/, "");
+      fetch(`/api/bff/api/generations/${encodeURIComponent(cleanId)}`, { method: "DELETE" }).catch(() => {});
+      if (item.id !== cleanId) {
+        fetch(`/api/bff/api/generations/${encodeURIComponent(item.id)}`, { method: "DELETE" }).catch(() => {});
+      }
       if (filename && (filename.endsWith(".png") || filename.endsWith(".avif") || filename.endsWith(".webp") || filename.endsWith(".jpg"))) {
         fetch(`/api/historico-imagens/${encodeURIComponent(filename)}`, { method: "DELETE" }).catch(() => {});
       }

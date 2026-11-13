@@ -13,6 +13,7 @@ import {
 import { DesignBuilderSidebar } from "./DesignBuilderSidebar";
 import { CosmicBackground } from "./CosmicBackground";
 import { DesignBuilderAssistant } from "./DesignBuilderAssistant";
+import { getDeletedImages } from "../store/useProjectStore";
 
 interface DesignBuilderHomeProps {
   isLoggedIn?: boolean;
@@ -349,7 +350,11 @@ export const DesignBuilderHome: React.FC<DesignBuilderHomeProps> = ({
         }
       } catch (e) {}
 
-      setRecentImages(urls);
+      const deleted = getDeletedImages();
+      setRecentImages(urls.filter((u) => {
+        const b = (u.split("/").pop() || "").split("?")[0].toLowerCase();
+        return !deleted.has(u) && !deleted.has(u.toLowerCase()) && !deleted.has(b);
+      }));
     };
     loadRecents();
   }, []);

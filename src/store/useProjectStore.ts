@@ -383,10 +383,21 @@ const getInitialProjectState = (): { list: any[]; activeId: string; activeConfig
       if (saved) {
         let list = JSON.parse(saved);
         if (Array.isArray(list) && list.length > 0) {
-          list = list.slice(0, 3).map((p: any, idx: number) => ({
-            ...p,
-            name: p.name && p.name.startsWith("Aba ") ? p.name : `Aba ${idx + 1}`
-          }));
+          const deleted = getDeletedImages();
+          list = list.slice(0, 3).map((p: any, idx: number) => {
+            const cleanGaleria = Array.isArray(p.galeria)
+              ? p.galeria.filter((url: string) => {
+                  if (!url) return false;
+                  const bname = (url.split("/").pop() || "").split("?")[0].toLowerCase();
+                  return !deleted.has(url) && !deleted.has(url.toLowerCase()) && !deleted.has(bname);
+                })
+              : [];
+            return {
+              ...p,
+              name: p.name && p.name.startsWith("Aba ") ? p.name : `Aba ${idx + 1}`,
+              galeria: cleanGaleria
+            };
+          });
           const lastActiveId = localStorage.getItem("zion_last_active_project_id");
           const activeProj = list.find((p: any) => p.id === lastActiveId) || list[0];
           return {
@@ -1279,7 +1290,11 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
     const jobId = matchId ? matchId[1] : (idOrUrl.startsWith("http") || idOrUrl.startsWith("/") ? null : idOrUrl);
 
     if (jobId) {
-      fetch(`/api/bff/api/generations/${jobId}`, { method: "DELETE" }).catch(() => { });
+      const cleanId = jobId.replace(/^(hist-gen-\d+-|ref-srv-|store-gen-)/, "");
+      fetch(`/api/bff/api/generations/${cleanId}`, { method: "DELETE" }).catch(() => { });
+      if (jobId !== cleanId) {
+        fetch(`/api/bff/api/generations/${jobId}`, { method: "DELETE" }).catch(() => { });
+      }
     }
     if (basename && (basename.endsWith(".png") || basename.endsWith(".avif") || basename.endsWith(".webp") || basename.endsWith(".jpg"))) {
       fetch(`/api/historico-imagens/${basename}`, { method: "DELETE" }).catch(() => { });
@@ -1287,16 +1302,18 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
 
     // 3. Remove de todas as abas e estado da galeria
     set((state) => {
-      const nextImages = state.galeriaImages.filter((img) => img !== idOrUrl && !img.includes(idOrUrl) && img !== basename);
+      const rawName = basename.replace(/\.[^/.]+$/, "");
+      const nextImages = state.galeriaImages.filter((img) => img !== idOrUrl && !img.includes(idOrUrl) && img !== basename && (!rawName || !img.includes(rawName)));
       const nextIndex = Math.min(state.activeImageIndex, Math.max(0, nextImages.length - 1));
 
       const updatedProjects = state.projectsList.map((p) => {
         const pGal = Array.isArray(p.galeria)
-          ? p.galeria.filter((img: string) => img !== idOrUrl && !img.includes(idOrUrl) && img !== basename)
+          ? p.galeria.filter((img: string) => img !== idOrUrl && !img.includes(idOrUrl) && img !== basename && (!rawName || !img.includes(rawName)))
           : [];
         return { ...p, galeria: pGal };
       });
 
+      saveProjectsToLocalStorage(updatedProjects);
       debouncedSaveProjectsToLocalStorage(updatedProjects);
       return {
         galeriaImages: nextImages,
