@@ -4838,8 +4838,24 @@ CRITICAL RULES:
       items = items.filter((i: any) => i.agent_slug === agentSlugFilter);
     }
 
-    // Sort newest first
-    items.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    const getEpochMs = (item: any): number => {
+      if (typeof item.timestamp === "number" && item.timestamp > 0) return item.timestamp;
+      const strToScan = [item.id, item.result_url, item.thumbnail_url, item.filename].filter(Boolean).join(" ");
+      const match = strToScan.match(/(?:img_)?(\d{12,14})/);
+      if (match && match[1]) {
+        const val = parseInt(match[1], 10);
+        if (val > 1672531199000 && val < 1900000000000) return val;
+      }
+      const d = item.created_at || item.createdAt;
+      if (d && typeof d === "string") {
+        const parsed = new Date(d).getTime();
+        if (!isNaN(parsed) && parsed > 0) return parsed;
+      }
+      return 0;
+    };
+
+    // Sort strictly newest first
+    items.sort((a, b) => getEpochMs(b) - getEpochMs(a));
 
     const formatGenItem = (item: any) => {
       const createdAt = item.created_at || item.timestamp || new Date().toISOString();

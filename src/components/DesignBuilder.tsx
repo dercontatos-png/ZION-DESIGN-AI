@@ -12,6 +12,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useProjectStore } from "../store/useProjectStore";
 import { useGenerateImage } from "../hooks/useGenerateImage";
 import { downloadImage } from "../utils/downloadImage";
+import { sortImagesChronological } from "../utils/imageCanonical";
 import { checkAdminOrOpenPlan, getAuthHeaders, openPlanModal, performSignOut, getCurrentUser, UserProfile, getCurrentUserEmail, isUserAdmin } from "../utils/userAuth";
 import { isClientPreviewActive, getClientPreviewSession, ClientPreviewSession } from "../utils/clientPreviewService";
 import { AuthModal } from "./AuthModal";
@@ -2233,11 +2234,12 @@ const hasFotoDot = Boolean(
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
-                    {(store.galeriaImages || []).map((imgUrl, i) => (
+                    {sortImagesChronological(store.galeriaImages || [], true).map((imgUrl, i) => (
                       <div
                         key={imgUrl + "_" + i}
                         onClick={() => {
-                          store.setActiveImageIndex(i);
+                          const realIdx = (store.galeriaImages || []).indexOf(imgUrl);
+                          store.setActiveImageIndex(realIdx >= 0 ? realIdx : i);
                           setStudioPalcoTab("builder");
                         }}
                         className="group relative rounded-xl overflow-hidden bg-zinc-950 border border-white/10 hover:border-violet-500/50 transition-all shadow-md cursor-pointer"
@@ -2659,8 +2661,9 @@ const hasFotoDot = Boolean(
               />
               <div className="flex-1 space-y-1.5 overflow-y-auto px-1.5 py-2 scrollbar-hide">
                 {store.galeriaImages && store.galeriaImages.length > 0 ? (
-                  store.galeriaImages.map((imgUrl, i) => {
-                    const isCurrent = i === store.activeImageIndex;
+                  sortImagesChronological(store.galeriaImages, true).map((imgUrl, i) => {
+                    const realIdx = store.galeriaImages.indexOf(imgUrl);
+                    const isCurrent = realIdx === store.activeImageIndex;
                     return (
                       <div
                         key={imgUrl + "_" + i}

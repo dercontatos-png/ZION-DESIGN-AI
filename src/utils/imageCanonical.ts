@@ -51,3 +51,56 @@ export function deduplicateImageUrls(urls: string[]): string[] {
 
   return result;
 }
+
+/**
+ * Extracts a reliable epoch millisecond timestamp from an item, object, URL or filename.
+ * Guarantees strict chronological sorting (newest first).
+ */
+export function extractImageTimestamp(item: any): number {
+  if (!item) return 0;
+  if (typeof item === "string") {
+    const match = item.match(/(?:img_)?(\d{12,14})/);
+    if (match && match[1]) {
+      const v = parseInt(match[1], 10);
+      if (v > 1672531199000 && v < 1900000000000) return v;
+    }
+    return 0;
+  }
+  if (typeof item.timestamp === "number" && item.timestamp > 0) return item.timestamp;
+  if (typeof item.mtimeMs === "number" && item.mtimeMs > 0) return item.mtimeMs;
+
+  const strToScan = [item.id, item.url, item.result_url, item.thumbnail_url, item.filename].filter(Boolean).join(" ");
+  const epochMatch = strToScan.match(/(?:img_)?(\d{12,14})/);
+  if (epochMatch && epochMatch[1]) {
+    const val = parseInt(epochMatch[1], 10);
+    if (val > 1672531199000 && val < 1900000000000) return val;
+  }
+
+  const dateStr = item.created_at || item.createdAt || item.timestamp;
+  if (dateStr && typeof dateStr === "string") {
+    // Ignore bogus hardcoded legacy fallback date
+    if (!dateStr.startsWith("2026-03-20")) {
+      const parsed = new Date(dateStr).getTime();
+      if (!isNaN(parsed) && parsed > 0) return parsed;
+    }
+  }
+
+  return 0;
+}
+
+/**
+ * Sorts any list of gallery items or URLs strictly in chronological order (newest first by default).
+ */
+export function sortImagesChronological<T>(items: T[], newestFirst = true): T[] {
+  if (!Array.isArray(items)) return [];
+  return [...items].sort((a, b) => {
+    const ta = extractImageTimestamp(a);
+    const tb = extractImageTimestamp(b);
+    if (tb !== ta) {
+      return newestFirst ? tb - ta : ta - tb;
+    }
+    const idA = typeof a === "string" ? a : (a as any)?.id || "";
+    const idB = typeof b === "string" ? b : (b as any)?.id || "";
+    return idA.localeCompare(idB);
+  });
+}

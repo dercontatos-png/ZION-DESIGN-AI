@@ -1,5 +1,70 @@
 [
   {
+    "id": "img_1794599114092_bqj47",
+    "status": "done",
+    "result_url": "/generated-images/img_1794599114092_bqj47.png",
+    "thumbnail_url": "/generated-images/img_1794599114092_bqj47.png",
+    "created_at": "2026-11-13T19:45:14.182Z",
+    "agent_slug": "design-builder1-2",
+    "dimensions": "4:5",
+    "form_data": {
+      "quality": "4K",
+      "dimensions": "4:5"
+    }
+  },
+  {
+    "id": "img_1794598996391_q7n40",
+    "status": "done",
+    "result_url": "/generated-images/img_1794598996391_q7n40.png",
+    "thumbnail_url": "/generated-images/img_1794598996391_q7n40.png",
+    "created_at": "2026-11-13T19:43:16.397Z",
+    "agent_slug": "design-builder1-2",
+    "dimensions": "4:5",
+    "form_data": {
+      "quality": "4K",
+      "dimensions": "4:5"
+    }
+  },
+  {
+    "id": "img_1794598243635_j51yb",
+    "status": "done",
+    "result_url": "/generated-images/img_1794598243635_j51yb.png",
+    "thumbnail_url": "/generated-images/img_1794598243635_j51yb.png",
+    "created_at": "2026-11-13T19:30:44.077Z",
+    "agent_slug": "design-builder1-2",
+    "dimensions": "4:5",
+    "form_data": {
+      "quality": "4K",
+      "dimensions": "4:5"
+    }
+  },
+  {
+    "id": "img_1794598166307_tlaxs",
+    "status": "done",
+    "result_url": "/generated-images/img_1794598166307_tlaxs.png",
+    "thumbnail_url": "/generated-images/img_1794598166307_tlaxs.png",
+    "created_at": "2026-11-13T19:29:26.352Z",
+    "agent_slug": "design-builder1-2",
+    "dimensions": "4:5",
+    "form_data": {
+      "quality": "4K",
+      "dimensions": "4:5"
+    }
+  },
+  {
+    "id": "img_1794598081984_awx1o",
+    "status": "done",
+    "result_url": "/generated-images/img_1794598081984_awx1o.png",
+    "thumbnail_url": "/generated-images/img_1794598081984_awx1o.png",
+    "created_at": "2026-11-13T19:28:01.989Z",
+    "agent_slug": "design-builder1-2",
+    "dimensions": "4:5",
+    "form_data": {
+      "quality": "4K",
+      "dimensions": "4:5"
+    }
+  },
+  {
     "id": "img_1794597202922_8xxwy",
     "status": "done",
     "result_url": "/generated-images/img_1794597202922_8xxwy.png",

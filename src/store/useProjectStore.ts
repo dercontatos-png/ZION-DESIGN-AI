@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { ProjectConfig, CamadaTexto, EstiloReferencia } from "../types/designBuilder";
 import { useClientStore } from "./useClientStore";
 import { set as idbSet, get as idbGet } from "idb-keyval";
+import { sortImagesChronological } from "../utils/imageCanonical";
 
 // ─── GERENCIAMENTO PERMANENTE DE IMAGENS EXCLUÍDAS ─────────────────────
 export const GENERIC_DELETED_NAMES = new Set([
@@ -1247,13 +1248,13 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
       const newItems = validFound.filter((url) => !current.includes(url));
       if (newItems.length === 0) return;
 
-      const combined = Array.from(new Set([...newItems, ...current]));
+      const combined = sortImagesChronological(Array.from(new Set([...newItems, ...current])), true);
       const activeProjId = get().activeProjectId;
       let nextProjects = get().projectsList;
       if (activeProjId) {
         nextProjects = nextProjects.map((p) => {
           if (p.id === activeProjId) {
-            return { ...p, galeria: Array.from(new Set([...newItems, ...(p.galeria || [])])) };
+            return { ...p, galeria: sortImagesChronological(Array.from(new Set([...newItems, ...(p.galeria || [])])), true) };
           }
           return p;
         });

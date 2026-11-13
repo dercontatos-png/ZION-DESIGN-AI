@@ -10,6 +10,7 @@ import { ProjetosWorkspace } from "./ProjetosWorkspace";
 import { GenerationLoadingCanvas } from "./GenerationLoadingCanvas";
 import { UsefulLinksMenu } from "./UsefulLinksMenu";
 import { optimizeBase64Image } from "../utils/compressBase64";
+import { extractImageTimestamp, sortImagesChronological } from "../utils/imageCanonical";
 
 import { REF_PINTEREST_CARDS } from "../data/refPinterestData";
 import { COMMUNITY_CARDS } from "../data/communityData";
@@ -766,12 +767,12 @@ export const RefBuilder: React.FC<RefBuilderProps> = ({
           id: `store-ref-${idx}`,
           url,
           type: "geracao",
-          timestamp: Date.now() - idx * 1000,
+          timestamp: extractImageTimestamp(url) || (Date.now() - idx * 1000),
           aspect: "4 / 5",
         });
       }
     });
-    return Array.from(map.values());
+    return sortImagesChronological(Array.from(map.values()), true);
   }, [refGalleryItems, store.galeriaImages]);
 
   const saveToRefHistory = (url: string, type: "refino" | "geracao" = "geracao", customSettings?: any) => {
@@ -796,7 +797,7 @@ export const RefBuilder: React.FC<RefBuilderProps> = ({
     };
     setRefGalleryItems((prev) => {
       const item = { id: `ref-${Date.now()}`, url, type, timestamp: Date.now(), isFavorited: false, settings: settingsToSave };
-      const updated = [item, ...prev.filter((p) => p.url !== url)];
+      const updated = sortImagesChronological([item, ...prev.filter((p) => p.url !== url)], true);
       try {
         localStorage.setItem("zion_ref_history", JSON.stringify(updated.slice(0, 60)));
       } catch {}
@@ -819,10 +820,11 @@ export const RefBuilder: React.FC<RefBuilderProps> = ({
               id: `ref-srv-${img.filename || idx}`,
               url: img.url,
               type: (img.filename?.includes("refino") ? "refino" : "geracao") as "refino" | "geracao",
-              timestamp: img.mtimeMs || Date.now(),
+              timestamp: img.mtimeMs || extractImageTimestamp(img.filename) || Date.now(),
               isFavorited: false
             }));
-          return [...newServerItems, ...prev];
+          const merged = [...newServerItems, ...prev];
+          return sortImagesChronological(merged, true);
         });
       }
     } catch (err) {
@@ -5717,9 +5719,10 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
 
                 <div className="p-6">
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                    {refGalleryItems
-                      .filter((card) => refGalleryTab === "todos" || card.isFavorited)
-                      .map((card) => (
+                    {sortImagesChronological(
+                      refGalleryItems.filter((card) => refGalleryTab === "todos" || card.isFavorited),
+                      true
+                    ).map((card) => (
                         <div
                           key={card.id}
                           onClick={() => {

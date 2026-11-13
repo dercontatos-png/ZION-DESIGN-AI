@@ -7548,7 +7548,22 @@ data: ${JSON.stringify({ type: "ping", timestamp: Date.now() })}
     if (agentSlugFilter) {
       items = items.filter((i) => i.agent_slug === agentSlugFilter);
     }
-    items.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    const getEpochMs = (item) => {
+      if (typeof item.timestamp === "number" && item.timestamp > 0) return item.timestamp;
+      const strToScan = [item.id, item.result_url, item.thumbnail_url, item.filename].filter(Boolean).join(" ");
+      const match = strToScan.match(/(?:img_)?(\d{12,14})/);
+      if (match && match[1]) {
+        const val = parseInt(match[1], 10);
+        if (val > 1672531199e3 && val < 19e11) return val;
+      }
+      const d = item.created_at || item.createdAt;
+      if (d && typeof d === "string") {
+        const parsed = new Date(d).getTime();
+        if (!isNaN(parsed) && parsed > 0) return parsed;
+      }
+      return 0;
+    };
+    items.sort((a, b) => getEpochMs(b) - getEpochMs(a));
     const formatGenItem = (item) => {
       const createdAt = item.created_at || item.timestamp || (/* @__PURE__ */ new Date()).toISOString();
       const resUrl = item.result_url || item.imageUrl || "";

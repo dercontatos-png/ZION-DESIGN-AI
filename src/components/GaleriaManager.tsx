@@ -20,6 +20,7 @@ import { REAL_USER_GENERATIONS, GalleryItem } from "../data/galleryData";
 import { GaleriaDetailModal, GaleriaCardItem } from "./GaleriaDetailModal";
 import { useProjectStore, addDeletedImage, getDeletedImages, GENERIC_DELETED_NAMES } from "../store/useProjectStore";
 import { downloadImage } from "../utils/downloadImage";
+import { extractImageTimestamp, sortImagesChronological } from "../utils/imageCanonical";
 
 interface GaleriaManagerProps {
   onOpenVitrine?: () => void;
@@ -116,7 +117,7 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
         }
       });
     }
-    return initialList;
+    return sortImagesChronological(initialList, true);
   });
 
   // Buscar geracoes atualizadas do servidor (BFF + Historico) com sincronizacao em tempo real
@@ -240,7 +241,7 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
               result_url: imgUrl,
               thumbnail_url: imgUrl,
               fallback_url: "/Design%20Builder1%202_files/result.avif",
-              created_at: "2026-03-20T12:00:00.000Z",
+              created_at: new Date(extractImageTimestamp(imgUrl) || Date.now()).toISOString(),
               date_formatted: "Hoje",
               agent_slug: detectedSlug,
               agent_name: detectedSlug === "ref" ? "REF" : detectedSlug === "hydra" ? "Hydra" : detectedSlug === "enhance" ? "Enhance" : detectedSlug === "altera-facil" ? "Altera Fácil" : "Zion Design",
@@ -301,12 +302,7 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
               }
             });
 
-            const all = Array.from(map.values());
-            all.sort((a, b) => {
-              const tb = new Date(b.created_at).getTime() || 0;
-              const ta = new Date(a.created_at).getTime() || 0;
-              return tb !== ta ? tb - ta : a.id.localeCompare(b.id);
-            });
+            const all = sortImagesChronological(Array.from(map.values()), true);
 
             // Evitar re-renderizacoes desnecessarias e reordenamento se a lista for igual
             const prevIds = prev.map((p) => p.id).join(",");
