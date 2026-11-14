@@ -25,6 +25,8 @@ export interface MagicRefineBarProps {
   onSendRefine: (text: string, attachments: MagicRefineAttachment[], isBrush: boolean) => void;
   onPublishCommunity?: () => void;
   onFormatClick?: () => void;
+  onReformat?: (dim: string) => void;
+  currentDim?: string;
   isProcessing?: boolean;
   activeImage?: string | null;
   agentColor?: string;
@@ -39,6 +41,8 @@ export const MagicRefineBar: React.FC<MagicRefineBarProps> = ({
   onSendRefine,
   onPublishCommunity,
   onFormatClick,
+  onReformat,
+  currentDim,
   isProcessing = false,
   activeImage = null,
   agentColor = "#a855f7",
@@ -137,10 +141,7 @@ export const MagicRefineBar: React.FC<MagicRefineBarProps> = ({
           <div>
             <button
               type="button"
-              onClick={() => {
-                if (onFormatClick) onFormatClick();
-                else setIsFormatOpen(!isFormatOpen);
-              }}
+              onClick={() => setIsFormatOpen(!isFormatOpen)}
               className="inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-xs font-medium text-zinc-200 transition-colors hover:bg-white/[0.08] hover:text-white cursor-pointer"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-crop h-4 w-4" aria-hidden="true">
@@ -151,22 +152,42 @@ export const MagicRefineBar: React.FC<MagicRefineBarProps> = ({
           </div>
           {isFormatOpen && (
             <div
-              className="absolute bottom-full right-0 mb-2 z-40 min-w-[160px] rounded-xl py-1.5 border border-white/[0.08] bg-[rgba(15,10,30,0.95)] backdrop-blur-xl shadow-2xl p-2 animate-in fade-in slide-in-from-bottom-2 duration-150"
+              className="absolute bottom-full mb-2 z-30 min-w-[160px] rounded-xl py-1.5 border border-white/[0.08] bg-[rgba(15,10,30,0.95)] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] animate-in fade-in slide-in-from-bottom-2 duration-150 right-0"
               onClick={(e) => e.stopPropagation()}
             >
-              <p className="px-2 pb-1 text-[10px] font-medium text-zinc-500">Alterar Formato</p>
-              <div className="grid grid-cols-3 gap-1">
-                {["1:1", "4:5", "9:16", "16:9", "3:4", "4:3"].map((dim) => (
+              <p className="px-3 pb-1 pt-0.5 text-[10px] font-medium text-zinc-500">Formato</p>
+              <div className="grid grid-cols-3 gap-1 px-2 pb-1.5">
+                {[
+                  { r: "16:9", w: 28.8, h: 16.2, t: "Widescreen" },
+                  { r: "9:16", w: 16.2, h: 28.8, t: "Story / Reels" },
+                  { r: "1:1", w: 21.6, h: 21.6, t: "Quadrado" },
+                  { r: "4:5", w: 19.2, h: 24, t: "Instagram" },
+                  { r: "3:4", w: 18, h: 24, t: "Retrato" },
+                  { r: "4:3", w: 24, h: 18, t: "Paisagem" }
+                ].map(({ r, w, h, t }) => (
                   <button
-                    key={dim}
+                    key={r}
                     type="button"
+                    disabled={isProcessing}
                     onClick={() => {
                       setIsFormatOpen(false);
-                      if (onFormatClick) onFormatClick();
+                      if (onReformat) onReformat(r);
+                      else if (onFormatClick) onFormatClick();
                     }}
-                    className="flex h-8 items-center justify-center rounded-lg text-xs font-semibold cursor-pointer text-zinc-400 hover:bg-white/[0.06] hover:text-white"
+                    className={`group flex flex-col items-center gap-1 rounded-lg p-1.5 transition-colors hover:bg-white/[0.08] cursor-pointer ${
+                      currentDim === r ? "bg-white/[0.06] ring-1 ring-violet-500/50" : ""
+                    }`}
+                    title={t}
                   >
-                    {dim}
+                    <div
+                      className="rounded border border-white/[0.12] transition-all duration-150 group-hover:border-violet-500/40"
+                      style={{
+                        width: `${w}px`,
+                        height: `${h}px`,
+                        background: "linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(139, 92, 246, 0.02))"
+                      }}
+                    />
+                    <span className="text-[10px] font-medium text-zinc-400 group-hover:text-zinc-200">{r}</span>
                   </button>
                 ))}
               </div>

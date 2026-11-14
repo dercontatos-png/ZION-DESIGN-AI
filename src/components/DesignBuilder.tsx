@@ -1023,6 +1023,24 @@ const hasFotoDot = Boolean(
       showToast(`🔄 Adaptando formato para ${targetDim}...`, "info");
       store.setIsGenerating(true);
       try {
+        let base64ImageToSend = currentImg;
+        if (currentImg.startsWith("http://") || currentImg.startsWith("https://")) {
+          try {
+            const proxyUrl = `/api/image-proxy?url=${encodeURIComponent(currentImg)}&format=jpeg&maxDim=2048`;
+            const r = await fetch(proxyUrl);
+            if (r.ok) {
+              const blob = await r.blob();
+              const reader = new FileReader();
+              base64ImageToSend = await new Promise<string>((resolve) => {
+                reader.onloadend = () => resolve(reader.result as string);
+                reader.readAsDataURL(blob);
+              });
+            }
+          } catch (e) {
+            console.warn("Client fallback to direct URL:", e);
+          }
+        }
+
         const apiKey = localStorage.getItem("custom_gemini_api_key") || customApiKey || "";
         const promptReformat = `Reformat and adapt this previously generated artwork to the exact ${targetDim} aspect ratio. Extend and outpaint the scene naturally to fill the new canvas dimensions while maintaining 100% fidelity to the main subject, typography, visual hierarchy, lighting, colors, styling, and background of the original artwork. Do not stretch, warp, or distort the original content.`;
 
@@ -1032,7 +1050,7 @@ const hasFotoDot = Boolean(
           body: JSON.stringify({
             app: isOrion ? "orion-pro" : "design-builder",
             tipoPainel: isOrion ? "ORION_PRO" : "FLYER",
-            previousImageBase64: currentImg,
+            previousImageBase64: base64ImageToSend,
             dimensao: targetDim,
             resolutionInput: store.qualidade || store.resolucao || "4K",
             formato: "PNG",
@@ -2123,7 +2141,7 @@ const hasFotoDot = Boolean(
 
               {/* ── ÁREA DO PALCO DA ARTE / CANVAS ── */}
               <div className="relative flex flex-1 min-h-0 flex-row overflow-hidden">
-          <div className="palco-da-arte relative flex h-full min-h-0 flex-1 min-w-0 overflow-hidden items-center justify-center p-4">
+          <div className="palco-da-arte relative flex h-full min-h-0 flex-1 min-w-0 overflow-hidden items-center justify-center">
             {studioPalcoTab === "pinterest" ? (
               /* MODO PINTEREST INTEGRADO NO PALCO */
               <div className="flex h-full w-full flex-col overflow-y-auto px-4 py-3 custom-scrollbar">
@@ -2401,27 +2419,47 @@ const hasFotoDot = Boolean(
                         setIsExportDropdownOpen(false);
                       }}
                       title="Formato"
-                      className={`flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-medium backdrop-blur-sm transition-all duration-200 bg-black/70 cursor-pointer ${
-                        isFormatDropdownOpen ? "text-white bg-violet-600/30 ring-1 ring-violet-500" : "text-zinc-300 hover:text-white"
+                      className={`inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-xs font-medium transition-colors cursor-pointer ${
+                        isFormatDropdownOpen ? "text-white bg-white/[0.12] ring-1 ring-white/20" : "text-zinc-200 hover:bg-white/[0.08] hover:text-white bg-black/70 backdrop-blur-sm"
                       }`}
                     >
-                      <Maximize2 className="h-4 w-4" />
+                      <Crop className="h-4 w-4" />
                       <span>Formato</span>
                     </button>
                     {isFormatDropdownOpen && (
-                      <div className="absolute bottom-full right-0 mb-2 z-30 min-w-[160px] rounded-xl py-1.5 border border-white/[0.08] bg-[rgba(15,10,30,0.95)] backdrop-blur-xl shadow-2xl p-2">
-                        <p className="px-2 pb-1 text-[10px] font-medium text-zinc-500">Alterar Formato</p>
-                        <div className="grid grid-cols-3 gap-1">
-                          {["1:1", "4:5", "9:16", "16:9", "3:4", "4:3"].map((dim) => (
+                      <div
+                        className="absolute bottom-full mb-2 z-30 min-w-[160px] rounded-xl py-1.5 border border-white/[0.08] bg-[rgba(15,10,30,0.95)] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] animate-in fade-in slide-in-from-bottom-2 duration-150 right-0"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <p className="px-3 pb-1 pt-0.5 text-[10px] font-medium text-zinc-500">Formato</p>
+                        <div className="grid grid-cols-3 gap-1 px-2 pb-1.5">
+                          {[
+                            { r: "16:9", w: 28.8, h: 16.2, t: "Widescreen" },
+                            { r: "9:16", w: 16.2, h: 28.8, t: "Story / Reels" },
+                            { r: "1:1", w: 21.6, h: 21.6, t: "Quadrado" },
+                            { r: "4:5", w: 19.2, h: 24, t: "Instagram" },
+                            { r: "3:4", w: 18, h: 24, t: "Retrato" },
+                            { r: "4:3", w: 24, h: 18, t: "Paisagem" }
+                          ].map(({ r, w, h, t }) => (
                             <button
-                              key={dim}
+                              key={r}
                               type="button"
-                              onClick={() => handleReformatDesign(dim)}
-                              className={`flex h-8 items-center justify-center rounded-lg text-xs font-semibold cursor-pointer ${
-                                store.dimensao === dim ? "bg-violet-600 text-white" : "text-zinc-400 hover:bg-white/[0.06] hover:text-white"
+                              disabled={store.isGenerating}
+                              onClick={() => handleReformatDesign(r)}
+                              className={`group flex flex-col items-center gap-1 rounded-lg p-1.5 transition-colors hover:bg-white/[0.08] cursor-pointer ${
+                                store.dimensao === r ? "bg-white/[0.06] ring-1 ring-violet-500/50" : ""
                               }`}
+                              title={t}
                             >
-                              {dim}
+                              <div
+                                className="rounded border border-white/[0.12] transition-all duration-150 group-hover:border-violet-500/40"
+                                style={{
+                                  width: `${w}px`,
+                                  height: `${h}px`,
+                                  background: "linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(139, 92, 246, 0.02))"
+                                }}
+                              />
+                              <span className="text-[10px] font-medium text-zinc-400 group-hover:text-zinc-200">{r}</span>
                             </button>
                           ))}
                         </div>
@@ -2500,8 +2538,10 @@ const hasFotoDot = Boolean(
                 {/* Magic Refine Bar & Community Publish Card Oficial */}
                 <MagicRefineBar
                   activeImage={activeImage}
-                  isProcessing={isRefining}
+                  isProcessing={isRefining || store.isGenerating}
                   agentColor={isOrion ? "#ffd500" : "#a855f7"}
+                  currentDim={store.dimensao}
+                  onReformat={(dim) => handleReformatDesign(dim)}
                   onFormatClick={() => setIsFormatDropdownOpen(!isFormatDropdownOpen)}
                   onPublishCommunity={() => {
                     setActivePalcoMode("comunidade");

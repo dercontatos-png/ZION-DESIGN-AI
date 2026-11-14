@@ -499,6 +499,40 @@ function parseBase64Part(input: any): { data: string; mimeType: string } | null 
   return null;
 }
 
+export async function resolveImageInputAsync(input: any): Promise<{ data: string; mimeType: string }> {
+  const syncRes = resolveImageInput(input);
+  if (syncRes && syncRes.data && syncRes.data.length > 0) {
+    return syncRes;
+  }
+
+  let str = "";
+  if (typeof input === "string") {
+    str = input;
+  } else if (typeof input === "object") {
+    str = input?.data || input?.base64 || input?.url || "";
+  }
+  str = str.trim();
+
+  if (str.startsWith("http://") || str.startsWith("https://")) {
+    try {
+      const resp = await fetch(str, { headers: { "User-Agent": "ZionAI/1.0" } });
+      if (resp.ok) {
+        const arrayBuf = await resp.arrayBuffer();
+        const buf = Buffer.from(arrayBuf);
+        const data = buf.toString("base64");
+        const contentType = resp.headers.get("content-type") || "image/jpeg";
+        const mimeType = contentType.includes("png") ? "image/png" : (contentType.includes("webp") ? "image/webp" : "image/jpeg");
+        console.log(`[resolveImageInputAsync] Successfully fetched remote URL to base64 (${data.length} chars, ${mimeType}).`);
+        return { data, mimeType };
+      }
+    } catch (err: any) {
+      console.warn(`[resolveImageInputAsync] Error fetching remote URL:`, err?.message || err);
+    }
+  }
+
+  return { data: "", mimeType: "image/jpeg" };
+}
+
 export async function overlayLogoOnImage(
   baseImageBase64: string,
   logoBase64Input: string,
@@ -1969,7 +2003,7 @@ async function startServer() {
 
   app.post("/api/stripe/create-checkout-session", async (req: any, res: any) => {
     try {
-      const { planId, currency = "brl", userEmail, userName = "", successUrl, cancelUrl } = req.body;
+      let { planId, currency = "brl", userEmail, userName = "", successUrl, cancelUrl } = req.body;
       if (!planId) {
         return res.status(400).json({ error: "Parâmetro 'planId' é obrigatório." });
       }
@@ -1995,7 +2029,7 @@ async function startServer() {
 
   app.post("/api/stripe/verify-session", async (req: any, res: any) => {
     try {
-      const { sessionId, planId, credits, userEmail } = req.body;
+      let { sessionId, planId, credits, userEmail } = req.body;
       if (!userEmail) {
         return res.status(400).json({ error: "E-mail de usuário é obrigatório." });
       }
@@ -2073,7 +2107,7 @@ async function startServer() {
 
   app.post("/api/comunidade/publicar", async (req: any, res: any) => {
     try {
-      const { imageUrl, prompt, aspectRatio, app: appName, authorName, authorEmail, tag } = req.body;
+      let { imageUrl, prompt, aspectRatio, app: appName, authorName, authorEmail, tag } = req.body;
       if (!imageUrl || !prompt) {
         return res.status(400).json({ error: "Arte e prompt são obrigatórios para publicação." });
       }
@@ -2097,7 +2131,7 @@ async function startServer() {
 
   app.post("/api/comunidade/like", async (req: any, res: any) => {
     try {
-      const { id } = req.body;
+      let { id } = req.body;
       if (!id) return res.status(400).json({ error: "ID do post obrigatório." });
       const likes = await upvoteCommunityPost(id);
       return res.json({ success: true, likes });
@@ -2473,7 +2507,7 @@ async function startServer() {
   // Direct Cloudflare R2 / S3 simulation endpoint: /designbuilder/results/:id/:filename
   app.get(["/designbuilder/results/:id/:filename", "/results/:id/:filename"], async (req: any, res: any) => {
     try {
-      const { id, filename } = req.params;
+      let { id, filename } = req.params;
       const cleanFile = path.basename(filename || "result.avif");
       const cacheHeader = req.query["response-cache-control"] || "private, max-age=3600, immutable";
       const resultPath = path.join(STORAGE_BASE_DIR, "results", id, cleanFile);
@@ -2524,7 +2558,7 @@ async function startServer() {
   // Direct Cloudflare R2 / S3 simulation endpoint for Thumbnails: /designbuilder/thumbnails/:id/:filename
   app.get(["/designbuilder/thumbnails/:id/:filename", "/thumbnails/:id/:filename"], async (req: any, res: any) => {
     try {
-      const { id, filename } = req.params;
+      let { id, filename } = req.params;
       const cleanFile = path.basename(filename || "thumbnail.avif");
       const cacheHeader = req.query["response-cache-control"] || "private, max-age=3600, immutable";
 
@@ -4950,7 +4984,7 @@ CRITICAL RULES:
 
   app.post(["/api/bff/api/community", "/api/community"], (req: any, res: any) => {
     try {
-      const { image, title, prompt, agent_slug, author, tag, aspect } = req.body || {};
+      let { image, title, prompt, agent_slug, author, tag, aspect } = req.body || {};
       const commDataPath = path.join(process.cwd(), "public", "community_data.json");
       let commData: any = { items: [], total: 0 };
       if (fs.existsSync(commDataPath)) {
@@ -5341,7 +5375,7 @@ CRITICAL RULES:
   // Excluir projeto e todos os seus assets do disco e do Cloudflare R2
   app.delete("/api/projetos/:id", async (req: any, res: any) => {
     try {
-      const { id } = req.params;
+      let { id } = req.params;
       const images: string[] = Array.isArray(req.body?.images) ? req.body.images : [];
       console.log(`[api/projetos DELETE] Excluindo projeto ${id} com ${images.length} imagens...`);
 
@@ -5419,7 +5453,7 @@ CRITICAL RULES:
 
   app.post("/api/clientes", async (req, res) => {
     try {
-      const { clients } = req.body;
+      let { clients } = req.body;
       if (!Array.isArray(clients)) {
         return res.status(400).json({ error: "Campo 'clients' deve ser uma lista" });
       }
@@ -5524,7 +5558,7 @@ CRITICAL RULES:
 
   app.patch("/api/admin/reports/:id/status", async (req, res) => {
     try {
-      const { id } = req.params;
+      let { id } = req.params;
       const { status } = req.body;
       const ok = updateAdminReportStatus(id, status);
       return res.json({ success: ok });
@@ -5535,7 +5569,7 @@ CRITICAL RULES:
 
   app.delete("/api/admin/reports/:id", async (req, res) => {
     try {
-      const { id } = req.params;
+      let { id } = req.params;
       const ok = deleteAdminReport(id);
       return res.json({ success: ok });
     } catch (err: any) {
@@ -5580,7 +5614,7 @@ CRITICAL RULES:
 
   app.patch("/api/admin/ratings/batch-status", async (req, res) => {
     try {
-      const { ids, status } = req.body;
+      let { ids, status } = req.body;
       const count = batchUpdateRatingStatus(Array.isArray(ids) ? ids : [], status);
       return res.json({ success: true, updated: count });
     } catch (err: any) {
@@ -5599,7 +5633,7 @@ CRITICAL RULES:
 
   app.patch("/api/admin/ratings/:id/status", async (req, res) => {
     try {
-      const { id } = req.params;
+      let { id } = req.params;
       const { status } = req.body;
       const ok = updateAdminRatingStatus(id, status);
       return res.json({ success: ok });
@@ -5610,7 +5644,7 @@ CRITICAL RULES:
 
   app.patch("/api/admin/ratings/:id/notes", async (req, res) => {
     try {
-      const { id } = req.params;
+      let { id } = req.params;
       const { notes } = req.body;
       const ok = updateAdminRatingNotes(id, notes);
       return res.json({ success: ok });
@@ -5631,7 +5665,7 @@ CRITICAL RULES:
 
   app.post("/api/admin/agents", async (req, res) => {
     try {
-      const { slug, ...data } = req.body;
+      let { slug, ...data } = req.body;
       if (!slug) return res.status(400).json({ error: "Slug do agente é obrigatório." });
       const updated = updateAgentPolicy(slug, data);
       return res.json({ success: !!updated, agent: updated });
@@ -5725,7 +5759,7 @@ CRITICAL RULES:
 
   app.delete("/api/admin/hydra/objectives/:id", async (req, res) => {
     try {
-      const { id } = req.params;
+      let { id } = req.params;
       const ok = deleteHydraObjective(id);
       return res.json({ success: ok });
     } catch (err: any) {
@@ -6372,7 +6406,7 @@ ${textContent}`
   app.post("/api/inpaint-image", async (req, res) => {
     if (!await verifyGenerationAccess(req, res)) return;
     try {
-      const { image, mask, prompt, customApiKey } = req.body;
+      let { image, mask, prompt, customApiKey } = req.body;
       const currentAi = getAiClient(customApiKey);
       if (!currentAi) {
         return res.status(400).json({ error: "API Key não configurada. Adicione sua chave nas configurações." });
@@ -6610,7 +6644,7 @@ Preserve 100% of the unmasked BLACK region without any changes.`;
   app.post("/api/remove-bg", async (req, res) => {
     if (!await verifyGenerationAccess(req, res)) return;
     try {
-      const { imageBase64 } = req.body;
+      let { imageBase64 } = req.body;
       if (!imageBase64) return res.status(400).json({ error: "Nenhuma imagem fornecida" });
 
       console.log("Removing background using isolated worker for image of length", imageBase64.length);
@@ -6627,7 +6661,7 @@ Preserve 100% of the unmasked BLACK region without any changes.`;
   // Optimized export for social networks (Instagram & WhatsApp) with custom post-processing presets
   app.post("/api/export-optimize", async (req, res) => {
     try {
-      const {
+      let {
         imageBase64,
         targetWidth,
         imageType = "auto",
@@ -7397,7 +7431,7 @@ If no issues are found, return an empty list. Output ONLY valid JSON.`;
   app.post("/api/apply-refinements", async (req, res) => {
     if (!await verifyGenerationAccess(req, res)) return;
     try {
-      const {
+      let {
         imageBase64,
         size = "1K",
         corDominante = "",
@@ -7438,7 +7472,7 @@ If no issues are found, return an empty list. Output ONLY valid JSON.`;
   app.post("/api/analyze-image-tech", async (req, res) => {
     if (!await verifyGenerationAccess(req, res)) return;
     try {
-      const { imageBase64, customApiKey } = req.body;
+      let { imageBase64, customApiKey } = req.body;
       if (!imageBase64) return res.status(400).json({ error: "Nenhuma imagem fornecida." });
 
       const currentAi = getAiClient(customApiKey);
@@ -7517,7 +7551,7 @@ Output ONLY the JSON object. Do not include conversational filler.`;
   app.post(["/api/enhancer-supir-magnific", "/api/enhance", "/api/generate-enhance"], async (req, res) => {
     if (!await verifyGenerationAccess(req, res)) return;
     try {
-      const {
+      let {
         imageBase64,
         foto_original,
         mode,
@@ -7776,7 +7810,7 @@ Diretrizes rígidas:
   app.post(["/api/generate-image", "/api/generate-design", "/api/zion-ai-generate"], async (req, res) => {
     if (!await verifyGenerationAccess(req, res)) return;
     try {
-      const {
+      let {
         imgConfig,
         backgroundSettings,
         personRefs = [],
@@ -8225,7 +8259,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
   app.post("/api/generate", async (req, res) => {
     if (!await verifyGenerationAccess(req, res)) return;
     try {
-      const {
+      let {
         imgConfig,
         personRefs = [],
         styleRefs = [],
@@ -8634,7 +8668,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
     opacity: number = 100
   ): Promise<string> {
     try {
-      const { data: mainData, mimeType: mainMime } = resolveImageInput(mainImageBase64);
+      let { data: mainData, mimeType: mainMime } = resolveImageInput(mainImageBase64);
       const { data: logoData } = resolveImageInput(logoImageBase64);
 
       if (!mainData || !logoData) return mainImageBase64;
@@ -8716,7 +8750,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
     console.log(`\n\n[api/gerar] --> STARTING REQUEST AT ${new Date().toISOString()}`);
     console.log(`[api/gerar] Body size: ${JSON.stringify(req.body).length} bytes`);
     try {
-      const {
+      let {
         base64DoSujeito,
         sujeitosBase64List = [],
         base64DoCenario,
@@ -8761,13 +8795,39 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         return str.includes(",") ? str.split(",")[1] : str;
       };
 
-      const prevImgBase64 = cleanBase64(previousImageBase64 || imagemAnteriorBase64 || imagemRefinamentoBase64 || "");
+      let prevImgRaw = cleanBase64(previousImageBase64 || imagemAnteriorBase64 || imagemRefinamentoBase64 || "");
+      if (prevImgRaw && (prevImgRaw.startsWith("http://") || prevImgRaw.startsWith("https://") || prevImgRaw.startsWith("/"))) {
+        const resolved = await resolveImageInputAsync(prevImgRaw);
+        if (resolved && resolved.data) prevImgRaw = resolved.data;
+      }
+      const prevImgBase64 = prevImgRaw;
 
       let useEnvRef = rawUseEnvRef;
       let desativarSujeito = rawDesativarSujeito;
 
-      const sujeitoLimpo = cleanBase64(base64DoSujeito);
-      const cenarioLimpo = cleanBase64(base64DoCenario);
+      let sujeitoRaw = cleanBase64(base64DoSujeito);
+      if (sujeitoRaw && (sujeitoRaw.startsWith("http://") || sujeitoRaw.startsWith("https://") || sujeitoRaw.startsWith("/"))) {
+        const resolved = await resolveImageInputAsync(sujeitoRaw);
+        if (resolved && resolved.data) sujeitoRaw = resolved.data;
+      }
+      const sujeitoLimpo = sujeitoRaw;
+
+      let cenarioRaw = cleanBase64(base64DoCenario);
+      if (cenarioRaw && (cenarioRaw.startsWith("http://") || cenarioRaw.startsWith("https://") || cenarioRaw.startsWith("/"))) {
+        const resolved = await resolveImageInputAsync(cenarioRaw);
+        if (resolved && resolved.data) cenarioRaw = resolved.data;
+      }
+      const cenarioLimpo = cenarioRaw;
+
+      if (designRefBase64 && (designRefBase64.startsWith("http://") || designRefBase64.startsWith("https://") || designRefBase64.startsWith("/"))) {
+        const resolved = await resolveImageInputAsync(designRefBase64);
+        if (resolved && resolved.data) designRefBase64 = resolved.data;
+      }
+
+      if (logoBase64 && (logoBase64.startsWith("http://") || logoBase64.startsWith("https://") || logoBase64.startsWith("/"))) {
+        const resolved = await resolveImageInputAsync(logoBase64);
+        if (resolved && resolved.data) logoBase64 = resolved.data;
+      }
 
       console.log("[BACK] Recebeu a requisição. Base64 Sujeito recebido? ", !!sujeitoLimpo);
 
@@ -10655,7 +10715,7 @@ The subject reference image may be a compressed digital photo. DO NOT replicate 
   app.post("/api/extract-prompt", async (req, res) => {
     if (!await verifyGenerationAccess(req, res)) return;
     try {
-      const { imageData, mimeType, customApiKey } = req.body;
+      let { imageData, mimeType, customApiKey } = req.body;
       if (!imageData) return res.status(400).json({ error: "Imagem não fornecida." });
       const currentAi = getAiClient(customApiKey);
       if (!currentAi) return res.status(400).json({ error: "API Key não configurada." });
@@ -10817,7 +10877,7 @@ The subject reference image may be a compressed digital photo. DO NOT replicate 
   app.post("/api/scan-gc-to-xaml", async (req, res) => {
     if (!await verifyGenerationAccess(req, res)) return;
     try {
-      const { imageBase64, customApiKey, layoutStyleHint, userPrompt, customPrompt } = req.body;
+      let { imageBase64, customApiKey, layoutStyleHint, userPrompt, customPrompt } = req.body;
       if (!imageBase64) return res.status(400).json({ error: "Imagem de referência de GC não fornecida." });
 
       const currentAi = getAiClient(customApiKey);
@@ -11071,7 +11131,7 @@ IMPORTANT: Return valid, strictly parseable JSON. Do not put unescaped raw newli
   app.post(["/api/chat-assistente", "/api/chat-agentes"], async (req, res) => {
     if (!await verifyGenerationAccess(req, res)) return;
     try {
-      const { assistantId, message, imageBase64, attachedFiles = [], history = [], customApiKey, modelId } = req.body;
+      let { assistantId, message, imageBase64, attachedFiles = [], history = [], customApiKey, modelId } = req.body;
       const currentAi = getAiClient(customApiKey);
       if (!currentAi) return res.status(400).json({ error: "API Key não configurada." });
 
