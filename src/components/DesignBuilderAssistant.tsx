@@ -78,6 +78,7 @@ interface ChatMsg {
   role: "user" | "assistant";
   content: string;
   image?: string;
+  images?: string[];
 }
 
 interface DesignBuilderAssistantProps {
@@ -99,7 +100,7 @@ export const DesignBuilderAssistant: React.FC<DesignBuilderAssistantProps> = ({
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [attachedImage, setAttachedImage] = useState<string | null>(null);
+  const [attachedImages, setAttachedImages] = useState<string[]>([]);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -133,43 +134,52 @@ export const DesignBuilderAssistant: React.FC<DesignBuilderAssistantProps> = ({
 
   const handleReset = () => {
     setMessages([{ role: "assistant", content: selectedAssistant.greeting }]);
-    setAttachedImage(null);
+    setAttachedImages([]);
     setInputValue("");
     showToast?.("Conversa reiniciada", "info");
   };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
-    const file = e.target.files[0];
-    const reader = new FileReader();
-    reader.onload = () => {
-      setAttachedImage(reader.result as string);
-    };
-    reader.readAsDataURL(file);
+    const files = Array.from(e.target.files);
+    Promise.all(
+      files.map((file) => {
+        return new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
+        });
+      })
+    ).then((newB64s) => {
+      setAttachedImages((prev) => [...prev, ...newB64s].slice(0, 10));
+    });
     e.target.value = "";
   };
 
   const handleSend = async () => {
-    if ((!inputValue.trim() && !attachedImage) || isLoading) return;
+    if ((!inputValue.trim() && attachedImages.length === 0) || isLoading) return;
 
     const currentText = inputValue.trim();
-    const currentImg = attachedImage;
+    const currentImgs = [...attachedImages];
 
     const userMsg: ChatMsg = {
       role: "user",
-      content: currentText || (currentImg ? "Analise esta imagem de referência e extraia o prompt mestre completo." : ""),
-      image: currentImg || undefined,
+      content: currentText || (currentImgs.length > 0 ? (currentImgs.length > 1 ? `Analise estas ${currentImgs.length} imagens de referência e extraia o prompt mestre completo.` : "Analise esta imagem de referência e extraia o prompt mestre completo.") : ""),
+      image: currentImgs[0] || undefined,
+      images: currentImgs.length > 0 ? currentImgs : undefined,
     };
 
     setMessages((prev) => [...prev, userMsg]);
     setInputValue("");
-    setAttachedImage(null);
+    setAttachedImages([]);
     setIsLoading(true);
 
     try {
       let promptText = currentText;
-      if (!promptText && currentImg) {
-        promptText = "Analise detalhadamente esta imagem de referência e gere o prompt mestre cinematográfico completo no padrão profissional do Design Builder.";
+      if (!promptText && currentImgs.length > 0) {
+        promptText = currentImgs.length > 1
+          ? `Analise detalhadamente estas ${currentImgs.length} imagens de referência anexadas e gere um prompt mestre cinematográfico completo unificando e reproduzindo os melhores elementos visuais no padrão profissional do Design Builder.`
+          : "Analise detalhadamente esta imagem de referência e gere o prompt mestre cinematográfico completo no padrão profissional do Design Builder.";
       }
 
       const res = await fetch("/api/chat-agentes", {
@@ -178,7 +188,12 @@ export const DesignBuilderAssistant: React.FC<DesignBuilderAssistantProps> = ({
         body: JSON.stringify({
           assistantId: selectedAssistant.id === "prompt-extractor" ? "prompt-extrator" : selectedAssistant.id,
           message: promptText,
-          imageBase64: currentImg || undefined,
+          imageBase64: currentImgs[0] || undefined,
+          attachedFiles: currentImgs.map((img, idx) => ({
+            name: `referencia_${idx + 1}.jpg`,
+            data: img,
+            type: "image/jpeg"
+          })),
           modelId: "deepseek-v4-flash",
         }),
       });
@@ -395,13 +410,17 @@ export const DesignBuilderAssistant: React.FC<DesignBuilderAssistantProps> = ({
                         : "bg-black/40 border border-brand-accent/10 rounded-sm shadow-lg shadow-brand-purple/5 backdrop-blur-xl text-zinc-300"
                     }`}
                   >
-                    {msg.image && (
-                      <div className="mb-3 overflow-hidden rounded-lg border border-white/10 max-h-48">
-                        <img
-                          src={msg.image}
-                          alt="Anexo"
-                          className="w-full h-full object-cover"
-                        />
+                    {((msg.images && msg.images.length > 0) || msg.image) && (
+                      <div className="mb-3 flex flex-wrap gap-2">
+                        {(msg.images && msg.images.length > 0 ? msg.images : [msg.image!]).map((img, i) => (
+                          <div key={i} className="overflow-hidden rounded-lg border border-white/10 max-h-48 max-w-[200px]">
+                            <img
+                              src={img}
+                              alt={`Anexo ${i + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ))}
                       </div>
                     )}
 
@@ -463,20 +482,25 @@ export const DesignBuilderAssistant: React.FC<DesignBuilderAssistantProps> = ({
 
             {/* Input Box com Anexo de Imagem (Match 1:1 com app.designbuilder.co) */}
             <div className="relative p-6 bg-zinc-950/50 border-t border-zinc-900">
-              {attachedImage && (
-                <div className="mb-2 relative inline-block">
-                  <img
-                    src={attachedImage}
-                    alt="Preview"
-                    className="h-16 w-16 object-cover rounded-lg border border-violet-500/40 shadow-lg"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setAttachedImage(null)}
-                    className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-0.5 shadow cursor-pointer hover:bg-red-600"
-                  >
-                    <X size={12} />
-                  </button>
+              {attachedImages.length > 0 && (
+                <div className="mb-2 flex flex-wrap gap-2 max-h-24 overflow-y-auto p-1">
+                  {attachedImages.map((img, idx) => (
+                    <div key={idx} className="relative inline-block">
+                      <img
+                        src={img}
+                        alt={`Preview ${idx + 1}`}
+                        className="h-14 w-14 object-cover rounded-lg border border-violet-500/40 shadow-lg"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setAttachedImages((prev) => prev.filter((_, i) => i !== idx))}
+                        className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-0.5 shadow cursor-pointer hover:bg-red-600"
+                        title="Remover imagem"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
 
@@ -485,6 +509,7 @@ export const DesignBuilderAssistant: React.FC<DesignBuilderAssistantProps> = ({
                   ref={fileInputRef}
                   type="file"
                   accept="image/*"
+                  multiple
                   className="hidden"
                   onChange={handleImageSelect}
                 />
@@ -528,7 +553,7 @@ export const DesignBuilderAssistant: React.FC<DesignBuilderAssistantProps> = ({
                 <button
                   type="button"
                   onClick={handleSend}
-                  disabled={isLoading || (!inputValue.trim() && !attachedImage)}
+                  disabled={isLoading || (!inputValue.trim() && attachedImages.length === 0)}
                   className="bg-brand-accent text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-brand-accent/80 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-xl cursor-pointer shrink-0 bg-violet-600 hover:bg-violet-500"
                   title="Enviar mensagem"
                 >

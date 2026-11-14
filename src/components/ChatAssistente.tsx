@@ -577,11 +577,6 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
 
           successfullyAttached.push(newFile);
 
-          if (triggerFlow && activeAssistant.id === "prompt-extrator" && file.type.startsWith("image/")) {
-            setTimeout(() => {
-              handleSendMessage("Por favor, analise a imagem e extraia o prompt.", [newFile]);
-            }, 100);
-          }
         } catch (fileErr) {
           console.error("Erro ao ler arquivo:", fileErr);
           showToast(`Erro ao processar arquivo ${file.name}.`, "error");
@@ -591,6 +586,14 @@ export const ChatAssistente: React.FC<ChatAssistenteProps> = ({ customApiKey, sh
       if (successfullyAttached.length > 0) {
         setAttachedFiles((prev) => [...prev, ...successfullyAttached]);
         showToast(`${successfullyAttached.length} ${successfullyAttached.length === 1 ? "arquivo anexado" : "arquivos anexados"} com sucesso!`, "success");
+        if (triggerFlow && activeAssistant.id === "prompt-extrator") {
+          const imgFiles = successfullyAttached.filter((f) => f.type.startsWith("image/"));
+          if (imgFiles.length > 0) {
+            setTimeout(() => {
+              handleSendMessage("Por favor, analise as imagens de referência anexadas e extraia o prompt mestre completo.", imgFiles);
+            }, 100);
+          }
+        }
       }
     } finally {
       setIsUploading(false);

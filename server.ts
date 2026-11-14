@@ -1644,11 +1644,12 @@ function getResolutionDimensions(resolution: string, aspectRatio: string, origin
     normRes = normRatio;
     normRatio = tmp;
   }
-  const is4K = normRes === "4K" || normRes === "8K";
+  const is8K = normRes === "8K";
+  const is4K = normRes === "4K";
   const is2K = normRes === "2K";
 
-  if (is4K) {
-    // 4K outputs the master 8K ultra-resolution (6144x7680 in 4:5, 7680x7680 in 1:1) with micro-textures & vector typography
+  if (is8K) {
+    // 8K Ultra Master Resolution (7680x7680 in 1:1, 7680x4320 in 16:9)
     switch (normRatio) {
       case "1:1": return { width: 7680, height: 7680 };
       case "4:5": return { width: 6144, height: 7680 };
@@ -1660,6 +1661,20 @@ function getResolutionDimensions(resolution: string, aspectRatio: string, origin
       case "2:3": return { width: 5120, height: 7680 };
       case "5:4": return { width: 7680, height: 6144 };
       default: return { width: 7680, height: 7680 };
+    }
+  } else if (is4K) {
+    // Standard 4K Ultra HD (3840x3840 in 1:1, 3840x2160 in 16:9, 3072x3840 in 4:5, 2160x3840 in 9:16)
+    switch (normRatio) {
+      case "1:1": return { width: 3840, height: 3840 };
+      case "4:5": return { width: 3072, height: 3840 };
+      case "9:16": return { width: 2160, height: 3840 };
+      case "16:9": return { width: 3840, height: 2160 };
+      case "4:3": return { width: 3840, height: 2880 };
+      case "3:4": return { width: 2880, height: 3840 };
+      case "3:2": return { width: 3840, height: 2560 };
+      case "2:3": return { width: 2560, height: 3840 };
+      case "5:4": return { width: 3840, height: 3072 };
+      default: return { width: 3840, height: 3840 };
     }
   } else if (is2K) {
     switch (normRatio) {
@@ -3329,12 +3344,21 @@ CRITICAL RULES:
               targetQuality === "8K" ? "8K" : (targetQuality === "4K" ? "4K" : (targetQuality === "2K" ? "2K" : "1K"))
             );
 
-            // Also encode exact AVIF buffer for fastest modern browser loading
-            const processedAvifBuffer = await sharp(processedPngBuffer)
-              .avif({ quality: 85, effort: 1 })
-              .toBuffer();
-
-            fs.writeFileSync(path.join(resultDir, "result.avif"), processedAvifBuffer);
+            // Also encode exact AVIF buffer for fastest modern browser loading (guarded to never crash the job)
+            let processedAvifBuffer: Buffer = processedPngBuffer;
+            try {
+              const avifPipeline = sharp(processedPngBuffer);
+              if (targetDims.width > 3840 || targetDims.height > 3840) {
+                avifPipeline.resize(Math.min(targetDims.width, 3840), Math.min(targetDims.height, 3840), { fit: "inside" });
+              }
+              processedAvifBuffer = await avifPipeline
+                .avif({ quality: 85, effort: 1 })
+                .toBuffer();
+              fs.writeFileSync(path.join(resultDir, "result.avif"), processedAvifBuffer);
+            } catch (avifErr) {
+              console.warn(`[bff/generate ASYNC] Job ${jobId}: AVIF master conversion warning, saving PNG as fallback:`, avifErr);
+              fs.writeFileSync(path.join(resultDir, "result.avif"), processedPngBuffer);
+            }
             fs.writeFileSync(path.join(resultDir, "result.png"), processedPngBuffer);
 
             // Generate crisp high-fidelity thumbnail at 30% scale
@@ -10436,8 +10460,8 @@ The subject reference image may be a compressed digital photo. DO NOT replicate 
         });
       }
 
-      // 2. Add Previously Generated Image for direct refinement/edit
-      if (prevImgBase64) {
+      // 2. Add Previously Generated Image for direct refinement/edit (only if not already added in isReformatRequest)
+      if (prevImgBase64 && !isReformatRequest) {
         addImagePart(prevImgBase64, "Imagem Gerada Anterior a ser Editada/Refinada");
       }
 
@@ -10656,7 +10680,7 @@ The subject reference image may be a compressed digital photo. DO NOT replicate 
         // Apply exact natural dimensions if AUTO aspect ratio is selected
         if (autoTargetDimensions && autoTargetDimensions.width && autoTargetDimensions.height) {
           try {
-            const maxDimTarget = (resolutionInput === "8K" || (resolutionInput as any) === "8k" || resolutionInput === "4K") ? 7680 : (resolutionInput === "2K" ? 2048 : 1024);
+            const maxDimTarget = (resolutionInput === "8K" || (resolutionInput as any) === "8k") ? 7680 : (resolutionInput === "4K" ? 3840 : (resolutionInput === "2K" ? 2048 : 1024));
             let finalTargetW = autoTargetDimensions.width;
             let finalTargetH = autoTargetDimensions.height;
             if (autoTargetDimensions.width >= autoTargetDimensions.height) {
@@ -10765,16 +10789,38 @@ The subject reference image may be a compressed digital photo. DO NOT replicate 
     }
   });
 
-  // Prompt Extractor: analyze an image and return the prompt that describes its composition
+  // Prompt Extractor: analyze one or multiple reference images and return the prompt describing them
   app.post("/api/extract-prompt", async (req, res) => {
     if (!await verifyGenerationAccess(req, res)) return;
     try {
-      let { imageData, mimeType, customApiKey } = req.body;
-      if (!imageData) return res.status(400).json({ error: "Imagem não fornecida." });
+      let { imageData, imagesData, mimeType, customApiKey } = req.body;
+      const allImages: string[] = [];
+      if (Array.isArray(imagesData) && imagesData.length > 0) {
+        allImages.push(...imagesData.filter(Boolean));
+      } else if (imageData) {
+        allImages.push(imageData);
+      }
+      if (allImages.length === 0) return res.status(400).json({ error: "Nenhuma imagem fornecida." });
+
       const currentAi = getAiClient(customApiKey);
       if (!currentAi) return res.status(400).json({ error: "API Key não configurada." });
 
-      const { data: cleanData, mimeType: resolvedMime } = resolveImageInput(imageData);
+      const imageParts: any[] = [];
+      for (let i = 0; i < allImages.length; i++) {
+        const { data: cleanData, mimeType: resolvedMime } = resolveImageInput(allImages[i]);
+        if (cleanData) {
+          imageParts.push({ inlineData: { data: cleanData, mimeType: resolvedMime || mimeType || "image/jpeg" } });
+        }
+      }
+
+      if (imageParts.length === 0) {
+        return res.status(400).json({ error: "Falha ao processar imagens enviadas." });
+      }
+
+      const promptInstruction = imageParts.length > 1
+        ? `You are an expert creative director and AI prompt engineer. Analyze these ${imageParts.length} reference images in extreme detail and synthesize the unified generative AI master prompt that combines and reproduces the visual style, subject composition, typography hierarchy, lighting, and layout characteristics from them. Format your response as a single detailed master prompt paragraph in English, suitable for use in high-end generative AI image generation. Output ONLY the prompt text, no explanations.`
+        : `You are an expert creative director and AI prompt engineer. Analyze this image in extreme detail and reconstruct the precise generative AI prompt that would have been used to create it. Focus on: subject description, pose, expression, clothing, lighting setup (key light, rim light, ambient color), background/environment, color palette, visual style, mood, composition, framing (close-up/medium/wide), any text elements, graphic design elements, and technical specifications. Format your response as a single detailed paragraph in English, suitable for use as a generative AI image prompt. Output ONLY the prompt text, no explanations.`;
+
       const extractModels = ["gemini-3.5-flash", "gemini-3.6-flash", "gemini-flash-lite-latest", "gemini-3.7-flash", "gemini-3.1-pro-preview"];
       let promptText = "";
       let lastErr: any = null;
@@ -10789,8 +10835,8 @@ The subject reference image may be a compressed digital photo. DO NOT replicate 
               {
                 role: "user",
                 parts: [
-                  { inlineData: { data: cleanData, mimeType: resolvedMime || mimeType || "image/jpeg" } },
-                  { text: `You are an expert creative director and AI prompt engineer. Analyze this image in extreme detail and reconstruct the precise generative AI prompt that would have been used to create it. Focus on: subject description, pose, expression, clothing, lighting setup (key light, rim light, ambient color), background/environment, color palette, visual style, mood, composition, framing (close-up/medium/wide), any text elements, graphic design elements, and technical specifications. Format your response as a single detailed paragraph in English, suitable for use as a generative AI image prompt. Output ONLY the prompt text, no explanations.` }
+                  ...imageParts,
+                  { text: promptInstruction }
                 ]
               }
             ]
