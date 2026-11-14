@@ -889,6 +889,8 @@ const hasFotoDot = Boolean(
   // Magic Refine Bar State & Handlers
   const [refinePrompt, setRefinePrompt] = useState("");
   const [isRefining, setIsRefining] = useState(false);
+  const [isReformatting, setIsReformatting] = useState(false);
+  const [reformattingDim, setReformattingDim] = useState("");
   const [refineAttachedFiles, setRefineAttachedFiles] = useState<{ name: string; url: string }[]>([]);
   const refineFileInputRef = useRef<HTMLInputElement>(null);
   const refineTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -1020,8 +1022,9 @@ const hasFotoDot = Boolean(
 
     const currentImg = activeImage || store.galeriaImages?.[store.activeImageIndex];
     if (currentImg) {
+      setReformattingDim(targetDim);
+      setIsReformatting(true);
       showToast(`🔄 Adaptando formato para ${targetDim}...`, "info");
-      store.setIsGenerating(true);
       try {
         let base64ImageToSend = currentImg;
         if (currentImg.startsWith("http://") || currentImg.startsWith("https://")) {
@@ -1095,7 +1098,8 @@ const hasFotoDot = Boolean(
         console.error("Erro ao reformatar no DesignBuilder:", err);
         showToast("Erro ao conectar com o servidor para adaptar o formato.", "error");
       } finally {
-        store.setIsGenerating(false);
+        setIsReformatting(false);
+        setReformattingDim("");
       }
     } else {
       showToast(`Formato definido para ${targetDim}!`, "success");
@@ -2350,6 +2354,18 @@ const hasFotoDot = Boolean(
                         }}
                         className="block h-auto w-auto max-h-full max-w-full shrink rounded-2xl object-contain"
                       />
+
+                      {/* Overlay elegante de adaptação de formato 1:1 com o RefBuilder e DesignBuilder */}
+                      {isReformatting && (
+                        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/75 backdrop-blur-md rounded-2xl animate-in fade-in duration-200 pointer-events-none">
+                          <div className="relative mb-3 flex items-center justify-center">
+                            <div className="absolute h-14 w-14 rounded-full border-2 border-violet-500/20 border-t-violet-400 animate-spin" />
+                            <Sparkles className="h-6 w-6 text-violet-300 animate-pulse" />
+                          </div>
+                          <p className="text-xs font-semibold text-white">Adaptando formato para {reformattingDim}...</p>
+                          <p className="text-[10px] text-zinc-400 mt-1">Sintetizando novo enquadramento com IA</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -2495,7 +2511,7 @@ const hasFotoDot = Boolean(
                 {/* Magic Refine Bar & Community Publish Card Oficial */}
                 <MagicRefineBar
                   activeImage={activeImage}
-                  isProcessing={isRefining || store.isGenerating}
+                  isProcessing={isRefining || isReformatting || store.isGenerating}
                   agentColor={isOrion ? "#ffd500" : "#a855f7"}
                   currentDim={store.dimensao}
                   onReformat={(dim) => handleReformatDesign(dim)}

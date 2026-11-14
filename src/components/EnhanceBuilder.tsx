@@ -1939,6 +1939,9 @@ export const EnhanceBuilder: React.FC<EnhanceBuilderProps> = ({
                             onSendRefine={(text, _attachments, _isBrush) => {
                               handleRefine(text);
                             }}
+                            onReformat={(dim) => {
+                              handleRefine(`Adapte e reformate esta imagem para a proporção exata ${dim}, estendendo o cenário naturalmente sem distorcer o conteúdo original.`);
+                            }}
                             isProcessing={isProcessing}
                             agentColor="#8b5cf6"
                             placeholder="Descreva o que deseja aprimorar nesta imagem..."

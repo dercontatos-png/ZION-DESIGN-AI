@@ -1529,6 +1529,11 @@ export const HydraBuilder: React.FC<HydraBuilderProps> = ({
                     activeImage={currentTab.activeResultImage}
                     isProcessing={isGenerating}
                     agentColor="#8b5cf6"
+                    currentDim={currentTab.selectedDimension}
+                    onReformat={(dim) => {
+                      updateCurrentTab({ selectedDimension: dim as any });
+                      showToast?.(`Formato definido para ${dim}!`, "success");
+                    }}
                     placeholder="Descreva o que deseja alterar nesta composição..."
                     onPublishCommunity={() => {
                       onOpenCommunity?.();

@@ -518,10 +518,19 @@ export async function resolveImageInputAsync(input: any): Promise<{ data: string
       const resp = await fetch(str, { headers: { "User-Agent": "ZionAI/1.0" } });
       if (resp.ok) {
         const arrayBuf = await resp.arrayBuffer();
-        const buf = Buffer.from(arrayBuf);
-        const data = buf.toString("base64");
+        let buf = Buffer.from(arrayBuf);
         const contentType = resp.headers.get("content-type") || "image/jpeg";
-        const mimeType = contentType.includes("png") ? "image/png" : (contentType.includes("webp") ? "image/webp" : (contentType.includes("avif") ? "image/avif" : "image/jpeg"));
+        let mimeType = contentType.includes("png") ? "image/png" : (contentType.includes("webp") ? "image/webp" : "image/jpeg");
+        if (contentType.includes("avif") || str.toLowerCase().includes(".avif")) {
+          try {
+            buf = await sharp(buf).jpeg({ quality: 95 }).toBuffer();
+            mimeType = "image/jpeg";
+            console.log(`[resolveImageInputAsync] Transcoded remote AVIF to JPEG (${buf.length} bytes).`);
+          } catch (avifErr: any) {
+            console.warn(`[resolveImageInputAsync] Warning transcoding remote AVIF:`, avifErr?.message || avifErr);
+          }
+        }
+        const data = buf.toString("base64");
         console.log(`[resolveImageInputAsync] Successfully fetched remote URL to base64 (${data.length} chars, ${mimeType}).`);
         return { data, mimeType };
       }
@@ -539,9 +548,18 @@ export async function resolveImageInputAsync(input: any): Promise<{ data: string
       ];
       for (const cand of candidates) {
         if (fs.existsSync(cand) && fs.statSync(cand).isFile()) {
-          const buf = await fs.promises.readFile(cand);
+          let buf = await fs.promises.readFile(cand);
           const ext = path.extname(cand).toLowerCase();
-          const mimeType = ext === ".png" ? "image/png" : (ext === ".webp" ? "image/webp" : (ext === ".avif" ? "image/avif" : "image/jpeg"));
+          let mimeType = ext === ".png" ? "image/png" : (ext === ".webp" ? "image/webp" : "image/jpeg");
+          if (ext === ".avif") {
+            try {
+              buf = await sharp(buf).jpeg({ quality: 95 }).toBuffer();
+              mimeType = "image/jpeg";
+              console.log(`[resolveImageInputAsync] Transcoded local AVIF file ${cand} to JPEG (${buf.length} bytes).`);
+            } catch (avifErr: any) {
+              console.warn(`[resolveImageInputAsync] Warning transcoding local AVIF:`, avifErr?.message || avifErr);
+            }
+          }
           const data = buf.toString("base64");
           console.log(`[resolveImageInputAsync] Successfully read local file ${cand} to base64 (${data.length} chars, ${mimeType}).`);
           return { data, mimeType };

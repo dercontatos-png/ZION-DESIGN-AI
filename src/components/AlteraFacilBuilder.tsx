@@ -1553,6 +1553,11 @@ const AlteraFacilBuilder: React.FC<AlteraFacilBuilderProps> = ({
                   activeImage={generatedImage || photoBase64 || undefined}
                   isProcessing={isProcessing}
                   agentColor="#a855f7"
+                  currentDim={aspectRatio}
+                  onReformat={(dim) => {
+                    setAspectRatio(dim as any);
+                    handleExecute(dim);
+                  }}
                   placeholder="Descreva a alteração mágica..."
                   onPublishCommunity={() => {
                     onOpenCommunity?.();
