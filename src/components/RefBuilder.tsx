@@ -4923,18 +4923,18 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                                 </div>
                                 {activePopover === "formato" && (
                                   <div
-                                    className="absolute bottom-full mb-2 z-40 min-w-[160px] rounded-xl py-1.5 border border-white/[0.08] bg-[rgba(15,10,30,0.95)] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] animate-in fade-in slide-in-from-bottom-2 duration-150 right-0"
+                                    className="absolute bottom-full mb-2 z-30 min-w-[160px] rounded-xl py-1.5 border border-white/[0.08] bg-[rgba(15,10,30,0.95)] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] animate-in fade-in slide-in-from-bottom-2 duration-150 right-0"
                                     onClick={(e) => e.stopPropagation()}
                                   >
                                     <p className="px-3 pb-1 pt-0.5 text-[10px] font-medium text-zinc-500">Formato</p>
                                     <div className="grid grid-cols-3 gap-1 px-2 pb-1.5">
                                       {([
-                                        { r: "16:9", w: 48, h: 27, t: "Widescreen" },
-                                        { r: "9:16", w: 27, h: 48, t: "Story / Reels" },
-                                        { r: "1:1", w: 36, h: 36, t: "Quadrado" },
-                                        { r: "4:5", w: 32, h: 40, t: "Instagram" },
-                                        { r: "3:4", w: 30, h: 40, t: "Retrato" },
-                                        { r: "4:3", w: 40, h: 30, t: "Paisagem" }
+                                        { r: "16:9", w: 28.8, h: 16.2, t: "Widescreen" },
+                                        { r: "9:16", w: 16.2, h: 28.8, t: "Story / Reels" },
+                                        { r: "1:1", w: 21.6, h: 21.6, t: "Quadrado" },
+                                        { r: "4:5", w: 19.2, h: 24, t: "Instagram" },
+                                        { r: "3:4", w: 18, h: 24, t: "Retrato" },
+                                        { r: "4:3", w: 24, h: 18, t: "Paisagem" }
                                       ] as const).map(({ r, w, h, t }) => (
                                         <button
                                           key={r}
@@ -4944,14 +4944,22 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                                             handleReformat(r);
                                             setActivePopover(null);
                                           }}
-                                          className={`group/btn relative flex flex-col items-center justify-center gap-1.5 rounded-lg py-2 transition-all duration-150 hover:bg-white/[0.08] cursor-pointer ${dimension === r ? "bg-white/[0.08] ring-1 ring-violet-400" : ""}`}
+                                          className={`group flex flex-col items-center gap-1 rounded-lg p-1.5 transition-all duration-150 hover:bg-white/[0.06] disabled:opacity-50 cursor-pointer ${
+                                            dimension === r ? "bg-white/[0.06] ring-1 ring-violet-500/50" : ""
+                                          }`}
                                           title={t}
                                         >
                                           <div
-                                            className={`rounded-sm border ${dimension === r ? "border-violet-400 bg-violet-400/20" : "border-zinc-500 group-hover/btn:border-zinc-300"}`}
-                                            style={{ width: `${Math.round(w * 0.55)}px`, height: `${Math.round(h * 0.55)}px` }}
+                                            className={`rounded border border-white/[0.12] transition-all duration-150 group-hover:border-violet-500/40 ${
+                                              dimension === r ? "border-violet-500/60" : ""
+                                            }`}
+                                            style={{
+                                              width: `${w}px`,
+                                              height: `${h}px`,
+                                              background: "linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(139, 92, 246, 0.02))"
+                                            }}
                                           />
-                                          <span className={`text-[10px] font-medium leading-none ${dimension === r ? "text-violet-300" : "text-zinc-400 group-hover/btn:text-zinc-200"}`}>{r}</span>
+                                          <span className={`text-[9px] font-medium ${dimension === r ? "text-violet-300" : "text-zinc-400"}`}>{r}</span>
                                         </button>
                                       ))}
                                     </div>

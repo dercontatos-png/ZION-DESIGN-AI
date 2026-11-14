@@ -174,20 +174,22 @@ export const MagicRefineBar: React.FC<MagicRefineBarProps> = ({
                       if (onReformat) onReformat(r);
                       else if (onFormatClick) onFormatClick();
                     }}
-                    className={`group flex flex-col items-center gap-1 rounded-lg p-1.5 transition-colors hover:bg-white/[0.08] cursor-pointer ${
+                    className={`group flex flex-col items-center gap-1 rounded-lg p-1.5 transition-all duration-150 hover:bg-white/[0.06] disabled:opacity-50 cursor-pointer ${
                       currentDim === r ? "bg-white/[0.06] ring-1 ring-violet-500/50" : ""
                     }`}
                     title={t}
                   >
                     <div
-                      className="rounded border border-white/[0.12] transition-all duration-150 group-hover:border-violet-500/40"
+                      className={`rounded border border-white/[0.12] transition-all duration-150 group-hover:border-violet-500/40 ${
+                        currentDim === r ? "border-violet-500/60" : ""
+                      }`}
                       style={{
                         width: `${w}px`,
                         height: `${h}px`,
                         background: "linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(139, 92, 246, 0.02))"
                       }}
                     />
-                    <span className="text-[10px] font-medium text-zinc-400 group-hover:text-zinc-200">{r}</span>
+                    <span className={`text-[9px] font-medium ${currentDim === r ? "text-violet-300" : "text-zinc-400"}`}>{r}</span>
                   </button>
                 ))}
               </div>
