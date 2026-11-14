@@ -2410,63 +2410,6 @@ const hasFotoDot = Boolean(
                 {/* Floating Glass Action Bar - Lado Direito */}
                 <div className="acoes-da-arte absolute right-6 z-30 flex items-center gap-1.5 transition-all duration-300 max-[1800px]:flex-col max-[1800px]:items-end max-lg:hidden pointer-events-auto" style={{ bottom: "108px" }}>
                   
-                  {/* Dropdown Formato */}
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsFormatDropdownOpen(!isFormatDropdownOpen);
-                        setIsExportDropdownOpen(false);
-                      }}
-                      title="Formato"
-                      className={`inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-xs font-medium transition-colors cursor-pointer ${
-                        isFormatDropdownOpen ? "text-white bg-white/[0.12] ring-1 ring-white/20" : "text-zinc-200 hover:bg-white/[0.08] hover:text-white bg-black/70 backdrop-blur-sm"
-                      }`}
-                    >
-                      <Crop className="h-4 w-4" />
-                      <span>Formato</span>
-                    </button>
-                    {isFormatDropdownOpen && (
-                      <div
-                        className="absolute bottom-full mb-2 z-30 min-w-[160px] rounded-xl py-1.5 border border-white/[0.08] bg-[rgba(15,10,30,0.95)] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] animate-in fade-in slide-in-from-bottom-2 duration-150 right-0"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <p className="px-3 pb-1 pt-0.5 text-[10px] font-medium text-zinc-500">Formato</p>
-                        <div className="grid grid-cols-3 gap-1 px-2 pb-1.5">
-                          {[
-                            { r: "16:9", w: 28.8, h: 16.2, t: "Widescreen" },
-                            { r: "9:16", w: 16.2, h: 28.8, t: "Story / Reels" },
-                            { r: "1:1", w: 21.6, h: 21.6, t: "Quadrado" },
-                            { r: "4:5", w: 19.2, h: 24, t: "Instagram" },
-                            { r: "3:4", w: 18, h: 24, t: "Retrato" },
-                            { r: "4:3", w: 24, h: 18, t: "Paisagem" }
-                          ].map(({ r, w, h, t }) => (
-                            <button
-                              key={r}
-                              type="button"
-                              disabled={store.isGenerating}
-                              onClick={() => handleReformatDesign(r)}
-                              className={`group flex flex-col items-center gap-1 rounded-lg p-1.5 transition-colors hover:bg-white/[0.08] cursor-pointer ${
-                                store.dimensao === r ? "bg-white/[0.06] ring-1 ring-violet-500/50" : ""
-                              }`}
-                              title={t}
-                            >
-                              <div
-                                className="rounded border border-white/[0.12] transition-all duration-150 group-hover:border-violet-500/40"
-                                style={{
-                                  width: `${w}px`,
-                                  height: `${h}px`,
-                                  background: "linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(139, 92, 246, 0.02))"
-                                }}
-                              />
-                              <span className="text-[10px] font-medium text-zinc-400 group-hover:text-zinc-200">{r}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
                   {/* Dropdown Exportar */}
                   <div className="relative">
                     <button
