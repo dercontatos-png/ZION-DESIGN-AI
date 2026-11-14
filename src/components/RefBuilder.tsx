@@ -1880,23 +1880,63 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
     customW?: number,
     customH?: number
   ) => {
+    const effW = targetDim === "custom" ? (customW || customWidth) : undefined;
+    const effH = targetDim === "custom" ? (customH || customHeight) : undefined;
+    const dimLabel = targetDim === "custom" ? `${effW}×${effH}px` : targetDim;
+
+    // Atualiza imediatamente o formato no estado local e na aba ativa
+    setDimension(targetDim);
+    updateActiveTab({
+      dimension: targetDim,
+      customWidth: effW || customWidth,
+      customHeight: effH || customHeight
+    });
+
     const currentImg = generatedImage;
     if (!currentImg) {
-      showToast("Nenhuma arte gerada ainda para reformatar.", "info");
+      showToast(`Formato alterado para ${dimLabel}!`, "success");
       return;
     }
 
     if (isReformatting) return;
-
-    const effW = targetDim === "custom" ? (customW || customWidth) : undefined;
-    const effH = targetDim === "custom" ? (customH || customHeight) : undefined;
-    const dimLabel = targetDim === "custom" ? `${effW}×${effH}px` : targetDim;
 
     setActiveReformatDim(targetDim);
     setIsReformatting(true);
     showToast(`Adaptando formato para ${dimLabel}...`, "info");
 
     try {
+      let base64ImageToSend = currentImg;
+      if (currentImg.startsWith("http://") || currentImg.startsWith("https://")) {
+        try {
+          const proxyUrl = `/api/image-proxy?url=${encodeURIComponent(currentImg)}&format=jpeg&maxDim=2048`;
+          const r = await fetch(proxyUrl);
+          if (r.ok) {
+            const blob = await r.blob();
+            const reader = new FileReader();
+            base64ImageToSend = await new Promise<string>((resolve) => {
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.readAsDataURL(blob);
+            });
+          }
+        } catch (e) {
+          console.warn("Client fallback to direct URL:", e);
+        }
+      } else if (currentImg.startsWith("/") && typeof window !== "undefined") {
+        try {
+          const r = await fetch(currentImg);
+          if (r.ok) {
+            const blob = await r.blob();
+            const reader = new FileReader();
+            base64ImageToSend = await new Promise<string>((resolve) => {
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.readAsDataURL(blob);
+            });
+          }
+        } catch (e) {
+          console.warn("Client fallback to direct relative fetch:", e);
+        }
+      }
+
       const apiKey = localStorage.getItem("custom_gemini_api_key") || "";
       const promptReformat = `Reformat and adapt this previously generated artwork to the exact ${dimLabel} aspect ratio. Extend and outpaint the scene naturally to fill the new canvas dimensions while maintaining 100% fidelity to the main subject, typography, visual hierarchy, lighting, colors, styling, and background of the original artwork. Do not stretch, warp, or distort the original content.`;
 
@@ -1907,13 +1947,14 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
           app: "ref",
           isRefBuilder: true,
           agent_slug: "ref-builder",
-          previousImageBase64: currentImg,
+          previousImageBase64: base64ImageToSend,
           dimensao: targetDim,
           customWidth: effW,
           customHeight: effH,
           resolutionInput: quality,
           formato: "PNG",
           promptTraduzido: promptReformat,
+          isReformat: true,
           customApiKey: apiKey,
           modelId: store.selectedAiModel
         })
@@ -1923,6 +1964,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
       const finalImg = data.image || data.imageUrl;
       if (finalImg) {
         setGeneratedImage(finalImg);
+        setDimension(targetDim);
         saveToRefHistory(finalImg, "refino");
         updateActiveTab({
           dimension: targetDim,

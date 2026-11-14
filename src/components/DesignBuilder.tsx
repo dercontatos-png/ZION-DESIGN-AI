@@ -1039,6 +1039,20 @@ const hasFotoDot = Boolean(
           } catch (e) {
             console.warn("Client fallback to direct URL:", e);
           }
+        } else if (currentImg.startsWith("/") && typeof window !== "undefined") {
+          try {
+            const r = await fetch(currentImg);
+            if (r.ok) {
+              const blob = await r.blob();
+              const reader = new FileReader();
+              base64ImageToSend = await new Promise<string>((resolve) => {
+                reader.onloadend = () => resolve(reader.result as string);
+                reader.readAsDataURL(blob);
+              });
+            }
+          } catch (e) {
+            console.warn("Client fallback to direct local fetch:", e);
+          }
         }
 
         const apiKey = localStorage.getItem("custom_gemini_api_key") || customApiKey || "";

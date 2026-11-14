@@ -4001,12 +4001,33 @@ async function resolveImageInputAsync(input) {
         const buf = Buffer.from(arrayBuf);
         const data = buf.toString("base64");
         const contentType = resp.headers.get("content-type") || "image/jpeg";
-        const mimeType = contentType.includes("png") ? "image/png" : contentType.includes("webp") ? "image/webp" : "image/jpeg";
+        const mimeType = contentType.includes("png") ? "image/png" : contentType.includes("webp") ? "image/webp" : contentType.includes("avif") ? "image/avif" : "image/jpeg";
         console.log(`[resolveImageInputAsync] Successfully fetched remote URL to base64 (${data.length} chars, ${mimeType}).`);
         return { data, mimeType };
       }
     } catch (err) {
       console.warn(`[resolveImageInputAsync] Error fetching remote URL:`, err?.message || err);
+    }
+  }
+  if (str.startsWith("/")) {
+    try {
+      const candidates = [
+        path5.join(process.cwd(), "public", str.replace(/^\//, "")),
+        path5.join(process.cwd(), str.replace(/^\//, "")),
+        path5.join(process.cwd(), "dist", str.replace(/^\//, ""))
+      ];
+      for (const cand of candidates) {
+        if (fs5.existsSync(cand) && fs5.statSync(cand).isFile()) {
+          const buf = await fs5.promises.readFile(cand);
+          const ext = path5.extname(cand).toLowerCase();
+          const mimeType = ext === ".png" ? "image/png" : ext === ".webp" ? "image/webp" : ext === ".avif" ? "image/avif" : "image/jpeg";
+          const data = buf.toString("base64");
+          console.log(`[resolveImageInputAsync] Successfully read local file ${cand} to base64 (${data.length} chars, ${mimeType}).`);
+          return { data, mimeType };
+        }
+      }
+    } catch (err) {
+      console.warn(`[resolveImageInputAsync] Error reading local path:`, err?.message || err);
     }
   }
   return { data: "", mimeType: "image/jpeg" };
@@ -10533,10 +10554,17 @@ CRITICAL DESIGN SYSTEM HIERARCHY RULES FOR PERFECT OUTPUT:
       }
       const cleanBase64 = (dataStr) => {
         if (!dataStr) return "";
-        if (dataStr.includes(",")) {
-          return dataStr.split(",")[1];
+        const trimmed = dataStr.trim();
+        if (trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("/")) {
+          return trimmed;
         }
-        return dataStr;
+        if (trimmed.startsWith("data:") && trimmed.includes(",")) {
+          return trimmed.split(",")[1];
+        }
+        if (trimmed.includes(",")) {
+          return trimmed.split(",")[1];
+        }
+        return trimmed;
       };
       const parts = [];
       parts.push({
@@ -10814,7 +10842,14 @@ CRITICAL DESIGN SYSTEM HIERARCHY RULES FOR PERFECT OUTPUT:
       const resolutionInput = rawResolucao || rawResolutionInput || "1K";
       const cleanBase64 = (str) => {
         if (!str) return "";
-        return str.includes(",") ? str.split(",")[1] : str;
+        const trimmed = str.trim();
+        if (trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("/")) {
+          return trimmed;
+        }
+        if (trimmed.startsWith("data:") && trimmed.includes(",")) {
+          return trimmed.split(",")[1];
+        }
+        return trimmed.includes(",") ? trimmed.split(",")[1] : trimmed;
       };
       let prevImgRaw = cleanBase64(previousImageBase64 || imagemAnteriorBase64 || imagemRefinamentoBase64 || "");
       if (prevImgRaw && (prevImgRaw.startsWith("http://") || prevImgRaw.startsWith("https://") || prevImgRaw.startsWith("/"))) {

@@ -521,12 +521,34 @@ export async function resolveImageInputAsync(input: any): Promise<{ data: string
         const buf = Buffer.from(arrayBuf);
         const data = buf.toString("base64");
         const contentType = resp.headers.get("content-type") || "image/jpeg";
-        const mimeType = contentType.includes("png") ? "image/png" : (contentType.includes("webp") ? "image/webp" : "image/jpeg");
+        const mimeType = contentType.includes("png") ? "image/png" : (contentType.includes("webp") ? "image/webp" : (contentType.includes("avif") ? "image/avif" : "image/jpeg"));
         console.log(`[resolveImageInputAsync] Successfully fetched remote URL to base64 (${data.length} chars, ${mimeType}).`);
         return { data, mimeType };
       }
     } catch (err: any) {
       console.warn(`[resolveImageInputAsync] Error fetching remote URL:`, err?.message || err);
+    }
+  }
+
+  if (str.startsWith("/")) {
+    try {
+      const candidates = [
+        path.join(process.cwd(), "public", str.replace(/^\//, "")),
+        path.join(process.cwd(), str.replace(/^\//, "")),
+        path.join(process.cwd(), "dist", str.replace(/^\//, ""))
+      ];
+      for (const cand of candidates) {
+        if (fs.existsSync(cand) && fs.statSync(cand).isFile()) {
+          const buf = await fs.promises.readFile(cand);
+          const ext = path.extname(cand).toLowerCase();
+          const mimeType = ext === ".png" ? "image/png" : (ext === ".webp" ? "image/webp" : (ext === ".avif" ? "image/avif" : "image/jpeg"));
+          const data = buf.toString("base64");
+          console.log(`[resolveImageInputAsync] Successfully read local file ${cand} to base64 (${data.length} chars, ${mimeType}).`);
+          return { data, mimeType };
+        }
+      }
+    } catch (err: any) {
+      console.warn(`[resolveImageInputAsync] Error reading local path:`, err?.message || err);
     }
   }
 
@@ -8452,10 +8474,17 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
 
       const cleanBase64 = (dataStr: string) => {
         if (!dataStr) return "";
-        if (dataStr.includes(",")) {
-          return dataStr.split(",")[1];
+        const trimmed = dataStr.trim();
+        if (trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("/")) {
+          return trimmed;
         }
-        return dataStr;
+        if (trimmed.startsWith("data:") && trimmed.includes(",")) {
+          return trimmed.split(",")[1];
+        }
+        if (trimmed.includes(",")) {
+          return trimmed.split(",")[1];
+        }
+        return trimmed;
       };
 
       // Construct multiple text and image parts
@@ -8792,7 +8821,14 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
 
       const cleanBase64 = (str: string): string => {
         if (!str) return "";
-        return str.includes(",") ? str.split(",")[1] : str;
+        const trimmed = str.trim();
+        if (trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("/")) {
+          return trimmed;
+        }
+        if (trimmed.startsWith("data:") && trimmed.includes(",")) {
+          return trimmed.split(",")[1];
+        }
+        return trimmed.includes(",") ? trimmed.split(",")[1] : trimmed;
       };
 
       let prevImgRaw = cleanBase64(previousImageBase64 || imagemAnteriorBase64 || imagemRefinamentoBase64 || "");
