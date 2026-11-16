@@ -8457,9 +8457,12 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         }
       }
 
-      // 6. TYPOGRAPHY & TEXT (Crucial for Flyer BR)
+      // 6. TYPOGRAPHY & TEXT (Crucial for Flyer BR - Padrão @psdflyerbr)
       if (imgConfig?.enableText) {
-        promptBuilder += `\n\nTYPOGRAPHY & TEXT LAYOUT: Integrate bold, highly readable, premium typography directly into the design (Flyer BR style). `;
+        promptBuilder += `\n\nTYPOGRAPHY & 3D EMBLEM ARCHITECTURE (Flyer BR Masterpiece):
+- Primary 3D Headline (H1): Render as a bold, monumental 3D Event Emblem with chamfered bevelled edges, specular top-edge highlights, and rich material physics matching the campaign aesthetic (e.g. polished gold, carved rustic wood, chrome liquid metal, or vibrant neon).
+- Spatial Layering: The typography seamlessly weaves through the scene with parallax depth — letters passing dynamically in front of or behind the subject with realistic ambient occlusion and contact shadows.
+- Hierarchical Readability: Subheadlines (H2) and date/location badges formatted as clean pill badges or ribbons with generous breathing room. `;
         if (imgConfig.textPosition) {
           const tpEnglish = /esq|left/i.test(imgConfig.textPosition)
             ? "MANDATORY ALIGNMENT: All text blocks MUST be strictly LEFT-ALIGNED (flush-left) on the LEFT SIDE of the canvas, never centered! "
@@ -8475,7 +8478,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         if (imgConfig.textSmall) promptBuilder += `Small descriptive body text must read exactly: "${imgConfig.textSmall}". `;
         if (imgConfig.cta) promptBuilder += `The Call-To-Action (badge/button) should read exactly: "${imgConfig.cta}". `;
 
-        promptBuilder += `Make the typography look professionally kerned, with correct visual hierarchy, perhaps some text passing behind the main subject for a 3D depth effect. `;
+        promptBuilder += `Make the typography look professionally kerned, with correct visual hierarchy and zero AI diffusion blur. `;
       }
 
       // 7. USER SPECIFIC OVERRIDES
@@ -8499,7 +8502,11 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         else selectedRatio = "1:1";
       }
 
-      let promptCompleto = "Fotografia comercial profissional, resolução 4k UHD, textura de pele hiper-realista, foco nítido, estilo premium de luxo, paleta com preto, branco e dourado #ad8330, " + finalPrompt;
+      const themePalette = (imgConfig?.colorCode || dominantColor)
+        ? `paleta de cores primária baseada em ${imgConfig?.colorCode || dominantColor}, harmonizada com tons de contraste e realces cinematográficos, `
+        : "paleta cinematográfica de alto impacto e contraste, ";
+
+      let promptCompleto = `Fotografia comercial profissional, resolução 4k UHD, textura de pele hiper-realista, foco nítido, arte no estilo Flyer BR profissional (padrão @psdflyerbr / agência de elite), ${themePalette}` + finalPrompt;
 
       // Inject explicit design system rules to avoid blur and guarantee 8K alignment/hierarchy
       promptCompleto += `\n\nCRITICAL DESIGN SYSTEM HIERARCHY RULES FOR PERFECT OUTPUT:
@@ -8509,9 +8516,9 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
 - PERFECT CONTRAST, BRIGHTNESS & COLORS: Ensure high typographic readability by matching colors to the dominant theme with flawless contrast. Maintain natural color vibrancy.
 - ABSOLUTELY ZERO BLUR OR DIFFUSION SMUDGES: NO blurry artifacts, NO flickering/cintilações, NO plastic skin, NO low-res noise. Deliver a razor-sharp, flawless, master-level 8k resolution commercial photograph.`;
 
-      const reqDominantColor = imgConfig?.corDominante || imgConfig?.backgroundSettings?.colors?.[0];
-      if (reqDominantColor && reqDominantColor !== "transparent") {
-        promptCompleto += `\n\n- SOLID BACKGROUND REQUIREMENT FOR CUTOUT: Because the client requested a solid background color, YOU MUST GENERATE ALL TEXTS AND ELEMENTS OVER A PURE WHITE OR HIGHLY CONTRASTING FLAT SOLID BACKGROUND. Do not generate ANY background textures, scenes, or gradients. Just the subjects and text floating over a blank, flat solid color canvas. This is critical so we can cleanly cut them out.`;
+      const userWantsIsolatedCutout = imgConfig?.isIsolatedCutout || imgConfig?.solidBackgroundOnly || /fundo s[óo]lido|para recorte|sem fundo|fundo branco puro/i.test(imgConfig?.additionalPrompt || "");
+      if (userWantsIsolatedCutout) {
+        promptCompleto += `\n\n- SOLID BACKGROUND REQUIREMENT FOR CUTOUT: Because the client explicitly requested an isolated cutout on a solid background, YOU MUST GENERATE ALL TEXTS AND ELEMENTS OVER A FLAT SOLID CONTRASTING BACKGROUND for clean chroma key / cutout.`;
       }
 
       const cleanBase64 = (dataStr: string) => {
@@ -10818,8 +10825,19 @@ The subject reference image may be a compressed digital photo. DO NOT replicate 
       }
 
       const promptInstruction = imageParts.length > 1
-        ? `You are an expert creative director and AI prompt engineer. Analyze these ${imageParts.length} reference images in extreme detail and synthesize the unified generative AI master prompt that combines and reproduces the visual style, subject composition, typography hierarchy, lighting, and layout characteristics from them. Format your response as a single detailed master prompt paragraph in English, suitable for use in high-end generative AI image generation. Output ONLY the prompt text, no explanations.`
-        : `You are an expert creative director and AI prompt engineer. Analyze this image in extreme detail and reconstruct the precise generative AI prompt that would have been used to create it. Focus on: subject description, pose, expression, clothing, lighting setup (key light, rim light, ambient color), background/environment, color palette, visual style, mood, composition, framing (close-up/medium/wide), any text elements, graphic design elements, and technical specifications. Format your response as a single detailed paragraph in English, suitable for use as a generative AI image prompt. Output ONLY the prompt text, no explanations.`;
+        ? `You are an expert creative director and master AI prompt engineer specializing in top-tier Brazilian Flyers (Flyer BR style / @psdflyerbr standard). Analyze these ${imageParts.length} reference images in extreme technical detail and synthesize the unified generative AI master prompt that combines and reproduces their visual DNA:
+- 3D EMBOSSED TYPOGRAPHY & MATERIAL SHADERS: Monumental 3D headlines, bevelled edges, specular top highlights, material textures (polished gold, carved rustic wood, liquid chrome, neon glass).
+- SPATIAL LAYERING & PARALLAX: Dynamic layering between foreground particles/dust, midground subject and 3D typography, and atmospheric background.
+- SYNCHRONIZED RIM LIGHTING: Intense rim light contours on the subject matching the dominant accent palette.
+- VOLUMETRIC ATMOSPHERE: Cinematic fog/smoke, dust motes, fire embers, or light beams.
+- SAFE MARGINS & READABILITY: Clean breathing room (16-20% from borders) with zero border clipping.
+Format your response as a single detailed master prompt paragraph in English, suitable for use in high-end generative AI image generation. Output ONLY the prompt text, no explanations.`
+        : `You are an expert creative director and master AI prompt engineer specializing in top-tier Brazilian Flyers (Flyer BR style / @psdflyerbr standard). Analyze this image in extreme technical detail and reconstruct the precise generative AI prompt that would create this exact masterpiece:
+- Subject description, pose, gaze, emotional expression, clothing textures.
+- Synchronized rim lighting matching the ambient color scheme, soft directional key lighting, and subtle contact shadows.
+- 3D typography hierarchy: Monumental 3D embossed/bevelled headline (H1), secondary titles, date/location pill badges, and clean institutional footer.
+- Background environment, volumetric depth (smoke, particles, embers, lens flares), color palette, and technical camera parameters (85mm lens, f/2.0, high realism).
+Format your response as a single detailed paragraph in English, suitable for use as a generative AI image prompt. Output ONLY the prompt text, no explanations.`;
 
       const extractModels = ["gemini-3.5-flash", "gemini-3.6-flash", "gemini-flash-lite-latest", "gemini-3.7-flash", "gemini-3.1-pro-preview"];
       let promptText = "";
@@ -11555,11 +11573,12 @@ Você tem OLHO CLÍNICO e INTELIGÊNCIA DE DESIGN:
 2. Se o usuário mandar uma imagem de flyer completo (card de referência) sem dizer nada, analise esse card imediatamente, descubra que se trata de uma referência de layout, mapeie-o OBRIGATORIAMENTE como "design" no seu JSON em "mapeamentoImagens" para preenchimento automático.
 3. Se o estilo visual que você quer aplicar a essa geração exigir alguma característica estética especial do card ou se o usuário quiser que você copie, defina "enableEstiloVisual": true e descreva detalhadamente em "estiloVisualCustom" (O estilo visual customizado deve ser preenchido automaticamente, detalhando texturas, iluminação, atmosfera e vibe). Se não for necessário nenhum estilo visual, você pode desativar explicitamente ("enableEstiloVisual": false).
 4. No fotos de cenário (promptCenario): se não houver um cenário específico enviado pelo usuário, você deve colocar a imagem do card de referência como cenário também e descrever em "promptCenario" o que quer extrair daquele cenário (ex: descrever a atmosfera urbana, o céu dramático ou as luzes de holofotes).
-Sua mente processa design analisando:
-1. Foco e Recorte (Saber separar Sujeito e Cenário).
-2. Profundidade 3D (O que passa na frente do texto, o que fica atrás).
-3. Iluminação Dramática e Cores (Glow, Luz de Contraste, Reflexos).
-4. Tipografia Impecável (Hierarquia de textos pesados, metálicos ou neon).
+Sua mente processa design no padrão de excelência de agência de elite (@psdflyerbr - Flyer BR):
+1. Selo 3D Monumental (Headline H1): Tipografia chanfrada em 3D, bisel polido com realces especulares a 45 graus, textura de material PBR rica (ouro polido, madeira entalhada, cromo líquido, neon vítreo), com sombra de oclusão de contato realista.
+2. Profundidade 3D e Parallax: Camadas bem definidas — primeiro plano com partículas/faíscas/névoa desfocadas (bokeh), plano médio com o Sujeito recortado e o Selo 3D se entrelaçando dinamicamente, e plano de fundo com o ambiente temático.
+3. Luz de Recorte Sincronizada (Rim Lighting): A silhueta, ombros e cabelos dos sujeitos/artistas capturam luz de recorte vigorosa na cor exata da atmosfera dominante do flyer, eliminando qualquer aspecto de colagem artificial.
+4. Respiro Institucional e Margens de Segurança (16% a 20%): Cabeçalho e rodapé NUNCA tocam as bordas do canvas. Textos, telefones e arrobas sociais mantêm amplo respiro visual.
+5. Badges Secundários: Datas, horários e atrações de apoio estruturados em cápsulas (pill badges), fitas de papel rasgado ou placas rústicas com tipografia limpa e legível.
 Analise qualquer imagem de referência e diga como reproduzir aquela excelência técnica em Midjourney, Leonardo AI ou outras plataformas, mapeando a estrutura perfeita para cada botão/opção da arte.
 
 IMPORTANTÍSSIMO: MANTENHA UM DIÁLOGO COM O USUÁRIO (COMO DIRETOR E CLIENTE/DESIGNER).

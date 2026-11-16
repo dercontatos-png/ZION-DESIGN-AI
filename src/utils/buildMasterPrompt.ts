@@ -269,15 +269,7 @@ Trace each limb sequentially from the shoulder joint to the fingertips and from 
 
   // ── BLOCO 7: POSE & EXPRESSION OU CAIXAS DE FOTO VAZIAS ──
   if (!isLogo) {
-    if (hasSubject) {
-      const pose = config.poseDescription || "Professional, engaging, composed posture naturally integrated into the composition.";
-      const subjectSpatialPlacement = alignmentMode === "left"
-        ? "strictly on the RIGHT SIDE of the frame (occupying the right 55% of canvas width, facing slightly inward, leaving the left 45% of the canvas completely free for the left-aligned typography column)"
-        : alignmentMode === "right"
-        ? "strictly on the LEFT SIDE of the frame (occupying the left 55% of canvas width, facing slightly inward, leaving the right 45% of the canvas completely free for the right-aligned typography column)"
-        : `at ${config.positioning?.toLowerCase() || "center"} of the frame`;
-      blocks.push(`POSE & SPATIAL PLACEMENT — Standing or seated composedly ${subjectSpatialPlacement}. ${pose} Weight settled, shoulders relaxed and dropped. Torso naturally oriented with subtle organic angle.`);
-      blocks.push(`EXPRESSION — Genuine, confident, approachable expression. The brows sit level and untensed. The eyes are warm, open and steady, holding the lens with clear catchlights. The mouth features an authentic, unforced expression engaging the cheeks with subtle natural creasing at the eye corners. The face reads as human, charismatic, and authentic.`);
+    if (userExplicitlyRequestedNoPerson || (!hasSubject && userRequestedBoxesOrCards)) {
       // Dynamic card detection from user prompt
       const promptToScan = (config.additionalPrompt || "").toLowerCase();
       const detectedCountMatch = promptToScan.match(/(\d+)\s*(quadrados?|cards?|caixas?|boxes?|espa[çc]os?|slots?)/i) ||
@@ -297,7 +289,7 @@ Trace each limb sequentially from the shoulder joint to the fingertips and from 
       }
 
       blocks.push(`PHOTO PLACEHOLDER SLOTS & HARMONIC VERTICAL PROPORTIONS:
-- ABSOLUTE PROHIBITION OF HUMAN MODELS: ZERO people, ZERO women, ZERO nurses, ZERO doctors, ZERO human figures! Do NOT paint any human model into the artwork!
+- ABSOLUTE PROHIBITION OF HUMAN MODELS: ZERO people, ZERO women, ZERO human figures! Do NOT paint any human model into the artwork!
 - EXACTLY ${detectedCards} HORIZONTAL PHOTO CARDS: Render exactly ${detectedCards} clean, prominent, white rectangular placeholder boxes arranged horizontally side-by-side across the middle of the canvas ("${detectedCards} quadrados um do lado do outro").
 - Appearance: Pure solid white fill (#FFFFFF) with subtle elegant rounded corners and soft drop shadows separating them from the background.
 - ELEGANT CARD PROPORTIONS & AVOID TALL VERTICAL STRETCHING (CRITICAL):
@@ -306,11 +298,20 @@ Trace each limb sequentially from the shoulder joint to the fingertips and from 
   * Card vertical placement: The cards must start at ~38% of canvas height and END by ~60% of canvas height.
   * This guarantees generous vertical space (at least 38% to 42% canvas height) below them for:
     1) Course bullet points (e.g. 2 columns x 2 rows)
-    2) Foreground floating elements (e.g. stethoscopes)
+    2) Foreground floating elements
     3) WhatsApp contact phone numbers (stacked with matching font sizes)
     4) Instagram & Facebook icons + @handle
     5) PLUS the MANDATORY SAFE MARGIN (respiro de segurança) of at least 8% to 12% below the lowest text!
 - ZERO CLIPPING & ZERO OVERCROWDING: All elements must have ample breathing room with zero text or icons touching or glued to borders.`);
+    } else if (hasSubject) {
+      const pose = config.poseDescription || "Professional, engaging, composed posture naturally integrated into the composition.";
+      const subjectSpatialPlacement = alignmentMode === "left"
+        ? "strictly on the RIGHT SIDE of the frame (occupying the right 55% of canvas width, facing slightly inward, leaving the left 45% of the canvas completely free for the left-aligned typography column)"
+        : alignmentMode === "right"
+        ? "strictly on the LEFT SIDE of the frame (occupying the left 55% of canvas width, facing slightly inward, leaving the right 45% of the canvas completely free for the right-aligned typography column)"
+        : `at ${config.positioning?.toLowerCase() || "center"} of the frame`;
+      blocks.push(`POSE & SPATIAL PLACEMENT — Standing or seated composedly ${subjectSpatialPlacement}. ${pose} Weight settled, shoulders relaxed and dropped. Torso naturally oriented with subtle organic angle.`);
+      blocks.push(`EXPRESSION — Genuine, confident, approachable expression. The brows sit level and untensed. The eyes are warm, open and steady, holding the lens with clear catchlights. The mouth features an authentic, unforced expression engaging the cheeks with subtle natural creasing at the eye corners. The face reads as human, charismatic, and authentic.`);
     } else {
       blocks.push(`SCENE ENVIRONMENT (NO HUMAN MODEL):
 - Clean, refined commercial institutional atmosphere without human models. Full-bleed edge-to-edge depth, architectural lighting, and pristine commercial clarity.`);
@@ -323,10 +324,11 @@ Trace each limb sequentially from the shoulder joint to the fingertips and from 
   if (isLogo) {
     blocks.push(`LIGHTING — Clean studio macro lighting highlighting the contours and finish of the logo emblem. Specular reflections and soft metallic sheen.${sobrietyNote}`);
   } else {
-    blocks.push(`LIGHTING — Commercial studio lighting with a directional key light and soft ambient fill.
-Key light positioned to sculpt the scene features with soft shadow transitions.
-Subtle rim light separates the foreground elements from the background.
-Shadows: Soft-edged contact shadows anchoring elements naturally. Deep crevices exhibit controlled black clipping for rich contrast without muddy tones.${sobrietyNote}`);
+    blocks.push(`LIGHTING (FLYER BR SIGNATURE ATMOSPHERE & SYNCHRONIZED RIM LIGHT):
+- Directional Key Light: Strong, clean directional illumination sculpting subject features with soft-edged tonal falloff.
+- SYNCHRONIZED RIM LIGHTING (CONTOUR ACCENT): High-intensity rim light (luz de recorte) backlighting the subject's silhouette, shoulders, and hair contours, precisely color-synchronized with the primary accent tone (${primaryAccent}) and ambient lighting. This creates a striking 3D visual pop separating the subject cleanly from the backdrop.
+- Environmental Depth & Particles: Subtle atmospheric volumetric depth — microscopic dust motes, soft luminous embers, or subtle cinematic fog drifting naturally between foreground and background planes without cluttering legibility.
+- Ambient Shadow Occlusion: Deep contact shadows anchoring subject and 3D typography into the scene with controlled, rich blacks without muddy or gray tones.${sobrietyNote}`);
   }
 
   // ── BLOCO 9: SOCIAL HEADER NO TOPO (SOMENTE SE CONFIGURADO PARA O TOPO) ──
@@ -372,11 +374,15 @@ ${rightZoneDesc}
 - CRITICAL POSITIONING MANDATE: Each text layer and bullet item MUST be rendered in its designated canvas zone (e.g. TOP-CENTER, MIDDLE-CENTER). DO NOT displace centered text to the left or right borders!`;
     }
 
-    blocks.push(`HEADLINE AND DISPLAY TYPOGRAPHY:
+    blocks.push(`HEADLINE AND DISPLAY TYPOGRAPHY (FLYER BR 3D EMBOSSED HIERARCHY):
 ${spatialDirectives}
 Display Stack:
 ${headlineLines}
-${fontStyleRule}`);
+${fontStyleRule}
+- 3D BEVEL & METALLIC EMBOSSING (SIGNATURE FLYER BR FINISH):
+  * The primary Headline (H1) acts as a monumental visual anchor. Render with subtle 3D depth, chamfered bevelled edges, and specular edge highlights.
+  * Layer Depth: The lettering interacts with scene depth — subject and title naturally overlap with crisp contact occlusion shadows (e.g. subject in front of or behind text elements), creating high-end agency parallax depth.
+  * Kerning & Geometry: Flawlessly tracked and kerned, bold impact, razor-sharp anti-aliased contours with zero diffusion waviness.`);
   }
 
   // ── BLOCO 11: CONTEÚDO DE CORPO & TEXTO SEAMLESS (SEM RETÂNGULOS/CARDS) ──
