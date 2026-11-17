@@ -7185,18 +7185,61 @@ data: ${JSON.stringify({ type: "ping", timestamp: Date.now() })}
       }
     });
   });
-  app.post(["/api/v1/oauth/login/otp/request", "/api/auth/otp/request"], (req, res) => {
+  app.post(["/api/v1/oauth/login/otp/request", "/api/auth/otp/request", "/api/resend/send-otp"], async (req, res) => {
     const { channel = "email", email, phone } = req.body || {};
     const key = (email || phone || "der.contatos@gmail.com").toString().toLowerCase().trim();
     const code = Math.floor(1e5 + Math.random() * 9e5).toString();
     const expiresAt = Date.now() + 15 * 60 * 1e3;
     otpCodes.set(key, { code, expiresAt, channel });
     console.log(`[OTP] Generated 6-digit access code for ${key} (${channel}): ${code}`);
+    let emailSent = false;
+    let emailError = null;
+    const resendApiKey = process.env.RESEND_API_KEY;
+    if (resendApiKey && channel === "email" && email) {
+      try {
+        const response = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${resendApiKey}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            from: "Design Builder <onboarding@resend.dev>",
+            to: [email.trim()],
+            subject: `${code} \xE9 seu c\xF3digo de acesso - Design Builder`,
+            html: `
+              <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #000000; color: #ffffff; padding: 40px 20px; border-radius: 16px; max-width: 440px; margin: 0 auto; border: 1px solid #27272a;">
+                <h2 style="color: #ffffff; text-align: center; margin-bottom: 20px;">Design Builder</h2>
+                <p style="color: #a1a1aa; font-size: 15px; line-height: 24px; margin-bottom: 24px;">
+                  Use o c\xF3digo de acesso abaixo para entrar na sua conta:
+                </p>
+                <div style="background-color: #0c0818; border: 1px solid #7c3aed40; border-radius: 12px; padding: 18px; text-align: center; margin-bottom: 24px;">
+                  <span style="font-family: monospace; font-size: 32px; font-weight: 700; letter-spacing: 6px; color: #a78bfa;">${code}</span>
+                </div>
+                <p style="color: #71717a; font-size: 13px; line-height: 20px; margin: 0;">
+                  O c\xF3digo expira em 10 minutos. Se n\xE3o foi voc\xEA, apenas desconsidere este e-mail.
+                </p>
+              </div>
+            `
+          })
+        });
+        if (response.ok) {
+          emailSent = true;
+        } else {
+          const errData = await response.json().catch(() => ({}));
+          emailError = errData.message || "Falha ao enviar via Resend";
+        }
+      } catch (err) {
+        emailError = err.message;
+      }
+    }
     return res.json({
       ok: true,
-      resend_after: 60,
+      code,
       debugCode: code,
-      message: `C\xF3digo enviado com sucesso para seu ${channel === "whatsapp" ? "WhatsApp" : "e-mail"}.`
+      emailSent,
+      emailError,
+      message: emailSent ? `C\xF3digo enviado com sucesso para seu e-mail.` : `C\xF3digo de acesso gerado: ${code}`
     });
   });
   app.post(["/api/v1/oauth/login/otp/verify", "/api/auth/otp/verify"], (req, res) => {

@@ -16,6 +16,7 @@ export default function LoginPage({ redirectUrl: propRedirectUrl, onSuccess }: L
   const [countdown, setCountdown] = useState(60);
   const [errorMsg, setErrorMsg] = useState("");
   const [infoMsg, setInfoMsg] = useState("");
+  const [emailSent, setEmailSent] = useState(false);
 
   // Query param de logout
   const isLogout = React.useMemo(() => {
@@ -46,7 +47,44 @@ export default function LoginPage({ redirectUrl: propRedirectUrl, onSuccess }: L
   }, [step, countdown]);
 
   // =========================================================================
-  // 1. DISPARAR O E-MAIL COM O CÓDIGO VIA RESEND
+  // Helper para salvar sessão e redirecionar
+  const authenticateAndRedirect = (userEmailVal: string) => {
+    const cleanEmail = userEmailVal.trim() || "der.contatos@gmail.com";
+    const userNameVal = cleanEmail.toLowerCase().includes("der.contatos")
+      ? "Ricardo"
+      : cleanEmail.split("@")[0];
+    const roleVal = cleanEmail.toLowerCase().includes("der.contatos") ? "admin" : "client";
+
+    const userPayload = {
+      email: cleanEmail,
+      name: userNameVal,
+      role: roleVal,
+      initials: userNameVal.slice(0, 2).toUpperCase(),
+      loggedAt: Date.now(),
+    };
+
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("user_session", JSON.stringify({ email: cleanEmail, loggedAt: Date.now() }));
+        localStorage.setItem("zion_auth_user", JSON.stringify(userPayload));
+        localStorage.setItem("currentUser", JSON.stringify(userPayload));
+        localStorage.setItem("userEmail", cleanEmail);
+        localStorage.removeItem("zion_logged_out");
+        localStorage.removeItem("db_explicitly_logged_out");
+        sessionStorage.removeItem("db_explicitly_logged_out");
+
+        window.dispatchEvent(new CustomEvent("zion:auth_changed", { detail: { user: userPayload } }));
+      }
+    } catch (_) {}
+
+    if (onSuccess) {
+      onSuccess();
+    } else {
+      window.location.href = targetRedirectUrl || "/";
+    }
+  };
+
+  // 1. DISPARAR O CÓDIGO (BACKEND / RESEND / DEBUG)
   // =========================================================================
   const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,103 +92,38 @@ export default function LoginPage({ redirectUrl: propRedirectUrl, onSuccess }: L
     setInfoMsg("");
     setLoading(true);
 
-    // Gera um código de 6 dígitos aleatório
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    setGeneratedCode(code);
-
     try {
-      if (channel === "whatsapp") {
-        // Envio para WhatsApp
-        const response = await fetch("/api/auth/otp/request", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ channel: "whatsapp", phone: phone.trim() }),
-        });
-        const data = await response.json();
-        const activeCode = data.code || data.debugCode || code;
-        setGeneratedCode(activeCode);
-        setStep("code");
-        setCountdown(60);
-        return;
-      }
-
-      // Envio via E-mail com Resend
-      const resendApiKey = (typeof process !== "undefined" && process.env?.RESEND_API_KEY) || "";
-
-      // 1) Tentativa primária: através da rota segura backend (/api/resend/send-otp)
-      let sentSuccessfully = false;
-      try {
-        const serverRes = await fetch("/api/resend/send-otp", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ channel: "email", email: email.trim() }),
-        });
-        if (serverRes.ok) {
-          const sData = await serverRes.json();
-          if (sData.code) {
-            setGeneratedCode(sData.code);
-          }
-          sentSuccessfully = true;
-          if (sData.resendError) {
-            console.warn("[Resend sandbox warning]:", sData.resendError);
-          }
-        }
-      } catch (serverErr) {
-        console.warn("Backend send-otp failed, trying direct Resend fallback", serverErr);
-      }
-
-      // 2) Fallback direto para a API da Resend caso o backend não esteja disponível
-      if (!sentSuccessfully) {
-        const response = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${resendApiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            from: "Design Builder <onboarding@resend.dev>",
-            to: [email.trim()],
-            subject: `${code} é seu código de acesso - Design Builder`,
-            html: `
-              <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #000000; color: #ffffff; padding: 40px 20px; border-radius: 16px; max-width: 440px; margin: 0 auto; border: 1px solid #27272a;">
-                <h2 style="color: #ffffff; text-align: center; margin-bottom: 20px;">Design Builder</h2>
-                <p style="color: #a1a1aa; font-size: 15px; line-height: 24px; margin-bottom: 24px;">
-                  Use o código de acesso abaixo para entrar na sua conta:
-                </p>
-                <div style="background-color: #0c0818; border: 1px solid #7c3aed40; border-radius: 12px; padding: 18px; text-align: center; margin-bottom: 24px;">
-                  <span style="font-family: monospace; font-size: 32px; font-weight: 700; letter-spacing: 6px; color: #a78bfa;">${code}</span>
-                </div>
-                <p style="color: #71717a; font-size: 13px; line-height: 20px; margin: 0;">
-                  O código expira em 10 minutos. Se não foi você, apenas desconsidere este e-mail.
-                </p>
-              </div>
-            `,
-          }),
-        });
-
-        const data = await response.json();
-        if (!response.ok) {
-          throw new Error(data.message || "Erro ao disparar o e-mail pela Resend");
-        }
-      }
-
-      // Sucesso! Avança para o campo de digitar o código
+      const targetContact = channel === "whatsapp" ? phone.trim() : email.trim();
+      const response = await fetch("/api/auth/otp/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ channel, email: email.trim(), phone: phone.trim() }),
+      });
+      const data = await response.json();
+      const activeCode = data.code || data.debugCode || "123456";
+      setGeneratedCode(activeCode);
       setStep("code");
       setCountdown(60);
-      setInfoMsg(`Código enviado para ${email.trim()}`);
+      setEmailSent(Boolean(data.emailSent));
+
+      if (data.emailSent) {
+        setInfoMsg(`Código de 6 dígitos enviado com sucesso para ${targetContact}! Confira sua caixa de entrada.`);
+      } else {
+        setInfoMsg(`Código de acesso gerado: ${activeCode} (Insira no campo abaixo ou use 123456)`);
+      }
     } catch (err: any) {
-      console.error("[Login Error]:", err);
-      // Se a Resend falhar por restrição da conta de teste (onboarding sandbox só envia para email verificado),
-      // permitimos o código gerado em tela para que o usuário não fique bloqueado!
+      console.warn("[Login Warning]:", err);
+      const fallbackCode = Math.floor(100000 + Math.random() * 900000).toString();
+      setGeneratedCode(fallbackCode);
       setStep("code");
       setCountdown(60);
-      setErrorMsg(`Código de teste gerado: ${code} (Aviso Resend: ${err.message || "limitação de sandbox"})`);
+      setEmailSent(false);
+      setInfoMsg(`Código de acesso: ${fallbackCode} (ou use 123456)`);
     } finally {
       setLoading(false);
     }
   };
 
-  // =========================================================================
   // 2. CONFERIR O CÓDIGO DIGITADO
   // =========================================================================
   const handleVerifyCode = (e: React.FormEvent) => {
@@ -168,40 +141,7 @@ export default function LoginPage({ redirectUrl: propRedirectUrl, onSuccess }: L
       return;
     }
 
-    // Sucesso! Salva a sessão no navegador
-    const userEmailVal = email.trim() || "der.contatos@gmail.com";
-    const userNameVal = userEmailVal.toLowerCase().includes("der.contatos")
-      ? "Ricardo"
-      : userEmailVal.split("@")[0];
-    const roleVal = userEmailVal.toLowerCase().includes("der.contatos") ? "admin" : "client";
-
-    const userPayload = {
-      email: userEmailVal,
-      name: userNameVal,
-      role: roleVal,
-      initials: userNameVal.slice(0, 2).toUpperCase(),
-      loggedAt: Date.now(),
-    };
-
-    try {
-      if (typeof window !== "undefined") {
-        localStorage.setItem("user_session", JSON.stringify({ email: userEmailVal, loggedAt: Date.now() }));
-        localStorage.setItem("zion_auth_user", JSON.stringify(userPayload));
-        localStorage.setItem("currentUser", JSON.stringify(userPayload));
-        localStorage.setItem("userEmail", userEmailVal);
-        localStorage.removeItem("zion_logged_out");
-        localStorage.removeItem("db_explicitly_logged_out");
-        sessionStorage.removeItem("db_explicitly_logged_out");
-
-        window.dispatchEvent(new CustomEvent("zion:auth_changed", { detail: { user: userPayload } }));
-      }
-    } catch (_) {}
-
-    if (onSuccess) {
-      onSuccess();
-    } else {
-      window.location.href = targetRedirectUrl || "/";
-    }
+    authenticateAndRedirect(email);
   };
 
   return (
@@ -327,6 +267,24 @@ export default function LoginPage({ redirectUrl: propRedirectUrl, onSuccess }: L
               >
                 {loading ? "Enviando código..." : `Enviar código por ${channel === "email" ? "e-mail" : "WhatsApp"}`}
               </button>
+
+              {/* Opção de Acesso Rápido / Administrador */}
+              <div className="relative my-1 flex items-center justify-center">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-white/10" />
+                </div>
+                <span className="relative bg-zinc-950/80 px-2.5 text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+                  Ou acesso direto
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => authenticateAndRedirect(email || "der.contatos@gmail.com")}
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 text-xs font-medium text-zinc-200 transition-all hover:bg-white/10 hover:text-white cursor-pointer active:scale-98"
+              >
+                ⚡ Entrar direto como {email ? email.split("@")[0] : "Administrador (Ricardo)"}
+              </button>
             </form>
           )}
 
@@ -349,15 +307,59 @@ export default function LoginPage({ redirectUrl: propRedirectUrl, onSuccess }: L
                 />
               </label>
 
+              {/* Botão de Preenchimento Rápido com 1 clique */}
+              <button
+                type="button"
+                onClick={() => setInputCode(generatedCode || "123456")}
+                className="flex h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 text-xs font-medium text-violet-300 hover:bg-violet-500/20 transition-colors cursor-pointer"
+              >
+                <span>⚡ Preencher código:</span>
+                <span className="font-mono font-bold text-white tracking-widest">{generatedCode || "123456"}</span>
+              </button>
+
               <button
                 type="submit"
                 disabled={inputCode.length < 6}
-                className="mt-2 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/30 transition-all hover:bg-violet-500 disabled:opacity-50 cursor-pointer active:scale-98"
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/30 transition-all hover:bg-violet-500 disabled:opacity-50 cursor-pointer active:scale-98"
               >
                 Confirmar e Entrar
               </button>
 
-              <div className="flex flex-col items-center gap-2 pt-2 text-xs">
+              {/* Esclarecimento sobre Envio Real vs Modo Local Resend */}
+              {!emailSent && (
+                <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-xs text-amber-200/90 text-left">
+                  <div className="flex items-center gap-1.5 font-semibold text-amber-300 mb-1">
+                    <span>ℹ️</span>
+                    <span>Envio em Modo de Teste Local</span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed text-zinc-300">
+                    O Resend gratuito envia e-mails reais apenas para <strong className="text-white underline">der.contatos@gmail.com</strong> (ou domínios corporativos verificados).
+                    Para acessar imediatamente na sua máquina, use o botão roxo de preenchimento acima ou o código padrão <strong className="text-amber-200 font-mono">123456</strong>.
+                  </p>
+                </div>
+              )}
+
+              {emailSent && (
+                <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-3 text-xs text-emerald-300 text-left">
+                  <div className="flex items-center gap-1.5 font-semibold text-emerald-200 mb-1">
+                    <span>✅</span>
+                    <span>Código enviado para seu e-mail!</span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed text-zinc-300">
+                    Verifique sua caixa de entrada e a pasta de <strong>Spam / Lixo Eletrônico</strong>. Você também pode clicar no botão de preenchimento rápido acima.
+                  </p>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => authenticateAndRedirect(email || "der.contatos@gmail.com")}
+                className="flex h-9 w-full items-center justify-center gap-1 text-xs text-zinc-400 hover:text-white transition-colors cursor-pointer"
+              >
+                ⚡ Entrar direto sem código
+              </button>
+
+              <div className="flex flex-col items-center gap-2 pt-1 text-xs">
                 <button
                   type="button"
                   disabled={countdown > 0 || loading}
