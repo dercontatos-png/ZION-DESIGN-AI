@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { performSignOut } from "../utils/userAuth";
 import {
   X,
   CreditCard,
@@ -104,11 +105,7 @@ export const DesignBuilderSettingsModal: React.FC<DesignBuilderSettingsModalProp
   };
 
   const handleSignOut = () => {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("zion_auth_user");
-      localStorage.removeItem("currentUser");
-      window.location.reload();
-    }
+    performSignOut();
   };
 
   if (!isOpen) return null;

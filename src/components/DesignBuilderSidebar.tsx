@@ -34,7 +34,7 @@ import {
 } from "lucide-react";
 import { DesignBuilderSettingsModal } from "./DesignBuilderSettingsModal";
 import { DesignBuilderAdminSuite } from "./DesignBuilderAdminSuite";
-import { isUserAdmin } from "../utils/userAuth";
+import { isUserAdmin, performSignOut } from "../utils/userAuth";
 import { getClientPreviewSession, exitClientPreview, ClientPreviewSession } from "../utils/clientPreviewService";
 
 export const AGENTS = [
@@ -591,10 +591,7 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                   if (onSignOut) {
                     onSignOut();
                   } else {
-                    localStorage.removeItem("zion_auth_user");
-                    localStorage.removeItem("zion_current_user");
-                    localStorage.removeItem("currentUser");
-                    window.location.reload();
+                    performSignOut();
                   }
                 }}
                 className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.06] py-3.5 text-sm font-medium text-white transition-all hover:bg-white/10 cursor-pointer"
@@ -963,7 +960,8 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                       type="button"
                       onClick={() => {
                         setIsProfileMenuOpen(false);
-                        onSignOut ? onSignOut() : window.location.reload();
+                        if (onSignOut) onSignOut();
+                        else performSignOut();
                       }}
                       className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-red-400 hover:bg-red-500/10 cursor-pointer"
                     >
@@ -1228,11 +1226,7 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                       onClick={() => {
                         setIsProfileMenuOpen(false);
                         if (onSignOut) onSignOut();
-                        else {
-                          localStorage.removeItem("zion_auth_user");
-                          localStorage.removeItem("currentUser");
-                          window.location.reload();
-                        }
+                        else performSignOut();
                       }}
                       className="flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-200 transition-colors hover:bg-white/[0.06] hover:text-white disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
                     >

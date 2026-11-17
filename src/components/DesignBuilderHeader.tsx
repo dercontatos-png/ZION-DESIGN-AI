@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { performSignOut } from "../utils/userAuth";
 import { useClientStore } from "../store/useClientStore";
 import {
   Sparkles,
@@ -339,7 +340,8 @@ export const DesignBuilderHeader: React.FC<DesignBuilderHeaderProps> = ({
                     type="button"
                     onClick={() => {
                       setIsProfileDropdownOpen(false);
-                      onSignOut ? onSignOut() : window.location.reload();
+                      if (onSignOut) onSignOut();
+                      else performSignOut();
                     }}
                     className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
                   >

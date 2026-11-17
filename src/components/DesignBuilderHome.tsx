@@ -14,6 +14,7 @@ import { DesignBuilderSidebar } from "./DesignBuilderSidebar";
 import { CosmicBackground } from "./CosmicBackground";
 import { DesignBuilderAssistant } from "./DesignBuilderAssistant";
 import { getDeletedImages } from "../store/useProjectStore";
+import { performSignOut } from "../utils/userAuth";
 
 interface DesignBuilderHomeProps {
   isLoggedIn?: boolean;
@@ -285,6 +286,7 @@ export const DesignBuilderHome: React.FC<DesignBuilderHomeProps> = ({
   onOpenAgentes,
   onNavigateTab,
   onOpenCreditsModal,
+  onSignOut,
   userEmail: propUserEmail,
   userName: propUserName,
   userTokens: propUserTokens = 0,
@@ -401,6 +403,7 @@ export const DesignBuilderHome: React.FC<DesignBuilderHomeProps> = ({
         onOpenAgentes={onOpenAgentes}
         onSelectAgent={(slug) => onOpenStudio(slug)}
         onOpenCreditsModal={onOpenCreditsModal}
+        onSignOut={onSignOut || performSignOut}
         userEmail={userEmail}
         userName={userName}
         userCredits={typeof userTokens === "number" && userTokens !== 999999 && userTokens !== 45 ? userTokens : 6612}

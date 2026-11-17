@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Shield, CreditCard, User, LogOut, X, Sparkles } from "lucide-react";
+import { performSignOut } from "../utils/userAuth";
 
 export interface DesignBuilderMobileNavProps {
   activeTab: "home" | "projetos" | "gallery" | "community" | "builder";
@@ -165,12 +166,7 @@ export const DesignBuilderMobileNav: React.FC<DesignBuilderMobileNavProps> = ({
                 onClick={() => {
                   setIsAccountMenuOpen(false);
                   if (onSignOut) onSignOut();
-                  else {
-                    localStorage.removeItem("zion_auth_user");
-                    localStorage.removeItem("zion_current_user");
-                    localStorage.removeItem("zion_user_email");
-                    window.location.reload();
-                  }
+                  else performSignOut();
                 }}
                 className="flex w-full items-center gap-3 rounded-xl border border-red-500/20 bg-red-500/5 hover:bg-red-500/10 px-3.5 py-2.5 text-xs font-semibold text-red-400 transition-all cursor-pointer active:scale-95"
               >

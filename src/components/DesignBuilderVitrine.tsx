@@ -14,6 +14,7 @@ import { DesignBuilderSidebar } from "./DesignBuilderSidebar";
 import { CosmicBackground } from "./CosmicBackground";
 import { DesignBuilderAssistant } from "./DesignBuilderAssistant";
 import { DesignBuilderMobileNav } from "./DesignBuilderMobileNav";
+import { performSignOut } from "../utils/userAuth";
 import { getDeletedImages } from "../store/useProjectStore";
 
 interface DesignBuilderVitrineProps {
@@ -288,6 +289,7 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
   onOpenAgentes,
   onNavigateTab,
   onOpenCreditsModal,
+  onSignOut,
   userEmail: propUserEmail,
   userName: propUserName,
   userTokens: propUserTokens = 0,
@@ -533,6 +535,7 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
         onOpenAgentes={onOpenAgentes}
         onSelectAgent={(slug) => onOpenStudio(slug)}
         onOpenCreditsModal={onOpenCreditsModal}
+        onSignOut={onSignOut || performSignOut}
         userEmail={userEmail}
         userName={userName}
         userCredits={typeof userTokens === "number" && userTokens !== 999999 && userTokens !== 45 ? userTokens : 6612}
@@ -1149,6 +1152,7 @@ export const DesignBuilderVitrine: React.FC<DesignBuilderVitrineProps> = ({
       {/* ÔöÇÔöÇ Mobile Bottom Navigation (Matching Home.html lines 175-233) ÔöÇÔöÇ */}
       <DesignBuilderMobileNav
         activeTab="home"
+        onSignOut={onSignOut || performSignOut}
         onNavigateHome={() => window.scrollTo({ top: 0, behavior: "smooth" })}
         onNavigateProjects={() => {
           if (onOpenProjects) onOpenProjects();
