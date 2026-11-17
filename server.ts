@@ -2349,6 +2349,28 @@ async function startServer() {
         }
       }
 
+      // 1.1 Try Cloudflare R2 for results or thumbnails if not on local ephemeral disk
+      if (!buffer && (url.includes("results/") || url.includes("thumbnails/")) && isR2Active()) {
+        const match = url.match(/(results|thumbnails)\/([^\/?#]+)\/([^\/?#]+)/);
+        if (match) {
+          const [_, folder, jId, fName] = match;
+          const baseName = fName.replace(/\.[a-zA-Z0-9]+$/, "");
+          const r2Candidates = [
+            `${folder}/${jId}/${baseName}.png`,
+            `${folder}/${jId}/${baseName}.avif`,
+            `${folder}/${jId}/${fName}`,
+            `generated-images/img_${jId}.png`
+          ];
+          for (const key of r2Candidates) {
+            const r2Obj = await downloadFromR2(key);
+            if (r2Obj?.data) {
+              buffer = r2Obj.data;
+              break;
+            }
+          }
+        }
+      }
+
       // 2. Local path /generated-images/ or /uploads/
       if (!buffer && url.includes("/generated-images/")) {
         const fname = path.basename(url.split("?")[0].split("#")[0]);
@@ -2387,20 +2409,17 @@ async function startServer() {
         return res.status(404).json({ error: "Image file not found on server." });
       }
 
-      // Upscale if requested quality is 4K or 8K and file on disk is lower resolution
+      // Safe resolution enforcement without blowing Node memory limit on Render (384MB limit)
       const requestedQuality = (req.query.quality || req.body?.quality || req.query.targetResolution || req.body?.targetResolution || "").toString().toUpperCase().trim();
-      if (requestedQuality === "8K" || requestedQuality === "4K") {
+      if (requestedQuality === "8K") {
         try {
           const meta = await sharp(buffer).metadata();
-          if (meta.width && meta.height) {
-            const minTargetW = 6144;
-            if (meta.width < minTargetW) {
-              console.log(`[/api/download-image] Upscaling image from ${meta.width}x${meta.height} to 8K-grade Master via processSuperResolution8K...`);
-              const aspect = meta.width / meta.height;
-              const targetW = meta.width >= meta.height ? 7680 : Math.round(7680 * aspect);
-              const targetH = meta.width >= meta.height ? Math.round(7680 / aspect) : 7680;
-              buffer = await processSuperResolution8K(buffer, targetW, targetH, "4K");
-            }
+          if (meta.width && meta.height && meta.width < 3840) {
+            console.log(`[/api/download-image] High-res upscale from ${meta.width}x${meta.height} to 4K...`);
+            const aspect = meta.width / meta.height;
+            const targetW = meta.width >= meta.height ? 3840 : Math.round(3840 * aspect);
+            const targetH = meta.width >= meta.height ? Math.round(3840 / aspect) : 3840;
+            buffer = await processSuperResolution8K(buffer, targetW, targetH, "4K");
           }
         } catch (upscaleErr) {
           console.warn("[/api/download-image] Upscaling attempt warning:", upscaleErr);
@@ -2493,6 +2512,28 @@ async function startServer() {
           for (const cp of candidatePaths) {
             if (fs.existsSync(cp) && fs.statSync(cp).isFile()) {
               buffer = fs.readFileSync(cp);
+              break;
+            }
+          }
+        }
+      }
+
+      // 1.1 Try Cloudflare R2 for results or thumbnails if not on local ephemeral disk
+      if (!buffer && (url.includes("results/") || url.includes("thumbnails/")) && isR2Active()) {
+        const match = url.match(/(results|thumbnails)\/([^\/?#]+)\/([^\/?#]+)/);
+        if (match) {
+          const [_, folder, jId, fName] = match;
+          const baseName = fName.replace(/\.[a-zA-Z0-9]+$/, "");
+          const r2Candidates = [
+            `${folder}/${jId}/${baseName}.png`,
+            `${folder}/${jId}/${baseName}.avif`,
+            `${folder}/${jId}/${fName}`,
+            `generated-images/img_${jId}.png`
+          ];
+          for (const key of r2Candidates) {
+            const r2Obj = await downloadFromR2(key);
+            if (r2Obj?.data) {
+              buffer = r2Obj.data;
               break;
             }
           }

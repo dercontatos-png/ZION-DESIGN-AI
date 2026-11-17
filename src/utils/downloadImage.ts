@@ -252,6 +252,24 @@ export const downloadImage = (
               resolve();
               return;
             }
+          } else if (isUrl) {
+            // Direct download fallback without crashing browser canvas
+            const directRes = await fetch(resolvedSource);
+            if (directRes.ok) {
+              const directBlob = await directRes.blob();
+              if (directBlob.size > 0) {
+                const blobUrl = URL.createObjectURL(directBlob);
+                const link = document.createElement("a");
+                link.href = blobUrl;
+                link.download = smartName;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                setTimeout(() => URL.revokeObjectURL(blobUrl), 3000);
+                resolve();
+                return;
+              }
+            }
           }
         } catch (fetchErr) {
           console.warn("Server conversion fetch fallback to smooth canvas:", fetchErr);
