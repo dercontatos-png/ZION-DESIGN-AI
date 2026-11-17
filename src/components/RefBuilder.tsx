@@ -434,6 +434,7 @@ export const RefBuilder: React.FC<RefBuilderProps> = ({
   const [activeReformatDim, setActiveReformatDim] = useState<string | null>(null);
   const [isCarouselSlicerOpen, setIsCarouselSlicerOpen] = useState<boolean>(false);
   const rightActionsRef = useRef<HTMLDivElement>(null);
+  const formatPopoverRef = useRef<HTMLDivElement>(null);
   const [brushSize, setBrushSize] = useState<number>(30);
   const [brushColor, setBrushColor] = useState<string>("#a855f7");
   const [brushTool, setBrushTool] = useState<"hand" | "brush">("brush");
@@ -481,7 +482,16 @@ export const RefBuilder: React.FC<RefBuilderProps> = ({
   useEffect(() => {
     if (!activePopover) return;
     const handleClick = (e: MouseEvent) => {
-      if (rightActionsRef.current && !rightActionsRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (activePopover === "exportar") {
+        if (rightActionsRef.current && !rightActionsRef.current.contains(target)) {
+          setActivePopover(null);
+        }
+      } else if (activePopover === "formato") {
+        if (formatPopoverRef.current && !formatPopoverRef.current.contains(target)) {
+          setActivePopover(null);
+        }
+      } else {
         setActivePopover(null);
       }
     };
@@ -4748,7 +4758,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                                       <Loader2 className="h-6 w-6 animate-spin" />
                                     </div>
                                     <div className="flex flex-col items-center gap-1">
-                                      <span className="text-xs font-semibold text-white">Adaptando proporção para ${activeReformatDim}...</span>
+                                      <span className="text-xs font-semibold text-white">Adaptando proporção para {activeReformatDim}...</span>
                                       <span className="text-[10px] text-zinc-400">Reformatando o cenário e preservando todos os elementos</span>
                                     </div>
                                   </div>
@@ -4950,7 +4960,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                                 </svg>
                                 Pós-produção
                               </button>
-                              <div className="relative">
+                              <div ref={formatPopoverRef} className="relative">
                                 <div>
                                   <button
                                     type="button"
@@ -4967,6 +4977,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                                   <div
                                     className="absolute bottom-full mb-2 z-30 min-w-[160px] rounded-xl py-1.5 border border-white/[0.08] bg-[rgba(15,10,30,0.95)] backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] animate-in fade-in slide-in-from-bottom-2 duration-150 right-0"
                                     onClick={(e) => e.stopPropagation()}
+                                    onMouseDown={(e) => e.stopPropagation()}
                                   >
                                     <p className="px-3 pb-1 pt-0.5 text-[10px] font-medium text-zinc-500">Formato</p>
                                     <div className="grid grid-cols-3 gap-1 px-2 pb-1.5">
@@ -4982,7 +4993,9 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                                           key={r}
                                           type="button"
                                           disabled={isReformatting}
-                                          onClick={() => {
+                                          onMouseDown={(e) => e.stopPropagation()}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
                                             handleReformat(r);
                                             setActivePopover(null);
                                           }}
@@ -6215,19 +6228,18 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                 <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
                   REFORMATAR
                 </span>
-                <div className="grid grid-cols-6 gap-1.5">
-                  {(["16:9", "9:16", "1:1", "3:4", "4:3"] as const).map((ratio) => (
+                <div className="grid grid-cols-7 gap-1.5">
+                  {(["16:9", "9:16", "1:1", "4:5", "3:4", "4:3"] as const).map((ratio) => (
                     <button
                       key={ratio}
                       type="button"
                       disabled={isReformatting}
                       onClick={() => {
-                        const targetDim = ratio === "3:4" ? "4:5" : (ratio as any);
-                        handleReformat(targetDim);
+                        handleReformat(ratio);
                       }}
                       className="py-1.5 px-1 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 text-xs font-medium text-center border border-white/5 transition-colors cursor-pointer disabled:opacity-50"
                     >
-                      {isReformatting && activeReformatDim === (ratio === "3:4" ? "4:5" : ratio) ? (
+                      {isReformatting && activeReformatDim === ratio ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin mx-auto text-zinc-400" />
                       ) : (
                         ratio
@@ -6631,8 +6643,9 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                       key={fmt.id}
                       type="button"
                       title={fmt.title}
+                      disabled={isReformatting}
                       onClick={() => {
-                        setDimension(fmt.id as any);
+                        handleReformat(fmt.id as any);
                         setIsMobileActionsOpen(false);
                       }}
                       className={`flex flex-col items-center gap-1 rounded-xl py-3 transition-colors hover:bg-white/[0.06] disabled:opacity-50 cursor-pointer ${
