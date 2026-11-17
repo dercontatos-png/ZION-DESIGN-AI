@@ -7140,7 +7140,7 @@ data: ${JSON.stringify({ type: "ping", timestamp: Date.now() })}
     });
   });
   app.all(["/api/auth/sair", "/api/auth/logout", "/api/auth/signout"], (req, res) => {
-    const redirectUrl = req.query.redirect_url || req.query.redirect_to || "/";
+    const redirectUrl = req.query.redirect_url || req.query.redirect_to || "/entrar?logout=1";
     res.clearCookie("__Host-db.sessao", { path: "/" });
     res.clearCookie("__Host-db.sessao.r", { path: "/" });
     res.clearCookie("__Host-db.sessao.i", { path: "/" });

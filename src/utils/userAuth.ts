@@ -135,7 +135,7 @@ export function performSignOut(): void {
 
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent("zion:auth_changed", { detail: { user: null } }));
-    window.location.href = "/login";
+    window.location.href = "/entrar?logout=1";
   }
 }
 

@@ -376,7 +376,7 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
             {/* 5. Avatar do Usuário ou Entrar */}
             {!isLoggedIn ? (
               <a
-                href="/login"
+                href="/entrar"
                 aria-label="Entrar na conta"
                 title="Entrar na conta"
                 className="group relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full outline-none transition-transform focus-visible:ring-2 focus-visible:ring-violet-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 active:scale-95 cursor-pointer text-violet-400 hover:text-white"
@@ -899,7 +899,7 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
           <div className="flex items-center justify-between">
             {!isLoggedIn ? (
               <a
-                href="/login"
+                href="/entrar"
                 className="flex items-center gap-2 rounded-xl bg-violet-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-violet-500 transition-colors shadow-sm cursor-pointer"
               >
                 <LogIn className="h-3.5 w-3.5" />
@@ -1148,7 +1148,7 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
           <div className="mb-1">
             {!isLoggedIn ? (
               <a
-                href="/login"
+                href="/entrar"
                 aria-label="Entrar na conta"
                 title="Entrar na conta"
                 className="flex h-7 w-7 items-center justify-center rounded-full bg-violet-600 text-white hover:bg-violet-500 ring-2 ring-violet-500/20 hover:ring-violet-400/50 transition-all cursor-pointer"
