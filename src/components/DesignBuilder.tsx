@@ -293,20 +293,10 @@ const hasFotoDot = Boolean(
   }, []);
 
   const handleSignOut = useCallback(() => {
-    performSignOut();
-    setCurrentUser(null);
-    setIsAuthModalOpen(false);
-    setSelectedAppUrl("/");
-    setIsPublicEntryModalOpen(true);
-    setIsHomeOpen(true);
-    setIsAppsOpen(false);
-    setActivePalcoMode("home");
-    if (typeof window !== "undefined") {
-      window.history.pushState({ path: "/" }, "", "/");
-    }
     if (typeof showToast === "function") {
       showToast("Você saiu da sua conta.", "info");
     }
+    performSignOut();
   }, []);
 
   // Main UI routing states

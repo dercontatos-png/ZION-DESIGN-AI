@@ -101,6 +101,7 @@ export function performSignOut(): void {
   try {
     if (typeof window !== "undefined") {
       localStorage.setItem("zion_logged_out", "true");
+      localStorage.setItem("db_explicitly_logged_out", "true");
       sessionStorage.setItem("db_explicitly_logged_out", "true");
 
       // Clear all auth and user profile storage keys
@@ -112,6 +113,10 @@ export function performSignOut(): void {
         "zion_user_name",
         "zion_user_instagram",
         "currentUser",
+        "user_session",
+        "userEmail",
+        "adminSessionActive",
+        "zion_admin_override",
         "zion_user_role",
         "custom_gemini_api_key"
       ];
@@ -130,8 +135,7 @@ export function performSignOut(): void {
 
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent("zion:auth_changed", { detail: { user: null } }));
-    window.dispatchEvent(new CustomEvent("open-entry-modal"));
-    window.dispatchEvent(new CustomEvent("open-public-entry-modal"));
+    window.location.href = "/login";
   }
 }
 

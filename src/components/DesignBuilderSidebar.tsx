@@ -14,6 +14,7 @@ import {
   User,
   CreditCard,
   LogOut,
+  LogIn,
   ExternalLink,
   X,
   Settings,
@@ -120,8 +121,14 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
 
   const rawUserPlan = propUserPlan || "Profissional (Vertex AI)";
   const userPlan = clientPreview.active ? clientPreview.simulatedPlan : rawUserPlan;
+  const isExplicitlyLoggedOut = typeof window !== "undefined" && (
+    sessionStorage.getItem("db_explicitly_logged_out") === "true" ||
+    localStorage.getItem("zion_logged_out") === "true" ||
+    localStorage.getItem("db_explicitly_logged_out") === "true"
+  );
   const cleanEmail = (userEmail || "").toLowerCase().trim();
-  const isRealAdmin = cleanEmail === "der.contatos@gmail.com" || cleanEmail === "ricardo.jrsr.gov@gmail.com" || isUserAdmin() || (typeof window !== "undefined" && (window.location.search.includes("admin=true") || localStorage.getItem("zion_admin_override") === "true"));
+  const isLoggedIn = !isExplicitlyLoggedOut && Boolean(cleanEmail && cleanEmail !== "" && cleanEmail !== "visitante");
+  const isRealAdmin = isLoggedIn && (cleanEmail === "der.contatos@gmail.com" || cleanEmail === "ricardo.jrsr.gov@gmail.com" || isUserAdmin() || (typeof window !== "undefined" && (window.location.search.includes("admin=true") || localStorage.getItem("zion_admin_override") === "true")));
   const isCleanAdmin = isRealAdmin;
   const [isAdminSuiteOpen, setIsAdminSuiteOpen] = useState(false);
   const [adminActiveTab, setAdminActiveTab] = useState<any>("dashboard");
@@ -366,21 +373,32 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
               </span>
             </a>
 
-            {/* 5. Avatar do Usuário */}
-            <button
-              type="button"
-              aria-label="Abrir conta e notificações"
-              aria-haspopup="dialog"
-              aria-expanded={isMobileAccountOpen}
-              onClick={() => setIsMobileAccountOpen(true)}
-              className="group relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full outline-none transition-transform focus-visible:ring-2 focus-visible:ring-violet-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 active:scale-95 cursor-pointer"
-            >
-              <span className="h-10 w-10 overflow-hidden rounded-full ring-2 transition-[box-shadow] ring-violet-500/30">
-                <span className="flex h-full w-full items-center justify-center bg-gradient-to-br from-violet-500 to-fuchsia-500 text-sm font-semibold text-white">
-                  {userInitials}
+            {/* 5. Avatar do Usuário ou Entrar */}
+            {!isLoggedIn ? (
+              <a
+                href="/login"
+                aria-label="Entrar na conta"
+                title="Entrar na conta"
+                className="group relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full outline-none transition-transform focus-visible:ring-2 focus-visible:ring-violet-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 active:scale-95 cursor-pointer text-violet-400 hover:text-white"
+              >
+                <LogIn className="h-5 w-5" />
+              </a>
+            ) : (
+              <button
+                type="button"
+                aria-label="Abrir conta e notificações"
+                aria-haspopup="dialog"
+                aria-expanded={isMobileAccountOpen}
+                onClick={() => setIsMobileAccountOpen(true)}
+                className="group relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full outline-none transition-transform focus-visible:ring-2 focus-visible:ring-violet-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 active:scale-95 cursor-pointer"
+              >
+                <span className="h-10 w-10 overflow-hidden rounded-full ring-2 transition-[box-shadow] ring-violet-500/30">
+                  <span className="flex h-full w-full items-center justify-center bg-gradient-to-br from-violet-500 to-fuchsia-500 text-sm font-semibold text-white">
+                    {userInitials}
+                  </span>
                 </span>
-              </span>
-            </button>
+              </button>
+            )}
           </nav>
         </div>
         )}
@@ -855,97 +873,109 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
 
         {/* Footer: Créditos + Perfil */}
         <div className="shrink-0 p-4 border-t border-white/[0.06] bg-black/20">
-          <div
-            onClick={() => onOpenCreditsModal?.()}
-            className="group/cred mb-3 cursor-pointer rounded-xl bg-white/[0.03] p-3 ring-1 ring-white/[0.06] transition-all hover:bg-white/[0.06]"
-          >
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-bold text-white">
-                {effectiveCredits.toLocaleString("pt-BR")} créditos
+          {isLoggedIn && (
+            <div
+              onClick={() => onOpenCreditsModal?.()}
+              className="group/cred mb-3 cursor-pointer rounded-xl bg-white/[0.03] p-3 ring-1 ring-white/[0.06] transition-all hover:bg-white/[0.06]"
+            >
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-white">
+                  {effectiveCredits.toLocaleString("pt-BR")} créditos
+                </span>
+                <span className="text-zinc-500">/ 56</span>
+              </div>
+              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all duration-500"
+                  style={{ width: `${Math.min(100, Math.max(10, (effectiveCredits / 100) * 100))}%` }}
+                />
+              </div>
+              <span className="mt-1.5 block text-[11px] text-zinc-400">
+                11 usados
               </span>
-              <span className="text-zinc-500">/ 56</span>
             </div>
-            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all duration-500"
-                style={{ width: `${Math.min(100, Math.max(10, (effectiveCredits / 100) * 100))}%` }}
-              />
-            </div>
-            <span className="mt-1.5 block text-[11px] text-zinc-400">
-              11 usados
-            </span>
-          </div>
+          )}
 
           <div className="flex items-center justify-between">
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                className="flex items-center gap-2.5 rounded-full p-1 text-left ring-1 ring-white/10 transition-all hover:ring-violet-400/50 cursor-pointer"
+            {!isLoggedIn ? (
+              <a
+                href="/login"
+                className="flex items-center gap-2 rounded-xl bg-violet-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-violet-500 transition-colors shadow-sm cursor-pointer"
               >
-                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 text-[11px] font-semibold text-white">
-                  {userInitials}
-                </div>
-              </button>
-
-              {isProfileMenuOpen && (
-                <>
-                  <div
-                    className="fixed inset-0 z-40 cursor-default"
-                    onClick={() => setIsProfileMenuOpen(false)}
-                  />
-                  <div
-                    role="menu"
-                    className="absolute bottom-full left-0 mb-3 w-60 rounded-2xl border border-white/10 bg-black/90 backdrop-blur-2xl shadow-2xl p-2 z-50"
-                  >
-                  <div className="px-3 py-2 border-b border-white/10 mb-1">
-                    <p className="text-sm font-semibold text-white truncate">{userName}</p>
-                    <p className="text-xs text-zinc-400 truncate">{cleanEmail}</p>
+                <LogIn className="h-3.5 w-3.5" />
+                <span>Entrar</span>
+              </a>
+            ) : (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                  className="flex items-center gap-2.5 rounded-full p-1 text-left ring-1 ring-white/10 transition-all hover:ring-violet-400/50 cursor-pointer"
+                >
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 text-[11px] font-semibold text-white">
+                    {userInitials}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsProfileMenuOpen(false);
-                      setSettingsInitialTab("perfil");
-                      setIsSettingsModalOpen(true);
-                    }}
-                    className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-zinc-300 hover:bg-white/10 hover:text-white cursor-pointer"
-                  >
-                    <Settings className="h-3.5 w-3.5" />
-                    <span>Configurações</span>
-                  </button>
-                  {isCleanAdmin && (
+                </button>
+
+                {isProfileMenuOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40 cursor-default"
+                      onClick={() => setIsProfileMenuOpen(false)}
+                    />
+                    <div
+                      role="menu"
+                      className="absolute bottom-full left-0 mb-3 w-60 rounded-2xl border border-white/10 bg-black/90 backdrop-blur-2xl shadow-2xl p-2 z-50"
+                    >
+                    <div className="px-3 py-2 border-b border-white/10 mb-1">
+                      <p className="text-sm font-semibold text-white truncate">{userName}</p>
+                      <p className="text-xs text-zinc-400 truncate">{cleanEmail}</p>
+                    </div>
                     <button
                       type="button"
                       onClick={() => {
                         setIsProfileMenuOpen(false);
-                        setAdminActiveTab("dashboard");
-                        setIsAdminSuiteOpen(true);
-                        window.dispatchEvent(new CustomEvent("open-admin-suite", { detail: { tab: "dashboard" } }));
-                        onOpenAdmin?.();
+                        setSettingsInitialTab("perfil");
+                        setIsSettingsModalOpen(true);
                       }}
-                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-amber-400 hover:bg-amber-500/10 font-bold cursor-pointer"
+                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-zinc-300 hover:bg-white/10 hover:text-white cursor-pointer"
                     >
-                      <Shield className="h-3.5 w-3.5" />
-                      <span>Painel Admin</span>
+                      <Settings className="h-3.5 w-3.5" />
+                      <span>Configurações</span>
                     </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsProfileMenuOpen(false);
-                      onSignOut ? onSignOut() : window.location.reload();
-                    }}
-                    className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-red-400 hover:bg-red-500/10 cursor-pointer"
-                  >
-                    <LogOut className="h-3.5 w-3.5" />
-                    <span>Sair</span>
-                  </button>
-                </div>
+                    {isCleanAdmin && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsProfileMenuOpen(false);
+                          setAdminActiveTab("dashboard");
+                          setIsAdminSuiteOpen(true);
+                          window.dispatchEvent(new CustomEvent("open-admin-suite", { detail: { tab: "dashboard" } }));
+                          onOpenAdmin?.();
+                        }}
+                        className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-amber-400 hover:bg-amber-500/10 font-bold cursor-pointer"
+                      >
+                        <Shield className="h-3.5 w-3.5" />
+                        <span>Painel Admin</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsProfileMenuOpen(false);
+                        onSignOut ? onSignOut() : window.location.reload();
+                      }}
+                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-red-400 hover:bg-red-500/10 cursor-pointer"
+                    >
+                      <LogOut className="h-3.5 w-3.5" />
+                      <span>Sair</span>
+                    </button>
+                  </div>
 
-                </>
-              )}
-            </div>
+                  </>
+                )}
+              </div>
+            )}
 
 
             <div className="flex items-center gap-1">
@@ -1081,51 +1111,63 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
         <div className="flex flex-col items-center gap-1.5 rounded-2xl bg-zinc-950 px-2 py-3 shadow-2xl shadow-black/40 ring-1 ring-white/[0.06]">
           
           {/* 1. Créditos no Topo da Sidebar */}
-          <div
-            title={`${effectiveCredits.toLocaleString("pt-BR")} créditos`}
-            onClick={() => onOpenCreditsModal?.()}
-            className="group relative flex flex-col items-center gap-0.5 mb-0.5 cursor-pointer"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="lucide lucide-sparkles lucide-stars h-3.5 w-3.5 text-amber-400"
-              aria-hidden="true"
+          {isLoggedIn && (
+            <div
+              title={`${effectiveCredits.toLocaleString("pt-BR")} créditos`}
+              onClick={() => onOpenCreditsModal?.()}
+              className="group relative flex flex-col items-center gap-0.5 mb-0.5 cursor-pointer"
             >
-              <path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z" />
-              <path d="M20 2v4" />
-              <path d="M22 4h-4" />
-              <circle cx="4" cy="20" r="2" />
-            </svg>
-            <span className="text-[10px] font-bold tabular-nums leading-none text-amber-400">
-              {effectiveCredits > 999 ? effectiveCredits.toLocaleString("pt-BR") : effectiveCredits}
-            </span>
-            <span className="pointer-events-none absolute left-full ml-3 whitespace-nowrap rounded-lg bg-zinc-800 px-2.5 py-1 text-xs font-medium text-zinc-200 opacity-0 shadow-lg ring-1 ring-white/10 transition-opacity group-hover:opacity-100 z-50">
-              {effectiveCredits.toLocaleString("pt-BR")} créditos
-            </span>
-          </div>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="lucide lucide-sparkles lucide-stars h-3.5 w-3.5 text-amber-400"
+                aria-hidden="true"
+              >
+                <path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z" />
+                <path d="M20 2v4" />
+                <path d="M22 4h-4" />
+                <circle cx="4" cy="20" r="2" />
+              </svg>
+              <span className="text-[10px] font-bold tabular-nums leading-none text-amber-400">
+                {effectiveCredits > 999 ? effectiveCredits.toLocaleString("pt-BR") : effectiveCredits}
+              </span>
+              <span className="pointer-events-none absolute left-full ml-3 whitespace-nowrap rounded-lg bg-zinc-800 px-2.5 py-1 text-xs font-medium text-zinc-200 opacity-0 shadow-lg ring-1 ring-white/10 transition-opacity group-hover:opacity-100 z-50">
+                {effectiveCredits.toLocaleString("pt-BR")} créditos
+              </span>
+            </div>
+          )}
 
           {/* 2. Avatar do Usuário */}
           <div className="mb-1">
-            <div className="relative">
-              <button
-                type="button"
-                aria-label="Abrir menu do usuário"
-                aria-expanded={isProfileMenuOpen}
-                onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                className="h-7 w-7 overflow-hidden rounded-full ring-2 transition-all focus:outline-none focus-visible:ring-violet-400 ring-violet-500/20 hover:ring-violet-400/50 cursor-pointer"
+            {!isLoggedIn ? (
+              <a
+                href="/login"
+                aria-label="Entrar na conta"
+                title="Entrar na conta"
+                className="flex h-7 w-7 items-center justify-center rounded-full bg-violet-600 text-white hover:bg-violet-500 ring-2 ring-violet-500/20 hover:ring-violet-400/50 transition-all cursor-pointer"
               >
-                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-violet-500 to-fuchsia-500 text-[11px] font-semibold text-white">
-                  {userInitials}
-                </div>
-              </button>
+                <LogIn className="h-3.5 w-3.5" />
+              </a>
+            ) : (
+              <div className="relative">
+                <button
+                  type="button"
+                  aria-label="Abrir menu do usuário"
+                  aria-expanded={isProfileMenuOpen}
+                  onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                  className="h-7 w-7 overflow-hidden rounded-full ring-2 transition-all focus:outline-none focus-visible:ring-violet-400 ring-violet-500/20 hover:ring-violet-400/50 cursor-pointer"
+                >
+                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-violet-500 to-fuchsia-500 text-[11px] font-semibold text-white">
+                    {userInitials}
+                  </div>
+                </button>
 
               {/* Menu do Usuário Flutuante 1:1 Oficial */}
               {isProfileMenuOpen && (
@@ -1202,6 +1244,7 @@ export const DesignBuilderSidebar: React.FC<DesignBuilderSidebarProps> = ({
                 </>
               )}
             </div>
+            )}
           </div>
 
           <div className="mx-auto h-px w-5 bg-white/10" />

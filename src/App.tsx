@@ -8,7 +8,7 @@ import { supabase } from "./supabase";
 import { handleFirestoreError, OperationType } from "./lib/firebase-utils";
 import { motion, AnimatePresence } from "motion/react";
 import ReactMarkdown from "react-markdown";
-import { checkAdminOrOpenPlan, getAuthHeaders, openPlanModal } from "./utils/userAuth";
+import { checkAdminOrOpenPlan, getAuthHeaders, openPlanModal, performSignOut, getCurrentUser } from "./utils/userAuth";
 import {
   LayoutDashboard,
   CheckSquare,
@@ -82,6 +82,7 @@ import { get as idbGet, set as idbSet, del as idbDel } from "idb-keyval";
 import { InpaintCanvas } from "./components/InpaintCanvas";
 import DesignBuilder from "./components/DesignBuilder";
 import { DesignBuilderSidebar } from "./components/DesignBuilderSidebar";
+import LoginPage from "./components/LoginPage";
 import { ProjetosManager } from "./components/ProjetosManager";
 import { GeradorGcTv } from "./components/GeradorGcTv";
 import Agentes from "./components/Agentes";
@@ -1623,14 +1624,10 @@ export default function App() {
     } catch (err) {
       console.warn("SignOut warning:", err);
     }
-    localStorage.removeItem("zion_auth_user");
-    localStorage.removeItem("zion_current_user");
-    localStorage.removeItem("zion_user_email");
-    localStorage.removeItem("zion_local_owner");
     clearUserLocalCache();
     setSyncUserId(null);
     setCurrentUser(null);
-    setIsAuthModalOpen(true);
+    performSignOut();
   };
   const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true);
   const [hoveredPointIndex, setHoveredPointIndex] = useState<number | null>(
@@ -4522,6 +4519,32 @@ ${textContent}`
       </div>
     );
   };
+
+  // Rota dedicada de login oficial 1:1
+  if (typeof window !== "undefined") {
+    const pathname = window.location.pathname.toLowerCase();
+    const isExplicitlyLoggedOut =
+      sessionStorage.getItem("db_explicitly_logged_out") === "true" ||
+      localStorage.getItem("zion_logged_out") === "true" ||
+      localStorage.getItem("db_explicitly_logged_out") === "true";
+
+    if (
+      pathname === "/login" ||
+      pathname === "/entrar" ||
+      pathname === "/cadastre-se" ||
+      (isExplicitlyLoggedOut && !currentUser)
+    ) {
+      return (
+        <LoginPage
+          onSuccess={() => {
+            const u = getCurrentUser();
+            setCurrentUser(u ? { email: u.email, role: u.role } : { email: "der.contatos@gmail.com", role: "admin" });
+            window.location.href = "/";
+          }}
+        />
+      );
+    }
+  }
 
   // ── CONTROLE DE ACESSO: ADMIN (der.contatos@gmail.com), LOCALHOST OU ASSINANTE ATIVO COM CRÉDITOS ──
   const isLocalhost = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" || window.location.search.includes("ws="));
