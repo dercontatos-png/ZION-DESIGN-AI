@@ -1056,7 +1056,7 @@ export async function saveImageToDisk(rawData: string, rawMime: string): Promise
         }
       } catch (_) {}
 
-    // Gerar thumbnail otimizado leve (~25KB WebP) para carregamento instantâneo da galeria
+    // Gerar thumbnail otimizado leve proporcional (~25KB WebP) mantendo 100% da proporção original sem cortes
     const thumbFilename = filename.replace(/\.[^/.]+$/, "") + ".webp";
     const thumbDir = path.join(process.cwd(), "public", "thumbnails");
     const thumbPath = path.join(thumbDir, thumbFilename);
@@ -1064,8 +1064,8 @@ export async function saveImageToDisk(rawData: string, rawMime: string): Promise
     try {
       if (!fs.existsSync(thumbDir)) fs.mkdirSync(thumbDir, { recursive: true });
       await sharp(finalBuf)
-        .resize(400, 500, { fit: "cover", position: "center" })
-        .webp({ quality: 80 })
+        .resize(480, null, { withoutEnlargement: true })
+        .webp({ quality: 82 })
         .toFile(thumbPath);
       hasThumb = true;
     } catch (tErr) {
@@ -1994,8 +1994,8 @@ async function startServer() {
       }
       if (sourceFile) {
         const thumbBuf = await sharp(sourceFile)
-          .resize(400, 500, { fit: "cover", position: "center" })
-          .webp({ quality: 80 })
+          .resize(480, null, { withoutEnlargement: true })
+          .webp({ quality: 82 })
           .toBuffer();
         fs.writeFileSync(targetPath, thumbBuf);
         res.set("Content-Type", "image/webp");
@@ -3811,7 +3811,7 @@ CRITICAL RULES:
 
             const processedPng = await sharp(rawBuffer).png({ compressionLevel: 0, quality: 100 }).toBuffer();
             const processedAvif = await sharp(rawBuffer).avif({ quality: 85 }).toBuffer();
-            const thumbAvif = await sharp(rawBuffer).resize(400, 500, { fit: "cover" }).avif({ quality: 75 }).toBuffer();
+            const thumbAvif = await sharp(rawBuffer).resize(480, null, { withoutEnlargement: true }).avif({ quality: 75 }).toBuffer();
 
             fs.writeFileSync(pngPath, processedPng);
             fs.writeFileSync(avifPath, processedAvif);

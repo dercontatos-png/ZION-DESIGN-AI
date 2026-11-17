@@ -674,6 +674,44 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
     }));
   }, [filteredGenerations]);
 
+  // Colunas responsivas para Media Masonry Oficial (2 a 6 colunas)
+  const [columnCount, setColumnCount] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      const w = window.innerWidth;
+      if (w < 640) return 2;
+      if (w < 768) return 3;
+      if (w < 1024) return 4;
+      if (w < 1280) return 5;
+      return 6;
+    }
+    return 5;
+  });
+
+  useEffect(() => {
+    const updateCols = () => {
+      const w = window.innerWidth;
+      if (w < 640) return setColumnCount(2);
+      if (w < 768) return setColumnCount(3);
+      if (w < 1024) return setColumnCount(4);
+      if (w < 1280) return setColumnCount(5);
+      setColumnCount(6);
+    };
+    updateCols();
+    window.addEventListener("resize", updateCols);
+    return () => window.removeEventListener("resize", updateCols);
+  }, []);
+
+  const masonryColumns = useMemo(() => {
+    const cols: { item: GalleryItem; globalIdx: number }[][] = Array.from(
+      { length: columnCount },
+      () => []
+    );
+    filteredGenerations.forEach((item, idx) => {
+      cols[idx % columnCount].push({ item, globalIdx: idx });
+    });
+    return cols;
+  }, [filteredGenerations, columnCount]);
+
   return (
     <div className="flex h-[100dvh] overflow-hidden bg-black relative w-full lg:-ml-[60px] lg:w-[calc(100%+60px)]">
       {/* Orb de Iluminação Violeta de app.designbuilder.co */}
@@ -886,36 +924,38 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
             </div>
           ) : (
             <div className="p-3 pb-12">
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-                {filteredGenerations.map((item, idx) => {
-                  const isSelected = selectedIds.has(item.id);
-                  const isFav = !!item.is_favorited;
-                  const isUp = !!item.is_upvoted;
+              <div className="flex w-full gap-3 items-start">
+                {masonryColumns.map((colGroup, colIdx) => (
+                  <div key={colIdx} className="flex min-w-0 flex-1 flex-col gap-3">
+                    {colGroup.map(({ item, globalIdx }) => {
+                      const isSelected = selectedIds.has(item.id);
+                      const isFav = !!item.is_favorited;
+                      const isUp = !!item.is_upvoted;
 
-                  return (
-                    <div
-                      key={item.id}
-                      onClick={() => {
-                        if (selectionMode) {
-                          toggleSelect(item.id, { stopPropagation: () => {} } as any);
-                        } else {
-                          setDetailIndex(idx);
-                        }
-                      }}
-                      className={`group relative w-full overflow-hidden rounded-2xl bg-zinc-900/60 border text-left cursor-pointer transition-all duration-300 ${
-                        isSelected
-                          ? "border-violet-500 ring-2 ring-violet-500/50 shadow-lg shadow-violet-600/20"
-                          : "border-white/[0.06] hover:border-violet-500/40 hover:shadow-xl hover:shadow-violet-600/10"
-                      }`}
-                    >
-                      {/* Container com Aspect Ratio Dinâmico */}
-                      <div
-                        className="relative w-full bg-zinc-950 overflow-hidden"
-                        style={getAspectStyle(item)}
-                      >
-                        <img
-                          alt={`Geração ${item.agent_name}`}
-                          loading={idx < 12 ? "eager" : "lazy"} decoding="async"
+                      return (
+                        <div
+                          key={item.id}
+                          onClick={() => {
+                            if (selectionMode) {
+                              toggleSelect(item.id, { stopPropagation: () => {} } as any);
+                            } else {
+                              setDetailIndex(globalIdx);
+                            }
+                          }}
+                          className={`group relative w-full overflow-hidden rounded-2xl bg-zinc-900/60 border text-left cursor-pointer transition-all duration-300 ${
+                            isSelected
+                              ? "border-violet-500 ring-2 ring-violet-500/50 shadow-lg shadow-violet-600/20"
+                              : "border-white/[0.06] hover:border-violet-500/40 hover:shadow-xl hover:shadow-violet-600/10"
+                          }`}
+                        >
+                          {/* Container com Aspect Ratio Dinâmico */}
+                          <div
+                            className="relative w-full bg-zinc-950 overflow-hidden"
+                            style={getAspectStyle(item)}
+                          >
+                            <img
+                              alt={`Geração ${item.agent_name}`}
+                              loading={globalIdx < 12 ? "eager" : "lazy"} decoding="async"
                           className="absolute inset-0 block h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
                           src={item.thumbnail_url || (item.result_url?.startsWith('/generated-images/') ? item.result_url.replace('/generated-images/', '/thumbnails/').replace(/\.[^/.]+$/, '.webp') : item.result_url)}
                           ref={(img) => {
@@ -1147,7 +1187,9 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
                   );
                 })}
               </div>
-            </div>
+            ))}
+          </div>
+        </div>
           )}
         </div>
       </main>

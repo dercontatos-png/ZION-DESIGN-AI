@@ -4403,7 +4403,7 @@ async function saveImageToDisk(rawData, rawMime) {
       let hasThumb = false;
       try {
         if (!fs5.existsSync(thumbDir)) fs5.mkdirSync(thumbDir, { recursive: true });
-        await sharp(finalBuf).resize(400, 500, { fit: "cover", position: "center" }).webp({ quality: 80 }).toFile(thumbPath);
+        await sharp(finalBuf).resize(480, null, { withoutEnlargement: true }).webp({ quality: 82 }).toFile(thumbPath);
         hasThumb = true;
       } catch (tErr) {
         console.warn("[saveImageToDisk] Falha ao gerar thumbnail:", tErr);
@@ -5123,7 +5123,7 @@ async function startServer() {
         }
       }
       if (sourceFile) {
-        const thumbBuf = await sharp(sourceFile).resize(400, 500, { fit: "cover", position: "center" }).webp({ quality: 80 }).toBuffer();
+        const thumbBuf = await sharp(sourceFile).resize(480, null, { withoutEnlargement: true }).webp({ quality: 82 }).toBuffer();
         fs5.writeFileSync(targetPath, thumbBuf);
         res.set("Content-Type", "image/webp");
         res.set("Cache-Control", "public, max-age=31536000, immutable");
@@ -6638,7 +6638,7 @@ CRITICAL RULES:
             const thumbAvifPath = path5.join(thumbsDir, "thumbnail.avif");
             const processedPng = await sharp(rawBuffer).png({ compressionLevel: 0, quality: 100 }).toBuffer();
             const processedAvif = await sharp(rawBuffer).avif({ quality: 85 }).toBuffer();
-            const thumbAvif = await sharp(rawBuffer).resize(400, 500, { fit: "cover" }).avif({ quality: 75 }).toBuffer();
+            const thumbAvif = await sharp(rawBuffer).resize(480, null, { withoutEnlargement: true }).avif({ quality: 75 }).toBuffer();
             fs5.writeFileSync(pngPath, processedPng);
             fs5.writeFileSync(avifPath, processedAvif);
             fs5.writeFileSync(thumbAvifPath, thumbAvif);
