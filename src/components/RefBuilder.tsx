@@ -835,14 +835,20 @@ export const RefBuilder: React.FC<RefBuilderProps> = ({
       assetsPhotoDesc,
       additionalDescription
     };
-    setRefGalleryItems((prev) => {
-      const item = { id: `ref-${Date.now()}`, url, type, timestamp: Date.now(), isFavorited: false, settings: settingsToSave };
-      const updated = sortImagesChronological([item, ...prev.filter((p) => p.url !== url)], true);
-      try {
-        localStorage.setItem("zion_ref_history", JSON.stringify(updated.slice(0, 60)));
-      } catch {}
-      return updated;
-    });
+      setRefGalleryItems((prev) => {
+        const item = { id: `ref-${Date.now()}`, url, type, timestamp: Date.now(), isFavorited: false, settings: settingsToSave };
+        const updated = sortImagesChronological([item, ...prev.filter((p) => p.url !== url)], true);
+        try {
+          localStorage.setItem("zion_ref_history", JSON.stringify(updated.slice(0, 60)));
+          const stored = localStorage.getItem("zion_image_app_tags");
+          const tags = stored ? JSON.parse(stored) : {};
+          tags[url] = "ref";
+          const bname = url.split("/").pop()?.split("?")[0];
+          if (bname) tags[bname] = "ref";
+          localStorage.setItem("zion_image_app_tags", JSON.stringify(tags));
+        } catch {}
+        return updated;
+      });
   };
 
   // Buscar imagens geradas do servidor para alimentar a galeria do REF

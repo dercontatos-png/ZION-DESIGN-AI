@@ -541,6 +541,8 @@ export const HydraBuilder: React.FC<HydraBuilderProps> = ({
         method: "POST",
         headers: { "Content-Type": "application/json", ...getAuthHeaders(apiKey) },
         body: JSON.stringify({
+          app: "hydra",
+          agent_slug: "hydra",
           base64DoSujeito: currentTab.productImage,
           sujeitosBase64List: [currentTab.productImage],
           designRefsList: currentTab.selectedInspirations.map((i) => i.src),
@@ -571,6 +573,13 @@ export const HydraBuilder: React.FC<HydraBuilderProps> = ({
         updateCurrentTab({ activeResultImage: finalImg });
         try {
           useProjectStore.getState().addGaleriaImage(finalImg, { app: "hydra" });
+          window.dispatchEvent(new CustomEvent("zion-generation-done", { detail: { imageUrl: finalImg, app: "hydra" } }));
+          const stored = localStorage.getItem("zion_image_app_tags");
+          const tags = stored ? JSON.parse(stored) : {};
+          tags[finalImg] = "hydra";
+          const bname = finalImg.split("/").pop()?.split("?")[0];
+          if (bname) tags[bname] = "hydra";
+          localStorage.setItem("zion_image_app_tags", JSON.stringify(tags));
         } catch (_) {}
         setGenerationsList((prev) => [
           { id: Date.now().toString(), url: finalImg, createdAt: Date.now() },

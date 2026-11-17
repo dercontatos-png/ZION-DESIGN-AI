@@ -613,6 +613,8 @@ const AlteraFacilBuilder: React.FC<AlteraFacilBuilderProps> = ({
           headers: { "Content-Type": "application/json", ...getAuthHeaders(apiKey) },
           signal: controller.signal,
           body: JSON.stringify({
+          app: "altera-facil",
+          agent_slug: "altera-facil",
           base64DoSujeito: photoBase64,
           sujeitosBase64List: [photoBase64],
           previousImageBase64: generatedImage || undefined,
@@ -647,6 +649,15 @@ const AlteraFacilBuilder: React.FC<AlteraFacilBuilderProps> = ({
         showToast?.("Imagem alterada com sucesso!", "success");
         store.addImagesToProjectGallery(store.activeProjectId, [finalImg]);
         store.addGaleriaImage(finalImg, { app: "altera-facil" });
+        try {
+          window.dispatchEvent(new CustomEvent("zion-generation-done", { detail: { imageUrl: finalImg, app: "altera-facil" } }));
+          const stored = localStorage.getItem("zion_image_app_tags");
+          const tags = stored ? JSON.parse(stored) : {};
+          tags[finalImg] = "altera-facil";
+          const bname = finalImg.split("/").pop()?.split("?")[0];
+          if (bname) tags[bname] = "altera-facil";
+          localStorage.setItem("zion_image_app_tags", JSON.stringify(tags));
+        } catch (_) {}
       } else {
         showToast?.(data.error || "Erro ao alterar imagem.", "error");
       }

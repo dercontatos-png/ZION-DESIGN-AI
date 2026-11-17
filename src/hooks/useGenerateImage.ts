@@ -601,14 +601,22 @@ export const useGenerateImage = (
       console.log(`[FRONT] ✅ Imagem recebida: ${resultUrl}`);
       recordImageGeneration(1);
       const isActive = store.addImagesToProjectGallery(targetProjectId, [resultUrl]);
-      store.addGaleriaImage(resultUrl, { app: "design-builder" });
+      store.addGaleriaImage(resultUrl, { app: activeSlug });
       if (isActive) {
         showToast(`Imagem ${is4K ? "4K Ultra HD" : "premium"} gerada com sucesso! ✅`, "success");
       } else {
         showToast(`Imagem do '${targetProjectName}' foi gerada no plano de fundo!`, "success");
       }
       if (typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent("zion-generation-done", { detail: { imageUrl: resultUrl, projectId: targetProjectId } }));
+        window.dispatchEvent(new CustomEvent("zion-generation-done", { detail: { imageUrl: resultUrl, app: activeSlug, projectId: targetProjectId } }));
+        try {
+          const stored = localStorage.getItem("zion_image_app_tags");
+          const tags = stored ? JSON.parse(stored) : {};
+          tags[resultUrl] = activeSlug;
+          const bname = resultUrl.split("/").pop()?.split("?")[0];
+          if (bname) tags[bname] = activeSlug;
+          localStorage.setItem("zion_image_app_tags", JSON.stringify(tags));
+        } catch (_) {}
       }
       onSuccess?.(resultUrl, rawPreviousImage);
 
@@ -702,7 +710,10 @@ export const useGenerateImage = (
         optimizeBase64List(allEnvPhotos, maxDim, quality)
       ]);
 
+      const activeSlug = (store as any).activeAgentSlug || (store as any).activeAgent || (store as any).selectedAgent || "orion-pro";
       const payload = {
+        app: activeSlug,
+        agent_slug: activeSlug,
         base64DoSujeito: optSujeito || optSujeitosList[0] || "",
         sujeitosBase64List: optSujeitosList,
         base64DoCenario: optCenario || optCenariosList[0] || "",
@@ -752,10 +763,18 @@ export const useGenerateImage = (
         recordImageGeneration(newImages.length);
         store.addImagesToProjectGallery(targetProjectId, newImages);
         if (newImages[0]) {
-          store.addGaleriaImage(newImages[0], { app: "design-builder" });
+          store.addGaleriaImage(newImages[0], { app: activeSlug });
         }
         if (typeof window !== "undefined") {
-          window.dispatchEvent(new CustomEvent("zion-generation-done", { detail: { imageUrl: newImages[0], projectId: targetProjectId } }));
+          window.dispatchEvent(new CustomEvent("zion-generation-done", { detail: { imageUrl: newImages[0], app: activeSlug, projectId: targetProjectId } }));
+          try {
+            const stored = localStorage.getItem("zion_image_app_tags");
+            const tags = stored ? JSON.parse(stored) : {};
+            tags[newImages[0]] = activeSlug;
+            const bname = newImages[0].split("/").pop()?.split("?")[0];
+            if (bname) tags[bname] = activeSlug;
+            localStorage.setItem("zion_image_app_tags", JSON.stringify(tags));
+          } catch (_) {}
         }
         onSuccess?.(newImages[0], rawPreviousImage);
       } else {

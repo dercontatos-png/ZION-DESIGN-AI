@@ -29,6 +29,211 @@ interface GaleriaManagerProps {
   showToast?: (message: string, type: "success" | "error" | "info" | "warning") => void;
 }
 
+export const getKnownAppUrls = (): {
+  refUrls: Set<string>;
+  enhanceUrls: Set<string>;
+  hydraUrls: Set<string>;
+  alteraUrls: Set<string>;
+  orionUrls: Set<string>;
+} => {
+  const refUrls = new Set<string>();
+  const enhanceUrls = new Set<string>();
+  const hydraUrls = new Set<string>();
+  const alteraUrls = new Set<string>();
+  const orionUrls = new Set<string>();
+
+  if (typeof window === "undefined") return { refUrls, enhanceUrls, hydraUrls, alteraUrls, orionUrls };
+
+  const addUrl = (set: Set<string>, rawUrl?: string | null) => {
+    if (!rawUrl || typeof rawUrl !== "string") return;
+    const clean = rawUrl.trim();
+    if (!clean) return;
+    set.add(clean);
+    const filename = clean.split("/").pop()?.split("?")[0];
+    if (filename) set.add(filename);
+  };
+
+  // 1. REF History & Tabs
+  try {
+    const refHist = localStorage.getItem("zion_ref_history");
+    if (refHist) {
+      const parsed = JSON.parse(refHist);
+      if (Array.isArray(parsed)) {
+        parsed.forEach((item: any) => {
+          addUrl(refUrls, item.url);
+          addUrl(refUrls, item.thumbnail_url);
+        });
+      }
+    }
+    const refTabs = localStorage.getItem("zion_ref_tabs_data_v2");
+    if (refTabs) {
+      const parsed = JSON.parse(refTabs);
+      if (Array.isArray(parsed)) {
+        parsed.forEach((tab: any) => {
+          addUrl(refUrls, tab.generatedImage);
+          if (Array.isArray(tab.history)) {
+            tab.history.forEach((h: any) => addUrl(refUrls, h.url || h));
+          }
+        });
+      }
+    }
+  } catch (_) {}
+
+  // 2. Enhance History & Tabs
+  try {
+    const enhHist = localStorage.getItem("zion_enhance_history");
+    if (enhHist) {
+      const parsed = JSON.parse(enhHist);
+      if (Array.isArray(parsed)) {
+        parsed.forEach((item: any) => {
+          addUrl(enhanceUrls, item.url || item.outputBase64 || item.resultUrl);
+        });
+      }
+    }
+    const enhTabs = localStorage.getItem("zion_enhance_tabs_v2");
+    if (enhTabs) {
+      const parsed = JSON.parse(enhTabs);
+      if (Array.isArray(parsed)) {
+        parsed.forEach((tab: any) => {
+          addUrl(enhanceUrls, tab.outputBase64 || tab.resultUrl || tab.generatedImage);
+        });
+      }
+    }
+  } catch (_) {}
+
+  // 3. Hydra Tabs
+  try {
+    const hydraTabs = localStorage.getItem("zion_hydra_tabs_v2");
+    if (hydraTabs) {
+      const parsed = JSON.parse(hydraTabs);
+      if (Array.isArray(parsed)) {
+        parsed.forEach((tab: any) => {
+          addUrl(hydraUrls, tab.generatedImage);
+          if (Array.isArray(tab.history)) {
+            tab.history.forEach((h: any) => addUrl(hydraUrls, h.url || h));
+          }
+        });
+      }
+    }
+  } catch (_) {}
+
+  // 4. Altera Fácil Tabs
+  try {
+    const alteraTabs = localStorage.getItem("zion_altera_facil_tabs_v2");
+    if (alteraTabs) {
+      const parsed = JSON.parse(alteraTabs);
+      if (Array.isArray(parsed)) {
+        parsed.forEach((tab: any) => {
+          addUrl(alteraUrls, tab.generatedImage);
+          if (Array.isArray(tab.history)) {
+            tab.history.forEach((h: any) => addUrl(alteraUrls, h.url || h));
+          }
+        });
+      }
+    }
+  } catch (_) {}
+
+  // 5. App tag registry in localStorage
+  try {
+    const appRegistry = localStorage.getItem("zion_image_app_tags");
+    if (appRegistry) {
+      const parsed = JSON.parse(appRegistry);
+      if (parsed && typeof parsed === "object") {
+        Object.entries(parsed).forEach(([urlKey, appSlug]: [string, any]) => {
+          const cleanSlug = String(appSlug).toLowerCase();
+          if (cleanSlug.includes("ref")) addUrl(refUrls, urlKey);
+          else if (cleanSlug.includes("enhance")) addUrl(enhanceUrls, urlKey);
+          else if (cleanSlug.includes("hydra")) addUrl(hydraUrls, urlKey);
+          else if (cleanSlug.includes("altera")) addUrl(alteraUrls, urlKey);
+          else if (cleanSlug.includes("orion")) addUrl(orionUrls, urlKey);
+        });
+      }
+    }
+  } catch (_) {}
+
+  return { refUrls, enhanceUrls, hydraUrls, alteraUrls, orionUrls };
+};
+
+export const detectImageApp = (
+  rawUrl: string,
+  rawSlug?: string,
+  rawPrompt?: string,
+  known?: ReturnType<typeof getKnownAppUrls>
+): { slug: string; name: string } => {
+  const knownUrls = known || getKnownAppUrls();
+  const url = (rawUrl || "").toLowerCase();
+  const filename = (url.split("/").pop() || "").split("?")[0];
+  const slug = (rawSlug || "").toLowerCase();
+  const prompt = (rawPrompt || "").toLowerCase();
+
+  // 1. REF Builder Check (URL set, filename, slug or prompt)
+  if (
+    knownUrls.refUrls.has(rawUrl) ||
+    knownUrls.refUrls.has(filename) ||
+    filename.startsWith("ref_") ||
+    filename.includes("refino") ||
+    slug === "ref" ||
+    slug === "ref-builder" ||
+    (slug.includes("ref") && !slug.includes("pref"))
+  ) {
+    return { slug: "ref-builder", name: "REF" };
+  }
+
+  // 2. Enhance Builder Check
+  if (
+    knownUrls.enhanceUrls.has(rawUrl) ||
+    knownUrls.enhanceUrls.has(filename) ||
+    filename.startsWith("enhance_") ||
+    filename.includes("enhance") ||
+    filename.includes("enh") ||
+    slug === "enhance" ||
+    slug === "enhance-builder" ||
+    slug.includes("enh")
+  ) {
+    return { slug: "enhance", name: "Enhance" };
+  }
+
+  // 3. Hydra Check
+  if (
+    knownUrls.hydraUrls.has(rawUrl) ||
+    knownUrls.hydraUrls.has(filename) ||
+    filename.startsWith("hydra_") ||
+    filename.includes("hydra") ||
+    slug === "hydra" ||
+    slug.includes("hydra")
+  ) {
+    return { slug: "hydra", name: "Hydra" };
+  }
+
+  // 4. Altera Fácil Check
+  if (
+    knownUrls.alteraUrls.has(rawUrl) ||
+    knownUrls.alteraUrls.has(filename) ||
+    filename.startsWith("altera_") ||
+    filename.includes("altera") ||
+    slug === "altera-facil" ||
+    slug.includes("altera")
+  ) {
+    return { slug: "altera-facil", name: "Altera Fácil" };
+  }
+
+  // 5. Órion Pro Check
+  if (
+    knownUrls.orionUrls.has(rawUrl) ||
+    knownUrls.orionUrls.has(filename) ||
+    filename.startsWith("orion_") ||
+    filename.includes("orion") ||
+    slug === "orion-pro" ||
+    slug === "orion" ||
+    slug.includes("orion")
+  ) {
+    return { slug: "orion-pro", name: "Órion Pro" };
+  }
+
+  // 6. Default to Design Builder / Zion Design
+  return { slug: "design-builder1-2", name: "Zion Design" };
+};
+
 export const checkIsItemDeleted = (item: GalleryItem, deletedSet: Set<string>): boolean => {
   const url = (item.result_url || "").toLowerCase();
   const thumb = (item.thumbnail_url || "").toLowerCase();
@@ -72,6 +277,7 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
   // Itens da Galeria: combina itens reais do HAR com gerações recentes do store
   const [generations, setGenerations] = useState<GalleryItem[]>(() => {
     const deletedSet = getDeletedImages();
+    const knownUrls = getKnownAppUrls();
     let initialList: GalleryItem[] = [];
 
     // Tenta carregar do cache persistente do usuário
@@ -94,6 +300,16 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
       );
     }
 
+    // Classifica itens existentes de acordo com app de origem
+    initialList = initialList.map((item) => {
+      const detected = detectImageApp(item.result_url || item.thumbnail_url || "", item.agent_slug, item.prompt, knownUrls);
+      return {
+        ...item,
+        agent_slug: detected.slug,
+        agent_name: detected.name
+      };
+    });
+
     // Se o store tiver imagens geradas pelo usuário que não foram excluídas, adiciona no topo
     if (store.galeriaImages && store.galeriaImages.length > 0) {
       store.galeriaImages.forEach((imgUrl, idx) => {
@@ -104,6 +320,7 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
           const thumbUrl = imgUrl.startsWith("/generated-images/")
             ? imgUrl.replace("/generated-images/", "/thumbnails/").replace(/\.[^/.]+$/, ".webp")
             : imgUrl;
+          const detected = detectImageApp(imgUrl, undefined, undefined, knownUrls);
           initialList.push({
             id: `local-gen-${idx}-${ts}`,
             status: "done",
@@ -113,15 +330,15 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
             timestamp: ts,
             created_at: new Date(ts).toISOString(),
             date_formatted: "Hoje",
-            agent_slug: "design-builder1-2",
-            agent_name: "Zion Design",
+            agent_slug: detected.slug,
+            agent_name: detected.name,
             dimensions: storeDim,
             aspect_ratio: storeAspect,
             ai_model: "gemini-3.1-flash-image",
             is_favorited: false,
             is_upvoted: false,
             upvote_count: 0,
-            prompt: "Imagem gerada no Studio Zion Design."
+            prompt: `Imagem gerada no ${detected.name}.`
           });
         }
       });
@@ -134,6 +351,7 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
     let isMounted = true;
     const loadServerGenerations = async () => {
       try {
+        const knownUrls = getKnownAppUrls();
         const [bffRes, histRes] = await Promise.all([
           fetch("/api/bff/api/generations?limit=150").catch(() => null),
           fetch("/api/historico-imagens").catch(() => null)
@@ -162,38 +380,31 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
               }
 
               const resUrl = item.result_url || item.thumbnail_url || "";
-              const fLower = (resUrl.split("/").pop() || "").toLowerCase();
-              let detectedSlug = item.agent_slug || "design-builder1-2";
-              if (fLower.includes("ref")) detectedSlug = "ref";
-              else if (fLower.includes("hydra")) detectedSlug = "hydra";
-              else if (fLower.includes("enhance") || fLower.includes("enh")) detectedSlug = "enhance";
-              else if (fLower.includes("altera")) detectedSlug = "altera-facil";
-              else if (fLower.includes("orion")) detectedSlug = "orion-pro";
+              const detected = detectImageApp(resUrl, item.agent_slug, item.form_data?.subject_description || item.prompt, knownUrls);
+              const thumbUrl = item.thumbnail_url || (resUrl.startsWith("/generated-images/") ? resUrl.replace("/generated-images/", "/thumbnails/").replace(/\.[^/.]+$/, ".webp") : resUrl);
+              const ts = extractImageTimestamp(item) || (item.created_at ? new Date(item.created_at).getTime() : Date.now());
 
-                const thumbUrl = item.thumbnail_url || (resUrl.startsWith("/generated-images/") ? resUrl.replace("/generated-images/", "/thumbnails/").replace(/\.[^/.]+$/, ".webp") : resUrl);
-                const ts = extractImageTimestamp(item) || (item.created_at ? new Date(item.created_at).getTime() : Date.now());
-
-                newItems.push({
-                  id: item.id || ("bff-gen-" + idx),
-                  status: item.status || "done",
-                  result_url: resUrl,
-                  thumbnail_url: thumbUrl,
-                  fallback_url: resUrl,
-                  timestamp: ts,
-                  created_at: item.created_at || new Date(ts).toISOString(),
-                  date_formatted: "Hoje",
-                  agent_slug: detectedSlug,
-                  agent_name: detectedSlug === "ref" ? "REF" : detectedSlug === "hydra" ? "Hydra" : detectedSlug === "enhance" ? "Enhance" : detectedSlug === "altera-facil" ? "Altera Fácil" : "Zion Design",
-                  dimensions: resolvedDim,
-                  aspect_ratio: resolvedAspect,
-                  ai_model: "gemini-3.1-flash-image",
-                  is_favorited: false,
-                  is_upvoted: false,
-                  upvote_count: 0,
-                  prompt: item.form_data?.subject_description || item.form_data?.scene_description || "Design gerado no Studio Zion Design.",
-                  form_data: item.form_data || item.parameters || {},
-                  input_image_urls: item.input_image_urls || {}
-                });
+              newItems.push({
+                id: item.id || ("bff-gen-" + idx),
+                status: item.status || "done",
+                result_url: resUrl,
+                thumbnail_url: thumbUrl,
+                fallback_url: resUrl,
+                timestamp: ts,
+                created_at: item.created_at || new Date(ts).toISOString(),
+                date_formatted: "Hoje",
+                agent_slug: detected.slug,
+                agent_name: detected.name,
+                dimensions: resolvedDim,
+                aspect_ratio: resolvedAspect,
+                ai_model: "gemini-3.1-flash-image",
+                is_favorited: false,
+                is_upvoted: false,
+                upvote_count: 0,
+                prompt: item.form_data?.subject_description || item.form_data?.scene_description || item.prompt || `Design gerado no Studio ${detected.name}.`,
+                form_data: item.form_data || item.parameters || {},
+                input_image_urls: item.input_image_urls || {}
+              });
             });
           }
         }
@@ -204,14 +415,7 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
             histData.images.forEach((img: any, idx: number) => {
               const url = img.url;
               if (!newItems.some((item) => item.result_url === url || item.thumbnail_url === url)) {
-                const fLower = (img.filename || "").toLowerCase();
-                let detectedSlug = "design-builder1-2";
-                if (fLower.includes("ref")) detectedSlug = "ref";
-                else if (fLower.includes("hydra")) detectedSlug = "hydra";
-                else if (fLower.includes("enhance") || fLower.includes("enh")) detectedSlug = "enhance";
-                else if (fLower.includes("altera")) detectedSlug = "altera-facil";
-                else if (fLower.includes("orion")) detectedSlug = "orion-pro";
-
+                const detected = detectImageApp(url, undefined, img.filename, knownUrls);
                 const thumbUrl = img.thumbnail_url || (url.startsWith("/generated-images/") ? url.replace("/generated-images/", "/thumbnails/").replace(/\.[^/.]+$/, ".webp") : url);
                 const ts = img.mtimeMs || extractImageTimestamp(img.filename) || Date.now();
 
@@ -224,8 +428,8 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
                   timestamp: ts,
                   created_at: img.createdAt || new Date(ts).toISOString(),
                   date_formatted: "Hoje",
-                  agent_slug: detectedSlug,
-                  agent_name: detectedSlug === "ref" ? "REF" : detectedSlug === "hydra" ? "Hydra" : detectedSlug === "enhance" ? "Enhance" : detectedSlug === "altera-facil" ? "Altera Fácil" : "Zion Design",
+                  agent_slug: detected.slug,
+                  agent_name: detected.name,
                   dimensions: img.aspect || "4:5",
                   aspect_ratio: img.aspect || "4/5",
                   ai_model: "gemini-3.1-flash-image",
@@ -243,14 +447,7 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
         const storeImages = useProjectStore.getState().galeriaImages || [];
         storeImages.forEach((imgUrl: string, idx: number) => {
           if (imgUrl && !newItems.some((item) => item.result_url === imgUrl || item.thumbnail_url === imgUrl)) {
-            const fLower = (imgUrl.split("/").pop() || "").toLowerCase();
-            let detectedSlug = "design-builder1-2";
-            if (fLower.includes("ref")) detectedSlug = "ref";
-            else if (fLower.includes("hydra")) detectedSlug = "hydra";
-            else if (fLower.includes("enhance") || fLower.includes("enh")) detectedSlug = "enhance";
-            else if (fLower.includes("altera")) detectedSlug = "altera-facil";
-            else if (fLower.includes("orion")) detectedSlug = "orion-pro";
-
+            const detected = detectImageApp(imgUrl, undefined, undefined, knownUrls);
             const stableId = "store-gen-" + String(imgUrl.split("/").pop() || idx).replace(/[^a-zA-Z0-9]/g, "_");
             newItems.push({
               id: stableId,
@@ -260,18 +457,122 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
               fallback_url: imgUrl,
               created_at: new Date(extractImageTimestamp(imgUrl) || Date.now()).toISOString(),
               date_formatted: "Hoje",
-              agent_slug: detectedSlug,
-              agent_name: detectedSlug === "ref" ? "REF" : detectedSlug === "hydra" ? "Hydra" : detectedSlug === "enhance" ? "Enhance" : detectedSlug === "altera-facil" ? "Altera Fácil" : "Zion Design",
+              agent_slug: detected.slug,
+              agent_name: detected.name,
               dimensions: "4:5",
               aspect_ratio: "4/5",
               ai_model: "gemini-3.1-flash-image",
               is_favorited: false,
               is_upvoted: false,
               upvote_count: 0,
-              prompt: "Arte gerada no Studio Zion"
+              prompt: `Arte gerada no Studio ${detected.name}`
             });
           }
         });
+
+        // Incorpora imagens do histórico local do REF que ainda não estejam na lista
+        try {
+          const refSaved = localStorage.getItem("zion_ref_history");
+          if (refSaved) {
+            const parsedRef = JSON.parse(refSaved);
+            if (Array.isArray(parsedRef)) {
+              parsedRef.forEach((refItem: any, idx: number) => {
+                const refUrl = refItem.url || refItem.imageUrl;
+                if (refUrl && !newItems.some((item) => item.result_url === refUrl || item.thumbnail_url === refUrl)) {
+                  const ts = refItem.timestamp || (Date.now() - idx * 1000);
+                  newItems.push({
+                    id: refItem.id || `ref-history-${idx}-${ts}`,
+                    status: "done",
+                    result_url: refUrl,
+                    thumbnail_url: refItem.thumbnail_url || refUrl,
+                    fallback_url: refUrl,
+                    timestamp: ts,
+                    created_at: new Date(ts).toISOString(),
+                    date_formatted: "Hoje",
+                    agent_slug: "ref-builder",
+                    agent_name: "REF",
+                    dimensions: refItem.settings?.dimensao || "4:5",
+                    aspect_ratio: (refItem.settings?.dimensao || "4:5").replace(":", "/"),
+                    ai_model: "gemini-3.1-flash-image",
+                    is_favorited: !!refItem.isFavorited,
+                    is_upvoted: false,
+                    upvote_count: 0,
+                    prompt: refItem.settings?.additionalDescription || "Arte gerada no REF"
+                  });
+                }
+              });
+            }
+          }
+        } catch (_) {}
+
+        // Incorpora abas ativas do REF
+        try {
+          const refTabsSaved = localStorage.getItem("zion_ref_tabs_data_v2");
+          if (refTabsSaved) {
+            const parsedTabs = JSON.parse(refTabsSaved);
+            if (Array.isArray(parsedTabs)) {
+              parsedTabs.forEach((tab: any, idx: number) => {
+                const tabImg = tab.generatedImage;
+                if (tabImg && !newItems.some((item) => item.result_url === tabImg || item.thumbnail_url === tabImg)) {
+                  const ts = Date.now() - idx * 1000;
+                  newItems.push({
+                    id: `ref-tab-${tab.id || idx}`,
+                    status: "done",
+                    result_url: tabImg,
+                    thumbnail_url: tabImg,
+                    fallback_url: tabImg,
+                    timestamp: ts,
+                    created_at: new Date(ts).toISOString(),
+                    date_formatted: "Hoje",
+                    agent_slug: "ref-builder",
+                    agent_name: "REF",
+                    dimensions: tab.dimension || "4:5",
+                    aspect_ratio: (tab.dimension || "4:5").replace(":", "/"),
+                    ai_model: "gemini-3.1-flash-image",
+                    is_favorited: false,
+                    is_upvoted: false,
+                    upvote_count: 0,
+                    prompt: tab.additionalDescription || "Arte gerada no REF"
+                  });
+                }
+              });
+            }
+          }
+        } catch (_) {}
+
+        // Incorpora abas do Enhance
+        try {
+          const enhTabsSaved = localStorage.getItem("zion_enhance_tabs_v2");
+          if (enhTabsSaved) {
+            const parsedTabs = JSON.parse(enhTabsSaved);
+            if (Array.isArray(parsedTabs)) {
+              parsedTabs.forEach((tab: any, idx: number) => {
+                const tabImg = tab.outputBase64 || tab.resultUrl;
+                if (tabImg && !newItems.some((item) => item.result_url === tabImg || item.thumbnail_url === tabImg)) {
+                  newItems.push({
+                    id: `enh-tab-${tab.id || idx}`,
+                    status: "done",
+                    result_url: tabImg,
+                    thumbnail_url: tabImg,
+                    fallback_url: tabImg,
+                    timestamp: Date.now() - idx * 1000,
+                    created_at: new Date().toISOString(),
+                    date_formatted: "Hoje",
+                    agent_slug: "enhance",
+                    agent_name: "Enhance",
+                    dimensions: "1:1",
+                    aspect_ratio: "1/1",
+                    ai_model: "gemini-3.1-flash-image",
+                    is_favorited: false,
+                    is_upvoted: false,
+                    upvote_count: 0,
+                    prompt: "Aprimoramento Enhance HD"
+                  });
+                }
+              });
+            }
+          }
+        } catch (_) {}
 
         // Filtrar imagens deletadas com protecao contra nomes genericos
         const deletedSet = getDeletedImages();
@@ -340,8 +641,20 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
 
     loadServerGenerations();
 
-    // Sincronizacao apenas quando uma geracao e concluida intencionalmente
-    const handleGenDone = () => {
+    // Sincronizacao quando uma geracao e concluida intencionalmente
+    const handleGenDone = (e?: any) => {
+      if (e?.detail?.imageUrl) {
+        const imgUrl = e.detail.imageUrl;
+        const app = e.detail.app || e.detail.agent_slug || "ref";
+        try {
+          const stored = localStorage.getItem("zion_image_app_tags");
+          const tags = stored ? JSON.parse(stored) : {};
+          tags[imgUrl] = app;
+          const bname = imgUrl.split("/").pop()?.split("?")[0];
+          if (bname) tags[bname] = app;
+          localStorage.setItem("zion_image_app_tags", JSON.stringify(tags));
+        } catch (_) {}
+      }
       loadServerGenerations();
     };
     window.addEventListener("zion-generation-done", handleGenDone);
@@ -361,7 +674,40 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
     };
   }, []);
 
-  const [selectedApp, setSelectedApp] = useState<string>("");
+  const [selectedApp, setSelectedApp] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      const search = new URLSearchParams(window.location.search);
+      const appParam = search.get("app") || search.get("agent") || "";
+      if (appParam) return appParam.toLowerCase();
+    }
+    return "";
+  });
+
+  const handleSelectApp = (value: string) => {
+    setSelectedApp(value);
+    setIsAppDropdownOpen(false);
+    if (typeof window !== "undefined") {
+      const search = new URLSearchParams(window.location.search);
+      if (value) {
+        search.set("app", value);
+      } else {
+        search.delete("app");
+      }
+      const newSearch = search.toString();
+      const newUrl = window.location.pathname + (newSearch ? `?${newSearch}` : "");
+      window.history.replaceState(null, "", newUrl);
+    }
+  };
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const search = new URLSearchParams(window.location.search);
+      const appParam = search.get("app") || search.get("agent") || "";
+      setSelectedApp(appParam.toLowerCase());
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
   const [selectionMode, setSelectionMode] = useState<boolean>(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [detailIndex, setDetailIndex] = useState<number | null>(null);
@@ -431,17 +777,88 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
 
   const filteredGenerations = useMemo(() => {
     if (!selectedApp) return generations;
+    const known = getKnownAppUrls();
+    const sel = selectedApp.toLowerCase();
+
     return generations.filter((g) => {
       const slug = (g.agent_slug || "").toLowerCase();
+      const name = (g.agent_name || "").toLowerCase();
       const prompt = (g.prompt || "").toLowerCase();
       const url = (g.result_url || "").toLowerCase();
-      if (selectedApp === "ref") return slug.includes("ref") || prompt.includes("ref") || url.includes("ref");
-      if (selectedApp === "hydra") return slug.includes("hydra") || prompt.includes("hydra") || url.includes("hydra");
-      if (selectedApp === "enhance") return slug.includes("enhance") || slug.includes("enh") || prompt.includes("enhance") || url.includes("enh");
-      if (selectedApp === "design-builder") return slug.includes("design") || slug === "" || !g.agent_slug;
-      if (selectedApp === "orion-pro") return slug.includes("orion") || prompt.includes("orion") || url.includes("orion");
-      if (selectedApp === "altera-facil") return slug.includes("altera") || prompt.includes("altera") || url.includes("altera");
-      return slug === selectedApp.toLowerCase();
+      const thumb = (g.thumbnail_url || "").toLowerCase();
+      const filename = (url.split("/").pop() || "").split("?")[0].toLowerCase();
+
+      if (sel === "ref" || sel === "ref-builder") {
+        return (
+          slug.includes("ref") ||
+          name === "ref" ||
+          filename.startsWith("ref_") ||
+          filename.includes("refino") ||
+          known.refUrls.has(g.result_url) ||
+          known.refUrls.has(g.thumbnail_url) ||
+          known.refUrls.has(filename)
+        );
+      }
+
+      if (sel === "hydra") {
+        return (
+          slug.includes("hydra") ||
+          name === "hydra" ||
+          filename.startsWith("hydra_") ||
+          known.hydraUrls.has(g.result_url) ||
+          known.hydraUrls.has(g.thumbnail_url) ||
+          known.hydraUrls.has(filename)
+        );
+      }
+
+      if (sel === "enhance" || sel === "enhance-builder") {
+        return (
+          slug.includes("enhance") ||
+          slug.includes("enh") ||
+          name === "enhance" ||
+          filename.startsWith("enhance_") ||
+          known.enhanceUrls.has(g.result_url) ||
+          known.enhanceUrls.has(g.thumbnail_url) ||
+          known.enhanceUrls.has(filename)
+        );
+      }
+
+      if (sel === "altera-facil" || sel === "altera") {
+        return (
+          slug.includes("altera") ||
+          name.includes("altera") ||
+          filename.startsWith("altera_") ||
+          known.alteraUrls.has(g.result_url) ||
+          known.alteraUrls.has(g.thumbnail_url) ||
+          known.alteraUrls.has(filename)
+        );
+      }
+
+      if (sel === "orion-pro" || sel === "orion") {
+        return (
+          slug.includes("orion") ||
+          name.includes("órion") ||
+          name.includes("orion") ||
+          filename.startsWith("orion_") ||
+          known.orionUrls.has(g.result_url) ||
+          known.orionUrls.has(g.thumbnail_url) ||
+          known.orionUrls.has(filename)
+        );
+      }
+
+      if (sel === "design-builder" || sel === "design-builder1-2" || sel === "zion-design") {
+        const isOther =
+          slug.includes("ref") || name === "ref" || known.refUrls.has(g.result_url) || filename.startsWith("ref_") ||
+          slug.includes("hydra") || name === "hydra" || known.hydraUrls.has(g.result_url) || filename.startsWith("hydra_") ||
+          slug.includes("enhance") || name === "enhance" || known.enhanceUrls.has(g.result_url) || filename.startsWith("enhance_") ||
+          slug.includes("altera") || name.includes("altera") || known.alteraUrls.has(g.result_url) || filename.startsWith("altera_") ||
+          slug.includes("orion") || name.includes("órion") || known.orionUrls.has(g.result_url) || filename.startsWith("orion_");
+
+        if (isOther) return false;
+        return slug.includes("design") || slug === "" || !g.agent_slug || name.includes("design");
+      }
+
+      return slug === sel;
     });
   }, [generations, selectedApp]);
 
@@ -801,8 +1218,7 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
                         <button
                           type="button"
                           onClick={() => {
-                            setSelectedApp("");
-                            setIsAppDropdownOpen(false);
+                            handleSelectApp("");
                           }}
                           className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-xs font-medium transition-colors hover:bg-white/5 cursor-pointer ${
                             selectedApp === "" ? "text-white" : "text-zinc-400"
@@ -847,8 +1263,7 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
                               <button
                                 type="button"
                                 onClick={() => {
-                                  setSelectedApp(opt.value);
-                                  setIsAppDropdownOpen(false);
+                                  handleSelectApp(opt.value);
                                 }}
                                 className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-xs font-medium transition-colors hover:bg-white/5 cursor-pointer ${
                                   isSelected ? "text-white" : "text-zinc-400"

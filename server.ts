@@ -990,12 +990,45 @@ export async function fixSolidBackground(
   }
 }
 
-export async function saveImageToDisk(rawData: string, rawMime: string): Promise<string> {
+export async function saveImageToDisk(
+  rawData: string,
+  rawMime: string,
+  agentSlug?: string,
+  prompt?: string,
+  formData?: any
+): Promise<string> {
   try {
     const ext = rawMime.includes("png") ? "png" : rawMime.includes("webp") ? "webp" : "jpg";
     const buffer = Buffer.from(rawData, "base64");
 
-    const filename = `img_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${ext}`;
+    const normSlug = (agentSlug || "").toLowerCase();
+    let prefix = "img_";
+    let detectedSlug = "design-builder1-2";
+    let agentName = "Zion Design";
+
+    if (normSlug.includes("ref")) {
+      prefix = "ref_";
+      detectedSlug = "ref-builder";
+      agentName = "REF";
+    } else if (normSlug.includes("orion")) {
+      prefix = "orion_";
+      detectedSlug = "orion-pro";
+      agentName = "Órion Pro";
+    } else if (normSlug.includes("hydra")) {
+      prefix = "hydra_";
+      detectedSlug = "hydra";
+      agentName = "Hydra";
+    } else if (normSlug.includes("enhance") || normSlug.includes("enh")) {
+      prefix = "enhance_";
+      detectedSlug = "enhance";
+      agentName = "Enhance";
+    } else if (normSlug.includes("altera")) {
+      prefix = "altera_";
+      detectedSlug = "altera-facil";
+      agentName = "Altera Fácil";
+    }
+
+    const filename = `${prefix}${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${ext}`;
     const isServerlessEnv = Boolean(
       process.env.VERCEL ||
       process.env.AWS_LAMBDA_FUNCTION_NAME ||
@@ -1026,7 +1059,7 @@ export async function saveImageToDisk(rawData: string, rawMime: string): Promise
     }
 
     await fs.promises.writeFile(filepath, finalBuf);
-    console.log(`[saveImageToDisk] Original native image saved to ${filepath} (${finalBuf.length} bytes / ${(finalBuf.length / 1024 / 1024).toFixed(2)} MB).`);
+    console.log(`[saveImageToDisk] [${agentName}] Original native image saved to ${filepath} (${finalBuf.length} bytes / ${(finalBuf.length / 1024 / 1024).toFixed(2)} MB).`);
 
     // Persistir imediatamente em public/generations_data.json para sincronizacao em tempo real da galeria
     try {
@@ -1039,8 +1072,6 @@ export async function saveImageToDisk(rawData: string, rawMime: string): Promise
           existingList = Array.isArray(parsed) ? parsed : (parsed.items || []);
         } catch (_) { }
       }
-      const fnameLower = filename.toLowerCase();
-      const detectedSlug = fnameLower.includes("ref") ? "ref" : fnameLower.includes("hydra") ? "hydra" : (fnameLower.includes("enhance") || fnameLower.includes("enh")) ? "enhance" : fnameLower.includes("altera") ? "altera-facil" : fnameLower.includes("orion") ? "orion-pro" : "design-builder1-2";
 
       let detectedDim = "4:5";
       try {
@@ -1079,8 +1110,10 @@ export async function saveImageToDisk(rawData: string, rawMime: string): Promise
       thumbnail_url: hasThumb ? "/thumbnails/" + thumbFilename : "/generated-images/" + filename,
       created_at: new Date().toISOString(),
       agent_slug: detectedSlug,
+      agent_name: agentName,
       dimensions: detectedDim,
-      form_data: { quality: "4K", dimensions: detectedDim }
+      form_data: { ...(formData || {}), quality: "4K", dimensions: detectedDim },
+      prompt: prompt || formData?.prompt || formData?.promptTraduzido || formData?.subject_description || `Arte gerada no ${agentName}`
     };
       existingList = [newItem, ...existingList.filter((it) => it.result_url !== newItem.result_url && it.id !== newItem.id)];
       fs.writeFileSync(gPath, JSON.stringify(existingList.slice(0, 300), null, 2), "utf-8");
@@ -5067,7 +5100,24 @@ CRITICAL RULES:
             if (!isServerImageDeleted(fileUrl) && !items.find((i) => i.result_url === fileUrl || i.thumbnail_url === fileUrl || i.id === file)) {
               const stat = fs.statSync(filePath);
               const fLower = file.toLowerCase();
-              const detectedSlug = fLower.includes("ref") ? "ref" : fLower.includes("hydra") ? "hydra" : (fLower.includes("enhance") || fLower.includes("enh")) ? "enhance" : fLower.includes("altera") ? "altera-facil" : fLower.includes("orion") ? "orion-pro" : "design-builder1-2";
+              let detectedSlug = "design-builder1-2";
+              let detectedName = "Zion Design";
+              if (fLower.startsWith("ref_") || fLower.includes("ref")) {
+                detectedSlug = "ref-builder";
+                detectedName = "REF";
+              } else if (fLower.startsWith("hydra_") || fLower.includes("hydra")) {
+                detectedSlug = "hydra";
+                detectedName = "Hydra";
+              } else if (fLower.startsWith("enhance_") || fLower.includes("enhance") || fLower.includes("enh")) {
+                detectedSlug = "enhance";
+                detectedName = "Enhance";
+              } else if (fLower.startsWith("altera_") || fLower.includes("altera")) {
+                detectedSlug = "altera-facil";
+                detectedName = "Altera Fácil";
+              } else if (fLower.startsWith("orion_") || fLower.includes("orion")) {
+                detectedSlug = "orion-pro";
+                detectedName = "Órion Pro";
+              }
               items.push({
                 id: file,
                 status: "done",
@@ -5075,6 +5125,7 @@ CRITICAL RULES:
                 thumbnail_url: fileUrl,
                 created_at: stat.mtime.toISOString(),
                 agent_slug: detectedSlug,
+                agent_name: detectedName,
                 dimensions: "4:5",
                 form_data: { quality: "4K", dimensions: "4:5" },
                 input_image_urls: {},
@@ -5100,6 +5151,7 @@ CRITICAL RULES:
           thumbnail_url: `/designbuilder/thumbnails/${id}/thumbnail.avif`,
           created_at: new Date(job.created_at).toISOString(),
           agent_slug: job.agent_slug || "design-builder1-2",
+          agent_name: job.agent_slug === "orion-pro" ? "Órion Pro" : job.agent_slug === "ref-builder" ? "REF" : "Zion Design",
           dimensions: jobDim,
           form_data: {
             plano: "medium",
@@ -5115,16 +5167,26 @@ CRITICAL RULES:
       }
     }
 
-    // Filter by agent_slug if requested
-    const agentSlugFilter = req.query.agent_slug as string | undefined;
+    // Filter by agent_slug or app if requested
+    const agentSlugFilter = (req.query.agent_slug || req.query.app) as string | undefined;
     if (agentSlugFilter) {
-      items = items.filter((i: any) => i.agent_slug === agentSlugFilter);
+      const cleanFilter = agentSlugFilter.toLowerCase();
+      items = items.filter((i: any) => {
+        const s = (i.agent_slug || "").toLowerCase();
+        if (cleanFilter === "ref" || cleanFilter === "ref-builder") return s.includes("ref");
+        if (cleanFilter === "hydra") return s.includes("hydra");
+        if (cleanFilter === "enhance" || cleanFilter === "enhance-builder") return s.includes("enhance") || s.includes("enh");
+        if (cleanFilter === "altera-facil" || cleanFilter === "altera") return s.includes("altera");
+        if (cleanFilter === "orion-pro" || cleanFilter === "orion") return s.includes("orion");
+        if (cleanFilter === "design-builder" || cleanFilter === "design-builder1-2") return s.includes("design");
+        return s === cleanFilter;
+      });
     }
 
     const getEpochMs = (item: any): number => {
       if (typeof item.timestamp === "number" && item.timestamp > 0) return item.timestamp;
       const strToScan = [item.id, item.result_url, item.thumbnail_url, item.filename].filter(Boolean).join(" ");
-      const match = strToScan.match(/(?:img_)?(\d{12,14})/);
+      const match = strToScan.match(/(?:img_|ref_|orion_|hydra_|enhance_|altera_)?(\d{12,14})/i);
       if (match && match[1]) {
         const val = parseInt(match[1], 10);
         if (val > 1672531199000 && val < 1900000000000) return val;
@@ -5444,7 +5506,7 @@ CRITICAL RULES:
       recordServerDeletedImage(id);
 
       // Extrair identificadores limpos (sem prefixos sintéticos como hist-gen-0-, ref-srv-, store-gen-)
-      const matchClean = id.match(/(img_\d+_[a-z0-9]+|\d{13}_[a-z0-9]+)/i);
+      const matchClean = id.match(/((?:img|ref|orion|hydra|enhance|altera)_\d+_[a-z0-9]+|\d{13}_[a-z0-9]+)/i);
       const cleanId = matchClean ? matchClean[1] : id.replace(/^(hist-gen-\d+-|ref-srv-|store-gen-)/, "");
       const cleanBase = path.basename(cleanId.split("?")[0]);
       const rawClean = cleanBase.replace(/\.[^/.]+$/, "");
@@ -6881,7 +6943,7 @@ Preserve 100% of the unmasked BLACK region without any changes.`;
           .toBuffer();
       }
 
-      const inpaintedImgUrl = await saveImageToDisk(finalResultBuffer.toString("base64"), "image/png");
+      const inpaintedImgUrl = await saveImageToDisk(finalResultBuffer.toString("base64"), "image/png", "altera-facil", "Edição Altera Fácil", req.body);
       res.json({ image: inpaintedImgUrl });
     } catch (error: any) {
       console.error("Inpaint API Error:", error);
@@ -8044,7 +8106,7 @@ Diretrizes rígidas:
       }
 
       const responseImgUrl = finalEnhancedImage && finalEnhancedImage.startsWith("data:")
-        ? await saveImageToDisk(finalEnhancedImage.includes(",") ? finalEnhancedImage.split(",")[1] : finalEnhancedImage, "image/png")
+        ? await saveImageToDisk(finalEnhancedImage.includes(",") ? finalEnhancedImage.split(",")[1] : finalEnhancedImage, "image/png", "enhance", "Aprimoramento Enhance HD", req.body)
         : finalEnhancedImage;
 
       return res.json({
@@ -8407,6 +8469,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
       const targetModel = "gemini-3-pro-image";
       let modelUsed = `Vertex AI (${targetModel})`;
       let lastErrors: string[] = [];
+      const targetAgentSlug = imgConfig?.agent_slug || req.body?.agent_slug || "orion-pro";
 
       for (let i = 0; i < variationsCount; i++) {
         let responseImgUrl = "";
@@ -8425,7 +8488,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
           modelUsed = genRes.modelUsed;
           let rawData = genRes.rawData;
           let mimeType = genRes.rawMime;
-          responseImgUrl = rawData ? await saveImageToDisk(rawData, mimeType) : genRes.imageBase64Url;
+          responseImgUrl = rawData ? await saveImageToDisk(rawData, mimeType, targetAgentSlug, finalPrompt, req.body) : genRes.imageBase64Url;
 
           let width = 0;
           let height = 0;
@@ -8483,7 +8546,7 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
             if (pRes.ok) {
               const pBuffer = Buffer.from(await pRes.arrayBuffer());
               const pBase64 = pBuffer.toString("base64");
-              const savedUrl = await saveImageToDisk(pBase64, "image/png");
+              const savedUrl = await saveImageToDisk(pBase64, "image/png", targetAgentSlug, finalPrompt, req.body);
               results.push(savedUrl);
             }
           }
@@ -8863,7 +8926,8 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
           const logoInclusionType = imgConfig?.logoInclusionType || "embedded";
 
           const finalParsed = resolveImageInput(finalImageBase64);
-          responseImgUrl = finalParsed.data ? await saveImageToDisk(finalParsed.data, finalParsed.mimeType) : finalImageBase64;
+          const genAgentSlug = imgConfig?.agent_slug || req.body?.agent_slug || "orion-pro";
+          responseImgUrl = finalParsed.data ? await saveImageToDisk(finalParsed.data, finalParsed.mimeType, genAgentSlug, imgConfig?.promptSujeito || "Design Zion", req.body) : finalImageBase64;
 
           let width = 0;
           let height = 0;
@@ -10906,7 +10970,20 @@ The subject reference image may be a compressed digital photo. DO NOT replicate 
         }
 
         const finalParsed = resolveImageInput(finalImageBase64);
-        const responseImgUrl = finalParsed.data ? await saveImageToDisk(finalParsed.data, finalParsed.mimeType) : finalImageBase64;
+        const requestedSlug =
+          req.body.agent_slug ||
+          (req.body.isRefBuilder || req.body.app === "ref" ? "ref-builder" : "") ||
+          (req.body.hydraData || req.body.app === "hydra" ? "hydra" : "") ||
+          (req.body.app === "orion-pro" || req.body.tipoPainel === "ORION_PRO" ? "orion-pro" : "") ||
+          (req.body.app === "altera-facil" ? "altera-facil" : "") ||
+          req.body.app ||
+          "design-builder1-2";
+
+        const requestedPrompt = promptTraduzido || req.body.promptTraduzido || req.body.prompt || req.body.additionalDescription || req.body.promptCenario;
+
+        const responseImgUrl = finalParsed.data
+          ? await saveImageToDisk(finalParsed.data, finalParsed.mimeType, requestedSlug, requestedPrompt, req.body)
+          : finalImageBase64;
 
         let width = 0;
         let height = 0;

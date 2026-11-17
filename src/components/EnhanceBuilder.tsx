@@ -427,6 +427,17 @@ export const EnhanceBuilder: React.FC<EnhanceBuilderProps> = ({
   useEffect(() => {
     try {
       localStorage.setItem("zion_enhance_history", JSON.stringify(historyItems));
+      const stored = localStorage.getItem("zion_image_app_tags");
+      const tags = stored ? JSON.parse(stored) : {};
+      historyItems.forEach((it) => {
+        const u = it.enhancedUrl || it.originalUrl;
+        if (u) {
+          tags[u] = "enhance";
+          const bname = u.split("/").pop()?.split("?")[0];
+          if (bname) tags[bname] = "enhance";
+        }
+      });
+      localStorage.setItem("zion_image_app_tags", JSON.stringify(tags));
     } catch (e) {
       console.warn("Falha ao persistir histórico do Enhance:", e);
     }
