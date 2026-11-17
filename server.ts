@@ -1056,16 +1056,32 @@ export async function saveImageToDisk(rawData: string, rawMime: string): Promise
         }
       } catch (_) {}
 
-      const newItem = {
-        id: filename.replace(/\.[^/.]+$/, ""),
-        status: "done",
-        result_url: "/generated-images/" + filename,
-        thumbnail_url: "/generated-images/" + filename,
-        created_at: new Date().toISOString(),
-        agent_slug: detectedSlug,
-        dimensions: detectedDim,
-        form_data: { quality: "4K", dimensions: detectedDim }
-      };
+    // Gerar thumbnail otimizado leve (~25KB WebP) para carregamento instantâneo da galeria
+    const thumbFilename = filename.replace(/\.[^/.]+$/, "") + ".webp";
+    const thumbDir = path.join(process.cwd(), "public", "thumbnails");
+    const thumbPath = path.join(thumbDir, thumbFilename);
+    let hasThumb = false;
+    try {
+      if (!fs.existsSync(thumbDir)) fs.mkdirSync(thumbDir, { recursive: true });
+      await sharp(finalBuf)
+        .resize(400, 500, { fit: "cover", position: "center" })
+        .webp({ quality: 80 })
+        .toFile(thumbPath);
+      hasThumb = true;
+    } catch (tErr) {
+      console.warn("[saveImageToDisk] Falha ao gerar thumbnail:", tErr);
+    }
+
+    const newItem = {
+      id: filename.replace(/\.[^/.]+$/, ""),
+      status: "done",
+      result_url: "/generated-images/" + filename,
+      thumbnail_url: hasThumb ? "/thumbnails/" + thumbFilename : "/generated-images/" + filename,
+      created_at: new Date().toISOString(),
+      agent_slug: detectedSlug,
+      dimensions: detectedDim,
+      form_data: { quality: "4K", dimensions: detectedDim }
+    };
       existingList = [newItem, ...existingList.filter((it) => it.result_url !== newItem.result_url && it.id !== newItem.id)];
       fs.writeFileSync(gPath, JSON.stringify(existingList.slice(0, 300), null, 2), "utf-8");
     } catch (gErr) {
@@ -1943,6 +1959,54 @@ async function startServer() {
     }
   } catch (_) { }
   app.use("/generated-images", express.static(publicGenDir));
+
+  const publicThumbDir = path.join(process.cwd(), "public", "thumbnails");
+  try {
+    if (!fs.existsSync(publicThumbDir)) {
+      fs.mkdirSync(publicThumbDir, { recursive: true });
+    }
+  } catch (_) { }
+  app.use("/thumbnails", express.static(publicThumbDir, { maxAge: "30d" }));
+
+  // Fallback gerador sob demanda com cache persistente
+  app.get("/thumbnails/:filename", async (req: any, res: any) => {
+    try {
+      const filename = path.basename(req.params.filename);
+      const targetPath = path.join(publicThumbDir, filename);
+      if (fs.existsSync(targetPath)) {
+        return res.sendFile(targetPath);
+      }
+      const rawBase = filename.replace(/\.[^/.]+$/, "");
+      const candidates = [
+        rawBase + ".png",
+        rawBase + ".webp",
+        rawBase + ".jpg",
+        rawBase + ".jpeg",
+        rawBase + ".avif"
+      ];
+      let sourceFile = null;
+      for (const cand of candidates) {
+        const p = path.join(publicGenDir, cand);
+        if (fs.existsSync(p)) {
+          sourceFile = p;
+          break;
+        }
+      }
+      if (sourceFile) {
+        const thumbBuf = await sharp(sourceFile)
+          .resize(400, 500, { fit: "cover", position: "center" })
+          .webp({ quality: 80 })
+          .toBuffer();
+        fs.writeFileSync(targetPath, thumbBuf);
+        res.set("Content-Type", "image/webp");
+        res.set("Cache-Control", "public, max-age=31536000, immutable");
+        return res.send(thumbBuf);
+      }
+      return res.status(404).send("Thumbnail not found");
+    } catch (_) {
+      return res.status(404).send("Thumbnail error");
+    }
+  });
   const publicUploadsDir = path.join(process.cwd(), "public", "uploads");
   try {
     if (!fs.existsSync(publicUploadsDir)) {
@@ -5163,8 +5227,14 @@ CRITICAL RULES:
               }
             } catch { }
 
+            const thumbName = filename.replace(/\.[^/.]+$/, "") + ".webp";
+            const thumbUrl = fs.existsSync(path.join(publicThumbDir, thumbName))
+              ? `/thumbnails/${thumbName}`
+              : `/generated-images/${filename}`;
+
             return {
               url: `/generated-images/${filename}`,
+              thumbnail_url: thumbUrl,
               filename,
               size: stat.size,
               width,

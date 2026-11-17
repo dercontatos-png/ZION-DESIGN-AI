@@ -58,7 +58,9 @@ export function deduplicateImageUrls(urls: string[]): string[] {
  */
 export function extractImageTimestamp(item: any): number {
   if (!item) return 0;
+  if (typeof item === "number" && item > 0) return item;
   if (typeof item === "string") {
+    if (item.startsWith("data:") || item.startsWith("blob:")) return 0;
     const match = item.match(/(?:img_)?(\d{12,14})/);
     if (match && match[1]) {
       const v = parseInt(match[1], 10);
@@ -69,19 +71,27 @@ export function extractImageTimestamp(item: any): number {
   if (typeof item.timestamp === "number" && item.timestamp > 0) return item.timestamp;
   if (typeof item.mtimeMs === "number" && item.mtimeMs > 0) return item.mtimeMs;
 
-  const strToScan = [item.id, item.url, item.result_url, item.thumbnail_url, item.filename].filter(Boolean).join(" ");
-  const epochMatch = strToScan.match(/(?:img_)?(\d{12,14})/);
-  if (epochMatch && epochMatch[1]) {
-    const val = parseInt(epochMatch[1], 10);
-    if (val > 1672531199000 && val < 1900000000000) return val;
-  }
-
-  const dateStr = item.created_at || item.createdAt || item.timestamp;
+  const dateStr = item.created_at || item.createdAt || (typeof item.timestamp === "string" ? item.timestamp : null);
   if (dateStr && typeof dateStr === "string") {
-    // Ignore bogus hardcoded legacy fallback date
     if (!dateStr.startsWith("2026-03-20")) {
       const parsed = new Date(dateStr).getTime();
       if (!isNaN(parsed) && parsed > 0) return parsed;
+    }
+  }
+
+  const idStr = String(item.id || item.filename || "");
+  const idMatch = idStr.match(/(?:img_)?(\d{12,14})/);
+  if (idMatch && idMatch[1]) {
+    const val = parseInt(idMatch[1], 10);
+    if (val > 1672531199000 && val < 1900000000000) return val;
+  }
+
+  const urlStr = String(item.result_url || item.thumbnail_url || item.url || "");
+  if (urlStr && !urlStr.startsWith("data:") && !urlStr.startsWith("blob:")) {
+    const urlMatch = urlStr.match(/(?:img_)?(\d{12,14})/);
+    if (urlMatch && urlMatch[1]) {
+      const val = parseInt(urlMatch[1], 10);
+      if (val > 1672531199000 && val < 1900000000000) return val;
     }
   }
 

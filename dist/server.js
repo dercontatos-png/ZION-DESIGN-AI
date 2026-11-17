@@ -4397,11 +4397,22 @@ async function saveImageToDisk(rawData, rawMime) {
         }
       } catch (_) {
       }
+      const thumbFilename = filename.replace(/\.[^/.]+$/, "") + ".webp";
+      const thumbDir = path5.join(process.cwd(), "public", "thumbnails");
+      const thumbPath = path5.join(thumbDir, thumbFilename);
+      let hasThumb = false;
+      try {
+        if (!fs5.existsSync(thumbDir)) fs5.mkdirSync(thumbDir, { recursive: true });
+        await sharp(finalBuf).resize(400, 500, { fit: "cover", position: "center" }).webp({ quality: 80 }).toFile(thumbPath);
+        hasThumb = true;
+      } catch (tErr) {
+        console.warn("[saveImageToDisk] Falha ao gerar thumbnail:", tErr);
+      }
       const newItem = {
         id: filename.replace(/\.[^/.]+$/, ""),
         status: "done",
         result_url: "/generated-images/" + filename,
-        thumbnail_url: "/generated-images/" + filename,
+        thumbnail_url: hasThumb ? "/thumbnails/" + thumbFilename : "/generated-images/" + filename,
         created_at: (/* @__PURE__ */ new Date()).toISOString(),
         agent_slug: detectedSlug,
         dimensions: detectedDim,
@@ -5080,6 +5091,49 @@ async function startServer() {
   } catch (_) {
   }
   app.use("/generated-images", express.static(publicGenDir));
+  const publicThumbDir = path5.join(process.cwd(), "public", "thumbnails");
+  try {
+    if (!fs5.existsSync(publicThumbDir)) {
+      fs5.mkdirSync(publicThumbDir, { recursive: true });
+    }
+  } catch (_) {
+  }
+  app.use("/thumbnails", express.static(publicThumbDir, { maxAge: "30d" }));
+  app.get("/thumbnails/:filename", async (req, res) => {
+    try {
+      const filename = path5.basename(req.params.filename);
+      const targetPath = path5.join(publicThumbDir, filename);
+      if (fs5.existsSync(targetPath)) {
+        return res.sendFile(targetPath);
+      }
+      const rawBase = filename.replace(/\.[^/.]+$/, "");
+      const candidates = [
+        rawBase + ".png",
+        rawBase + ".webp",
+        rawBase + ".jpg",
+        rawBase + ".jpeg",
+        rawBase + ".avif"
+      ];
+      let sourceFile = null;
+      for (const cand of candidates) {
+        const p = path5.join(publicGenDir, cand);
+        if (fs5.existsSync(p)) {
+          sourceFile = p;
+          break;
+        }
+      }
+      if (sourceFile) {
+        const thumbBuf = await sharp(sourceFile).resize(400, 500, { fit: "cover", position: "center" }).webp({ quality: 80 }).toBuffer();
+        fs5.writeFileSync(targetPath, thumbBuf);
+        res.set("Content-Type", "image/webp");
+        res.set("Cache-Control", "public, max-age=31536000, immutable");
+        return res.send(thumbBuf);
+      }
+      return res.status(404).send("Thumbnail not found");
+    } catch (_) {
+      return res.status(404).send("Thumbnail error");
+    }
+  });
   const publicUploadsDir = path5.join(process.cwd(), "public", "uploads");
   try {
     if (!fs5.existsSync(publicUploadsDir)) {
@@ -7863,8 +7917,11 @@ data: ${JSON.stringify({ type: "ping", timestamp: Date.now() })}
               }
             } catch {
             }
+            const thumbName = filename.replace(/\.[^/.]+$/, "") + ".webp";
+            const thumbUrl = fs5.existsSync(path5.join(publicThumbDir, thumbName)) ? `/thumbnails/${thumbName}` : `/generated-images/${filename}`;
             return {
               url: `/generated-images/${filename}`,
+              thumbnail_url: thumbUrl,
               filename,
               size: stat.size,
               width,

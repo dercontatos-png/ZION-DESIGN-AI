@@ -748,6 +748,7 @@ export const RefBuilder: React.FC<RefBuilderProps> = ({
   const [refGalleryItems, setRefGalleryItems] = useState<Array<{
     id: string;
     url: string;
+    thumbnail_url?: string;
     type: "refino" | "geracao";
     timestamp: number;
     isFavorited?: boolean;
@@ -764,9 +765,9 @@ export const RefBuilder: React.FC<RefBuilderProps> = ({
       }
     } catch {}
     return [
-      { id: "ref-demo-1", url: "/galeria/thumbnail(1).avif", type: "refino", timestamp: Date.now() - 120000, isFavorited: true },
-      { id: "ref-demo-2", url: "/galeria/thumbnail(2).avif", type: "geracao", timestamp: Date.now() - 180000, isFavorited: false },
-      { id: "ref-demo-3", url: "/galeria/thumbnail(3).avif", type: "geracao", timestamp: Date.now() - 240000, isFavorited: false },
+      { id: "ref-demo-1", url: "/galeria/thumbnail(1).avif", type: "refino", timestamp: 1789442315246, isFavorited: true },
+      { id: "ref-demo-2", url: "/galeria/thumbnail(2).avif", type: "geracao", timestamp: 1789441589104, isFavorited: false },
+      { id: "ref-demo-3", url: "/galeria/thumbnail(3).avif", type: "geracao", timestamp: 1789431206887, isFavorited: false },
     ];
   });
 
@@ -855,14 +856,18 @@ export const RefBuilder: React.FC<RefBuilderProps> = ({
         setRefGalleryItems((prev) => {
           const existingUrls = new Set(prev.map((i) => i.url));
           const newServerItems = data.images
-            .filter((img: any) => img.url && !existingUrls.has(img.url) && !isUrlDeleted(img.url, deleted) && !isUrlDeleted(img.filename, deleted))
-            .map((img: any, idx: number) => ({
-              id: `ref-srv-${img.filename || idx}`,
-              url: img.url,
-              type: (img.filename?.includes("refino") ? "refino" : "geracao") as "refino" | "geracao",
-              timestamp: img.mtimeMs || extractImageTimestamp(img.filename) || Date.now(),
-              isFavorited: false
-            }));
+            .filter((img: any) => img.url && !isUrlDeleted(img.url, deleted) && !isUrlDeleted(img.filename, deleted))
+            .map((img: any, idx: number) => {
+              const thumbName = (img.filename || "").replace(/\.[^/.]+$/, "") + ".webp";
+              return {
+                id: `ref-srv-${img.filename || idx}`,
+                url: img.url,
+                thumbnail_url: img.thumbnail_url || `/thumbnails/${thumbName}`,
+                type: (img.filename?.includes("refino") ? "refino" : "geracao") as "refino" | "geracao",
+                timestamp: img.mtimeMs || extractImageTimestamp(img.filename) || Date.now(),
+                isFavorited: false
+              };
+            });
           const filteredPrev = prev.filter((p) => !isUrlDeleted(p.url, deleted) && !isUrlDeleted(p.id, deleted));
           const merged = [...newServerItems, ...filteredPrev];
           return sortImagesChronological(merged, true);
@@ -5727,8 +5732,10 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                         >
                           <div className="relative aspect-[4/5] w-full overflow-hidden bg-black/40">
                             <img
-                              src={card.url}
+                              src={card.thumbnail_url || (card.url.startsWith("/generated-images/") ? card.url.replace("/generated-images/", "/thumbnails/").replace(/\.[^/.]+$/, ".webp") : card.url)}
                               alt="Arte gerada"
+                              loading="lazy"
+                              decoding="async"
                               className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                             />
 
@@ -5851,7 +5858,7 @@ DIRETRIZES RÍGIDAS DE SAÍDA:
                               loading="lazy"
                               decoding="async"
                               draggable="true"
-                              src={item.url}
+                              src={item.thumbnail_url || (item.url.startsWith("/generated-images/") ? item.url.replace("/generated-images/", "/thumbnails/").replace(/\.[^/.]+$/, ".webp") : item.url)}
                               style={{
                                 aspectRatio: (item as any).aspect || "4 / 5"
                               }}

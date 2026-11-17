@@ -3,6 +3,7 @@ export interface GalleryItem {
   status: "done" | "generating" | "failed";
   result_url: string;
   thumbnail_url: string;
+  timestamp?: number;
   created_at: string;
   date_formatted: string;
   agent_slug: string;

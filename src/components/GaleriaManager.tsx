@@ -96,13 +96,18 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
         if (!deletedSet.has(imgUrl) && !initialList.some((g) => g.result_url === imgUrl || g.thumbnail_url === imgUrl)) {
           const storeDim = (store.dimensao as string) || "1:1";
           const storeAspect = storeDim.includes(":") ? storeDim.replace(":", "/") : "1/1";
-          initialList.unshift({
-            id: `local-gen-${idx}-${Date.now()}`,
+          const ts = extractImageTimestamp(imgUrl) || (Date.now() - idx * 1000);
+          const thumbUrl = imgUrl.startsWith("/generated-images/")
+            ? imgUrl.replace("/generated-images/", "/thumbnails/").replace(/\.[^/.]+$/, ".webp")
+            : imgUrl;
+          initialList.push({
+            id: `local-gen-${idx}-${ts}`,
             status: "done",
             result_url: imgUrl,
-            thumbnail_url: imgUrl,
+            thumbnail_url: thumbUrl,
             fallback_url: "/vitrine/hydra/hydra-fotografia-1.avif",
-            created_at: new Date().toISOString(),
+            timestamp: ts,
+            created_at: new Date(ts).toISOString(),
             date_formatted: "Hoje",
             agent_slug: "design-builder1-2",
             agent_name: "Zion Design",
@@ -161,26 +166,30 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
               else if (fLower.includes("altera")) detectedSlug = "altera-facil";
               else if (fLower.includes("orion")) detectedSlug = "orion-pro";
 
-              newItems.push({
-                id: item.id || ("bff-gen-" + idx),
-                status: item.status || "done",
-                result_url: resUrl,
-                thumbnail_url: item.thumbnail_url || resUrl,
-                fallback_url: "/Design%20Builder1%202_files/result.avif",
-                created_at: item.created_at || new Date().toISOString(),
-                date_formatted: "Hoje",
-                agent_slug: detectedSlug,
-                agent_name: detectedSlug === "ref" ? "REF" : detectedSlug === "hydra" ? "Hydra" : detectedSlug === "enhance" ? "Enhance" : detectedSlug === "altera-facil" ? "Altera Fácil" : "Zion Design",
-                dimensions: resolvedDim,
-                aspect_ratio: resolvedAspect,
-                ai_model: "gemini-3.1-flash-image",
-                is_favorited: false,
-                is_upvoted: false,
-                upvote_count: 0,
-                prompt: item.form_data?.subject_description || item.form_data?.scene_description || "Design gerado no Studio Zion Design.",
-                form_data: item.form_data || item.parameters || {},
-                input_image_urls: item.input_image_urls || {}
-              });
+                const thumbUrl = item.thumbnail_url || (resUrl.startsWith("/generated-images/") ? resUrl.replace("/generated-images/", "/thumbnails/").replace(/\.[^/.]+$/, ".webp") : resUrl);
+                const ts = extractImageTimestamp(item) || (item.created_at ? new Date(item.created_at).getTime() : Date.now());
+
+                newItems.push({
+                  id: item.id || ("bff-gen-" + idx),
+                  status: item.status || "done",
+                  result_url: resUrl,
+                  thumbnail_url: thumbUrl,
+                  fallback_url: "/Design%20Builder1%202_files/result.avif",
+                  timestamp: ts,
+                  created_at: item.created_at || new Date(ts).toISOString(),
+                  date_formatted: "Hoje",
+                  agent_slug: detectedSlug,
+                  agent_name: detectedSlug === "ref" ? "REF" : detectedSlug === "hydra" ? "Hydra" : detectedSlug === "enhance" ? "Enhance" : detectedSlug === "altera-facil" ? "Altera Fácil" : "Zion Design",
+                  dimensions: resolvedDim,
+                  aspect_ratio: resolvedAspect,
+                  ai_model: "gemini-3.1-flash-image",
+                  is_favorited: false,
+                  is_upvoted: false,
+                  upvote_count: 0,
+                  prompt: item.form_data?.subject_description || item.form_data?.scene_description || "Design gerado no Studio Zion Design.",
+                  form_data: item.form_data || item.parameters || {},
+                  input_image_urls: item.input_image_urls || {}
+                });
             });
           }
         }
@@ -199,13 +208,17 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
                 else if (fLower.includes("altera")) detectedSlug = "altera-facil";
                 else if (fLower.includes("orion")) detectedSlug = "orion-pro";
 
+                const thumbUrl = img.thumbnail_url || (url.startsWith("/generated-images/") ? url.replace("/generated-images/", "/thumbnails/").replace(/\.[^/.]+$/, ".webp") : url);
+                const ts = img.mtimeMs || extractImageTimestamp(img.filename) || Date.now();
+
                 newItems.push({
                   id: "hist-gen-" + idx + "-" + img.filename,
                   status: "done",
                   result_url: url,
-                  thumbnail_url: url,
+                  thumbnail_url: thumbUrl,
                   fallback_url: "/Design%20Builder1%202_files/result.avif",
-                  created_at: img.createdAt || new Date().toISOString(),
+                  timestamp: ts,
+                  created_at: img.createdAt || new Date(ts).toISOString(),
                   date_formatted: "Hoje",
                   agent_slug: detectedSlug,
                   agent_name: detectedSlug === "ref" ? "REF" : detectedSlug === "hydra" ? "Hydra" : detectedSlug === "enhance" ? "Enhance" : detectedSlug === "altera-facil" ? "Altera Fácil" : "Zion Design",
@@ -303,6 +316,10 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
             });
 
             const all = sortImagesChronological(Array.from(map.values()), true);
+
+            try {
+              localStorage.setItem("zion_gallery_generations", JSON.stringify(all.slice(0, 150)));
+            } catch (_) {}
 
             // Evitar re-renderizacoes desnecessarias e reordenamento se a lista for igual
             const prevIds = prev.map((p) => p.id).join(",");
@@ -869,7 +886,7 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
             </div>
           ) : (
             <div className="p-3 pb-12">
-              <div className="columns-2 sm:columns-3 md:columns-4 lg:columns-5 gap-3 space-y-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
                 {filteredGenerations.map((item, idx) => {
                   const isSelected = selectedIds.has(item.id);
                   const isFav = !!item.is_favorited;
@@ -885,7 +902,7 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
                           setDetailIndex(idx);
                         }
                       }}
-                      className={`break-inside-avoid group relative w-full overflow-hidden rounded-2xl bg-zinc-900/60 border text-left cursor-pointer transition-all duration-300 mb-3 ${
+                      className={`group relative w-full overflow-hidden rounded-2xl bg-zinc-900/60 border text-left cursor-pointer transition-all duration-300 ${
                         isSelected
                           ? "border-violet-500 ring-2 ring-violet-500/50 shadow-lg shadow-violet-600/20"
                           : "border-white/[0.06] hover:border-violet-500/40 hover:shadow-xl hover:shadow-violet-600/10"
@@ -900,7 +917,7 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
                           alt={`Geração ${item.agent_name}`}
                           loading={idx < 12 ? "eager" : "lazy"} decoding="async"
                           className="absolute inset-0 block h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                          src={item.thumbnail_url || item.result_url}
+                          src={item.thumbnail_url || (item.result_url?.startsWith('/generated-images/') ? item.result_url.replace('/generated-images/', '/thumbnails/').replace(/\.[^/.]+$/, '.webp') : item.result_url)}
                           ref={(img) => {
                             if (img && img.naturalWidth && img.naturalHeight) {
                               const ratioStr = `${img.naturalWidth} / ${img.naturalHeight}`;
