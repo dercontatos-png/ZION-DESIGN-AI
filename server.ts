@@ -1041,6 +1041,21 @@ export async function saveImageToDisk(rawData: string, rawMime: string): Promise
       }
       const fnameLower = filename.toLowerCase();
       const detectedSlug = fnameLower.includes("ref") ? "ref" : fnameLower.includes("hydra") ? "hydra" : (fnameLower.includes("enhance") || fnameLower.includes("enh")) ? "enhance" : fnameLower.includes("altera") ? "altera-facil" : fnameLower.includes("orion") ? "orion-pro" : "design-builder1-2";
+
+      let detectedDim = "4:5";
+      try {
+        const meta = await sharp(finalBuf).metadata();
+        if (meta.width && meta.height) {
+          const ratio = meta.width / meta.height;
+          if (ratio <= 0.65) detectedDim = "9:16";
+          else if (ratio >= 1.5) detectedDim = "16:9";
+          else if (Math.abs(ratio - 1.0) < 0.1) detectedDim = "1:1";
+          else if (Math.abs(ratio - 0.8) < 0.05) detectedDim = "4:5";
+          else if (Math.abs(ratio - 0.75) < 0.05) detectedDim = "3:4";
+          else if (Math.abs(ratio - 1.33) < 0.05) detectedDim = "4:3";
+        }
+      } catch (_) {}
+
       const newItem = {
         id: filename.replace(/\.[^/.]+$/, ""),
         status: "done",
@@ -1048,8 +1063,8 @@ export async function saveImageToDisk(rawData: string, rawMime: string): Promise
         thumbnail_url: "/generated-images/" + filename,
         created_at: new Date().toISOString(),
         agent_slug: detectedSlug,
-        dimensions: "4:5",
-        form_data: { quality: "4K", dimensions: "4:5" }
+        dimensions: detectedDim,
+        form_data: { quality: "4K", dimensions: detectedDim }
       };
       existingList = [newItem, ...existingList.filter((it) => it.result_url !== newItem.result_url && it.id !== newItem.id)];
       fs.writeFileSync(gPath, JSON.stringify(existingList.slice(0, 300), null, 2), "utf-8");
@@ -10152,7 +10167,6 @@ ${hasExclusions ? `${exclusions.join(', ')}, ` : ""}black circle behind logo, so
 
           expandedSystemInstruction = `You are an elite commercial graphic designer and art director. You execute pristine advertising posters, religious event flyers, social media cards, and commercial marketing layouts with vector-sharp typographic precision.
 RULES:
-0. 👑 SUPREME USER SOVEREIGNTY LAW (RANK 0): Any addition, exclusion, positioning, texture choice, or text requested by the user 100% OVERRULES any elements in the reference images.
 ${hasExclusions ? `   - STRICT EXCLUSIONS: Under NO circumstance generate: ${exclusions.join(', ')}. If present in reference or photo, PURGE AND ERASE THEM COMPLETELY.\n` : ""}${hasAdditions ? `   - MANDATORY ADDITIONS: You must include: ${additions.join(', ')}.\n` : ""}${posResult.isExplicit ? `   - POSITIONING: Position the subject on the ${posResult.position.toUpperCase()} as ordered by the user.\n` : ""}${logoPlacement.isExplicit ? `   - LOGO POSITION: Position the brand logo strictly ${logoPlacement.position.toUpperCase()} as ordered by the user.\n` : ""}   - MULTI-REFERENCE SPECIALIZATION: Strictly respect each reference's assigned role (texture only, typography only, layout only). Never blend contradictory layouts.
 1. DYNAMIC REFERENCE ANALYSIS & THEMATIC ADAPTATION: Visually analyze the Design Reference to clone its composition grid, panel layout, and typography hierarchy. MANDATORY NICHE ADAPTATION: If the user's requested topic differs from the reference (e.g. auto mechanic shop vs church, dental clinic vs party), purge all reference-specific props (crosses, altars, glasses) and replace them with props matching the user's requested niche! NO modern 3D podiums or plastic cubes on non-product flyers.
 2. STRICT TEXT PURGE & REPLACEMENTS: Completely erase all old text from the reference image. Render ONLY the text explicitly requested by the user. Respect all negative constraints (e.g. no crown, no whatsapp, no instagram) and all word replacements.

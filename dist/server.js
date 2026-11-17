@@ -4383,6 +4383,20 @@ async function saveImageToDisk(rawData, rawMime) {
       }
       const fnameLower = filename.toLowerCase();
       const detectedSlug = fnameLower.includes("ref") ? "ref" : fnameLower.includes("hydra") ? "hydra" : fnameLower.includes("enhance") || fnameLower.includes("enh") ? "enhance" : fnameLower.includes("altera") ? "altera-facil" : fnameLower.includes("orion") ? "orion-pro" : "design-builder1-2";
+      let detectedDim = "4:5";
+      try {
+        const meta = await sharp(finalBuf).metadata();
+        if (meta.width && meta.height) {
+          const ratio = meta.width / meta.height;
+          if (ratio <= 0.65) detectedDim = "9:16";
+          else if (ratio >= 1.5) detectedDim = "16:9";
+          else if (Math.abs(ratio - 1) < 0.1) detectedDim = "1:1";
+          else if (Math.abs(ratio - 0.8) < 0.05) detectedDim = "4:5";
+          else if (Math.abs(ratio - 0.75) < 0.05) detectedDim = "3:4";
+          else if (Math.abs(ratio - 1.33) < 0.05) detectedDim = "4:3";
+        }
+      } catch (_) {
+      }
       const newItem = {
         id: filename.replace(/\.[^/.]+$/, ""),
         status: "done",
@@ -4390,8 +4404,8 @@ async function saveImageToDisk(rawData, rawMime) {
         thumbnail_url: "/generated-images/" + filename,
         created_at: (/* @__PURE__ */ new Date()).toISOString(),
         agent_slug: detectedSlug,
-        dimensions: "4:5",
-        form_data: { quality: "4K", dimensions: "4:5" }
+        dimensions: detectedDim,
+        form_data: { quality: "4K", dimensions: detectedDim }
       };
       existingList = [newItem, ...existingList.filter((it) => it.result_url !== newItem.result_url && it.id !== newItem.id)];
       fs5.writeFileSync(gPath, JSON.stringify(existingList.slice(0, 300), null, 2), "utf-8");
@@ -11988,7 +12002,6 @@ You MUST NOT follow any rigid generic template or hardcoded layout! Instead, dee
 ${hasExclusions ? `${exclusions.join(", ")}, ` : ""}black circle behind logo, solid black circular disc, black badge container behind logo, sticker box behind logo, distorted logo lines, squiggly logo curves, deformed logo geometry, podium, geometric platform, 3D display cube, pedestal, blurry, low resolution, soft focus, out of focus, motion blur, plastic skin, airbrushed, cartoon, anime, 3D model, messy layout, overlapping text, illegible font, unrequested English words, missing text, cut-off borders, glued-to-edge text, unrequested old text from reference, crown, whatsapp icon, instagram handle.`;
           expandedSystemInstruction = `You are an elite commercial graphic designer and art director. You execute pristine advertising posters, religious event flyers, social media cards, and commercial marketing layouts with vector-sharp typographic precision.
 RULES:
-0. \u{1F451} SUPREME USER SOVEREIGNTY LAW (RANK 0): Any addition, exclusion, positioning, texture choice, or text requested by the user 100% OVERRULES any elements in the reference images.
 ${hasExclusions ? `   - STRICT EXCLUSIONS: Under NO circumstance generate: ${exclusions.join(", ")}. If present in reference or photo, PURGE AND ERASE THEM COMPLETELY.
 ` : ""}${hasAdditions ? `   - MANDATORY ADDITIONS: You must include: ${additions.join(", ")}.
 ` : ""}${posResult.isExplicit ? `   - POSITIONING: Position the subject on the ${posResult.position.toUpperCase()} as ordered by the user.
