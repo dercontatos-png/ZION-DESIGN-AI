@@ -5482,15 +5482,18 @@ async function startServer() {
         return res.status(404).json({ error: "Image file not found on server." });
       }
       const requestedQuality = (req.query.quality || req.body?.quality || req.query.targetResolution || req.body?.targetResolution || "").toString().toUpperCase().trim();
-      if (requestedQuality === "8K") {
+      if (requestedQuality === "8K" || requestedQuality === "4K") {
         try {
           const meta = await sharp(buffer).metadata();
-          if (meta.width && meta.height && meta.width < 3840) {
-            console.log(`[/api/download-image] High-res upscale from ${meta.width}x${meta.height} to 4K...`);
-            const aspect = meta.width / meta.height;
-            const targetW = meta.width >= meta.height ? 3840 : Math.round(3840 * aspect);
-            const targetH = meta.width >= meta.height ? Math.round(3840 / aspect) : 3840;
-            buffer = await processSuperResolution8K(buffer, targetW, targetH, "4K");
+          if (meta.width && meta.height) {
+            const targetMax = requestedQuality === "8K" ? 7680 : 3840;
+            if (meta.width < targetMax) {
+              console.log(`[/api/download-image] Upscaling image from ${meta.width}x${meta.height} to ${requestedQuality} (${targetMax}px) via processSuperResolution8K...`);
+              const aspect = meta.width / meta.height;
+              const targetW = meta.width >= meta.height ? targetMax : Math.round(targetMax * aspect);
+              const targetH = meta.width >= meta.height ? Math.round(targetMax / aspect) : targetMax;
+              buffer = await processSuperResolution8K(buffer, targetW, targetH, requestedQuality === "8K" ? "8K" : "4K");
+            }
           }
         } catch (upscaleErr) {
           console.warn("[/api/download-image] Upscaling attempt warning:", upscaleErr);
