@@ -1,5 +1,31 @@
 [
   {
+    "id": "img_1794874678306_lj05o",
+    "status": "done",
+    "result_url": "/generated-images/img_1794874678306_lj05o.png",
+    "thumbnail_url": "/generated-images/img_1794874678306_lj05o.png",
+    "created_at": "2026-11-17T00:17:58.316Z",
+    "agent_slug": "design-builder1-2",
+    "dimensions": "4:5",
+    "form_data": {
+      "quality": "4K",
+      "dimensions": "4:5"
+    }
+  },
+  {
+    "id": "img_1794874552452_rompp",
+    "status": "done",
+    "result_url": "/generated-images/img_1794874552452_rompp.png",
+    "thumbnail_url": "/generated-images/img_1794874552452_rompp.png",
+    "created_at": "2026-11-17T00:15:52.464Z",
+    "agent_slug": "design-builder1-2",
+    "dimensions": "4:5",
+    "form_data": {
+      "quality": "4K",
+      "dimensions": "4:5"
+    }
+  },
+  {
     "id": "img_1794874201674_79qoo",
     "status": "done",
     "result_url": "/generated-images/img_1794874201674_79qoo.png",
