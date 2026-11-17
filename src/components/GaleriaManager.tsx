@@ -34,6 +34,10 @@ export const checkIsItemDeleted = (item: GalleryItem, deletedSet: Set<string>): 
   const thumb = (item.thumbnail_url || "").toLowerCase();
   const id = (item.id || "").toLowerCase();
   
+  if (url.includes("design builder1 2_files") || url.includes("design_builder1_2_files") || url.includes("1790244192693_upnh2yl")) return true;
+  if (thumb.includes("design builder1 2_files") || thumb.includes("design_builder1_2_files") || thumb.includes("1790244192693_upnh2yl")) return true;
+  if (id.includes("1790244192693_upnh2yl")) return true;
+
   if (deletedSet.has(id)) return true;
   if (url && (deletedSet.has(url) || deletedSet.has(item.result_url))) return true;
   if (thumb && (deletedSet.has(thumb) || deletedSet.has(item.thumbnail_url))) return true;
@@ -174,7 +178,7 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
                   status: item.status || "done",
                   result_url: resUrl,
                   thumbnail_url: thumbUrl,
-                  fallback_url: "/Design%20Builder1%202_files/result.avif",
+                  fallback_url: resUrl,
                   timestamp: ts,
                   created_at: item.created_at || new Date(ts).toISOString(),
                   date_formatted: "Hoje",
@@ -216,7 +220,7 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
                   status: "done",
                   result_url: url,
                   thumbnail_url: thumbUrl,
-                  fallback_url: "/Design%20Builder1%202_files/result.avif",
+                  fallback_url: url,
                   timestamp: ts,
                   created_at: img.createdAt || new Date(ts).toISOString(),
                   date_formatted: "Hoje",
@@ -253,7 +257,7 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
               status: "done",
               result_url: imgUrl,
               thumbnail_url: imgUrl,
-              fallback_url: "/Design%20Builder1%202_files/result.avif",
+              fallback_url: imgUrl,
               created_at: new Date(extractImageTimestamp(imgUrl) || Date.now()).toISOString(),
               date_formatted: "Hoje",
               agent_slug: detectedSlug,
@@ -979,9 +983,8 @@ export const GaleriaManager: React.FC<GaleriaManagerProps> = ({
                             const target = e.currentTarget;
                             if (target.dataset.hasFailed) return;
                             target.dataset.hasFailed = "true";
-                            const fallback = item.fallback_url || "/galeria/thumbnail(1).avif";
-                            if (!target.src.endsWith(fallback)) {
-                              target.src = fallback;
+                            if (item.result_url && target.src !== item.result_url) {
+                              target.src = item.result_url;
                             }
                           }}
                         />

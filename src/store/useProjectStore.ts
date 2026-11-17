@@ -229,7 +229,7 @@ const defaultConfig: ProjectConfig = {
 
 const getFreshDefaultConfig = (): ProjectConfig => JSON.parse(JSON.stringify(defaultConfig));
 
-const createDefaultProjects = (serverImages: string[] = ["/Design Builder1 2_files/result.avif"]) => {
+const createDefaultProjects = (serverImages: string[] = []) => {
   const proj1Config: ProjectConfig = getFreshDefaultConfig();
   const proj2Config: ProjectConfig = getFreshDefaultConfig();
   /*
@@ -418,7 +418,7 @@ const initialProjectData = getInitialProjectState();
 export const useProjectStore = create<ProjectStoreState>((set, get) => ({
   ...defaultConfig,
   ...initialProjectData.activeConfig,
-  galeriaImages: (initialProjectData.list.find(p => p.id === initialProjectData.activeId)?.galeria) || ["/Design Builder1 2_files/result.avif"],
+  galeriaImages: (initialProjectData.list.find(p => p.id === initialProjectData.activeId)?.galeria) || [],
   activeImageIndex: 0,
   lastLoadedAt: Date.now(),
   isGenerating: false,
@@ -1076,11 +1076,12 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
       }
       // Filtra imagens excluídas da lista do servidor
       const deletedSet = getDeletedImages();
-      serverImages = Array.from(new Set(["/Design Builder1 2_files/result.avif", ...serverImages]))
+      serverImages = Array.from(new Set(serverImages))
         .filter((img) => {
           const bname = img.split("/").pop() || "";
           const matchId = img.match(/(\d{13}_[a-z0-9]+)/i);
           const jId = matchId ? matchId[1] : "";
+          if (img.includes("Design Builder1 2_files") || img.includes("Design_Builder1_2_files") || img.includes("1790244192693_upnh2yl")) return false;
           return !deletedSet.has(img) && !deletedSet.has(bname) && (!jId || !deletedSet.has(jId));
         });
 
@@ -1107,6 +1108,7 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
 
         const filteredCombined = (combinedGallery.length > 0 ? combinedGallery : serverImages).filter((img) => {
           const bname = img.split("/").pop() || "";
+          if (img.includes("Design Builder1 2_files") || img.includes("Design_Builder1_2_files") || img.includes("1790244192693_upnh2yl")) return false;
           return !deletedSet.has(img) && !deletedSet.has(bname);
         });
 
@@ -1149,13 +1151,13 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
       id: "proj_aba_1",
       name: "Aba 1",
       config: freshConfig,
-      galeria: ["/Design Builder1 2_files/result.avif"]
+      galeria: []
     };
     set({
       projectsList: [fallbackProj],
       activeProjectId: "proj_aba_1",
       ...freshConfig,
-      galeriaImages: ["/Design Builder1 2_files/result.avif"],
+      galeriaImages: [],
       activeImageIndex: 0,
       lastGeneratedPrompt: "",
       lastSystemInstruction: ""

@@ -752,7 +752,7 @@ const hasFotoDot = Boolean(
   }, [mobileActiveCategory]);
 
   // Active image in gallery
-  const activeImage = store.galeriaImages?.[store.activeImageIndex] || (store.galeriaImages?.[0]) || "/Design Builder1 2_files/result.avif";
+  const activeImage = store.galeriaImages?.[store.activeImageIndex] || (store.galeriaImages?.[0]) || "";
 
   // Real-time timer during generation
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
