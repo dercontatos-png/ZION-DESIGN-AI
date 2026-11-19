@@ -360,9 +360,9 @@ export const useGenerateImage = (
       };
       formData.append("color_palette", JSON.stringify(colorPalette));
 
-      // Campo 15: plano ("close-up" | "medium" | "american")
+      // Campo 15: plano ("close-up" | "medium" | "american" | "full_body")
       const rawPlano = (store.composicao || "medium").toLowerCase();
-      const mappedPlano = rawPlano.includes("close") ? "close-up" : rawPlano.includes("american") ? "american" : "medium";
+      const mappedPlano = rawPlano.includes("close") ? "close-up" : rawPlano.includes("american") ? "american" : rawPlano.includes("corpo") || rawPlano.includes("full") ? "full_body" : "medium";
       formData.append("plano", mappedPlano);
 
       // Campo 16: elementos_flutuantes

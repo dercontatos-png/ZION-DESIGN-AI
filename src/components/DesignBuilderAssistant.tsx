@@ -17,7 +17,9 @@ import {
   BookOpenCheck,
   Images,
   FileText,
-  Search
+  Search,
+  Instagram,
+  Film
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
@@ -33,16 +35,16 @@ export const ASSISTANT_OPTIONS: AssistantOption[] = [
   {
     id: "prompt-extractor",
     name: "Prompt Extractor",
-    desc: "",
-    greeting: "Olá! Eu sou Prompt Extractor.",
+    desc: "Decodifique a estrutura e os parâmetros técnicos de referências visuais.",
+    greeting: "Olá! Eu sou o Prompt Extractor. Envie uma imagem ou flyer para eu decodificar e extrair o prompt mestre.",
     icon: Bot,
   },
   {
-    id: "creative-assistant",
-    name: "Creative Assistant",
-    desc: "Ajuda a ter ideias para cenários e composições.",
-    greeting: "Olá! Eu sou o Creative Assistant. Me conte sobre seu projeto ou conceito para explorarmos ideias de cenários, iluminação e composições marcantes.",
-    icon: Wand2,
+    id: "copy-legendas-instagram",
+    name: "Criador de Legendas [Instagram]",
+    desc: "Envie flyer, vídeo ou imagens e gere legendas magnéticas com 5 hashtags prontas para copiar.",
+    greeting: "Olá! Sou o Criador de Legendas para Instagram. Envie seu flyer, vídeo ou imagem (ou descreva a ideia do post) e eu gero a legenda completa, organizada e curta, com gancho, corpo, chamada para ação e exatamente 5 hashtags. Se quiser mudar algo depois, é só me falar aqui no chat que eu ajusto na hora!",
+    icon: Instagram,
   },
   {
     id: "diretor-criativo",
@@ -50,6 +52,13 @@ export const ASSISTANT_OPTIONS: AssistantOption[] = [
     desc: "Mentor visual que guia você na criação de peças impactantes com direções criativas estratégicas.",
     greeting: "Olá! Sou seu Diretor Criativo. Qual direção artística ou conceito visual deseja estruturar para o seu projeto hoje?",
     icon: BookOpenCheck,
+  },
+  {
+    id: "creative-assistant",
+    name: "Creative Assistant",
+    desc: "Ajuda a ter ideias para cenários e composições.",
+    greeting: "Olá! Eu sou o Creative Assistant. Me conte sobre seu projeto ou conceito para explorarmos ideias de cenários, iluminação e composições marcantes.",
+    icon: Wand2,
   },
   {
     id: "copy-builder-carrosseis",
@@ -74,9 +83,17 @@ export const ASSISTANT_OPTIONS: AssistantOption[] = [
   },
 ];
 
+export interface AttachedMedia {
+  id: string;
+  name: string;
+  data: string;
+  type: string;
+}
+
 interface ChatMsg {
   role: "user" | "assistant";
   content: string;
+  media?: AttachedMedia[];
   image?: string;
   images?: string[];
 }
@@ -87,6 +104,37 @@ interface DesignBuilderAssistantProps {
   showToast?: (msg: string, type: "success" | "error" | "warning" | "info") => void;
 }
 
+const STORAGE_KEY_PREFIX = "zion_builder_assistant_chat_";
+const ACTIVE_ASSISTANT_KEY = "zion_builder_assistant_active_id";
+
+const getSavedAssistant = (): AssistantOption => {
+  try {
+    const savedId = localStorage.getItem(ACTIVE_ASSISTANT_KEY);
+    if (savedId) {
+      const found = ASSISTANT_OPTIONS.find((a) => a.id === savedId);
+      if (found) return found;
+    }
+  } catch (e) {
+    console.warn("Erro ao ler assistente salvo:", e);
+  }
+  return ASSISTANT_OPTIONS[0];
+};
+
+const getSavedMessages = (assistantId: string, defaultGreeting: string): ChatMsg[] => {
+  try {
+    const saved = localStorage.getItem(`${STORAGE_KEY_PREFIX}${assistantId}`);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch (e) {
+    console.warn("Erro ao ler mensagens salvas:", e);
+  }
+  return [{ role: "assistant", content: defaultGreeting }];
+};
+
 export const DesignBuilderAssistant: React.FC<DesignBuilderAssistantProps> = ({
   onApplyPrompt,
   showToast,
@@ -94,13 +142,14 @@ export const DesignBuilderAssistant: React.FC<DesignBuilderAssistantProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [selectedAssistant, setSelectedAssistant] = useState<AssistantOption>(ASSISTANT_OPTIONS[0]);
-  const [messages, setMessages] = useState<ChatMsg[]>([
-    { role: "assistant", content: ASSISTANT_OPTIONS[0].greeting },
-  ]);
+  const [selectedAssistant, setSelectedAssistant] = useState<AssistantOption>(() => getSavedAssistant());
+  const [messages, setMessages] = useState<ChatMsg[]>(() => {
+    const active = getSavedAssistant();
+    return getSavedMessages(active.id, active.greeting);
+  });
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [attachedImages, setAttachedImages] = useState<string[]>([]);
+  const [attachedMedia, setAttachedMedia] = useState<AttachedMedia[]>([]);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -110,6 +159,30 @@ export const DesignBuilderAssistant: React.FC<DesignBuilderAssistantProps> = ({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
+
+  // Persistir mensagens do assistente ativo no localStorage com proteção de cota
+  useEffect(() => {
+    try {
+      const key = `${STORAGE_KEY_PREFIX}${selectedAssistant.id}`;
+      if (messages.length > 1 || (messages.length === 1 && messages[0].content !== selectedAssistant.greeting)) {
+        const safeMessages = messages.map((m) => ({
+          role: m.role,
+          content: m.content,
+          media: m.media?.map((item) => ({
+            id: item.id,
+            name: item.name,
+            type: item.type,
+            data: item.data && item.data.length < 60000 ? item.data : "",
+          })),
+          image: m.image && m.image.length < 60000 ? m.image : undefined,
+          images: m.images?.filter((img) => img.length < 60000),
+        }));
+        localStorage.setItem(key, JSON.stringify(safeMessages));
+      }
+    } catch (err) {
+      console.warn("Erro ao salvar mensagens no localStorage:", err);
+    }
+  }, [messages, selectedAssistant.id]);
 
   // Fechar menu ao clicar fora
   useEffect(() => {
@@ -129,72 +202,129 @@ export const DesignBuilderAssistant: React.FC<DesignBuilderAssistantProps> = ({
   const handleSelectAssistant = (opt: AssistantOption) => {
     setSelectedAssistant(opt);
     setIsMenuOpen(false);
-    setMessages([{ role: "assistant", content: opt.greeting }]);
+    try {
+      localStorage.setItem(ACTIVE_ASSISTANT_KEY, opt.id);
+      const saved = getSavedMessages(opt.id, opt.greeting);
+      setMessages(saved);
+    } catch (e) {
+      setMessages([{ role: "assistant", content: opt.greeting }]);
+    }
   };
 
   const handleReset = () => {
+    try {
+      localStorage.removeItem(`${STORAGE_KEY_PREFIX}${selectedAssistant.id}`);
+    } catch (e) {}
     setMessages([{ role: "assistant", content: selectedAssistant.greeting }]);
-    setAttachedImages([]);
+    setAttachedMedia([]);
     setInputValue("");
-    showToast?.("Conversa reiniciada", "info");
+    showToast?.(
+      selectedAssistant.id === "copy-legendas-instagram"
+        ? "Chat limpo. Pronto para uma nova legenda!"
+        : "Conversa reiniciada",
+      "info"
+    );
   };
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const files = Array.from(e.target.files);
     Promise.all(
       files.map((file) => {
-        return new Promise<string>((resolve) => {
+        return new Promise<AttachedMedia>((resolve) => {
           const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
+          reader.onload = () => {
+            const result = reader.result as string;
+            let mime = file.type;
+            if (!mime) {
+              if (file.name.match(/\.(mp4|mov|webm|avi|mkv)$/i)) mime = "video/mp4";
+              else if (file.name.match(/\.(png)$/i)) mime = "image/png";
+              else if (file.name.match(/\.(webp)$/i)) mime = "image/webp";
+              else mime = "image/jpeg";
+            }
+            resolve({
+              id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              name: file.name,
+              data: result,
+              type: mime,
+            });
+          };
           reader.readAsDataURL(file);
         });
       })
-    ).then((newB64s) => {
-      setAttachedImages((prev) => [...prev, ...newB64s].slice(0, 10));
+    ).then((newItems) => {
+      setAttachedMedia((prev) => [...prev, ...newItems].slice(0, 10));
     });
     e.target.value = "";
   };
 
-  const handleSend = async () => {
-    if ((!inputValue.trim() && attachedImages.length === 0) || isLoading) return;
+  const handleSend = async (overridePrompt?: string) => {
+    const textToSend = overridePrompt !== undefined ? overridePrompt : inputValue;
+    if ((!textToSend.trim() && attachedMedia.length === 0) || isLoading) return;
 
-    const currentText = inputValue.trim();
-    const currentImgs = [...attachedImages];
+    const currentText = textToSend.trim();
+    const currentMedia = [...attachedMedia];
+    const isInstagramCaption = selectedAssistant.id === "copy-legendas-instagram";
+    const hasVideo = currentMedia.some((m) => m.type.startsWith("video/") || m.name.match(/\.(mp4|mov|webm|avi|mkv)$/i));
+
+    let defaultPrompt = "";
+    if (isInstagramCaption) {
+      if (currentMedia.length > 0) {
+        defaultPrompt = hasVideo
+          ? "Analise este vídeo anexado e gere uma legenda de alta conversão completa para o Instagram (Reels/Feed) com gancho de abertura (hook), corpo envolvente e curto, chamada para ação (CTA) e exatamente 5 hashtags (#)."
+          : "Analise este flyer/imagem anexado e gere uma legenda de alta conversão completa para o Instagram com gancho de abertura (hook), corpo envolvente e curto, chamada para ação (CTA) e exatamente 5 hashtags (#).";
+      } else {
+        defaultPrompt = "Crie uma legenda magnética, organizada e curta para o Instagram com gancho com emoji, corpo persuasivo, CTA e exatamente 5 hashtags (#).";
+      }
+    } else {
+      defaultPrompt = currentMedia.length > 1
+        ? `Analise detalhadamente estas ${currentMedia.length} imagens de referência anexadas e gere um prompt mestre cinematográfico completo unificando e reproduzindo os melhores elementos visuais no padrão profissional do Design Builder.`
+        : "Analise detalhadamente esta imagem de referência e gere o prompt mestre cinematográfico completo no padrão profissional do Design Builder.";
+    }
+
+    const finalPromptText = currentText || defaultPrompt;
 
     const userMsg: ChatMsg = {
       role: "user",
-      content: currentText || (currentImgs.length > 0 ? (currentImgs.length > 1 ? `Analise estas ${currentImgs.length} imagens de referência e extraia o prompt mestre completo.` : "Analise esta imagem de referência e extraia o prompt mestre completo.") : ""),
-      image: currentImgs[0] || undefined,
-      images: currentImgs.length > 0 ? currentImgs : undefined,
+      content: finalPromptText,
+      media: currentMedia.length > 0 ? currentMedia : undefined,
+      image: currentMedia.length > 0 && currentMedia[0].type.startsWith("image/") ? currentMedia[0].data : undefined,
+      images: currentMedia.filter((m) => m.type.startsWith("image/")).map((m) => m.data),
     };
+
+    // Prepara histórico conversacional para permitir refinamento e memória de chat
+    const historyPayload = messages
+      .filter((m, idx) => !(idx === 0 && m.role === "assistant" && m.content === selectedAssistant.greeting))
+      .map((m) => ({
+        role: m.role === "assistant" ? "model" : "user",
+        content: m.content,
+        files: m.media?.map((med, idx) => ({
+          name: med.name || `arquivo_${idx + 1}`,
+          data: med.data,
+          type: med.type,
+        })) || (m.image ? [{ name: "imagem.jpg", data: m.image, type: "image/jpeg" }] : undefined),
+      }));
 
     setMessages((prev) => [...prev, userMsg]);
     setInputValue("");
-    setAttachedImages([]);
+    setAttachedMedia([]);
     setIsLoading(true);
 
     try {
-      let promptText = currentText;
-      if (!promptText && currentImgs.length > 0) {
-        promptText = currentImgs.length > 1
-          ? `Analise detalhadamente estas ${currentImgs.length} imagens de referência anexadas e gere um prompt mestre cinematográfico completo unificando e reproduzindo os melhores elementos visuais no padrão profissional do Design Builder.`
-          : "Analise detalhadamente esta imagem de referência e gere o prompt mestre cinematográfico completo no padrão profissional do Design Builder.";
-      }
-
       const res = await fetch("/api/chat-agentes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           assistantId: selectedAssistant.id === "prompt-extractor" ? "prompt-extrator" : selectedAssistant.id,
-          message: promptText,
-          imageBase64: currentImgs[0] || undefined,
-          attachedFiles: currentImgs.map((img, idx) => ({
-            name: `referencia_${idx + 1}.jpg`,
-            data: img,
-            type: "image/jpeg"
+          message: finalPromptText,
+          history: historyPayload,
+          imageBase64: currentMedia.length > 0 && currentMedia[0].type.startsWith("image/") ? currentMedia[0].data : undefined,
+          attachedFiles: currentMedia.map((m, idx) => ({
+            name: m.name || `arquivo_${idx + 1}`,
+            data: m.data,
+            type: m.type,
           })),
-          modelId: "deepseek-v4-flash",
+          modelId: (hasVideo || isInstagramCaption) ? "gemini-2.5-flash" : "deepseek-v4-flash",
         }),
       });
 
@@ -223,8 +353,8 @@ export const DesignBuilderAssistant: React.FC<DesignBuilderAssistantProps> = ({
   const handleCopyText = (text: string, idx: number) => {
     navigator.clipboard.writeText(text);
     setCopiedIndex(idx);
-    showToast?.("Texto copiado para a área de transferência!", "success");
-    setTimeout(() => setCopiedIndex(null), 2000);
+    showToast?.("Legenda copiada para a área de transferência!", "success");
+    setTimeout(() => setCopiedIndex(null), 2500);
   };
 
   return (
@@ -410,46 +540,139 @@ export const DesignBuilderAssistant: React.FC<DesignBuilderAssistantProps> = ({
                         : "bg-black/40 border border-brand-accent/10 rounded-sm shadow-lg shadow-brand-purple/5 backdrop-blur-xl text-zinc-300"
                     }`}
                   >
-                    {((msg.images && msg.images.length > 0) || msg.image) && (
+                    {msg.media && msg.media.length > 0 ? (
                       <div className="mb-3 flex flex-wrap gap-2">
-                        {(msg.images && msg.images.length > 0 ? msg.images : [msg.image!]).map((img, i) => (
-                          <div key={i} className="overflow-hidden rounded-lg border border-white/10 max-h-48 max-w-[200px]">
-                            <img
-                              src={img}
-                              alt={`Anexo ${i + 1}`}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        ))}
+                        {msg.media.map((item, i) =>
+                          item.type.startsWith("video/") ? (
+                            <div
+                              key={i}
+                              className="flex items-center gap-2.5 p-2.5 rounded-lg bg-zinc-900/90 border border-violet-500/30 max-w-[240px]"
+                            >
+                              <div className="w-8 h-8 rounded bg-violet-600/30 flex items-center justify-center text-violet-400 shrink-0">
+                                <Film className="w-4 h-4" />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs text-white truncate font-medium">{item.name}</p>
+                                <span className="text-[10px] text-violet-300 uppercase tracking-wider font-semibold">
+                                  Vídeo
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div
+                              key={i}
+                              className="overflow-hidden rounded-lg border border-white/10 max-h-48 max-w-[200px]"
+                            >
+                              <img
+                                src={item.data}
+                                alt={item.name || `Anexo ${i + 1}`}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          )
+                        )}
                       </div>
+                    ) : (
+                      ((msg.images && msg.images.length > 0) || msg.image) && (
+                        <div className="mb-3 flex flex-wrap gap-2">
+                          {(msg.images && msg.images.length > 0 ? msg.images : [msg.image!]).map((img, i) => (
+                            <div key={i} className="overflow-hidden rounded-lg border border-white/10 max-h-48 max-w-[200px]">
+                              <img
+                                src={img}
+                                alt={`Anexo ${i + 1}`}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )
                     )}
 
-                    <div className="markdown-body">
+                    <div className="markdown-body whitespace-pre-line text-sm leading-relaxed text-zinc-200">
                       <ReactMarkdown>{msg.content}</ReactMarkdown>
                     </div>
 
-                    {msg.role === "assistant" && (
-                      <div className="mt-3 pt-2 border-t border-white/5 flex items-center justify-between text-xs text-zinc-500">
+                    {/* Sugestões rápidas para o Criador de Legendas no início */}
+                    {selectedAssistant.id === "copy-legendas-instagram" && messages.length === 1 && idx === 0 && (
+                      <div className="mt-3.5 pt-3 border-t border-white/10">
+                        <p className="text-[11px] text-zinc-400 font-medium mb-2">Sugestões rápidas (ou anexe seu flyer/vídeo):</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {[
+                            "Criar legenda magnética para flyer",
+                            "Legenda dinâmica para Vídeo/Reels",
+                            "Legenda de alta conversão com CTA",
+                            "Legenda promocional com 5 hashtags",
+                          ].map((sug, sIdx) => (
+                            <button
+                              key={sIdx}
+                              type="button"
+                              onClick={() => handleSend(sug)}
+                              className="text-xs bg-white/5 hover:bg-violet-600/25 hover:border-violet-500/40 border border-white/10 text-zinc-300 hover:text-white px-2.5 py-1 rounded-full transition-all text-left cursor-pointer"
+                            >
+                              {sug}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Atalhos rápidos de refinamento da legenda gerada */}
+                    {selectedAssistant.id === "copy-legendas-instagram" && msg.role === "assistant" && idx === messages.length - 1 && messages.length > 1 && (
+                      <div className="mt-3 pt-2.5 border-t border-white/10">
+                        <p className="text-[11px] text-zinc-400 font-medium mb-1.5 flex items-center gap-1.5">
+                          <Sparkles className="w-3 h-3 text-violet-400" />
+                          <span>Quer ajustar algo? Clique abaixo ou digite seu pedido:</span>
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {[
+                            "Mudar CTA para Link na Bio",
+                            "Deixar ainda mais curto",
+                            "Tom mais bem-humorado",
+                            "Adicionar chamada para direct",
+                          ].map((refine, rIdx) => (
+                            <button
+                              key={rIdx}
+                              type="button"
+                              onClick={() => handleSend(refine)}
+                              className="text-[11px] bg-white/5 hover:bg-violet-600/25 hover:border-violet-500/40 border border-white/10 text-zinc-300 hover:text-white px-2.5 py-1 rounded-full transition-all text-left cursor-pointer"
+                            >
+                              {refine}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {msg.role === "assistant" && (idx > 0 || msg.content !== selectedAssistant.greeting) && (
+                      <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between text-xs">
                         <button
                           type="button"
                           onClick={() => handleCopyText(msg.content, idx)}
-                          className="flex items-center gap-1 hover:text-violet-300 transition-colors cursor-pointer"
-                          title="Copiar texto"
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
+                            copiedIndex === idx
+                              ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                              : selectedAssistant.id === "copy-legendas-instagram"
+                              ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white shadow-md shadow-violet-900/30"
+                              : "hover:text-violet-300 text-zinc-400 hover:bg-white/5"
+                          }`}
+                          title="Copiar texto / legenda"
                         >
                           {copiedIndex === idx ? (
                             <>
-                              <Check size={13} className="text-emerald-400" />
-                              <span className="text-emerald-400">Copiado</span>
+                              <Check size={14} className="text-emerald-400" />
+                              <span className="font-semibold text-emerald-300">Copiado com Sucesso!</span>
                             </>
                           ) : (
                             <>
-                              <Copy size={13} />
-                              <span>Copiar</span>
+                              <Copy size={14} />
+                              <span className="font-semibold">
+                                {selectedAssistant.id === "copy-legendas-instagram" ? "Copiar Legenda" : "Copiar"}
+                              </span>
                             </>
                           )}
                         </button>
 
-                        {onApplyPrompt && (
+                        {selectedAssistant.id !== "copy-legendas-instagram" && onApplyPrompt && (
                           <button
                             type="button"
                             onClick={() => {
@@ -480,22 +703,32 @@ export const DesignBuilderAssistant: React.FC<DesignBuilderAssistantProps> = ({
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input Box com Anexo de Imagem (Match 1:1 com app.designbuilder.co) */}
+            {/* Input Box com Anexo de Flyer, Imagem ou Vídeo */}
             <div className="relative p-6 bg-zinc-950/50 border-t border-zinc-900">
-              {attachedImages.length > 0 && (
-                <div className="mb-2 flex flex-wrap gap-2 max-h-24 overflow-y-auto p-1">
-                  {attachedImages.map((img, idx) => (
-                    <div key={idx} className="relative inline-block">
-                      <img
-                        src={img}
-                        alt={`Preview ${idx + 1}`}
-                        className="h-14 w-14 object-cover rounded-lg border border-violet-500/40 shadow-lg"
-                      />
+              {attachedMedia.length > 0 && (
+                <div className="mb-2 flex flex-wrap gap-2 max-h-28 overflow-y-auto p-1">
+                  {attachedMedia.map((item, idx) => (
+                    <div key={item.id} className="relative inline-block">
+                      {item.type.startsWith("video/") ? (
+                        <div className="h-14 px-3 rounded-lg bg-zinc-900 border border-violet-500/40 flex items-center gap-2 shadow-lg max-w-[200px]">
+                          <Film className="w-5 h-5 text-violet-400 shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[11px] text-white truncate font-medium">{item.name}</p>
+                            <span className="text-[9px] text-violet-300 uppercase font-semibold">Vídeo</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <img
+                          src={item.data}
+                          alt={item.name || `Preview ${idx + 1}`}
+                          className="h-14 w-14 object-cover rounded-lg border border-violet-500/40 shadow-lg"
+                        />
+                      )}
                       <button
                         type="button"
-                        onClick={() => setAttachedImages((prev) => prev.filter((_, i) => i !== idx))}
-                        className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-0.5 shadow cursor-pointer hover:bg-red-600"
-                        title="Remover imagem"
+                        onClick={() => setAttachedMedia((prev) => prev.filter((_, i) => i !== idx))}
+                        className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-0.5 shadow cursor-pointer hover:bg-red-600 z-10"
+                        title="Remover anexo"
                       >
                         <X size={12} />
                       </button>
@@ -508,16 +741,16 @@ export const DesignBuilderAssistant: React.FC<DesignBuilderAssistantProps> = ({
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/*"
+                  accept="image/*,video/*"
                   multiple
                   className="hidden"
-                  onChange={handleImageSelect}
+                  onChange={handleFileSelect}
                 />
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   className="w-10 h-10 flex items-center justify-center text-zinc-500 hover:text-brand-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shrink-0 hover:text-violet-400"
-                  title="Anexar imagem"
+                  title="Anexar flyer, imagem ou vídeo"
                 >
                   <Paperclip className="w-5 h-5" aria-hidden="true" />
                 </button>
@@ -532,7 +765,11 @@ export const DesignBuilderAssistant: React.FC<DesignBuilderAssistantProps> = ({
                       handleSend();
                     }
                   }}
-                  placeholder="Fale com o Agente..."
+                  placeholder={
+                    selectedAssistant.id === "copy-legendas-instagram"
+                      ? "Envie flyer/vídeo ou descreva a ideia..."
+                      : "Fale com o Agente..."
+                  }
                   className="flex-1 bg-transparent border-none px-2 py-3 text-sm text-white outline-none resize-none h-12 scrollbar-hide placeholder:text-zinc-700 disabled:opacity-50"
                   rows={1}
                 />
@@ -552,8 +789,8 @@ export const DesignBuilderAssistant: React.FC<DesignBuilderAssistantProps> = ({
 
                 <button
                   type="button"
-                  onClick={handleSend}
-                  disabled={isLoading || (!inputValue.trim() && attachedImages.length === 0)}
+                  onClick={() => handleSend()}
+                  disabled={isLoading || (!inputValue.trim() && attachedMedia.length === 0)}
                   className="bg-brand-accent text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-brand-accent/80 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-xl cursor-pointer shrink-0 bg-violet-600 hover:bg-violet-500"
                   title="Enviar mensagem"
                 >

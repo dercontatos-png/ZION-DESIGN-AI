@@ -2658,7 +2658,7 @@ Exemplo de JSON de saída:
               <div className="overflow-y-auto flex-1 space-y-1.5 custom-scrollbar pr-1">
                 {assistants
                   .filter(a => {
-                    if (agentCategoryFilter === "design") return ["diretor-criativo", "gc-tv-specialist", "prompt-extrator", "creative-assistant", "analisador-paginas", "easy-image"].includes(a.id);
+                    if (agentCategoryFilter === "design") return ["diretor-criativo", "copy-legendas-instagram", "gc-tv-specialist", "prompt-extrator", "creative-assistant", "analisador-paginas", "easy-image"].includes(a.id);
                     if (agentCategoryFilter === "copy") return ["copy-legendas-instagram", "copy-ads", "copy-carroseis", "easy-copy"].includes(a.id);
                     if (agentCategoryFilter === "vendas") return ["analise-estrategica", "icp", "atendimento", "webson-vendedor"].includes(a.id);
                     if (agentCategoryFilter === "dev") return ["estrutura-sites", "easy-coder"].includes(a.id);

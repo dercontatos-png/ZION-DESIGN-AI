@@ -35,7 +35,8 @@ export default defineConfig(({mode}) => {
           '**/dist/**',
           '**/chave-vertex.json',
           '**/.tempmediaStorage/**',
-          '**/whatsapp-sessions/**'
+          '**/whatsapp-sessions/**',
+          '**/server.ts'
         ]
       }
     },

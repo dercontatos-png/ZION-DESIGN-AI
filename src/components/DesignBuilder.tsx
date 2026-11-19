@@ -1904,8 +1904,7 @@ const hasFotoDot = Boolean(
           >
             {/* ── COLUNA ESQUERDA: FORMULÁRIO DO AGENTE (420px) ── */}
             {isOrion ? (
-              <div className="w-full lg:w-[420px] shrink-0 h-full overflow-hidden flex flex-col bg-[#0C0D11] border-r border-white/5 z-20">
-                <ErrorBoundary fallbackTitle="Erro ao carregar o Órion Pro">
+              <ErrorBoundary fallbackTitle="Erro ao carregar o Órion Pro">
                 <OrionProBuilder
                   onSwitchAgent={handleSwitchAgent}
                   onOpenVitrine={handleOpenVitrine}
@@ -1925,9 +1924,9 @@ const hasFotoDot = Boolean(
                     await generatePremiumImage();
                   }}
                   onCloseMobileCategory={() => setMobileActiveCategory(null)}
+                  mobileActiveCategory={mobileActiveCategory}
                 />
-                </ErrorBoundary>
-              </div>
+              </ErrorBoundary>
             ) : (
               <DesignBuilderFormOfficial
                 onOpenCropModal={handleOpenCropModal}

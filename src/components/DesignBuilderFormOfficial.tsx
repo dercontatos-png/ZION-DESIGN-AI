@@ -596,7 +596,7 @@ export const DesignBuilderFormOfficial: React.FC<DesignBuilderFormOfficialProps>
           e.preventDefault();
           onGenerate();
         }}
-        className="flex flex-col gap-6 lg:gap-12 pb-16"
+        className="flex flex-col gap-6 lg:gap-12 pb-36 lg:pb-44"
       >
         {shouldRenderFormContent && (
           <>

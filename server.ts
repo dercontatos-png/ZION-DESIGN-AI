@@ -9263,9 +9263,15 @@ Output ONLY the expanded prompt text. Do not include any explanations, introduct
         (Array.isArray(designRefsList) && designRefsList.some((r: any) => r && (typeof r === 'string' ? r.trim() !== '' : (r.data || r.url))))
       );
 
-      const hasFlyerTypography =
-        /(cabeçalho|título|data|local|contato|horário|preço|oferta|apresenta|show|evento|ingresso|procedimentos|valores|exame|ótica|sindicato)/i.test(promptTraduzido || '') ||
-        /(cabeçalho|título|data|local|contato|horário|preço|oferta|apresenta|show|evento|ingresso|procedimentos|valores|exame|ótica|sindicato)/i.test(req.body.additionalPrompt || '');
+      const explicitNoTextOrFlyer =
+        /(sem\s+(?:ser\s+)?(?:um\s+)?flyer|n[aã]o\s+[eé]\s+flyer|sem\s+texto|sem\s+textos|zero\s+texto|sem\s+letras|n[aã]o\s+quero\s+texto|apenas\s+foto|s[oó]\s+foto|somente\s+foto|pura\s+foto|fotografia|packshot|foto\s+de\s+comida|foto\s+de\s+alimento|foto\s+de\s+produto|no\s+text|pure\s+photo|photograph)/i.test(
+          `${promptTraduzido || ''} ${req.body.additionalPrompt || ''} ${req.body.prompt || ''}`
+        );
+
+      const hasFlyerTypography = !explicitNoTextOrFlyer && (
+        Boolean(req.body.textHierarchy?.headline || req.body.textHierarchy?.subtitle) ||
+        /(cabeçalho|título|data|local|contato|horário|preço|oferta|apresenta|show|evento|ingresso|procedimentos|valores|exame|ótica|sindicato)/i.test(req.body.additionalPrompt || '')
+      );
 
       const isExplicitLogoOnly =
         !hasDesignLayoutRef &&
@@ -10406,6 +10412,7 @@ ${hasExclusions ? `${exclusions.join(', ')}, ` : ""}black circle behind logo, so
 
           expandedSystemInstruction = `You are an elite commercial graphic designer and art director. You execute pristine advertising posters, religious event flyers, social media cards, and commercial marketing layouts with vector-sharp typographic precision.
 RULES:
+0. 👑 SUPREME USER SOVEREIGNTY LAW (RANK 0): Any addition, exclusion, positioning, texture choice, or text requested by the user 100% OVERRULES any elements in the reference images.
 ${hasExclusions ? `   - STRICT EXCLUSIONS: Under NO circumstance generate: ${exclusions.join(', ')}. If present in reference or photo, PURGE AND ERASE THEM COMPLETELY.\n` : ""}${hasAdditions ? `   - MANDATORY ADDITIONS: You must include: ${additions.join(', ')}.\n` : ""}${posResult.isExplicit ? `   - POSITIONING: Position the subject on the ${posResult.position.toUpperCase()} as ordered by the user.\n` : ""}${logoPlacement.isExplicit ? `   - LOGO POSITION: Position the brand logo strictly ${logoPlacement.position.toUpperCase()} as ordered by the user.\n` : ""}   - MULTI-REFERENCE SPECIALIZATION: Strictly respect each reference's assigned role (texture only, typography only, layout only). Never blend contradictory layouts.
 1. DYNAMIC REFERENCE ANALYSIS & THEMATIC ADAPTATION: Visually analyze the Design Reference to clone its composition grid, panel layout, and typography hierarchy. MANDATORY NICHE ADAPTATION: If the user's requested topic differs from the reference (e.g. auto mechanic shop vs church, dental clinic vs party), purge all reference-specific props (crosses, altars, glasses) and replace them with props matching the user's requested niche! NO modern 3D podiums or plastic cubes on non-product flyers.
 2. STRICT TEXT PURGE & REPLACEMENTS: Completely erase all old text from the reference image. Render ONLY the text explicitly requested by the user. Respect all negative constraints (e.g. no crown, no whatsapp, no instagram) and all word replacements.
@@ -10720,8 +10727,8 @@ The subject reference image may be a compressed digital photo. DO NOT replicate 
         });
       }
 
-      // 2. Add Previously Generated Image for direct refinement/edit (only if not already added in isReformatRequest)
-      if (prevImgBase64 && !isReformatRequest) {
+      // 2. Add Previously Generated Image for direct refinement/edit
+      if (prevImgBase64) {
         addImagePart(prevImgBase64, "Imagem Gerada Anterior a ser Editada/Refinada");
       }
 
@@ -10940,7 +10947,7 @@ The subject reference image may be a compressed digital photo. DO NOT replicate 
         // Apply exact natural dimensions if AUTO aspect ratio is selected
         if (autoTargetDimensions && autoTargetDimensions.width && autoTargetDimensions.height) {
           try {
-            const maxDimTarget = (resolutionInput === "8K" || (resolutionInput as any) === "8k") ? 7680 : (resolutionInput === "4K" ? 3840 : (resolutionInput === "2K" ? 2048 : 1024));
+            const maxDimTarget = (resolutionInput === "8K" || (resolutionInput as any) === "8k" || resolutionInput === "4K") ? 7680 : (resolutionInput === "2K" ? 2048 : 1024);
             let finalTargetW = autoTargetDimensions.width;
             let finalTargetH = autoTargetDimensions.height;
             if (autoTargetDimensions.width >= autoTargetDimensions.height) {
@@ -10970,20 +10977,7 @@ The subject reference image may be a compressed digital photo. DO NOT replicate 
         }
 
         const finalParsed = resolveImageInput(finalImageBase64);
-        const requestedSlug =
-          req.body.agent_slug ||
-          (req.body.isRefBuilder || req.body.app === "ref" ? "ref-builder" : "") ||
-          (req.body.hydraData || req.body.app === "hydra" ? "hydra" : "") ||
-          (req.body.app === "orion-pro" || req.body.tipoPainel === "ORION_PRO" ? "orion-pro" : "") ||
-          (req.body.app === "altera-facil" ? "altera-facil" : "") ||
-          req.body.app ||
-          "design-builder1-2";
-
-        const requestedPrompt = promptTraduzido || req.body.promptTraduzido || req.body.prompt || req.body.additionalDescription || req.body.promptCenario;
-
-        const responseImgUrl = finalParsed.data
-          ? await saveImageToDisk(finalParsed.data, finalParsed.mimeType, requestedSlug, requestedPrompt, req.body)
-          : finalImageBase64;
+        const responseImgUrl = finalParsed.data ? await saveImageToDisk(finalParsed.data, finalParsed.mimeType) : finalImageBase64;
 
         let width = 0;
         let height = 0;
@@ -11062,49 +11056,16 @@ The subject reference image may be a compressed digital photo. DO NOT replicate 
     }
   });
 
-  // Prompt Extractor: analyze one or multiple reference images and return the prompt describing them
+  // Prompt Extractor: analyze an image and return the prompt that describes its composition
   app.post("/api/extract-prompt", async (req, res) => {
     if (!await verifyGenerationAccess(req, res)) return;
     try {
-      let { imageData, imagesData, mimeType, customApiKey } = req.body;
-      const allImages: string[] = [];
-      if (Array.isArray(imagesData) && imagesData.length > 0) {
-        allImages.push(...imagesData.filter(Boolean));
-      } else if (imageData) {
-        allImages.push(imageData);
-      }
-      if (allImages.length === 0) return res.status(400).json({ error: "Nenhuma imagem fornecida." });
-
+      let { imageData, mimeType, customApiKey } = req.body;
+      if (!imageData) return res.status(400).json({ error: "Imagem não fornecida." });
       const currentAi = getAiClient(customApiKey);
       if (!currentAi) return res.status(400).json({ error: "API Key não configurada." });
 
-      const imageParts: any[] = [];
-      for (let i = 0; i < allImages.length; i++) {
-        const { data: cleanData, mimeType: resolvedMime } = resolveImageInput(allImages[i]);
-        if (cleanData) {
-          imageParts.push({ inlineData: { data: cleanData, mimeType: resolvedMime || mimeType || "image/jpeg" } });
-        }
-      }
-
-      if (imageParts.length === 0) {
-        return res.status(400).json({ error: "Falha ao processar imagens enviadas." });
-      }
-
-      const promptInstruction = imageParts.length > 1
-        ? `You are an expert creative director and master AI prompt engineer specializing in top-tier Brazilian Flyers (Flyer BR style / @psdflyerbr standard). Analyze these ${imageParts.length} reference images in extreme technical detail and synthesize the unified generative AI master prompt that combines and reproduces their visual DNA:
-- 3D EMBOSSED TYPOGRAPHY & MATERIAL SHADERS: Monumental 3D headlines, bevelled edges, specular top highlights, material textures (polished gold, carved rustic wood, liquid chrome, neon glass).
-- SPATIAL LAYERING & PARALLAX: Dynamic layering between foreground particles/dust, midground subject and 3D typography, and atmospheric background.
-- SYNCHRONIZED RIM LIGHTING: Intense rim light contours on the subject matching the dominant accent palette.
-- VOLUMETRIC ATMOSPHERE: Cinematic fog/smoke, dust motes, fire embers, or light beams.
-- SAFE MARGINS & READABILITY: Clean breathing room (16-20% from borders) with zero border clipping.
-Format your response as a single detailed master prompt paragraph in English, suitable for use in high-end generative AI image generation. Output ONLY the prompt text, no explanations.`
-        : `You are an expert creative director and master AI prompt engineer specializing in top-tier Brazilian Flyers (Flyer BR style / @psdflyerbr standard). Analyze this image in extreme technical detail and reconstruct the precise generative AI prompt that would create this exact masterpiece:
-- Subject description, pose, gaze, emotional expression, clothing textures.
-- Synchronized rim lighting matching the ambient color scheme, soft directional key lighting, and subtle contact shadows.
-- 3D typography hierarchy: Monumental 3D embossed/bevelled headline (H1), secondary titles, date/location pill badges, and clean institutional footer.
-- Background environment, volumetric depth (smoke, particles, embers, lens flares), color palette, and technical camera parameters (85mm lens, f/2.0, high realism).
-Format your response as a single detailed paragraph in English, suitable for use as a generative AI image prompt. Output ONLY the prompt text, no explanations.`;
-
+      const { data: cleanData, mimeType: resolvedMime } = resolveImageInput(imageData);
       const extractModels = ["gemini-3.5-flash", "gemini-3.6-flash", "gemini-flash-lite-latest", "gemini-3.7-flash", "gemini-3.1-pro-preview"];
       let promptText = "";
       let lastErr: any = null;
@@ -11119,8 +11080,8 @@ Format your response as a single detailed paragraph in English, suitable for use
               {
                 role: "user",
                 parts: [
-                  ...imageParts,
-                  { text: promptInstruction }
+                  { inlineData: { data: cleanData, mimeType: resolvedMime || mimeType || "image/jpeg" } },
+                  { text: `You are an expert creative director and AI prompt engineer. Analyze this image in extreme detail and reconstruct the precise generative AI prompt that would have been used to create it. Focus on: subject description, pose, expression, clothing, lighting setup (key light, rim light, ambient color), background/environment, color palette, visual style, mood, composition, framing (close-up/medium/wide), any text elements, graphic design elements, and technical specifications. Format your response as a single detailed paragraph in English, suitable for use as a generative AI image prompt. Output ONLY the prompt text, no explanations.` }
                 ]
               }
             ]
@@ -11705,26 +11666,46 @@ Responda sempre em Português do Brasil com máxima praticidade sem enviar NENHU
         systemInstruction = "Você é o Copiloto Estratégico de Agência de Marketing. Sua função é ajudar o dono da agência a prospectar, vender, onboardar, executar, otimizar e renovar contratos de marketing digital para seus clientes. Tom profissional, prático e focado em resultados. Responda em Português do Brasil sem enviar JSON de interface.";
       } else if (assistantId === "copy-legendas-instagram") {
         systemInstruction = `Você é o Especialista em Legendas e Engajamento para Instagram (Copy Zion Instagram).
-Sua missão é gerar APENAS E EXCLUSIVAMENTE a legenda final pronta para publicação no Instagram a partir dos textos, ideias, áudios ou arquivos/imagens enviadas pelo usuário.
+Sua missão é gerar APENAS E EXCLUSIVAMENTE a legenda final pronta para publicação no Instagram a partir dos textos, ideias, fotos ou vídeos enviados pelo usuário.
 
-REGRAS RÍGIDAS E ABSOLUTAS DE SAÍDA (PROIBIDO DESVIAR):
-1. ZERO CONVERSAS, ELOGIOS OU INTRODUÇÕES:
-   - É STRICTLY PROIBIDO escrever saudações, introduções ou elogios como "Fala, meu parceiro!", "Que arte espetacular!", "Aqui está a sua legenda...", "Ótima escolha!".
-   - É STRICTLY PROIBIDO escrever comentários no início ou no fim ("Como você pediu apenas a legenda...", "Estou mantendo as configurações...").
-5. PROIBIDO USAR ASTERISCOS:
-   - O Instagram NÃO formata negrito por marcação de asteriscos. É TERMINANTEMENTE PROIBIDO usar asteriscos ao redor de palavras ou frases. Escreva todas as palavras normalmente sem nenhum asterisco.
-2. CONTEÚDO 100% LIMPO DA LEGENDA:
-   - Sua resposta DEVE CONTER APENAS E EXCLUSIVAMENTE A LEGENDA FINAL com emojis, CTA e o bloco de hashtags (#), sem aspas e pronta para o Instagram.
-3. EXTRAÇÃO TOTAL DE TEXTOS DE ARQUIVOS E CARDS:
-   - Se o usuário anexou uma imagem de referência, card, print ou documento contendo textos, VOCÊ DEVE LER E EXTRAIR TODOS OS TEXTOS E CONTEÚDOS DA IMAGEM E PREENCHER OS CAMPOS DA LEGENDA INTEGRALMENTE (a não ser que o usuário peça explicitamente para remover ou ignorar algo).
-4. ESTRUTURA OBRIGATÓRIA DA LEGENDA:
-   - GANCHO INICIAL (HOOK): Primeira linha magnética com emoji para parar o scroll.
-   - CORPO DA LEGENDA: Parágrafos curtos, limpos e com emojis.
-   - CHAMADA PARA AÇÃO (CTA): Instrução para comentários, salvamento ou compartilhamento.
-   - BLOCO DE HASHTAGS DE ALTO ENGAJAMENTO (OBRIGATÓRIO EM 100% DAS RESPOSTAS):
-     * No final de TODA legenda gerada, inclua OBRIGATORIAMENTE um bloco separado com hashtags (#) estratégicas e virais (#...).
+REGRAS RÍGIDAS E ABSOLUTAS DE FORMATAÇÃO E SAÍDA:
 
-Sua resposta inteira DEVE ser APENAS O TEXTO DA LEGENDA.`;
+1. ORGANIZAÇÃO VISUAL IMPECÁVEL:
+   - Estrutura clara, limpa e espaçada para leitura fluida no celular:
+     [Linha 1]: Gancho (Hook) de alto impacto com emoji magnético para parar o scroll.
+     (pule uma linha em branco)
+     [Corpo]: Texto envolvente, direto e agradável, estruturado em 1 a 3 parágrafos curtos e espaçados com emojis estratégicos.
+     (pule uma linha em branco)
+     [Chamada para Ação (CTA)]: Uma única instrução clara e objetiva para o leitor (ex: link na bio, direct, salvar, comentar).
+     (pule uma linha em branco)
+     [Bloco de Hashtags]: Exatamente 5 hashtags na última linha.
+   - ZERO RÓTULOS OU METADADOS: JAMAIS escreva palavras de identificação como "[GANCHO]", "[CORPO]", "[CTA]", "[HASHTAGS]", "Legenda:", "Hook:", "Chamada para Ação:" ou similares. Entregue apenas o texto fluido pronto para ser postado.
+
+2. REGRA MANDATÓRIA DAS 5 HASHTAGS (CRÍTICO):
+   - Inclua OBRIGATORIAMENTE E RIGOROSAMENTE 5 HASHTAGS (#) no final da legenda.
+   - NEM 4, NEM 6: SEMPRE E EXATAMENTE 5 HASHTAGS (#tag1 #tag2 #tag3 #tag4 #tag5).
+   - As 5 hashtags devem ser hiper-relevantes ao tema, nicho e público do post.
+
+3. LEGENDA CURTA E OBJETIVA POR PADRÃO:
+   - O padrão DEVE ser curto, conciso e dinâmico (2 a 4 parágrafos pequenos no total).
+   - NÃO faça textos longos a não ser que o usuário peça explicitamente (ex: "faça um texto longo", "conte uma história completa").
+
+4. PROIBIÇÃO ABSOLUTA DE ASTERISCOS:
+   - O Instagram não renderiza formatação markdown (** ou *).
+   - É TERMINANTEMENTE PROIBIDO colocar asteriscos (* ou **) em qualquer palavra ou frase. Escreva todas as palavras com texto limpo.
+
+5. ZERO CONVERSAS OU INTRODUÇÕES:
+   - É PROIBIDO escrever saudações ("Olá", "Aqui está"), introduções, elogios ou despedidas.
+   - Comece DIRETAMENTE na primeira linha da legenda e termine na última hashtag.
+
+6. LEITURA DE MATERIAIS ANEXADOS:
+   - Se houver imagem, flyer, print, arte ou vídeo anexado: examine minuciosamente todos os textos, títulos, datas, ofertas e mensagens da peça e construa a legenda refletindo esses dados com perfeição.
+
+7. MEMÓRIA CONVERSACIONAL E REFINAMENTO (MULTITURN):
+   - Quando o usuário enviar mensagens de ajuste ou refinamento (ex: "mude o tom para mais descontraído", "troque a chamada para link na bio", "adicione o preço de R$ 49,90", "coloque mais emojis", "faça mais curto"):
+     * Você DEVE entender que o usuário está ajustando a legenda anterior do histórico.
+     * Mantenha o contexto e reescreva a legenda aplicando exatamente a alteração solicitada.
+     * Entregue SEMPRE a legenda completa revisada, mantendo o padrão limpo, sem asteriscos, curta e com exatamente 5 hashtags.`;
       }
       switch (assistantId) {
         case "ref":
@@ -11839,12 +11820,11 @@ Você tem OLHO CLÍNICO e INTELIGÊNCIA DE DESIGN:
 2. Se o usuário mandar uma imagem de flyer completo (card de referência) sem dizer nada, analise esse card imediatamente, descubra que se trata de uma referência de layout, mapeie-o OBRIGATORIAMENTE como "design" no seu JSON em "mapeamentoImagens" para preenchimento automático.
 3. Se o estilo visual que você quer aplicar a essa geração exigir alguma característica estética especial do card ou se o usuário quiser que você copie, defina "enableEstiloVisual": true e descreva detalhadamente em "estiloVisualCustom" (O estilo visual customizado deve ser preenchido automaticamente, detalhando texturas, iluminação, atmosfera e vibe). Se não for necessário nenhum estilo visual, você pode desativar explicitamente ("enableEstiloVisual": false).
 4. No fotos de cenário (promptCenario): se não houver um cenário específico enviado pelo usuário, você deve colocar a imagem do card de referência como cenário também e descrever em "promptCenario" o que quer extrair daquele cenário (ex: descrever a atmosfera urbana, o céu dramático ou as luzes de holofotes).
-Sua mente processa design no padrão de excelência de agência de elite (@psdflyerbr - Flyer BR):
-1. Selo 3D Monumental (Headline H1): Tipografia chanfrada em 3D, bisel polido com realces especulares a 45 graus, textura de material PBR rica (ouro polido, madeira entalhada, cromo líquido, neon vítreo), com sombra de oclusão de contato realista.
-2. Profundidade 3D e Parallax: Camadas bem definidas — primeiro plano com partículas/faíscas/névoa desfocadas (bokeh), plano médio com o Sujeito recortado e o Selo 3D se entrelaçando dinamicamente, e plano de fundo com o ambiente temático.
-3. Luz de Recorte Sincronizada (Rim Lighting): A silhueta, ombros e cabelos dos sujeitos/artistas capturam luz de recorte vigorosa na cor exata da atmosfera dominante do flyer, eliminando qualquer aspecto de colagem artificial.
-4. Respiro Institucional e Margens de Segurança (16% a 20%): Cabeçalho e rodapé NUNCA tocam as bordas do canvas. Textos, telefones e arrobas sociais mantêm amplo respiro visual.
-5. Badges Secundários: Datas, horários e atrações de apoio estruturados em cápsulas (pill badges), fitas de papel rasgado ou placas rústicas com tipografia limpa e legível.
+Sua mente processa design analisando:
+1. Foco e Recorte (Saber separar Sujeito e Cenário).
+2. Profundidade 3D (O que passa na frente do texto, o que fica atrás).
+3. Iluminação Dramática e Cores (Glow, Luz de Contraste, Reflexos).
+4. Tipografia Impecável (Hierarquia de textos pesados, metálicos ou neon).
 Analise qualquer imagem de referência e diga como reproduzir aquela excelência técnica em Midjourney, Leonardo AI ou outras plataformas, mapeando a estrutura perfeita para cada botão/opção da arte.
 
 IMPORTANTÍSSIMO: MANTENHA UM DIÁLOGO COM O USUÁRIO (COMO DIRETOR E CLIENTE/DESIGNER).
@@ -11882,25 +11862,7 @@ IMPORTANTÍSSIMO: MANTENHA UM DIÁLOGO COM O USUÁRIO (COMO DIRETOR E CLIENTE/DE
           systemInstruction += `Você é o Especialista em GC, Tarjas e Lower-Thirds de Transmissão para TV e Vídeo da Zion AI. Sua especialidade é criar tarjas de identificação de entrevistados, títulos de matérias, coberturas jornalísticas, plantões e gráficos esportivos. Defina sempre "tipoPainel": "GC_TV", "dimensao": "16:9", desative sujeitos ("desativarSujeito": true, "noPeople": true) a menos que solicitado, e estruture as camadas de texto com precisão: Camada #1 (Nome / Título Principal), Camada #2 (Cargo / Subtítulo / Localização). Retorne SEMPRE o bloco JSON no final da resposta para aplicar as configurações e textos no painel.`;
           break;
         case "copy-legendas-instagram":
-          systemInstruction += `\n\nVocê é o Especialista em Legendas e Engajamento para Instagram (Copy Zion Instagram).
-Sua missão é criar legendas altamente envolventes, organizadas, otimizadas para conversão e prontas para publicação no Instagram a partir dos textos, ideias, áudios ou arquivos/imagens enviadas pelo usuário.
-
-REGRAS RÍGIDAS E ESTRUTURA OBRIGATÓRIA DA LEGENDA:
-1. LEITURA DE ARQUIVOS E IMAGENS ANEXADAS:
-   - Se o usuário enviar um arquivo, print, card ou imagem de referência, VOCÊ DEVE LER E EXTRAIR TODOS OS TEXTOS E CONTEÚDOS DA IMAGEM E PREENCHER OS CAMPOS DA LEGENDA INTEGRALMENTE (a não ser que o usuário peça explicitamente para remover ou ignorar algo).
-2. GANCHO INICIAL (HOOK):
-   - A primeira linha DEVE ser extremamente forte, curiosa e envolvente, acompanhada de um emoji estratégico para parar o scroll no feed/reels.
-3. ESTRUTURA DO CORPO DA LEGENDA:
-   - Divida o texto em parágrafos curtos e espaçados com emojis para facilitar a leitura no celular.
-   - Entregue o valor principal ou a mensagem central da publicação.
-4. CHAMADA PARA AÇÃO (CTA):
-   - Inclua uma instrução clara para engajamento (ex: "Comente X para receber...", "Salve para não esquecer!", "Clique no link da bio", "Compartilhe com um amigo").
-5. BLOCO DE HASHTAGS DE ALTO ENGAJAMENTO (OBRIGATÓRIO EM 100% DAS RESPOSTAS):
-   - No final de TODA legenda gerada, inclua OBRIGATORIAMENTE um bloco separado com hashtags (#) estratégicas para engajar a publicação:
-     * Hashtags do nicho específico do conteúdo fornecido pelo usuário
-     * Hashtags virais e de alto volume de busca no Instagram (#instagramestrategico #conteudodevalor #marketingdigital #viralreels #dicasdeconteudo #engajamento #explorepage #criadoresdeconteudo etc.)
-
-Responda em Português do Brasil de forma direta, clara e sem introduções desnecessárias, entregando a legenda pronta para copiar.`;
+          // Instruções específicas de legendas consolidadas em systemInstruction
           break;
         case "copy-ads":
           systemInstruction += "Você é o Copy Zion Ads, especialista em copywriting para anúncios estáticos de alta conversão. Você deve OBRIGATORIAMENTE estruturar todas as suas copys utilizando a técnica AIDA (Atenção, Interesse, Desejo, Ação). É TERMINANTEMENTE PROIBIDO inventar ou inserir marcações de perfis de terceiros (@) em qualquer sugestão de texto. Responda em português do Brasil.";
@@ -11944,7 +11906,7 @@ Responda em Português do Brasil de forma direta, clara e sem introduções desn
       }
 
       // Adiciona regra de formatação universal para o parser do frontend funcionar 100% (Apenas para assistentes de design/flyers)
-      if (assistantId !== "gerador-roteiros" && assistantId !== "prompt-extrator") {
+      if (assistantId !== "gerador-roteiros" && assistantId !== "prompt-extrator" && assistantId !== "copy-legendas-instagram" && assistantId !== "copiloto-agencia") {
         systemInstruction += `\n\nDIRETRIZES DE ESTILO FLYER BR:
 Lembre-se sempre das características de altíssima qualidade de Flyers Brasileiros Profissionais (Eventos, Shows, Lançamentos, Corporativo):
 1. Estilo & Qualidade: Nível de agência premium, masterpiece, high-end commercial design.
@@ -12202,6 +12164,14 @@ Sempre avise no texto de forma natural se identificou uma logo ou foto de sujeit
         sanitizedContents.shift();
       }
 
+      const sanitizeCaptionOutput = (text: string) => {
+        if (!text) return "";
+        let cleaned = text.replace(/\*\*/g, "").replace(/\*/g, "");
+        cleaned = cleaned.replace(/\[(?:GANCHO|HOOK|CORPO|BODY|CTA|CHAMADA|HASHTAGS|LEGENDA)\]/gi, "");
+        cleaned = cleaned.replace(/^(?:Legenda(?:\s+do\s+Instagram)?|Hook|Gancho|CTA):\s*/gim, "");
+        return cleaned.trim();
+      };
+
       const isDeepSeek = modelId && (modelId.startsWith("deepseek") || modelId.includes("b.ai"));
       let responseText = "";
       let lastError: any = null;
@@ -12217,8 +12187,12 @@ Sempre avise no texto de forma natural se identificou uma logo ou foto de sujeit
             systemInstruction,
             customApiKey
           });
+          let finalReply = deepseekRes.text;
+          if (assistantId === "copy-legendas-instagram") {
+            finalReply = sanitizeCaptionOutput(finalReply);
+          }
           return res.json({
-            response: deepseekRes.text,
+            response: finalReply,
             modelUsed: targetModel,
             clientUsed: deepseekRes.clientUsed
           });
@@ -12274,6 +12248,10 @@ Sempre avise no texto de forma natural se identificou uma logo ou foto de sujeit
         throw lastError;
       }
 
+      if (assistantId === "copy-legendas-instagram" && responseText) {
+        responseText = sanitizeCaptionOutput(responseText);
+      }
+
       res.json({
         response: responseText || "",
         modelUsed: fallbackRes?.modelUsed || modelId || "gemini-3.7-flash",
@@ -12296,6 +12274,108 @@ Sempre avise no texto de forma natural se identificou uma logo ou foto de sujeit
     }
   });
 
+  app.post("/api/check-models-status", async (req: any, res: any) => {
+    try {
+      const customApiKey = req.body?.customApiKey || (req.headers["x-custom-api-key"] as string) || undefined;
+      const currentAi = getAiClient(customApiKey);
+      const candidates = getCandidateClients(customApiKey);
+      const primaryClient = candidates[0]?.instance || currentAi;
+
+      const modelsToCheck = [
+        { id: "deepseek-v4-flash", label: "DeepSeek V4", category: "deepseek", desc: "Raciocínio veloz, OCR de texto e Visão Multimodal automática" },
+        { id: "gemini-3.7-flash", label: "Gemini 3.7 Flash", category: "text", desc: "Mais avançado com raciocínio híbrido" },
+        { id: "gemini-3.5-flash", label: "Gemini 3.5 Flash", category: "text", desc: "Ultra-rápido e estável" },
+        { id: "gemini-3.1-pro-preview", label: "Gemini 3.1 Pro Preview", category: "text", desc: "Raciocínio analítico avançado" }
+      ];
+
+      const results = await Promise.all(
+        modelsToCheck.map(async (m) => {
+          const start = Date.now();
+          try {
+            if (m.category === "deepseek") {
+              await callBaiChatCompletion({
+                model: m.id,
+                contents: [{ role: "user", parts: [{ text: "ping" }] }],
+                customApiKey
+              });
+              const latency = Date.now() - start;
+              return {
+                id: m.id,
+                label: m.label,
+                desc: m.desc,
+                category: m.category,
+                status: "online",
+                statusText: "Online 🟢",
+                latencyMs: latency
+              };
+            } else if (m.category === "image") {
+              const testRes = await primaryClient.models.generateContent({
+                model: m.id,
+                contents: "A blue circle",
+                config: { responseModalities: ["IMAGE"] }
+              });
+              const latency = Date.now() - start;
+              return {
+                id: m.id,
+                label: m.label,
+                desc: m.desc,
+                category: m.category,
+                status: "online",
+                statusText: "Online 🟢",
+                latencyMs: latency
+              };
+            } else {
+              const testRes = await primaryClient.models.generateContent({
+                model: m.id,
+                contents: "ping"
+              });
+              const latency = Date.now() - start;
+              return {
+                id: m.id,
+                label: m.label,
+                desc: m.desc,
+                category: m.category,
+                status: "online",
+                statusText: "Online 🟢",
+                latencyMs: latency
+              };
+            }
+          } catch (err: any) {
+            const rawMsg = err?.message || String(err);
+            let status = "error";
+            let statusText = "Indisponível 🔴";
+            if (rawMsg.includes("503") || rawMsg.includes("UNAVAILABLE") || rawMsg.includes("high demand")) {
+              status = "busy";
+              statusText = "Alta Demanda (503) 🟡";
+            } else if (rawMsg.includes("429") || rawMsg.includes("RESOURCE_EXHAUSTED") || rawMsg.includes("quota")) {
+              status = "quota_exceeded";
+              statusText = "Cota 429 🔴";
+            } else if (rawMsg.includes("404") || rawMsg.includes("NOT_FOUND")) {
+              status = "not_found";
+              statusText = "Indisponível ⚪";
+            }
+            return {
+              id: m.id,
+              label: m.label,
+              desc: m.desc,
+              category: m.category,
+              status,
+              statusText,
+              latencyMs: null,
+              error: sanitizeLogMessage(rawMsg.substring(0, 100))
+            };
+          }
+        })
+      );
+
+      res.json({ models: results });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Erro ao checar modelos." });
+    }
+  });
+
+
+  
   // Vite integration and server listen
   if (process.env.NODE_ENV !== "production") {
     const { createServer: createViteServer } = await import("vite");
